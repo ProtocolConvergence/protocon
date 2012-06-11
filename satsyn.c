@@ -113,11 +113,11 @@ lose_XnSys (XnSys* sys)
 
 qual_inline
     void
-dump_BitTable (FileB* f, const BitTable bt)
+dump_BitTable (OFileB* f, const BitTable bt)
 {
     BitTableSz i;
     UFor( i, bt.sz )
-        dump_char_FileB (f, test_BitTable (bt, i) ? '1' : '0');
+        dump_char_OFileB (f, test_BitTable (bt, i) ? '1' : '0');
 }
 
 
@@ -300,10 +300,10 @@ sat3_legit_XnSys (XnSys* sys, TableT(Disj3) cnf)
 {
     BitTable bt = cons1_BitTable (sys->legit.sz);
     DeclTable( XnEVbl, p );
-    FileB* xf = stderr_FileB ();
+    OFileB* of = stderr_OFileB ();
 
-    dump_BitTable (xf, sys->legit);
-    dump_char_FileB (xf, '\n');
+    dump_BitTable (of, sys->legit);
+    dump_char_OFileB (of, '\n');
 
 #if 1
     GrowTable( p, 2 );
@@ -393,8 +393,9 @@ sat3_legit_XnSys (XnSys* sys, TableT(Disj3) cnf)
     LoseTable( p );
     lose_BitTable( &bt );
 
-    dump_BitTable (xf, sys->legit);
-    dump_char_FileB (xf, '\n');
+    dump_BitTable (of, sys->legit);
+    dump_char_OFileB (of, '\n');
+    flush_OFileB (of);
 }
 
     XnSys
@@ -402,10 +403,10 @@ sat3_XnSys ()
 {
     Disj3 clauses[] = {
         {{ 1, 1, 1 }},
-        {{ -2, -2, -2 }},
+        {{ -2, -2, -2 }}
     };
     DeclTable( Disj3, cnf );
-    const uint n = 2;
+    const uint n = 5;
     DecloStack( XnSys, sys );
 
     *sys = dflt_XnSys ();
@@ -441,14 +442,18 @@ sat3_XnSys ()
 
     sat3_legit_XnSys (sys, cnf);
 
+    /*
     { BLoop( i, sys->legit.sz )
         if (test_BitTable (sys->legit, i))
             DBog1( "%u is true", i );
     } BLose()
+    */
+    DBog1( "size is %u", (uint) sys->legit.sz );
     
     return *sys;
 }
 
+#if 0
     void
 dump_cnf_XnSys (FileB* f, const XnSys* sys)
 {
@@ -457,6 +462,7 @@ dump_cnf_XnSys (FileB* f, const XnSys* sys)
     const uint nvbls = nstates + nxns;
     uint nclauses = 0;
 }
+#endif
 
     int
 main ()
