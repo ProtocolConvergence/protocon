@@ -14,12 +14,19 @@ typedef struct XnSys XnSys;
 typedef BitTableSz XnSz;
 typedef byte DomSz;
 typedef struct Disj3 Disj3;
+typedef struct XnSz2 XnSz2;
+typedef struct FnWMem_detect_livelock FnWMem_detect_livelock;
+typedef struct FnWMem_do_XnSys FnWMem_do_XnSys;
 
 DeclTableT( XnPc, XnPc );
 DeclTableT( XnVbl, XnVbl );
 DeclTableT( XnEVbl, XnEVbl );
 DeclTableT( XnSz, XnSz );
 DeclTableT( Disj3, Disj3 );
+DeclTableT( Xns, TableT(XnSz) );
+DeclTableT( XnSz2, XnSz2 );
+
+struct XnSz2 { XnSz i; XnSz j; };
 
 struct XnPc
 {
@@ -48,6 +55,22 @@ struct XnSys
     TableT(XnPc) pcs;
     TableT(XnVbl) vbls;
     BitTable legit;
+};
+
+struct FnWMem_detect_livelock
+{
+    BitTable cycle;
+    BitTable tested;
+    TableT(XnSz2) testing;
+    const BitTable* legit;
+};
+
+struct FnWMem_do_XnSys
+{
+    DomSz* vals;
+    BitTable fixed;
+    TableT(XnEVbl) evs;
+    const XnSys* sys;
 };
 
 struct Disj3 {
@@ -251,6 +274,30 @@ iswapped_XnEVbl (const void* av, const void* bv)
     return 0;
 }
 
+
+    FnWMem_do_XnSys
+cons1_FnWMem_do_XnSys (const XnSys* sys)
+{
+    FnWMem_do_XnSys tape;
+    const TableSz n = sys->vbls.sz;
+
+    tape.sys = sys;
+    tape.vals = AllocT( DomSz, n);
+    tape.fixed = cons2_BitTable( n, 0 );
+    InitTable( tape.evs );
+    GrowTable( tape.evs, n );
+    tape.evs.sz = 0;
+    return tape;
+}
+
+    void
+lose_FnWMem_do_XnSys (FnWMem_do_XnSys* tape)
+{
+    if (tape->vals)  free (tape->vals);
+    lose_BitTable (&tape->fixed);
+    LoseTable (tape->evs);
+}
+
 static
     void
 recu_do_XnSys (BitTable* bt, const XnEVbl* a, uint n, XnSz step, XnSz bel)
@@ -271,42 +318,34 @@ recu_do_XnSys (BitTable* bt, const XnEVbl* a, uint n, XnSz step, XnSz bel)
         recu_do_XnSys (bt, a+1, n-1, step, step + stepsz);
 }
 
-static
     void
-recu_save_do_XnSys (BitTable* bt, TableT(XnEVbl)* p, uint i)
+do_XnSys (FnWMem_do_XnSys* tape, BitTable bt)
 {
-    XnEVbl x;
+    tape->evs.sz = 0;
+    { BLoop( i, tape->fixed.sz )
+        XnEVbl e;
+        if (test_BitTable (tape->fixed, i))
+        {
+            e.val = tape->vals[i];
+            e.vbl = &tape->sys->vbls.s[i];
+            PushTable( tape->evs, e );
+        }
+    } BLose()
 
-    if (i == p->sz)
-    {
-        qsort (p->s, p->sz, sizeof (*p->s), iswapped_XnEVbl);
-        recu_do_XnSys (bt, p->s, p->sz, 0, bt->sz);
-        return;
-    }
-
-    x = p->s[i];
-    recu_save_do_XnSys (bt, p, i+1);
-    p->s[i] = x;
-}
-
-    void
-do_XnSys (BitTable bt, TableT(XnEVbl) p)
-{
-    recu_save_do_XnSys (&bt, &p, 0);
+    recu_do_XnSys (&bt, tape->evs.s, tape->evs.sz, 0, bt.sz);
 }
 
     void
 sat3_legit_XnSys (XnSys* sys, TableT(Disj3) cnf)
 {
     BitTable bt = cons1_BitTable (sys->legit.sz);
-    DeclTable( XnEVbl, p );
     OFileB* of = stderr_OFileB ();
+    FnWMem_do_XnSys fix = cons1_FnWMem_do_XnSys (sys);
 
     dump_BitTable (of, sys->legit);
     dump_char_OFileB (of, '\n');
 
 #if 1
-    GrowTable( p, 2 );
     { BLoop( i, 3 )
         const uint n = 1 + (uint) sys->vbls.s[0].max;
         uint j;
@@ -314,32 +353,39 @@ sat3_legit_XnSys (XnSys* sys, TableT(Disj3) cnf)
         {
             wipe_BitTable (bt, 0);
 
-            p.s[0].vbl = &sys->vbls.s[2*i];
-            p.s[1].vbl = &sys->vbls.s[2*j];
+            set1_BitTable (fix.fixed, 2*i);
+            set1_BitTable (fix.fixed, 2*j);
+
             { BLoop( val, n )
-                p.s[0].val = p.s[1].val = val;
-                do_XnSys (bt, p);
+                fix.vals[2*i] = val;
+                fix.vals[2*j] = val;
+                do_XnSys (&fix, bt);
             } BLose()
+
+            set0_BitTable (fix.fixed, 2*i);
+            set0_BitTable (fix.fixed, 2*j);
 
             op_BitTable (bt, bt, BitTable_NOT);
 
-            p.s[0].vbl = &sys->vbls.s[2*i+1];
-            p.s[1].vbl = &sys->vbls.s[2*j+1];
+            set1_BitTable (fix.fixed, 2*i+1);
+            set1_BitTable (fix.fixed, 2*j+1);
             { BLoop( val, 2 )
-                p.s[0].val = p.s[1].val = val;
-                do_XnSys (bt, p);
+                fix.vals[2*i+1] = val;
+                fix.vals[2*j+1] = val;
+                do_XnSys (&fix, bt);
             } BLose()
+            set0_BitTable (fix.fixed, 2*i+1);
+            set0_BitTable (fix.fixed, 2*j+1);
 
             op_BitTable (sys->legit, bt, BitTable_AND);
         }
     } BLose()
-    p.sz = 0;
 #endif
 
         /* Clauses.*/
     { BLoop( ci, cnf.sz )
         static const byte perms[][3] = {
-#if 0
+#if 1
             { 0, 1, 2 }
 #else
             { 0, 1, 2 },
@@ -359,43 +405,187 @@ sat3_legit_XnSys (XnSys* sys, TableT(Disj3) cnf)
             } BLose()
 
             wipe_BitTable (bt, 0);
-            p.sz = 0;
 
                 /* Get variables on the stack.*/
             { BLoop( i, 3 )
                 int v = clause.terms[i];
-                XnEVbl x;
 
-                x.vbl = &sys->vbls.s[2*i];
-                x.val = (DomSz) (v > 0 ? v : -v) - 1;
-                PushTable( p, x );
+                set1_BitTable (fix.fixed, 2*i);
+                fix.vals[2*i] = (DomSz) (v > 0 ? v : -v) - 1;
             } BLose()
 
-            do_XnSys (bt, p);
+            do_XnSys (&fix, bt);
             op_BitTable (bt, bt, BitTable_NOT);
 
             { BLoop( i, 3 )
                 int v = clause.terms[i];
-                XnEVbl x;
 
-                x.vbl = &sys->vbls.s[2*i+1];
-                x.val = (v > 0);
-
-                PushTable( p, x );
-                do_XnSys (bt, p);
-                p.sz --;
+                set1_BitTable (fix.fixed, 2*i+1);
+                fix.vals[2*i+1] = (v > 0);
+                do_XnSys (&fix, bt);
+                set0_BitTable (fix.fixed, 2*i+1);
             } BLose()
 
             op_BitTable (sys->legit, bt, BitTable_AND);
+
+            wipe_BitTable (fix.fixed, 0);
         } BLose()
     } BLose()
 
-    LoseTable( p );
+    lose_FnWMem_do_XnSys (&fix);
     lose_BitTable( &bt );
 
     dump_BitTable (of, sys->legit);
     dump_char_OFileB (of, '\n');
     flush_OFileB (of);
+}
+
+    FnWMem_detect_livelock
+cons1_FnWMem_detect_livelock (const BitTable* legit)
+{
+    FnWMem_detect_livelock tape;
+
+    tape.legit = legit;
+
+    tape.cycle = cons1_BitTable (legit->sz);
+    tape.tested = cons1_BitTable (legit->sz);
+    InitTable( tape.testing );
+    return tape;
+}
+
+    void
+lose_FnWMem_detect_livelock (FnWMem_detect_livelock* tape)
+{
+    lose_BitTable (&tape->cycle);
+    lose_BitTable (&tape->tested);
+    LoseTable( tape->testing );
+}
+
+    bool
+detect_livelock (FnWMem_detect_livelock* tape,
+                 const TableT(Xns) xns)
+{
+    ujint testidx = 0;
+    BitTable cycle = tape->cycle;
+    BitTable tested = tape->tested;
+    TableT(XnSz2) testing = tape->testing;
+
+    if (xns.sz == 0)  return false;
+    testing.sz = 0;
+
+    op_BitTable (cycle, *tape->legit, BitTable_IDEN);
+    op_BitTable (tested, *tape->legit, BitTable_IDEN);
+
+    while (true)
+    {
+        XnSz i, j;
+        XnSz2* top;
+
+        if (testing.sz > 0)
+        {
+            top = TopTable( testing );
+            i = top->i;
+            j = top->j;
+        }
+        else
+        {
+            while (testidx < xns.sz &&
+                   test_BitTable (tested, testidx))
+            {
+                ++ testidx;
+            }
+
+            if (testidx == xns.sz)  break;
+
+            top = Grow1Table( testing );
+            top->i = i = testidx;
+            top->j = j = 0;
+            ++ testidx;
+
+            set1_BitTable (cycle, i);
+        }
+
+        while (j < xns.s[i].sz)
+        {
+            ujint k = xns.s[i].s[j];
+
+            ++j;
+
+            if (!test_BitTable (tested, k))
+            {
+                if (set1_BitTable (cycle, k))
+                {
+                    tape->testing = testing;
+                    return true;
+                }
+
+                top->i = i;
+                top->j = j;
+                top = Grow1Table( testing );
+                top->i = i = k;
+                top->j = j = 0;
+            }
+        }
+
+        if (j == xns.s[i].sz)
+        {
+            set1_BitTable (tested, i);
+            -- testing.sz;
+        }
+    }
+    tape->testing = testing;
+    return false;
+}
+
+    void
+back1_Xn (TableT(Xns)* xns, TableT(XnSz)* stk)
+{
+    ujint n = *TopTable(*stk);
+    ujint off = stk->sz - (n + 1);
+
+    { BLoopT( ujint, i, n )
+        xns->s[stk->s[off + i]].sz -= 1;
+    } BLose()
+
+    stk->sz = off;
+}
+
+    void
+testfn_detect_livelock ()
+{
+    BitTable legit = cons2_BitTable (6, 0);
+    DeclTable( Xns, xns );
+    FnWMem_detect_livelock mem_detect_livelock;
+    bool livelock_exists;
+
+    GrowTable( xns, legit.sz );
+    { BLoop( i, xns.sz )
+        InitTable( xns.s[i] );
+    } BLose()
+
+    mem_detect_livelock = cons1_FnWMem_detect_livelock (&legit);
+
+
+    PushTable( xns.s[0], 1 );
+    livelock_exists = detect_livelock (&mem_detect_livelock, xns);
+    Claim( !livelock_exists );
+
+    PushTable( xns.s[1], 5 );
+    PushTable( xns.s[1], 3 );
+    PushTable( xns.s[2], 1 );
+    PushTable( xns.s[3], 4 );
+    PushTable( xns.s[4], 2 );
+
+    livelock_exists = detect_livelock (&mem_detect_livelock, xns);
+    Claim( livelock_exists );
+
+    lose_FnWMem_detect_livelock (&mem_detect_livelock);
+
+    { BLoop( i, xns.sz )
+        LoseTable( xns.s[i] );
+    } BLose()
+    LoseTable( xns );
+    lose_BitTable (&legit);
 }
 
     XnSys
@@ -406,7 +596,7 @@ sat3_XnSys ()
         {{ -2, -2, -2 }}
     };
     DeclTable( Disj3, cnf );
-    const uint n = 5;
+    const uint n = 3;
     DecloStack( XnSys, sys );
 
     *sys = dflt_XnSys ();
@@ -470,6 +660,8 @@ main ()
     DecloStack( XnSys, sys );
     init_sys_cx ();
     *sys = sat3_XnSys ();
+
+    testfn_detect_livelock ();
 
     lose_XnSys (sys);
     lose_sys_cx ();
