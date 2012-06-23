@@ -38,10 +38,15 @@ struct XnPc
     TableT(XnSz) vbls;
     XnSz nwvbls;
     XnSz nrvbls;
+
+    XnSz rule_step;
+    TableT(XnSz) rule_stepsz_p;
+    TableT(XnSz) rule_stepsz_q;
 };
 
 struct XnVbl
 {
+    TableT(char) name;
     DomSz max;
     TableT(XnSz) pcs;
     XnSz nwpcs;
@@ -67,6 +72,8 @@ struct XnSys
     TableT(XnPc) pcs;
     TableT(XnVbl) vbls;
     BitTable legit;
+    XnSz nstates;  /* Same as /legit.sz/.*/
+    XnSz n_rule_steps;
 };
 
 struct FnWMem_detect_livelock
@@ -111,6 +118,9 @@ dflt_XnPc ()
     InitTable( pc.vbls );
     pc.nwvbls = 0;
     pc.nrvbls = 0;
+    pc.rule_step = 0;
+    InitTable( pc.rule_stepsz_p );
+    InitTable( pc.rule_stepsz_q );
     return pc;
 }
 
@@ -118,12 +128,18 @@ dflt_XnPc ()
 lose_XnPc (XnPc* pc)
 {
     LoseTable( pc->vbls );
+    LoseTable( pc->rule_stepsz_p );
+    LoseTable( pc->rule_stepsz_q );
 }
 
     XnVbl
 dflt_XnVbl ()
 {
     XnVbl x;
+    InitTable( x.name );
+    SizeTable( x.name, 2 );
+    x.name.s[0] = 'x';
+    x.name.s[1] = '\0';
     x.max = 0;
     InitTable( x.pcs );
     x.nwpcs = 0;
@@ -135,7 +151,25 @@ dflt_XnVbl ()
     void
 lose_XnVbl (XnVbl* x)
 {
+    LoseTable( x->name );
     LoseTable( x->pcs );
+}
+
+    XnRule
+dflt_XnRule ()
+{
+    XnRule g;
+    g.pc = 0;
+    InitTable( g.p );
+    InitTable( g.q );
+    return g;
+}
+
+    void
+lose_XnRule (XnRule* g)
+{
+    LoseTable( g->p );
+    LoseTable( g->q );
 }
 
     XnSys
@@ -145,6 +179,8 @@ dflt_XnSys ()
     InitTable( sys.pcs );
     InitTable( sys.vbls );
     sys.legit = dflt_BitTable ();
+    sys.nstates = 0;
+    sys.n_rule_steps = 0;
     return sys;
 }
 
@@ -290,20 +326,108 @@ accept_topology_XnSys (XnSys* sys)
 
         /* All legit states.*/
     sys->legit = cons2_BitTable (stepsz, 1);
+
+    { BLoop( pcidx, sys->pcs.sz )
+        XnPc* pc = &sys->pcs.s[pcidx];
+        uint n;
+
+        SizeTable( pc->rule_stepsz_p, pc->nrvbls );
+        SizeTable( pc->rule_stepsz_q, pc->nwvbls );
+
+        stepsz = 1;
+
+        n = pc->rule_stepsz_q.sz;
+        { BLoop( i, n )
+            XnSz* x = &pc->rule_stepsz_q.s[n-1-i];
+            DomSz max = sys->vbls.s[pc->vbls.s[n-1-i]].max;
+
+            *x = stepsz;
+            stepsz *= (1 + max);
+            if (max != 0 && *x >= stepsz)
+            {
+                DBog0( "Cannot hold all the rules!" );
+                fail_exit_sys_cx (0);
+            }
+        } BLose()
+
+        n = pc->rule_stepsz_p.sz;
+        { BLoop( i, n )
+            XnSz* x = &pc->rule_stepsz_p.s[n-1-i];
+            DomSz max = sys->vbls.s[pc->vbls.s[n-1-i]].max;
+
+            *x = stepsz;
+            stepsz *= (1 + max);
+            if (max != 0 && *x >= stepsz)
+            {
+                DBog0( "Cannot hold all the rules!" );
+                fail_exit_sys_cx (0);
+            }
+        } BLose()
+
+
+        if (pcidx == 0)
+            pc->rule_step = 0;
+
+        sys->n_rule_steps = pc->rule_step + stepsz;
+
+        if (pcidx < sys->pcs.sz-1)
+            sys->pcs.s[pcidx+1].rule_step = sys->n_rule_steps;
+    } BLose()
 }
 
+
+    void
+dump_XnEVbl (OFileB* of, const XnEVbl* ev)
+{
+    dump_cstr_OFileB (of, ev->vbl->name.s);
+    dump_char_OFileB (of, '=');
+    dump_uint_OFileB (of, ev->val);
+}
 
     void
 dump_state_XnSys (OFileB* of, const XnSys* sys, XnSz sidx)
 {
     { BLoop( i, sys->vbls.sz )
-        const XnVbl* x = &sys->vbls.s[i];
-        uint v = sidx / x->stepsz;
-        sidx = sidx % x->stepsz;
-        dump_uint_OFileB (of, v);
-        dump_char_OFileB (of, ' ');
+        XnEVbl x;
+        x.vbl = &sys->vbls.s[i];
+        x.val = sidx / x.vbl->stepsz;
+        sidx = sidx % x.vbl->stepsz;
+        if (i > 0)  dump_char_OFileB (of, ' ');
+        dump_XnEVbl (of, &x);
     } BLose()
 }
+
+    void
+rule_XnSys (XnRule* g, const XnSys* sys, XnSz idx)
+{
+    const XnPc* pc = 0;
+    g->pc = sys->pcs.sz - 1;
+    { BLoop( i, sys->pcs.sz-1 )
+        if (idx < sys->pcs.s[i+1].rule_step)
+        {
+            g->pc = i;
+            break;
+        }
+    } BLose()
+
+    pc = &sys->pcs.s[g->pc];
+    idx -= pc->rule_step;
+
+    EnsizeTable( g->p, pc->rule_stepsz_p.sz );
+    { BLoop( i, g->p.sz )
+        XnSz d = pc->rule_stepsz_p.s[i];
+        g->p.s[i] = idx / d;
+        idx = idx % d;
+    } BLose()
+
+    EnsizeTable( g->q, pc->rule_stepsz_q.sz );
+    { BLoop( i, g->q.sz )
+        XnSz d = pc->rule_stepsz_q.s[i];
+        g->q.s[i] = idx / d;
+        idx = idx % d;
+    } BLose()
+}
+
 
     void
 dump_XnRule (OFileB* of, const XnRule* g, const XnSys* sys)
@@ -320,10 +444,11 @@ dump_XnRule (OFileB* of, const XnRule* g, const XnSys* sys)
         { BLoop( j, t.sz )
             if (t.s[j] == i)
             {
-                dump_cstr_OFileB (of, " x");
-                dump_uint_OFileB (of, i);
-                dump_char_OFileB (of, '=');
-                dump_uint_OFileB (of, g->p.s[j]);
+                XnEVbl x;
+                x.vbl = &sys->vbls.s[i];
+                x.val = g->p.s[j];
+                dump_char_OFileB (of, ' ');
+                dump_XnEVbl (of, &x);
             }
         } BLose()
     } BLose()
@@ -335,10 +460,11 @@ dump_XnRule (OFileB* of, const XnRule* g, const XnSys* sys)
         { BLoop( j, t.sz )
             if (t.s[j] == i)
             {
-                dump_cstr_OFileB (of, " x");
-                dump_uint_OFileB (of, i);
-                dump_char_OFileB (of, '=');
-                dump_uint_OFileB (of, g->q.s[j]);
+                XnEVbl x;
+                x.vbl = &sys->vbls.s[i];
+                x.val = g->q.s[j];
+                dump_char_OFileB (of, ' ');
+                dump_XnEVbl (of, &x);
             }
         } BLose()
     } BLose()
@@ -556,6 +682,7 @@ sat3_legit_XnSys (XnSys* sys, TableT(Disj3) cnf)
     dump_BitTable (of, sys->legit);
     dump_char_OFileB (of, '\n');
 
+    if (true)
     { BLoopT( XnSz, i, sys->legit.sz )
         if (test_BitTable (sys->legit, i))
         {
@@ -838,7 +965,7 @@ add_XnRule (FnWMem_synsearch* tape, const XnRule* g)
 }
 
     void
-synsearch (FnWMem_synsearch* tape)
+synsearch (FnWMem_synsearch* tape, XnSz rule_step)
 {
     const XnSys* restrict sys = tape->sys;
     XnRule* g;
@@ -868,13 +995,13 @@ synsearch (FnWMem_synsearch* tape)
     {
         g->pc = 0;
         InitTable( g->p );
-        GrowTable( g->p, tape->rule_nrvbls );
+        SizeTable( g->p, tape->rule_nrvbls );
         { BLoop( i, g->p.sz )
             g->p.s[i] = 0;
         } BLose()
 
         InitTable( g->q );
-        GrowTable( g->q, tape->rule_nwvbls );
+        SizeTable( g->q, tape->rule_nwvbls );
         { BLoop( i, g->q.sz )
             g->q.s[i] = 0;
         } BLose()
@@ -882,6 +1009,7 @@ synsearch (FnWMem_synsearch* tape)
         ++ tape->cached_nrules;
     }
 
+#if 1
     if (tape->rules.sz > 1)
     {
         XnRule* tg = &tape->rules.s[tape->rules.sz-2];
@@ -924,24 +1052,36 @@ synsearch (FnWMem_synsearch* tape)
         {
             do
             {
-                add_XnRule (tape, g);
-                if (tape->rules.sz-1 < 7)
+                bool doit = false;
+                { BLoop( i, g->q.sz )
+                    if (g->p.s[i] != g->q.s[i])
+                    {
+                        doit = true;
+                        break;
+                    }
+                } BLose()
+
+                if (doit)
                 {
-                    OFileB* of = stderr_OFileB ();
-                    dump_cstr_OFileB (of, " -- ");
-                    dump_uint_OFileB (of, tape->rules.sz - 1);
-                    dump_cstr_OFileB (of, " -- ");
-                    dump_XnRule (of, g, sys);
-                    dump_char_OFileB (of, '\n');
-                    flush_OFileB (of);
+                    add_XnRule (tape, g);
+                    if (tape->rules.sz-1 < 40 && false)
+                        /* if (tape->rules.sz-1 >= 0 || false) */
+                    {
+                        OFileB* of = stderr_OFileB ();
+                        dump_cstr_OFileB (of, " -- ");
+                        dump_uint_OFileB (of, tape->rules.sz - 1);
+                        dump_cstr_OFileB (of, " -- ");
+                        dump_XnRule (of, g, sys);
+                        dump_char_OFileB (of, '\n');
+                        flush_OFileB (of);
+                    }
+
+                    synsearch (tape, 0);
+                    if (tape->stabilizing)  return;
+                    back1_Xn (&tape->xns, &tape->xn_stk);
+
+                    g = TopTable( tape->rules );
                 }
-
-
-                synsearch (tape);
-                if (tape->stabilizing)  return;
-                back1_Xn (&tape->xns, &tape->xn_stk);
-
-                g = TopTable( tape->rules );
 
                 off = g->q.sz;
                 while (off > 0)
@@ -971,9 +1111,46 @@ synsearch (FnWMem_synsearch* tape)
             }
         } while (off != 0);
     }
+#else
+    for (; rule_step < sys->n_rule_steps; ++ rule_step)
+    {
+        bool doit = false;
+        rule_XnSys (g, sys, rule_step);
+        { BLoop( i, g->q.sz )
+            if (g->p.s[i] != g->q.s[i])
+            {
+                doit = true;
+                break;
+            }
+        } BLose()
+
+        if (doit)
+        {
+            add_XnRule (tape, g);
+            if (tape->rules.sz-1 < 40 && false)
+                    /* if (tape->rules.sz-1 >= 0 || false) */
+            {
+                OFileB* of = stderr_OFileB ();
+                dump_cstr_OFileB (of, " -- ");
+                dump_uint_OFileB (of, tape->rules.sz - 1);
+                dump_cstr_OFileB (of, " -- ");
+                dump_XnRule (of, g, sys);
+                dump_char_OFileB (of, '\n');
+                flush_OFileB (of);
+            }
+
+            synsearch (tape, rule_step + 1);
+            if (tape->stabilizing)  return;
+            back1_Xn (&tape->xns, &tape->xn_stk);
+
+            g = TopTable( tape->rules );
+        }
+    }
+#endif
 
     -- tape->rules.sz;
         /* DBog0( "BUST" ); */
+        /* if (tape->rules.sz == 58)  exit(1); */
 }
 
 
@@ -1019,12 +1196,13 @@ testfn_detect_livelock ()
 sat3_XnSys ()
 {
     Disj3 clauses[] = {
-        {{ -2, -2, -2 }},
-        {{ 1, 1, 1 }}
+            /* {{ -2, -2, -2 }}, */
+        {{ 1, -1, 1 }}
     };
     DeclTable( Disj3, cnf );
     const uint n = 1;
     DecloStack( XnSys, sys );
+    OFileB name = dflt_OFileB ();
 
     *sys = dflt_XnSys ();
     cnf.s = clauses;
@@ -1049,6 +1227,14 @@ sat3_XnSys ()
         *x = dflt_XnVbl ();
         *y = dflt_XnVbl ();
 
+        flush_OFileB (&name);
+        printf_OFileB (&name, "x%u", r);
+        CopyTable( x->name, name.buf );
+
+        flush_OFileB (&name);
+        printf_OFileB (&name, "y%u", r);
+        CopyTable( y->name, name.buf );
+
         x->max = n-1;
         y->max = 1;
 
@@ -1062,6 +1248,9 @@ sat3_XnSys ()
         DeclGrow1Table( XnVbl, sat, sys->vbls );
         *sat = dflt_XnVbl ();
         sat->max = 1;
+        flush_OFileB (&name);
+        dump_cstr_OFileB (&name, "sat");
+        CopyTable( sat->name, name.buf );
     }
 
     { BLoop( r, 3 )
@@ -1081,6 +1270,7 @@ sat3_XnSys ()
     */
     DBog1( "size is %u", (uint) sys->legit.sz );
 
+    lose_OFileB (&name);
     return *sys;
 }
 
@@ -1106,7 +1296,7 @@ main ()
 
     {
         FnWMem_synsearch tape = cons1_FnWMem_synsearch (sys);
-        synsearch (&tape);
+        synsearch (&tape, 0);
         if (tape.stabilizing)
         {
             DBog0( "Solution found! :)" );
