@@ -73,7 +73,7 @@ struct XnSys
     TableT(XnPc) pcs;
     TableT(XnVbl) vbls;
     BitTable legit;
-    TableT(Xns) xns;
+    TableT(XnRule) legit_rules;
     XnSz nstates;  /* Same as /legit.sz/.*/
     XnSz n_rule_steps;
 };
@@ -116,6 +116,8 @@ struct FnWMem_synsearch
     uint n_cached_rules;
     uint rule_nwvbls;
     uint rule_nrvbls;
+    TableT(XnSz) legit_states;
+    TableT(Xns) legit_xns;
 };
 
 struct Disj3 {
@@ -134,6 +136,9 @@ dflt_XnPc ()
     InitTable( pc.rule_stepsz_q );
     return pc;
 }
+
+void
+add_XnRule (FnWMem_synsearch* tape, const XnRule* g);
 
     void
 lose_XnPc (XnPc* pc)
@@ -190,7 +195,7 @@ dflt_XnSys ()
     InitTable( sys.pcs );
     InitTable( sys.vbls );
     sys.legit = dflt_BitTable ();
-    InitTable( sys.xns );
+    InitTable( sys.legit_rules );
     sys.nstates = 0;
     sys.n_rule_steps = 0;
     return sys;
@@ -208,10 +213,10 @@ lose_XnSys (XnSys* sys)
     } BLose()
     LoseTable( sys->vbls );
     lose_BitTable (&sys->legit);
-    { BLoopT( XnSz, i, sys->xns.sz )
-        LoseTable( sys->xns.s[i] );
+    { BLoopT( XnSz, i, sys->legit_rules.sz )
+        lose_XnRule (&sys->legit_rules.s[i]);
     } BLose()
-    LoseTable( sys->xns );
+    LoseTable( sys->legit_rules );
 }
 
 qual_inline
@@ -342,10 +347,6 @@ accept_topology_XnSys (XnSys* sys)
 
         /* All legit states.*/
     sys->legit = cons2_BitTable (stepsz, 1);
-    EnsizeTable( sys->xns, sys->legit.sz ); 
-    { BLoopT( XnSz, i, sys->xns.sz )
-        InitTable( sys->xns.s[i] );
-    } BLose()
 
     { BLoop( pcidx, sys->pcs.sz )
         XnPc* pc = &sys->pcs.s[pcidx];
@@ -867,19 +868,18 @@ detect_convergence (FnWMem_detect_convergence* tape,
     } BLose()
     reach.sz = 0;
 
-    { BLoopT( XnSz, i, xns.sz )
-        { BLoopT( XnSz, j, xns.s[i].sz )
-            PushTable( bxns.s[xns.s[i].s[j]], i );
-        } BLose()
-    } BLose()
-
     op_BitTable (tested, *tape->legit, BitTable_IDEN);
-    { BLoopT( XnSz, i, tested.sz )
+
+    { BLoopT( XnSz, i, xns.sz )
         if (test_BitTable (tested, i))
         {
             ++ nreached;
             PushTable( reach, i );
         }
+
+        { BLoopT( XnSz, j, xns.s[i].sz )
+            PushTable( bxns.s[xns.s[i].s[j]], i );
+        } BLose()
     } BLose()
 
     while (reach.sz > 0)
@@ -901,28 +901,30 @@ detect_convergence (FnWMem_detect_convergence* tape,
     return (nreached == tested.sz);
 }
 
+    /** Check for livelock and deadlock freedom
+     * along with fulfillment of the original protocol.
+     *
+     * It is assumed that all transitions in legit states are found in the
+     * original protocol (we just check edge counts).
+     **/
     Trit
-detect_stabilizing (FnWMem_detect_livelock* tape,
-                    const TableT(Xns) xns)
+detect_strong_convergence (FnWMem_synsearch* tape)
 {
-    bool missing = false;
+    if (detect_livelock (&tape->livelock_tape, tape->xns))  return Nil;
 
-    { BLoopT( XnSz, i, xns.sz )
-        Bit legit = test_BitTable (*tape->legit, i);
-        if (xns.s[i].sz == 0)
-        {
-            if (!legit)  missing = true;
-        }
-        else
-        {
-                /* No transitions from legit states (yet).*/
-            if (legit)  return Nil;
-        }
+    { BLoopT( XnSz, i, tape->xns.sz )
+        if (tape->xns.s[i].sz == 0)
+            if (!test_BitTable (tape->sys->legit, i))
+                return May;
     } BLose()
 
-    if (detect_livelock (tape, xns))  return Nil;
+    { BLoopT( XnSz, i, tape->legit_states.sz )
+        XnSz s0 = tape->legit_states.s[i];
+        if (tape->xns.s[s0].sz != tape->legit_xns.s[i].sz)
+            return May;
+    } BLose()
 
-    return missing ? May : Yes;
+    return Yes;
 }
 
     void
@@ -943,11 +945,11 @@ cons1_FnWMem_synsearch (const XnSys* sys)
 {
     FnWMem_synsearch tape;
 
+    tape.stabilizing = false;
     tape.sys = sys;
     tape.livelock_tape = cons1_FnWMem_detect_livelock (&sys->legit);
     tape.convergence_tape = cons1_FnWMem_detect_convergence (&sys->legit);
     tape.dostates_tape = cons1_FnWMem_do_XnSys (sys);
-    tape.stabilizing = false;
 
     InitTable( tape.xns );
     GrowTable( tape.xns, sys->legit.sz );
@@ -966,6 +968,27 @@ cons1_FnWMem_synsearch (const XnSys* sys)
         uint nrvbls = sys->pcs.s[i].nrvbls;
         if (nwvbls > tape.rule_nwvbls)  tape.rule_nwvbls = nwvbls;
         if (nrvbls > tape.rule_nrvbls)  tape.rule_nrvbls = nrvbls;
+    } BLose()
+
+    InitTable( tape.legit_states );
+    { BLoopT( XnSz, i, sys->legit.sz )
+        if (test_BitTable (sys->legit, i))
+            PushTable( tape.legit_states, i );
+    } BLose()
+
+    { BLoopT( XnSz, i, sys->legit_rules.sz )
+        add_XnRule (&tape, &sys->legit_rules.s[i]);
+    } BLose()
+
+    InitTable( tape.legit_xns );
+    EnsizeTable( tape.legit_xns, tape.legit_states.sz );
+    { BLoopT( XnSz, i, tape.legit_states.sz )
+        InitTable( tape.legit_xns.s[i] );
+        CopyTable( tape.legit_xns.s[i], tape.xns.s[tape.legit_states.s[i]] );
+    } BLose()
+
+    { BLoopT( XnSz, i, sys->legit_rules.sz )
+        back1_Xn (&tape.xns, &tape.xn_stk);
     } BLose()
 
     return tape;
@@ -994,6 +1017,13 @@ lose_FnWMem_synsearch (FnWMem_synsearch* tape)
         LoseTable( tape->may_rules.s[i] );
     } BLose()
     LoseTable( tape->may_rules );
+
+    LoseTable( tape->legit_states );
+
+    { BLoopT( XnSz, i, tape->legit_xns.sz )
+        LoseTable( tape->legit_xns.s[i] );
+    } BLose()
+    LoseTable( tape->legit_xns );
 }
 
 #define DelTo( a, b, c ) \
@@ -1075,6 +1105,98 @@ add_XnRule (FnWMem_synsearch* tape, const XnRule* g)
     PushTable( *stk, nadds );
 }
 
+static
+    int
+cmp_XnSz (const void* pa, const void* pb)
+{
+    const XnSz a = *(XnSz*) pa;
+    const XnSz b = *(XnSz*) pb;
+    return ((a > b) ? +1 :
+            (a < b) ? -1 :
+            0);
+}
+
+
+static
+    void
+set_may_rules (FnWMem_synsearch* tape, TableT(XnSz)* may_rules, XnRule* g)
+{
+    const XnSys* restrict sys = tape->sys;
+
+        /* Ensure protocol is closed.*/
+    { BLoopT( XnSz, i, tape->legit_xns.sz )
+        const TableT(XnSz)* t = &tape->legit_xns.s[i];
+        { BLoopT( XnSz, j, t->sz )
+            if (!test_BitTable (sys->legit, t->s[j]))
+            {
+                DBog0( "Protocol breaks closure." );
+                may_rules->sz = 0;
+                return;
+            }
+        } BLose()
+    } BLose()
+
+    { BLoopT( XnSz, i, sys->n_rule_steps )
+            /* XnSz rule_step = i; */
+        XnSz rule_step = sys->n_rule_steps - 1 - i;
+
+        bool add = true;
+        bool test_selfloop = true;
+        TableT(XnSz) t;
+
+        rule_XnSys (g, sys, rule_step);
+        add_XnRule (tape, g);
+
+        t = tape->xn_stk;
+        -- t.sz;
+
+        { BLoopT( XnSz, j, t.sz )
+            const XnSz s0 = t.s[j];
+
+                /* Do not add rules which cause
+                 * bad transitions from legit states.
+                 */
+            if (test_BitTable (sys->legit, s0))
+            {
+                const XnSz s1 = tape->xns.s[s0].s[0];
+                const XnSz* elt;
+                XnSz legit_idx;
+
+                test_selfloop = false;
+
+                elt = bsearch (&s0, tape->legit_states.s,
+                               tape->legit_states.sz, sizeof(XnSz),
+                               cmp_XnSz);
+
+                legit_idx = IdxEltTable( tape->legit_states, elt );
+
+                elt = bsearch (&s1,
+                               tape->legit_xns.s[legit_idx].s,
+                               tape->legit_xns.s[legit_idx].sz,
+                               sizeof(XnSz),
+                               cmp_XnSz);
+
+                if (!elt)
+                {
+                    add = false;
+                    break;
+                }
+            }
+        } BLose()
+
+        if (add && test_selfloop)
+        {
+            const XnSz s0 = t.s[0];
+            add = (s0 != tape->xns.s[s0].s[0]);
+        }
+
+        back1_Xn (&tape->xns, &tape->xn_stk);
+
+        if (add)
+            PushTable( *may_rules, rule_step );
+    } BLose()
+}
+
     void
 synsearch (FnWMem_synsearch* tape)
 {
@@ -1109,31 +1231,13 @@ synsearch (FnWMem_synsearch* tape)
 
     if (tape->rules.sz == 1)
     {
-        Trit stabilizing =
-            detect_stabilizing (&tape->livelock_tape, tape->xns);
-
-        if (stabilizing == Nil)  return;
-        if (stabilizing == Yes)
+        if (all_BitTable (sys->legit))
         {
             tape->stabilizing = true;
+            CopyTable( tape->rules, sys->legit_rules );
             return;
         }
-
-        { BLoopT( XnSz, i, sys->n_rule_steps )
-                /* XnSz rule_step = i; */
-            XnSz rule_step = sys->n_rule_steps - 1 - i;
-            rule_XnSys (g, sys, rule_step);
-            { BLoop( j, g->q.sz )
-                if (g->p.s[j] != g->q.s[j])
-                {
-                        /* It's not a self-loop.*/
-                    PushTable( *may_rules, rule_step );
-                    break;
-                }
-            } BLose()
-        } BLose()
-            /* TODO: Prune rules that break closure.*/
-            /* TODO: Prune rules that add bad transitions in legit states.*/
+        set_may_rules (tape, may_rules, g);
     }
     else
     {
@@ -1150,8 +1254,7 @@ synsearch (FnWMem_synsearch* tape)
             rule_XnSys (g, sys, rule_step);
             add_XnRule (tape, g);
 
-            stabilizing =
-                detect_stabilizing (&tape->livelock_tape, tape->xns);
+            stabilizing = detect_strong_convergence (tape);
 
             if (stabilizing == Yes)
             {
@@ -1159,48 +1262,74 @@ synsearch (FnWMem_synsearch* tape)
                 return;
             }
 
-            if (0 == *TopTable( tape->xn_stk ))
+                /* Prune if the rule doesn't add any useful transitions.
+                 * Note: This is probably invalid if we assume weak fairness.
+                 */
+            if (stabilizing == May)
             {
-                DBog0( "No new transitions from this rule." );
+                bool add = false;
+                DeclTable( XnSz, t );
+                t.sz = *TopTable( tape->xn_stk );
+                t.s = &tape->xn_stk.s[tape->xn_stk.sz - 1 - t.sz];
+
+                Claim2( t.sz ,>, 0 );
+
+                { BLoopT( XnSz, j, t.sz )
+                    XnSz s0 = t.s[j];
+                        /* Resolves a deadlock or
+                         * helps fulfill the original protocol.
+                         */
+                    if (tape->xns.s[s0].sz == 1 ||
+                        test_BitTable (sys->legit, s0))
+                    {
+                        add = true;
+                        break;
+                    }
+                } BLose()
+
+                if (!add)
+                {
+                    stabilizing = Nil;
+                }
             }
+
             back1_Xn (&tape->xns, &tape->xn_stk);
 
-            if (stabilizing != Nil)
+            if (stabilizing == May)
             {
                 may_rules->s[off] = may_rules->s[i];
                 ++ off;
             }
         } BLose()
         may_rules->sz = off;
+    }
 
-            /* TODO: Remove rules which don't add any transitions
-             * from states which have no transitions.
-             * (i.e. don't resolve any deadlocks)
-             * Note: I'm not sure if this is valid if we assume weak fairness.
-             * Note: This may also need to allow rules which add transitions
-             * to match those in the set of legitimate states. Currently it
-             * is assumed that no transitions should fire when the system has
-             * converged.
-             */
+        /* Check that a weakly stabilizing protocol
+         * exists with the rules we have left.
+         */
+    {
+        bool weak = true;
+        { BLoopT( XnSz, i, may_rules->sz )
+            XnSz rule_step = may_rules->s[i];
+            rule_XnSys (g, sys, rule_step);
+            add_XnRule (tape, g);
+        } BLose()
 
-            /* Check that a weakly stabilizing protocol
-             * exists with the rules we have left.
-             */
+        weak = detect_convergence (&tape->convergence_tape, tape->xns);
+
+        { BLoopT( XnSz, i, tape->legit_states.sz )
+            XnSz nout = tape->xns.s[tape->legit_states.s[i]].sz;
+            if (nout != tape->legit_xns.s[i].sz)
+                weak = false;
+        } BLose()
+
+        { BLoopT( XnSz, i, may_rules->sz )
+            back1_Xn (&tape->xns, &tape->xn_stk);
+        } BLose()
+
+        if (!weak)
         {
-            bool weak;
-            { BLoopT( XnSz, i, may_rules->sz )
-                XnSz rule_step = may_rules->s[i];
-                rule_XnSys (g, sys, rule_step);
-                add_XnRule (tape, g);
-            } BLose()
-            weak = detect_convergence (&tape->convergence_tape, tape->xns);
-            { BLoopT( XnSz, i, may_rules->sz )
-                back1_Xn (&tape->xns, &tape->xn_stk);
-            } BLose()
-            if (!weak)
-            {
-                may_rules->sz = 0;
-            }
+            may_rules->sz = 0;
         }
     }
 
@@ -1282,6 +1411,7 @@ sat3_XnSys ()
             /* {{ 1, 3, 1 }}, */
         {{ -2, 1, -2 }},
         {{ -2, -2, -2 }},
+            /* {{ 2, -1, 2 }}, */
         {{ 1, 1, 1 }}
     };
     DeclTable( Disj3, cnf );
