@@ -101,7 +101,8 @@ struct FnWMem_synsearch
     TableT(Xns) xns;
     TableT(XnSz) xn_stk;
     TableT(XnRule) rules;
-    uint cached_nrules;
+    TableT(Xns) may_rules;
+    uint n_cached_rules;
     uint rule_nwvbls;
     uint rule_nrvbls;
 };
@@ -853,7 +854,8 @@ cons1_FnWMem_synsearch (const XnSys* sys)
 
     InitTable( tape.xn_stk );
     InitTable( tape.rules );
-    tape.cached_nrules = 0;
+    InitTable( tape.may_rules );
+    tape.n_cached_rules = 0;
     tape.rule_nwvbls = 0;
     tape.rule_nrvbls = 0;
     { BLoop( i, sys->pcs.sz )
@@ -878,11 +880,16 @@ lose_FnWMem_synsearch (FnWMem_synsearch* tape)
     LoseTable( tape->xns );
     LoseTable( tape->xn_stk );
 
-    { BLoop( i, tape->cached_nrules )
+    { BLoop( i, tape->n_cached_rules )
         LoseTable( tape->rules.s[i].p );
         LoseTable( tape->rules.s[i].q );
     } BLose()
     LoseTable( tape->rules );
+
+    { BLoopT( XnSz, i, tape->n_cached_rules )
+        LoseTable( tape->may_rules.s[i] );
+    } BLose()
+    LoseTable( tape->may_rules );
 }
 
 #define DelTo( a, b, c ) \
@@ -965,33 +972,16 @@ add_XnRule (FnWMem_synsearch* tape, const XnRule* g)
 }
 
     void
-synsearch (FnWMem_synsearch* tape, XnSz rule_step)
+synsearch (FnWMem_synsearch* tape)
 {
     const XnSys* restrict sys = tape->sys;
     XnRule* g;
-
-    {
-        Trit stabilizing =
-            detect_stabilizing (&tape->livelock_tape, tape->xns);
-
-        if (stabilizing == Nil)
-        {
-                /* DBog0( "NOPE" ); */
-            return;
-        }
-
-        if (stabilizing == Yes)
-        {
-                /* DBog0( "BLACKJACK" ); */
-            tape->stabilizing = true;
-            return;
-        }
-    }
-        /* DBog0( "HIT" ); */
+    TableT(XnSz)* may_rules;
 
     g = Grow1Table( tape->rules );
+    may_rules = Grow1Table( tape->may_rules );
 
-    if (tape->rules.sz > tape->cached_nrules)
+    if (tape->rules.sz > tape->n_cached_rules)
     {
         g->pc = 0;
         InitTable( g->p );
@@ -1006,150 +996,119 @@ synsearch (FnWMem_synsearch* tape, XnSz rule_step)
             g->q.s[i] = 0;
         } BLose()
 
-        ++ tape->cached_nrules;
+        InitTable( *may_rules );
+
+        ++ tape->n_cached_rules;
     }
 
-#if 1
-    if (tape->rules.sz > 1)
+    may_rules->sz = 0;
+
+    if (tape->rules.sz == 1)
     {
-        XnRule* tg = &tape->rules.s[tape->rules.sz-2];
+        Trit stabilizing =
+            detect_stabilizing (&tape->livelock_tape, tape->xns);
 
-        const XnPc* restrict pc = &sys->pcs.s[tg->pc];
-        uint nwovbls = pc->vbls.sz - pc->nrvbls;
-        uint off = 0;
-
-        g->pc = tg->pc;
-        CopyTable( g->p, tg->p );
-
-        { BLoop( i, g->q.sz )
-            g->q.s[i] = 0;
-        } BLose()
-
-        off = g->p.sz;
-        while (off > 0)
+        if (stabilizing == Nil)  return;
+        if (stabilizing == Yes)
         {
-            -- off;
-            if (g->p.s[off] < sys->vbls.s[pc->vbls.s[nwovbls + off]].max)
-            {
-                ++ g->p.s[off];
-                off = g->p.sz;
-                break;
-            }
-            g->p.s[off] = 0;
+            tape->stabilizing = true;
+            return;
         }
-        if (off == 0)  ++ g->pc;
-    }
 
-    for (; g->pc < sys->pcs.sz; ++g->pc)
-    {
-        const XnPc* restrict pc = &sys->pcs.s[g->pc];
-        uint nwovbls = pc->vbls.sz - pc->nrvbls;
-        uint off = 0;
-
-        g->p.sz = pc->nrvbls;
-        g->q.sz = pc->nwvbls;
-        do
-        {
-            do
-            {
-                bool doit = false;
-                { BLoop( i, g->q.sz )
-                    if (g->p.s[i] != g->q.s[i])
-                    {
-                        doit = true;
-                        break;
-                    }
-                } BLose()
-
-                if (doit)
+        { BLoopT( XnSz, i, sys->n_rule_steps )
+            XnSz rule_step = i;
+                /* XnSz rule_step = sys->n_rule_steps - 1 - i; */
+            rule_XnSys (g, sys, rule_step);
+            { BLoop( j, g->q.sz )
+                if (g->p.s[j] != g->q.s[j])
                 {
-                    add_XnRule (tape, g);
-                    if (tape->rules.sz-1 < 40 && false)
-                        /* if (tape->rules.sz-1 >= 0 || false) */
-                    {
-                        OFileB* of = stderr_OFileB ();
-                        dump_cstr_OFileB (of, " -- ");
-                        dump_uint_OFileB (of, tape->rules.sz - 1);
-                        dump_cstr_OFileB (of, " -- ");
-                        dump_XnRule (of, g, sys);
-                        dump_char_OFileB (of, '\n');
-                        flush_OFileB (of);
-                    }
-
-                    synsearch (tape, 0);
-                    if (tape->stabilizing)  return;
-                    back1_Xn (&tape->xns, &tape->xn_stk);
-
-                    g = TopTable( tape->rules );
-                }
-
-                off = g->q.sz;
-                while (off > 0)
-                {
-                    -- off;
-                    if (g->q.s[off] < sys->vbls.s[pc->vbls.s[off]].max)
-                    {
-                        ++ g->q.s[off];
-                        off = g->q.sz;
-                        break;
-                    }
-                    g->q.s[off] = 0;
-                }
-            } while (off != 0);
-
-            off = g->p.sz;
-            while (off > 0)
-            {
-                -- off;
-                if (g->p.s[off] < sys->vbls.s[pc->vbls.s[nwovbls + off]].max)
-                {
-                    ++ g->p.s[off];
-                    off = g->p.sz;
+                        /* It's not a self-loop.*/
+                    PushTable( *may_rules, rule_step );
                     break;
                 }
-                g->p.s[off] = 0;
-            }
-        } while (off != 0);
-    }
-#else
-    for (; rule_step < sys->n_rule_steps; ++ rule_step)
-    {
-        bool doit = false;
-        rule_XnSys (g, sys, rule_step);
-        { BLoop( i, g->q.sz )
-            if (g->p.s[i] != g->q.s[i])
-            {
-                doit = true;
-                break;
-            }
+            } BLose()
         } BLose()
+    }
+    else
+    {
+        CopyTable( *may_rules, *(may_rules - 1) );
+    }
 
-        if (doit)
-        {
+        /* Trim down the next possible steps.*/
+    {
+        XnSz off = 0;
+        { BLoopT( XnSz, i, may_rules->sz )
+            Trit stabilizing;
+            XnSz rule_step = may_rules->s[i];
+
+            rule_XnSys (g, sys, rule_step);
             add_XnRule (tape, g);
-            if (tape->rules.sz-1 < 40 && false)
-                    /* if (tape->rules.sz-1 >= 0 || false) */
+
+            stabilizing =
+                detect_stabilizing (&tape->livelock_tape, tape->xns);
+
+            if (stabilizing == Yes)
             {
-                OFileB* of = stderr_OFileB ();
-                dump_cstr_OFileB (of, " -- ");
-                dump_uint_OFileB (of, tape->rules.sz - 1);
-                dump_cstr_OFileB (of, " -- ");
-                dump_XnRule (of, g, sys);
-                dump_char_OFileB (of, '\n');
-                flush_OFileB (of);
+                tape->stabilizing = true;
+                return;
             }
 
-            synsearch (tape, rule_step + 1);
-            if (tape->stabilizing)  return;
+            if (0 == *TopTable( tape->xn_stk ))
+            {
+                DBog0( "No new transitions from this rule." );
+            }
             back1_Xn (&tape->xns, &tape->xn_stk);
 
-            g = TopTable( tape->rules );
-        }
+            if (stabilizing != Nil)
+            {
+                may_rules->s[off] = may_rules->s[i];
+                ++ off;
+            }
+        } BLose()
+        may_rules->sz = off;
+            /* TODO: Remove rules which don't add any transitions
+             * from states which have no transitions.
+             * (i.e. don't resolve any deadlocks)
+             * Note: I'm not sure if this is valid if we assume weak fairness.
+             * Note: This may also need to allow rules which add transitions
+             * to match those in the set of legitimate states. Currently it
+             * is assumed that no transitions should fire when the system has
+             * converged.
+             */
+            /* TODO: check that a weakly stabilizing protocol
+             * exists with the rules we have left.
+             */
     }
-#endif
+
+    while (may_rules->sz > 0)
+    {
+        XnSz rule_step = *TopTable( *may_rules );
+        -- may_rules->sz;
+        rule_XnSys (g, sys, rule_step);
+
+        add_XnRule (tape, g);
+        if (tape->rules.sz-1 < 40 && false)
+                /* if (tape->rules.sz-1 >= 0 || false) */
+        {
+            OFileB* of = stderr_OFileB ();
+            dump_cstr_OFileB (of, " -- ");
+            dump_uint_OFileB (of, tape->rules.sz - 1);
+            dump_cstr_OFileB (of, " -- ");
+            dump_XnRule (of, g, sys);
+            dump_char_OFileB (of, '\n');
+            flush_OFileB (of);
+        }
+
+        synsearch (tape);
+        if (tape->stabilizing)  return;
+        back1_Xn (&tape->xns, &tape->xn_stk);
+
+        g = TopTable( tape->rules );
+        may_rules = TopTable( tape->may_rules );
+    }
 
     -- tape->rules.sz;
-        /* DBog0( "BUST" ); */
+    -- tape->may_rules.sz;
         /* if (tape->rules.sz == 58)  exit(1); */
 }
 
@@ -1196,11 +1155,11 @@ testfn_detect_livelock ()
 sat3_XnSys ()
 {
     Disj3 clauses[] = {
-            /* {{ -2, -2, -2 }}, */
-        {{ 1, -1, 1 }}
+        {{ -2, -2, -2 }},
+        {{ 1, 1, 1 }}
     };
     DeclTable( Disj3, cnf );
-    const uint n = 1;
+    const uint n = 2;
     DecloStack( XnSys, sys );
     OFileB name = dflt_OFileB ();
 
@@ -1274,17 +1233,6 @@ sat3_XnSys ()
     return *sys;
 }
 
-#if 0
-    void
-dump_cnf_XnSys (FileB* f, const XnSys* sys)
-{
-    const XnSz nstates = size_XnSys (sys);
-    const XnSz nxns = nstates * nstates;
-    const uint nvbls = nstates + nxns;
-    uint nclauses = 0;
-}
-#endif
-
     int
 main ()
 {
@@ -1296,7 +1244,7 @@ main ()
 
     {
         FnWMem_synsearch tape = cons1_FnWMem_synsearch (sys);
-        synsearch (&tape, 0);
+        synsearch (&tape);
         if (tape.stabilizing)
         {
             DBog0( "Solution found! :)" );
