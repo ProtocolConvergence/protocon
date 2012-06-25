@@ -1,0 +1,14 @@
+#!/bin/env lace
+
+$(H: satsyn_exe) ../bin/satsyn
+
+ $(O sig) true
+$(XO sig) waitdo $(H satsyn_exe)
+$(XO sig) waitdo spin -a model.pml
+$(XO sig) waitdo gcc pan.c -o pan
+$(XO sig) waitdo rm -f pan.b pan.c pan.h pan.m pan.p pan.t
+$(XO sig) waitdo ./pan -a
+
+$(X  sig) tee $(OF sig)
+$(X  sig) waitdo rm -f pan _spin_nvr.tmp
+
