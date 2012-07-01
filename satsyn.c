@@ -7,6 +7,10 @@
 #include <assert.h>
 #include <stdio.h>
 
+static const bool DBog_WeakChk    = true;
+static const bool DBog_AssertRule = true;
+static const bool DBog_SearchStep = true;
+
 typedef struct XnPc XnPc;
 typedef struct XnVbl XnVbl;
 typedef struct XnEVbl XnEVbl;
@@ -117,6 +121,7 @@ struct FnWMem_synsearch
     TableT(XnRule) rules;
     TableT(Xns) may_rules;
     TableT(XnSz) cmp_xn_stk;
+    TableT(XnSz2) influence_order;
     uint n_cached_rules;
     uint n_cached_may_rules;
     uint rule_nwvbls;
@@ -892,6 +897,7 @@ cons1_FnWMem_synsearch (const XnSys* sys)
     InitTable( tape.rules );
     InitTable( tape.may_rules );
     InitTable( tape.cmp_xn_stk );
+    InitTable( tape.influence_order );
     tape.n_cached_rules = 0;
     tape.n_cached_may_rules = 0;
     tape.rule_nwvbls = 0;
@@ -952,6 +958,8 @@ lose_FnWMem_synsearch (FnWMem_synsearch* tape)
     LoseTable( tape->may_rules );
 
     LoseTable( tape->cmp_xn_stk );
+
+    LoseTable( tape->influence_order );
 
     LoseTable( tape->legit_states );
 
@@ -1051,6 +1059,15 @@ cmp_XnSz (const void* pa, const void* pb)
             0);
 }
 
+#if 1
+    /* Only sort by the first member.*/
+static
+    int
+cmp_XnSz2 (const void* pa, const void* pb)
+{
+    return cmp_XnSz (&((XnSz2*)pa)->i, &((XnSz2*)pb)->i);
+}
+#endif
 
 static
     void
@@ -1181,42 +1198,17 @@ grow1_may_rules_synsearch (FnWMem_synsearch* tape)
 }
 
     void
-synsearch (FnWMem_synsearch* tape)
+synsearch_trim (FnWMem_synsearch* tape)
 {
-    const XnSys* restrict sys = tape->sys;
-    XnRule* g;
-    XnSz nreqrules = 0;
-    TableT(XnSz)* may_rules;
-
-    g = grow1_rules_synsearch (tape);
-    may_rules = grow1_may_rules_synsearch (tape);
-
-    may_rules->sz = 0;
-
-    if (tape->may_rules.sz == 1)
-    {
-        if (all_BitTable (sys->legit))
-        {
-            tape->stabilizing = true;
-            CopyTable( tape->rules, sys->legit_rules );
-            return;
-        }
-        if (Yes == detect_strong_convergence (tape))
-        {
-            tape->stabilizing = true;
-            return;
-        }
-        set_may_rules (tape, may_rules, g);
-    }
-    else
-    {
-        CopyTable( *may_rules, *(may_rules - 1) );
-    }
+    const XnSys* sys = tape->sys;
+    TableT(XnSz)* may_rules = TopTable( tape->may_rules );
+    XnRule* g = TopTable( tape->rules );
 
         /* Trim down the next possible steps.*/
     if (true)
     {
         XnSz off = 0;
+
         { BLoopT( XnSz, i, may_rules->sz )
             Trit stabilizing;
             XnSz rule_step = may_rules->s[i];
@@ -1263,16 +1255,41 @@ synsearch (FnWMem_synsearch* tape)
                 }
             }
 
-            back1_Xn (&tape->xns, &tape->xn_stk);
-
             if (stabilizing == May)
             {
+                XnSz2 p;
+                p.i = *TopTable( tape->xn_stk );
+                p.j = may_rules->s[i];
+                PushTable( tape->influence_order, p );
+
                 may_rules->s[off] = may_rules->s[i];
                 ++ off;
             }
+
+            back1_Xn (&tape->xns, &tape->xn_stk);
         } BLose()
         may_rules->sz = off;
+
+        qsort (tape->influence_order.s,
+               tape->influence_order.sz,
+               sizeof(*tape->influence_order.s),
+               cmp_XnSz2);
+        { BLoopT( XnSz, i, tape->influence_order.sz )
+                /* XnSz idx = tape->influence_order.sz - 1 - i; */
+            XnSz idx = i;
+            may_rules->s[i] = tape->influence_order.s[idx].j;
+        } BLose()
+        tape->influence_order.sz = 0;
     }
+}
+
+    bool
+synsearch_check_weak (FnWMem_synsearch* tape, XnSz* ret_nreqrules)
+{
+    const XnSys* sys = tape->sys;
+    TableT(XnSz)* may_rules = TopTable( tape->may_rules );
+    XnRule* g = TopTable( tape->rules );
+    XnSz nreqrules = 0;
 
         /* Check that a weakly stabilizing protocol
          * exists with the rules we have left.
@@ -1315,9 +1332,10 @@ synsearch (FnWMem_synsearch* tape)
         if (!weak)
         {
             may_rules->sz = 0;
-            if (0)
+            if (DBog_WeakChk)
                 DBog1( "Not weakly stabilizing at depth %u.",
                        tape->may_rules.sz-1 );
+            return false;
         }
     }
 
@@ -1387,71 +1405,126 @@ synsearch (FnWMem_synsearch* tape)
         Claim2( tape->cmp_xn_stk.sz ,==, 0 );
     }
 
-    if (nreqrules > 0)
+    *ret_nreqrules = nreqrules;
+    return true;
+}
+
+    void
+synsearch (FnWMem_synsearch* tape)
+{
+    const XnSys* restrict sys = tape->sys;
+    XnRule* g;
+    XnSz nreqrules = 0;
+    TableT(XnSz)* may_rules;
+
+    g = grow1_rules_synsearch (tape);
+    may_rules = grow1_may_rules_synsearch (tape);
+
+    may_rules->sz = 0;
+
+    if (tape->may_rules.sz == 1)
     {
-        Trit stabilizing = May;
-        -- tape->rules.sz;
-        g = g - nreqrules;
-#if 0
-        DBog3( "Assert %u/%u rules at depth %u.",
-               nreqrules,
-               may_rules->sz + nreqrules,
-               tape->may_rules.sz-1 );
-#endif
-        { BLoop( i, nreqrules )
-            add_XnRule (tape, g + i);
-        } BLose()
-
-            /* If the number of required rules is greater than 1,
-             * we haven't checked its validity.
-             */
-        if (nreqrules > 1)
+        Trit stabilizing;
+        if (all_BitTable (sys->legit))
         {
-            stabilizing = detect_strong_convergence (tape);
-
-            if (stabilizing == Yes)
-            {
-                tape->stabilizing = true;
-                return;
-            }
+            tape->stabilizing = true;
+            CopyTable( tape->rules, sys->legit_rules );
+            return;
         }
 
-        if (stabilizing == May)
+        stabilizing = detect_strong_convergence (tape);
+        if (Yes == stabilizing)
         {
+            tape->stabilizing = true;
+            return;
+        }
+        if (stabilizing == Nil)
+        {
+            DBog0( "Hint protocol has a livelock!" );
+            return;
+        }
+        set_may_rules (tape, may_rules, g);
+    }
+    else
+    {
+        CopyTable( *may_rules, *(may_rules - 1) );
+    }
+
+    synsearch_trim (tape);
+    if (tape->stabilizing)  return;
+
+    while (may_rules->sz > 0)
+    {
+        if (!synsearch_check_weak (tape, &nreqrules))  break;
+        g = TopTable( tape->rules );
+
+        if (nreqrules > 0)
+        {
+            Trit stabilizing = May;
+            -- tape->rules.sz;
+            g = g - nreqrules;
+            if (DBog_AssertRule)
+                DBog3( "Assert %u/%u rules at depth %u.",
+                       nreqrules,
+                       may_rules->sz + nreqrules,
+                       tape->may_rules.sz-1 );
+            { BLoop( i, nreqrules )
+                add_XnRule (tape, g + i);
+            } BLose()
+
+                /* If the number of required rules is greater than 1,
+                 * we haven't checked its validity.
+                 */
+            if (nreqrules > 1)
+            {
+                stabilizing = detect_strong_convergence (tape);
+
+                if (stabilizing == Yes)
+                {
+                    tape->stabilizing = true;
+                    return;
+                }
+            }
+
+            if (stabilizing == May)
+            {
+                synsearch (tape);
+                if (tape->stabilizing)  return;
+            }
+
+            { BLoop( i, nreqrules )
+                back1_Xn (&tape->xns, &tape->xn_stk);
+            } BLose()
+            break;
+        }
+        else
+        {
+            XnSz rule_step = *TopTable( *may_rules );
+            -- may_rules->sz;
+            rule_XnSys (g, sys, rule_step);
+
+            add_XnRule (tape, g);
+            if (DBog_SearchStep
+                || tape->may_rules.sz-1 < 40)
+            {
+                OFileB* of = stderr_OFileB ();
+                dump_cstr_OFileB (of, " -- ");
+                dump_uint_OFileB (of, tape->may_rules.sz - 1);
+                dump_cstr_OFileB (of, " -- ");
+                dump_uint_OFileB (of, may_rules->sz);
+                dump_cstr_OFileB (of, " -- ");
+                dump_promela_XnRule (of, g, sys);
+                dump_char_OFileB (of, '\n');
+                flush_OFileB (of);
+            }
+
             synsearch (tape);
             if (tape->stabilizing)  return;
-        }
-
-        { BLoop( i, nreqrules )
             back1_Xn (&tape->xns, &tape->xn_stk);
-        } BLose()
-    }
-    else  while (may_rules->sz > 0)
-    {
-        XnSz rule_step = *TopTable( *may_rules );
-        -- may_rules->sz;
-        rule_XnSys (g, sys, rule_step);
 
-        add_XnRule (tape, g);
-        if (0 && tape->may_rules.sz-1 < 40)
-        {
-            OFileB* of = stderr_OFileB ();
-            dump_cstr_OFileB (of, " -- ");
-            dump_uint_OFileB (of, tape->may_rules.sz - 1);
-            dump_cstr_OFileB (of, " -- ");
-            dump_uint_OFileB (of, may_rules->sz);
-            dump_cstr_OFileB (of, " -- ");
-            dump_promela_XnRule (of, g, sys);
-            dump_char_OFileB (of, '\n');
-            flush_OFileB (of);
+            g = TopTable( tape->rules );
+            may_rules = TopTable( tape->may_rules );
         }
-
-        synsearch (tape);
-        if (tape->stabilizing)  return;
-        back1_Xn (&tape->xns, &tape->xn_stk);
-
-        g = TopTable( tape->rules );
-        may_rules = TopTable( tape->may_rules );
     }
 
     if (nreqrules > 0)  tape->rules.sz -= nreqrules;
@@ -1882,8 +1955,10 @@ sat3_ring_XnSys (const CnfFmla* fmla, const bool use_sat)
             { BLoop( i, npcs )
                 set1_BitTable (fix->fixed, y_idcs[i]);
                 fix->vals[y_idcs[i]] = 2;
+                wipe_BitTable (bt, 0);
                 do_XnSys (fix, bt);
-                op_BitTable (sys->legit, bt, BitOp_NIMP);
+                op_BitTable (bt, bt, BitOp_NOT);
+                op_BitTable (sys->legit, bt, BitOp_AND);
                 set0_BitTable (fix->fixed, y_idcs[i]);
             } BLose()
         }
@@ -1937,7 +2012,8 @@ sat3_soln_XnSys (TableT(XnRule)* rules,
 
     void
 sat3_ring_soln_XnSys (TableT(XnRule)* rules,
-                      const BitTable evs, const XnSys* sys)
+                      const BitTable evs, const XnSys* sys,
+                      const CnfFmla* fmla)
 {
     const bool use_sat = (sys->pcs.s[0].nwvbls == 2);
     DeclTable( XnSz, x_idcs );
@@ -1992,6 +2068,11 @@ sat3_ring_soln_XnSys (TableT(XnRule)* rules,
     } BLose()
 
     { BLoop( pcidx, sys->pcs.sz )
+        const uint npcs = sys->pcs.sz;
+        const uint oh_pcidx = pcidx;
+        const uint hi_pcidx = (oh_pcidx + 1) % npcs;
+        const uint lo_pcidx = (oh_pcidx + npcs - 1) % npcs;
+
         const XnPc* pc = &sys->pcs.s[pcidx];
         const XnSz n_rule_steps =
             pc->rule_stepsz_q.s[0] *
@@ -2015,21 +2096,16 @@ sat3_ring_soln_XnSys (TableT(XnRule)* rules,
         } BLose()
 
         { BLoop( i, vbls.sz )
-            const uint npcs = sys->pcs.sz;
-            const uint oh = pcidx;
-            const uint hi = (oh + 1) % npcs;
-            const uint lo = (oh + npcs - 1) % npcs;
-
-            if      (vbls.s[i] == x_idcs.s[oh])  x_pidcs[0] = i;
-            else if (vbls.s[i] == x_idcs.s[lo])  x_pidcs[1] = i;
-            else if (vbls.s[i] == x_idcs.s[hi])  x_pidcs[2] = i;
-            else if (vbls.s[i] == y_idcs.s[oh])  y_pidcs[0] = i;
-            else if (vbls.s[i] == y_idcs.s[lo])  y_pidcs[1] = i;
-            else if (vbls.s[i] == y_idcs.s[hi])  y_pidcs[2] = i;
+            if      (vbls.s[i] == x_idcs.s[oh_pcidx])  x_pidcs[0] = i;
+            else if (vbls.s[i] == x_idcs.s[lo_pcidx])  x_pidcs[1] = i;
+            else if (vbls.s[i] == x_idcs.s[hi_pcidx])  x_pidcs[2] = i;
+            else if (vbls.s[i] == y_idcs.s[oh_pcidx])  y_pidcs[0] = i;
+            else if (vbls.s[i] == y_idcs.s[lo_pcidx])  y_pidcs[1] = i;
+            else if (vbls.s[i] == y_idcs.s[hi_pcidx])  y_pidcs[2] = i;
             else if (!use_sat)  Claim( 0 );
-            else if (vbls.s[i] == sat_idcs.s[oh])  sat_pidcs[0] = i;
-            else if (vbls.s[i] == sat_idcs.s[lo])  sat_pidcs[1] = i;
-            else if (vbls.s[i] == sat_idcs.s[hi])  sat_pidcs[2] = i;
+            else if (vbls.s[i] == sat_idcs.s[oh_pcidx])  sat_pidcs[0] = i;
+            else if (vbls.s[i] == sat_idcs.s[lo_pcidx])  sat_pidcs[1] = i;
+            else if (vbls.s[i] == sat_idcs.s[hi_pcidx])  sat_pidcs[2] = i;
             else  Claim( 0 );
         } BLose()
 
@@ -2048,43 +2124,86 @@ sat3_ring_soln_XnSys (TableT(XnRule)* rules,
             const XnSz rule_step = pc->rule_step + rule_step_idx;
             bool add = false;
             Bit soln_y = test_BitTable (evs, g.p.s[x_pidcs[0]]);
+            Bit lo_soln_y = test_BitTable (evs, g.p.s[x_pidcs[1]]);
+            Bit hi_soln_y = test_BitTable (evs, g.p.s[x_pidcs[2]]);
+            bool xy_legit = true;
 
             rule_XnSys (&g, sys, rule_step);
 
-            if (g.p.s[x_pidcs[1]] == g.p.s[x_pidcs[2]] &&
-                g.p.s[y_pidcs[1]] != g.p.s[y_pidcs[2]])
+            { BLoop( i, fmla->clauses.sz )
+                bool allin = true;
+                bool satisfied = false;
+
+                CnfDisj clause = fmla->clauses.s[i];
+                { BLoop( j, 3 )
+                    bool found = false;
+
+                    { BLoop( k, 3 )
+                        if (g.p.s[x_pidcs[j]] == clause.terms.s[j].vbl)
+                        {
+                            if (g.p.s[y_pidcs[j]] == clause.terms.s[j].val)
+                                satisfied = true;
+                            found = true;
+                        }
+                    } BLose()
+
+                    if (satisfied)  break;
+                    if (!found)
+                    {
+                        allin = false;
+                        break;
+                    }
+                } BLose()
+
+                if (allin && !satisfied)
+                {
+                    xy_legit = false;
+                    break;
+                }
+            } BLose()
+
+            if (use_sat &&
+                (!xy_legit ||
+                 g.p.s[sat_pidcs[0]] == 0 ||
+                 g.p.s[sat_pidcs[1]] == 0 ||
+                 g.p.s[sat_pidcs[2]] == 0)
+                && ((g.p.s[y_pidcs[0]] != soln_y) ||
+                    (g.p.s[sat_pidcs[0]] == 0))
+                && (g.q.s[y_pidcs[0]] == soln_y)
+                && (g.q.s[sat_pidcs[0]] == 1)
+                && ((g.p.s[x_pidcs[1]] != g.p.s[x_pidcs[2]])
+                    || (((g.p.s[y_pidcs[1]] == lo_soln_y)
+                         || (g.p.s[sat_pidcs[1]] == 0))
+                        &&
+                        ((g.p.s[y_pidcs[2]] == hi_soln_y)
+                         || (g.p.s[sat_pidcs[2]] == 0)))))
             {
-                if (!use_sat)
-                {
-                    add = (g.p.s[y_pidcs[0]] != 2 &&
-                           g.p.s[y_pidcs[1]] != 2 &&
-                           g.p.s[y_pidcs[2]] != 2 &&
-                           g.q.s[y_qidx] == 2);
-                }
-                else
-                {
-                    add = (g.p.s[sat_pidcs[0]] != 0 &&
-                           g.p.s[sat_pidcs[1]] != 0 &&
-                           g.p.s[sat_pidcs[2]] != 0 &&
-                           g.q.s[sat_qidx] == 0);
-                }
+                add = true;
             }
-            else if (g.p.s[y_pidcs[0]] != soln_y &&
-                     g.q.s[y_qidx] == soln_y)
+            if (!use_sat
+                && (g.q.s[y_pidcs[0]] == soln_y)
+                && ((g.p.s[y_pidcs[0]] == 2)
+                    || (!xy_legit && (g.p.s[y_pidcs[0]] != soln_y)))
+                && ((g.p.s[y_pidcs[1]] == lo_soln_y)
+                    || (g.p.s[y_pidcs[1]] == 2))
+                && ((g.p.s[y_pidcs[2]] == hi_soln_y)
+                    || (g.p.s[y_pidcs[2]] == 2)))
             {
-                if (!use_sat)
-                {
-                    add = (g.p.s[y_pidcs[0]] == 2 ||
-                           g.p.s[y_pidcs[1]] == 2 ||
-                           g.p.s[y_pidcs[2]] == 2);
-                }
-                else
-                {
-                    add = (g.q.s[sat_qidx] == 0)
-                        && (g.p.s[sat_pidcs[0]] == 0 ||
-                            g.p.s[sat_pidcs[1]] == 0 ||
-                            g.p.s[sat_pidcs[2]] == 0);
-                }
+                add = true;
+            }
+            if (!add && !use_sat
+                && (g.q.s[y_pidcs[0]] == 2)
+                && (!xy_legit ||
+                    ((g.p.s[x_pidcs[1]] == g.p.s[x_pidcs[2]])
+                     && (g.p.s[y_pidcs[1]] != g.p.s[y_pidcs[2]])))
+                && (g.p.s[y_pidcs[0]] != 2)
+                && (((g.p.s[y_pidcs[1]] != 2)
+                     && (g.p.s[y_pidcs[1]] != lo_soln_y))
+                    ||
+                    ((g.p.s[y_pidcs[2]] != 2)
+                     && (g.p.s[y_pidcs[2]] != hi_soln_y))))
+            {
+                add = true;
             }
 
 
@@ -2213,6 +2332,13 @@ dump_promela (OFileB* of, const XnSys* sys, const TableT(XnRule) rules)
     dump_cstr_OFileB (of, "}\n");
 }
 
+#if 0
+    CnfFmla
+sscnf_XnSys (const XnSys* sys)
+{
+}
+#endif
+
     int
 main ()
 {
@@ -2223,16 +2349,16 @@ main ()
             /* {{Yes, 1}, {Yes, 1}, {Yes, 1}}, */
             /* {{Yes, 1}, {Nil, 0}, {Yes, 1}}, */
             /* {{Nil, 0}, {Yes, 1}, {Nil, 0}}, */
-        {{Nil, 1}, {Nil, 1}, {Nil, 1}},
-        {{Yes, 2}, {Yes, 2}, {Yes, 2}},
+        {{Yes, 1}, {Yes, 1}, {Yes, 1}},
+            /* {{Yes, 2}, {Yes, 2}, {Yes, 2}}, */
             /* {{Yes, 0}, {Nil, 0}, {Yes, 0}}, */
             /* {{Yes, 0}, {Nil, 0}, {Yes, 0}}, */
             /* {{Nil, 0}, {Nil, 0}, {Nil, 0}} */
         {{Nil, 0}, {Nil, 0}, {Nil, 0}}
     };
-    const bool ring = false;
+    const bool ring = true;
     const bool use_sat_vbl = false; /* Only applies to ring.*/
-    const bool manual_soln = false;
+    const bool manual_soln = true;
 
     init_sys_cx ();
 
@@ -2273,7 +2399,7 @@ main ()
                 if (!ring)
                     sat3_soln_XnSys (&tape.rules, evs, sys);
                 else
-                    sat3_ring_soln_XnSys (&tape.rules, evs, sys);
+                    sat3_ring_soln_XnSys (&tape.rules, evs, sys, fmla);
 
                 DBog1( "Giving %u hints.", (uint)tape.rules.sz );
             }
@@ -2281,10 +2407,12 @@ main ()
 
         synsearch (&tape);
 
-        if (tape.stabilizing)
+        if (tape.stabilizing)  DBog0( "Solution found! :)" );
+        else                   DBog0( "No solution. :(" );
+
+        if (tape.stabilizing || true)
         {
             FileB pmlf;
-            DBog0( "Solution found! :)" );
 #if 0
             { BLoopT( XnSz, i, tape.rules.sz )
                 dump_promela_XnRule (stderr_OFileB (), &tape.rules.s[i], sys);
@@ -2297,10 +2425,6 @@ main ()
             open_FileB (&pmlf, 0, "model.pml");
             dump_promela (&pmlf.xo, sys, tape.rules);
             lose_FileB (&pmlf);
-        }
-        else
-        {
-            DBog0( "No solution. :(" );
         }
         lose_FnWMem_synsearch (&tape);
         lose_BitTable (&evs);
