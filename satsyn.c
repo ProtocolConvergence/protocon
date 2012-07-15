@@ -16,7 +16,7 @@ typedef struct XnVbl XnVbl;
 typedef struct XnEVbl XnEVbl;
 typedef struct XnRule XnRule;
 typedef struct XnSys XnSys;
-typedef BitTableSz XnSz;
+typedef ujint XnSz;
 typedef byte DomSz;
 typedef struct BoolEVbl BoolEVbl;
 typedef struct CnfDisj CnfDisj;
@@ -274,7 +274,7 @@ qual_inline
     void
 dump_BitTable (OFileB* f, const BitTable bt)
 {
-    BitTableSz i;
+    ujint i;
     UFor( i, bt.sz )
         dump_char_OFileB (f, test_BitTable (bt, i) ? '1' : '0');
 }
@@ -565,7 +565,7 @@ dump_promela_XnRule (OFileB* of, const XnRule* g, const XnSys* sys)
 cons1_FnWMem_do_XnSys (const XnSys* sys)
 {
     FnWMem_do_XnSys tape;
-    const TableSz n = sys->vbls.sz;
+    const ujint n = sys->vbls.sz;
 
     tape.sys = sys;
     tape.vals = AllocT( DomSz, n);
