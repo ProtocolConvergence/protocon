@@ -2326,21 +2326,19 @@ dump_promela_pc (OFileB* of, const XnPc* pc, const XnSys* sys,
         }
     }
 
+    dump_cstr_OFileB (of, "end_");
+    dump_uint_OFileB (of, pcidx);
+    dump_cstr_OFileB (of, ":\n");
     dump_cstr_OFileB (of, "do\n");
-    dump_cstr_OFileB (of, ":: true ->\n");
-    dump_cstr_OFileB (of, "atomic { setlegit (); };\n");
-    dump_cstr_OFileB (of, "if\n");
     { BLoopT( XnSz, i, rules.sz )
         const XnRule* g = &rules.s[i];
         if (g->pc == pcidx)
         {
             dump_cstr_OFileB (of, ":: atomic {");
             dump_promela_XnRule (of, g, sys);
-                /* dump_cstr_OFileB (of, " assert(!Legit); "); */
             dump_cstr_OFileB (of, "};\n");
         }
     } BLose()
-    dump_cstr_OFileB (of, "fi;\n");
     dump_cstr_OFileB (of, "od;\n");
     dump_cstr_OFileB (of, "}\n\n");
     
@@ -2349,7 +2347,13 @@ dump_promela_pc (OFileB* of, const XnPc* pc, const XnSys* sys,
     void
 dump_promela (OFileB* of, const XnSys* sys, const TableT(XnRule) rules)
 {
-    dump_cstr_OFileB (of, "bool Legit = false;\n");
+#define dumpl(s)  dump_cstr_OFileB(of, s); dump_char_OFileB(of, '\n')
+    dumpl( "/*** Use acceptance cycle check with the LTL claim for a full verification!" );
+    dumpl( " *** Assertions, end states, and progress conditions are present to help debugging." );
+    dumpl( " *** A safety check and liveness check (BOTH WITH LTL CLAIM DISABLED) should be" );
+    dumpl( " *** equivalent to verifying the LTL claim holds via the acceptance cycle check." );
+    dumpl( " ***/" );
+    dumpl( "bool Legit = false;" );
     { BLoop( i, sys->vbls.sz )
         const XnVbl* x = &sys->vbls.s[i];
         if (x->max <= 1)
@@ -2362,27 +2366,11 @@ dump_promela (OFileB* of, const XnSys* sys, const TableT(XnRule) rules)
         dump_cstr_OFileB (of, ";\n");
     } BLose()
 
-    dump_cstr_OFileB (of, "inline setlegit ()\n");
-    dump_cstr_OFileB (of, "{\n");
-    dump_cstr_OFileB (of, "if\n");
-    { BLoopT( XnSz, i, sys->legit.sz )
-        if (test_BitTable (sys->legit, i))
-        {
-            dump_cstr_OFileB (of, ":: ");
-            dump_promela_state_XnSys (of, sys, i);
-            dump_cstr_OFileB (of, " -> Legit = true;\n");
-        }
-    } BLose()
-    dump_cstr_OFileB (of, ":: else -> Legit = false;\n");
-    dump_cstr_OFileB (of, "fi;\n");
-    dump_cstr_OFileB (of, "}\n");
-
     { BLoop( i, sys->pcs.sz )
         dump_promela_pc (of, &sys->pcs.s[i], sys, rules);
     } BLose()
 
-    dump_cstr_OFileB (of, "init {\n");
-
+    dumpl( "init {" );
     { BLoop( i, sys->vbls.sz )
         const XnVbl* x = &sys->vbls.s[i];
         dump_promela_select (of, x);
@@ -2394,12 +2382,39 @@ dump_promela (OFileB* of, const XnSys* sys, const TableT(XnRule) rules)
         dump_cstr_OFileB (of, " ();\n");
     } BLose()
 
-    dump_cstr_OFileB (of, "}\n");
+    dumpl( "if" );
+    { BLoopT( XnSz, i, sys->legit.sz )
+        if (test_BitTable (sys->legit, i))
+        {
+            dump_cstr_OFileB (of, ":: ");
+            dump_promela_state_XnSys (of, sys, i);
+            dump_cstr_OFileB (of, " -> skip;\n");
+        }
+    } BLose()
+    dumpl( "fi;" );
 
-    dump_cstr_OFileB (of, "ltl {\n");
-    dump_cstr_OFileB (of, "<> Legit && [] (Legit -> [] Legit)\n");
+    dumpl( "Legit = true;" );
+    dumpl( "progress: skip;" );
 
-    dump_cstr_OFileB (of, "}\n");
+    dumpl( "end:" );
+    dumpl( "if" );
+    { BLoopT( XnSz, i, sys->legit.sz )
+        if (!test_BitTable (sys->legit, i))
+        {
+            dump_cstr_OFileB (of, ":: ");
+            dump_promela_state_XnSys (of, sys, i);
+            dump_cstr_OFileB (of, " -> skip;\n");
+        }
+    } BLose()
+    dumpl( "fi;" );
+    dumpl( "Legit = false;" );
+    dumpl( "assert(0);" );
+    dumpl( "}" );
+
+    dumpl( "ltl {" );
+    dumpl( "<> Legit && [] (Legit -> [] Legit)" );
+    dumpl( "}" );
+#undef dumpl
 }
 
 #if 0
