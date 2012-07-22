@@ -17,7 +17,7 @@ exe_list := $(addprefix $(bin_path)/,$(exe_list))
 
 all: $(exe_list)
 
-cx_obj_list = fileb.o sys-cx.o
+cx_obj_list = fileb.o sys-cx.o bstree.o rbtree.o
 cx_obj_list := $(addprefix $(cx_path)/,$(cx_obj_list))
 
 $(bin_path)/satsyn: satsyn.o $(cx_obj_list)
