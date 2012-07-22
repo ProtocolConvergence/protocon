@@ -1389,7 +1389,6 @@ synsearch_trim (FnWMem_synsearch* tape)
         may_rules->sz = off;
     }
 
-    if (1)
     {
         qsort (tape->influence_order.s,
                tape->influence_order.sz,
@@ -2500,11 +2499,11 @@ swapped_XnSz2 (const XnSz2* a, const XnSz2* b)
 synsearch_sat (FnWMem_synsearch* tape)
 {
     DeclTableT( XnInfo, struct { ujint idx; CnfDisj impl; } );
-    DeclTableT( State, struct { TableT(XnSz) srcs; TableT(XnSz) dsts; } );
+    DeclTableT( State, struct { TableT(XnSz) tx; TableT(XnSz) to; } );
 
+    DecloStack( Associa, lstate_map );
     DecloStack( Associa, xnmap );
     DeclTable( State, states );
-        /* Associa lstates; */
     DecloStack1( CnfFmla, fmla, dflt_CnfFmla () );
     DeclTable( XnInfo, xns );
     DecloStack( Associa, pathmap );
@@ -2513,6 +2512,8 @@ synsearch_sat (FnWMem_synsearch* tape)
     XnRule* g;
     TableT(XnSz)* may_rules;
 
+    init3_Associa (lstate_map, sizeof(XnSz), sizeof(TableT(ujint)),
+                   (SwappedFn) swapped_XnSz);
     init3_Associa (xnmap, sizeof(XnSz2), sizeof(ujint),
                    (SwappedFn) swapped_XnSz2);
     init3_Associa (pathmap, sizeof(XnSz2), sizeof(ujint),
@@ -2562,8 +2563,8 @@ synsearch_sat (FnWMem_synsearch* tape)
     AffyTable( states, sys->nstates );
     states.sz = sys->nstates;
     { BUjFor( i, states.sz )
-        InitTable( states.s[i].srcs );
-        InitTable( states.s[i].dsts );
+        InitTable( states.s[i].to );
+        InitTable( states.s[i].tx );
     } BLose()
 
     fmla->nvbls = may_rules->sz;
@@ -2588,8 +2589,8 @@ synsearch_sat (FnWMem_synsearch* tape)
                 xn->idx = fmla->nvbls ++;
                 xn->impl = dflt_CnfDisj ();
                 app_CnfDisj (&xn->impl, false, xn->idx);
-                PushTable( states.s[t.i].srcs, t.j );
-                PushTable( states.s[t.j].dsts, t.i );
+                PushTable( states.s[t.j].tx, t.i );
+                PushTable( states.s[t.i].to, t.j );
             }
             else
             {
@@ -2606,39 +2607,66 @@ synsearch_sat (FnWMem_synsearch* tape)
             }
         } BLose()
         back1_Xn (&tape->xns, &tape->xn_stk);
+        
+        { BLoop( qi, g->q.sz )
+            g->q.s[qi] = 0;
+        } BLose()
+
+        {
+            XnSz step = step_XnRule (g, sys);
+            bool added = false;
+            Assoc* assoc = ensure1_Associa (lstate_map, &step, &added);
+            TableT(ujint)* rules = (TableT(ujint)*) val_of_Assoc (assoc);
+            if (added)  InitTable( *rules );
+            PushTable( *rules, i );
+        }
     } BLose()
 
     { BUjFor( i, xns.sz )
         PushTable( fmla->clauses, xns.s[i].impl );
     } BLose()
 
-    if (1)
+    { BUjFor( si, lstate_map->nodes.sz )
+        TableT(ujint)* rules = (TableT(ujint)*)
+            elt_Table (&lstate_map->vals, si);
+        { BUjFor( i, rules->sz )
+            { BUjFor( j, i )
+                CnfDisj clause = dflt_CnfDisj ();
+                app_CnfDisj (&clause, false, rules->s[i]);
+                app_CnfDisj (&clause, false, rules->s[j]);
+                PushTable( fmla->clauses, clause );
+            } BLose()
+        } BLose()
+        LoseTable( *rules );
+    } BLose()
+    lose_Associa (lstate_map);
+
     { BUjFor( i, states.sz )
         if (!test_BitTable (sys->legit, i))
         {
             TableElT(State)* state = &states.s[i];
-            CnfDisj clause = dflt_CnfDisj ();
+            CnfDisj deadlock_clause = dflt_CnfDisj ();
 
-            if (state->srcs.sz == 0)
+            if (state->to.sz == 0)
                 DBog0( "Illegit state without outgoing transitions!!!!" );
 
-            { BUjFor( j, state->srcs.sz )
+            { BUjFor( j, state->to.sz )
                 XnSz2 t;
                 Assoc* assoc;
                 ujint idx;
                 t.i = i;
-                t.j = state->srcs.s[j];
+                t.j = state->to.s[j];
                 assoc = lookup_Associa (xnmap, &t);
                 Claim( assoc );
-                idx = ((TableElT(XnInfo)*) val_of_Assoc (assoc)) -> idx;
-                app_CnfDisj (&clause, true, idx);
+                idx = xns.s[*(ujint*) val_of_Assoc (assoc)].idx;
+                app_CnfDisj (&deadlock_clause, true, idx);
             } BLose()
 
-            PushTable( fmla->clauses, clause );
+            PushTable( fmla->clauses, deadlock_clause );
         }
 
         { BUjFor( j, states.sz )
-            if (states.s[i].srcs.sz > 0 && states.s[j].dsts.sz > 0)
+            if (states.s[i].to.sz > 0 && states.s[j].tx.sz > 0)
             {
                 XnSz2 xn;
                 ujint idx = fmla->nvbls ++;
@@ -2656,7 +2684,6 @@ synsearch_sat (FnWMem_synsearch* tape)
         } BLose()
     } BLose()
 
-    if (1)
     { BUjFor( path_idx, pathmap->nodes.sz )
         CnfDisj path_clause = dflt_CnfDisj ();
         XnSz2 p = *(XnSz2*) elt_Table (&pathmap->keys, path_idx);
@@ -2665,17 +2692,17 @@ synsearch_sat (FnWMem_synsearch* tape)
 
         app_CnfDisj (&path_clause, false, p_ij);
 
-        { BUjFor( k_idx, state.dsts.sz )
+        { BUjFor( k_idx, state.tx.sz )
             CnfDisj* clause;
             Assoc* assoc;
-            ujint k = state.dsts.s[k_idx];
+            ujint k = state.tx.s[k_idx];
             ujint q_ikj;
             if (k == p.i)
             {
-                    /* In this case, just let q_ijk = t_ij.*/
+                    /* In this case, just let q_{ikj} = t_{ij}.*/
                 assoc = lookup_Associa (xnmap, &p);
                 Claim( assoc );
-                q_ikj = *(ujint*) val_of_Assoc (assoc);
+                q_ikj = xns.s[*(ujint*) val_of_Assoc (assoc)].idx;
             }
             else
             {
@@ -2692,22 +2719,22 @@ synsearch_sat (FnWMem_synsearch* tape)
                 xn.j = p.j;
                 assoc = lookup_Associa (xnmap, &xn);
                 Claim( assoc );
-                t_kj = *(ujint*) val_of_Assoc (assoc);
+                t_kj = xns.s[*(ujint*) val_of_Assoc (assoc)].idx;
 
                 q_ikj = fmla->nvbls ++;
-                    /* We wish for (q_ikj == p_ik && t_kj).*/
+                    /* We wish for (q_{ikj} == p_{ik} && t_{kj}).*/
 
-                    /* (q_ikj => p_ik) */
+                    /* (q_{ikj} => p_{ik}) */
                 clause = Grow1Table( fmla->clauses );
                 *clause = dflt_CnfDisj ();
                 app_CnfDisj (clause, false, q_ikj);
                 app_CnfDisj (clause, true , p_ik );
-                    /* (q_ikj => t_kj) */
+                    /* (q_{ikj} => t_{kj}) */
                 clause = Grow1Table( fmla->clauses );
                 *clause = dflt_CnfDisj ();
                 app_CnfDisj (clause, false, q_ikj);
                 app_CnfDisj (clause, true , t_kj );
-                    /* (p_ik && t_kj => q_ikj) */
+                    /* (p_{ik} && t_{kj} => q_{ikj}) */
                 clause = Grow1Table( fmla->clauses );
                 *clause = dflt_CnfDisj ();
                 app_CnfDisj (clause, true , q_ikj);
@@ -2715,7 +2742,7 @@ synsearch_sat (FnWMem_synsearch* tape)
                 app_CnfDisj (clause, false, t_kj );
             }
 
-                /* (q_ikj => p_ij) */
+                /* (q_{ikj} => p_{ij}) */
             clause = Grow1Table( fmla->clauses );
             *clause = dflt_CnfDisj ();
             app_CnfDisj (clause, false, q_ikj);
@@ -2726,13 +2753,25 @@ synsearch_sat (FnWMem_synsearch* tape)
         PushTable( fmla->clauses, path_clause );
     } BLose()
 
+        /* Lose everything we can before running the solve.*/
+    { BUjFor( i, states.sz )
+        LoseTable( states.s[i].tx );
+        LoseTable( states.s[i].to );
+    } BLose()
+    LoseTable( states );
+    lose_Associa (pathmap);
+    lose_Associa (xnmap);
+    LoseTable( xns );
 
     {
         BitTable evs = cons2_BitTable (fmla->nvbls, 0);
         bool sat = false;
         extl_solve_CnfFmla (fmla, &sat, evs);
-        dump_BitTable (stderr_OFileB (), evs);
-        dump_char_OFileB (stderr_OFileB (), '\n');
+        if (0)
+        {
+            dump_BitTable (stderr_OFileB (), evs);
+            dump_char_OFileB (stderr_OFileB (), '\n');
+        }
 
         tape->stabilizing = sat;
         if (sat)
@@ -2747,15 +2786,7 @@ synsearch_sat (FnWMem_synsearch* tape)
     }
     -- tape->rules.sz;
 
-    lose_Associa (xnmap);
     lose_CnfFmla (fmla);
-    { BUjFor( i, states.sz )
-        LoseTable( states.s[i].srcs );
-        LoseTable( states.s[i].dsts );
-    } BLose()
-    LoseTable( states );
-    lose_Associa (pathmap);
-    LoseTable( xns );
 }
 
     int
@@ -2764,22 +2795,22 @@ main ()
     DecloStack( XnSys, sys );
     DecloStack( CnfFmla, fmla );
     BoolLit clauses[][3] = {
-            /* {{Yes, 0}, {Yes, 1}, {Yes, 0}}, */
-            /* {{Yes, 1}, {Nil, 0}, {Yes, 1}}, */
+        {{Yes, 0}, {Yes, 1}, {Yes, 0}},
+        {{Yes, 1}, {Nil, 0}, {Yes, 1}},
             /* {{Nil, 1}, {Yes, 0}, {Nil, 1}}, */
-        {{Yes, 1}, {Yes, 1}, {Yes, 1}},
-            /* {{Yes, 2}, {Yes, 2}, {Yes, 2}}, */
-            /* {{Nil, 2}, {Nil, 2}, {Yes, 3}}, */
+        {{Yes, 1}, {Yes, 1}, {Nil, 1}},
+        {{Yes, 2}, {Yes, 1}, {Nil, 2}},
+        {{Nil, 2}, {Nil, 2}, {Yes, 3}},
             /* {{Nil, 3}, {Nil, 3}, {Nil, 3}}, */
             /* {{Yes, 0}, {Nil, 0}, {Yes, 0}}, */
             /* {{Yes, 0}, {Nil, 0}, {Yes, 0}}, */
             /* {{Nil, 0}, {Nil, 0}, {Nil, 0}} */
         {{Nil, 0}, {Nil, 0}, {Nil, 0}}
     };
-    const bool ring = true;
+    const bool ring = false;
     const bool use_sat_vbl = false; /* Only applies to ring.*/
     const bool manual_soln = true;
-    const bool use_synsearch_sat = false;
+    const bool use_synsearch_sat = true;
 
     init_sys_cx ();
 
@@ -2833,6 +2864,13 @@ main ()
 
         if (tape.stabilizing)  DBog0( "Solution found! :)" );
         else                   DBog0( "No solution. :(" );
+
+        if (tape.stabilizing)
+        {
+            Trit stabilizing = detect_strong_convergence (&tape);
+            if (stabilizing)  DBog0( "OK, this protocol should work!" );
+            else              DBog0( "Protocol might not work?" );
+        }
 
         if (tape.stabilizing || (manual_soln && tape.rules.sz > 0))
         {
