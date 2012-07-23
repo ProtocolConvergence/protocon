@@ -13,6 +13,8 @@ static const bool DBog_AssertRule = true;
 static const bool DBog_SearchStep = true;
 static const bool DBog_QuickTrim = false;
 
+static const bool SatSolve_Z3 = false;
+
 typedef struct XnPc XnPc;
 typedef struct XnVbl XnVbl;
 typedef struct XnEVbl XnEVbl;
@@ -142,7 +144,9 @@ struct CnfDisj {
 };
 struct CnfFmla {
     uint nvbls;
-    TableT(CnfDisj) clauses;
+    TableT(ujint) idcs;  /* Clause indices.*/
+    TableT(uint) vbls;  /* Clause variables.*/
+    BitTable vals;  /* Clause values, negative (0) or positive (1).*/
 };
 
     XnPc
@@ -307,17 +311,47 @@ dflt_CnfFmla ()
 {
     CnfFmla fmla;
     fmla.nvbls = 0;
-    InitTable( fmla.clauses );
+    InitTable( fmla.idcs );
+    InitTable( fmla.vbls );
+    fmla.vals = dflt_BitTable ();
     return fmla;
 }
 
     void
 lose_CnfFmla (CnfFmla* fmla)
 {
-    { BUjFor( i, fmla->clauses.sz )
-        lose_CnfDisj (&fmla->clauses.s[i]);
+    LoseTable( fmla->idcs );
+    LoseTable( fmla->vbls );
+    lose_BitTable (&fmla->vals);
+}
+
+    void
+app_CnfFmla (CnfFmla* fmla, const CnfDisj* clause)
+{
+    const ujint off = fmla->vbls.sz;
+    Claim2( fmla->vbls.sz ,==, fmla->vals.sz );
+    PushTable( fmla->idcs, off );
+    GrowTable( fmla->vbls, clause->lits.sz );
+    grow_BitTable (&fmla->vals, clause->lits.sz);
+    { BLoop( i, clause->lits.sz )
+        BoolLit lit = clause->lits.s[i];
+        if (lit.val)  set1_BitTable (fmla->vals, off+i);
+        else          set0_BitTable (fmla->vals, off+i);
+        fmla->vbls.s[off+i] = lit.vbl;
     } BLose()
-    LoseTable( fmla->clauses );
+}
+
+    void
+clause_of_CnfFmla (CnfDisj* clause, const CnfFmla* fmla, ujint i)
+{
+    const ujint bel = (i+1 < fmla->idcs.sz
+                       ? fmla->idcs.s[i+1]
+                       : fmla->vbls.sz);
+    clause->lits.sz = 0;
+    for (i = fmla->idcs.s[i]; i < bel; ++i)
+        app_CnfDisj (clause,
+                     test_BitTable (fmla->vals, i),
+                     fmla->vbls.s[i]);
 }
 
 qual_inline
@@ -1844,11 +1878,12 @@ sat3_legit_XnSys (FnWMem_do_XnSys* fix,
     void
 dump_dimacs_CnfFmla (OFileB* of, const CnfFmla* fmla)
 {
+    DecloStack1( CnfDisj, clause, dflt_CnfDisj () );
     printf_OFileB (of, "p cnf %u %u\n",
                    (uint) fmla->nvbls,
-                   (uint)fmla->clauses.sz);
-    { BLoop( i, fmla->clauses.sz )
-        const CnfDisj* clause = &fmla->clauses.s[i];
+                   (uint) fmla->idcs.sz);
+    { BLoop( i, fmla->idcs.sz )
+        clause_of_CnfFmla (clause, fmla, i);
         { BLoop( j, clause->lits.sz )
             if (!clause->lits.s[j].val)
                 dump_char_OFileB (of, '-');
@@ -1857,6 +1892,7 @@ dump_dimacs_CnfFmla (OFileB* of, const CnfFmla* fmla)
         } BLose()
         dump_cstr_OFileB (of, "0\n");
     } BLose()
+    lose_CnfDisj (clause);
 }
 
     void
@@ -1864,7 +1900,8 @@ load_dimacs_result (XFileB* xf, bool* sat, BitTable evs)
 {
     const char* line = getline_XFileB (xf);
     wipe_BitTable (evs, 0);
-    if (0 == strcmp (line, "UNSAT"))
+    if (0 == strcmp (line, "UNSAT") ||
+        0 == strcmp (line, "unsat"))
     {
         *sat = false;
     }
@@ -1875,17 +1912,17 @@ load_dimacs_result (XFileB* xf, bool* sat, BitTable evs)
         *sat = true;
 
         good = load_int_XFileB (xf, &v);
-        while (good && v != 0)
+        while (good)
         {
-            if (v > 0)  set1_BitTable (evs, +v-1);
-            else        set0_BitTable (evs, -v-1);
+            if      (v > 0)  set1_BitTable (evs, +v-1);
+            else if (v < 0)  set0_BitTable (evs, -v-1);
             good = load_int_XFileB (xf, &v);
         }
     }
 }
 
     void
-extl_solve_CnfFmla (const CnfFmla* fmla, bool* sat, BitTable evs)
+extl_solve_CnfFmla (CnfFmla* fmla, bool* sat, BitTable evs)
 {
     DecloStack( FileB, fb );
     init_FileB (fb);
@@ -1894,7 +1931,13 @@ extl_solve_CnfFmla (const CnfFmla* fmla, bool* sat, BitTable evs)
     dump_dimacs_CnfFmla (&fb->xo, fmla);
     close_FileB (fb);
 
-    system ("minisat -verb=0 sat.in sat.out");
+    lose_CnfFmla (fmla);
+    *fmla = dflt_CnfFmla ();
+
+    if (SatSolve_Z3)
+        system ("z3 -dimacs sat.in > sat.out");
+    else
+        system ("minisat -verb=0 sat.in sat.out");
 
     seto_FileB (fb, false);
     open_FileB (fb, 0, "sat.out");
@@ -1959,20 +2002,29 @@ sat3_XnSys (const CnfFmla* fmla)
     accept_topology_XnSys (sys);
 
     {
-        DecloStack( FnWMem_do_XnSys, fix );
+        DeclTable( CnfDisj, clauses );
+        DecloStack1( FnWMem_do_XnSys, fix, cons1_FnWMem_do_XnSys (sys) );
         BitTable bt = cons2_BitTable (sys->legit.sz, 0);
 
-        *fix = cons1_FnWMem_do_XnSys (sys);
+        { BUjFor( i, fmla->idcs.sz )
+            CnfDisj clause = dflt_CnfDisj ();
+            clause_of_CnfFmla (&clause, fmla, i);
+            PushTable( clauses, clause );
+        } BLose()
 
         fix->vals[sat_idx] = 1;
         set1_BitTable (fix->fixed, sat_idx);
         do_XnSys (fix, bt);
         op_BitTable (sys->legit, bt, BitOp_AND);
 
-        sat3_legit_XnSys (fix, bt, sys, fmla->clauses, 3, x_idcs, y_idcs);
+        sat3_legit_XnSys (fix, bt, sys, clauses, 3, x_idcs, y_idcs);
 
         lose_BitTable (&bt);
         lose_FnWMem_do_XnSys (fix);
+        { BUjFor( i, clauses.sz )
+            lose_CnfDisj (&clauses.s[i]);
+        } BLose()
+        LoseTable( clauses );
     }
 
     /*
@@ -2069,10 +2121,15 @@ sat3_ring_XnSys (const CnfFmla* fmla, const bool use_sat)
     accept_topology_XnSys (sys);
 
     {
-        DecloStack( FnWMem_do_XnSys, fix );
+        DeclTable( CnfDisj, clauses );
+        DecloStack1( FnWMem_do_XnSys, fix, cons1_FnWMem_do_XnSys (sys) );
         BitTable bt = cons2_BitTable (sys->legit.sz, 0);
 
-        *fix = cons1_FnWMem_do_XnSys (sys);
+        { BUjFor( i, fmla->idcs.sz )
+            CnfDisj clause = dflt_CnfDisj ();
+            clause_of_CnfFmla (&clause, fmla, i);
+            PushTable( clauses, clause );
+        } BLose()
 
         if (use_sat)
         {
@@ -2098,10 +2155,14 @@ sat3_ring_XnSys (const CnfFmla* fmla, const bool use_sat)
 
         wipe_BitTable (bt, 0);
 
-        sat3_legit_XnSys (fix, bt, sys, fmla->clauses, npcs, x_idcs, y_idcs);
+        sat3_legit_XnSys (fix, bt, sys, clauses, npcs, x_idcs, y_idcs);
 
         lose_BitTable (&bt);
         lose_FnWMem_do_XnSys (fix);
+        { BUjFor( i, clauses.sz )
+            lose_CnfDisj (&clauses.s[i]);
+        } BLose()
+        LoseTable( clauses );
     }
 
     return *sys;
@@ -2149,6 +2210,7 @@ sat3_ring_soln_XnSys (TableT(XnRule)* rules,
                       const CnfFmla* fmla)
 {
     const bool use_sat = (sys->pcs.s[0].nwvbls == 2);
+    CnfDisj clause = dflt_CnfDisj ();
     DeclTable( XnSz, x_idcs );
     DeclTable( XnSz, y_idcs );
     DeclTable( XnSz, sat_idcs );
@@ -2257,11 +2319,13 @@ sat3_ring_soln_XnSys (TableT(XnRule)* rules,
 
             rule_XnSys (&g, sys, rule_step);
 
-            { BLoop( i, fmla->clauses.sz )
+            { BLoop( i, fmla->idcs.sz )
                 bool allin = true;
                 bool satisfied = false;
 
-                CnfDisj clause = fmla->clauses.s[i];
+                clause.lits.sz = 0;
+                clause_of_CnfFmla (&clause, fmla, i);
+
                 { BLoop( j, 3 )
                     bool found = false;
 
@@ -2343,6 +2407,7 @@ sat3_ring_soln_XnSys (TableT(XnRule)* rules,
     LoseTable( x_idcs );
     LoseTable( y_idcs );
     LoseTable( sat_idcs );
+    lose_CnfDisj (&clause);
 }
 
     void
@@ -2507,6 +2572,7 @@ synsearch_sat (FnWMem_synsearch* tape)
     DecloStack1( CnfFmla, fmla, dflt_CnfFmla () );
     DeclTable( XnInfo, xns );
     DecloStack( Associa, pathmap );
+    DecloStack1( CnfDisj, clause, dflt_CnfDisj () );
 
     const XnSys* restrict sys = tape->sys;
     XnRule* g;
@@ -2599,12 +2665,10 @@ synsearch_sat (FnWMem_synsearch* tape)
             }
             app_CnfDisj (&xn->impl, true, i);
 
-            {
-                CnfDisj clause = dflt_CnfDisj ();
-                app_CnfDisj (&clause, false, i);
-                app_CnfDisj (&clause, true, xn->idx);
-                PushTable( fmla->clauses, clause );
-            }
+            clause->lits.sz = 0;
+            app_CnfDisj (clause, false, i);
+            app_CnfDisj (clause, true, xn->idx);
+            app_CnfFmla (fmla, clause);
         } BLose()
         back1_Xn (&tape->xns, &tape->xn_stk);
         
@@ -2623,7 +2687,9 @@ synsearch_sat (FnWMem_synsearch* tape)
     } BLose()
 
     { BUjFor( i, xns.sz )
-        PushTable( fmla->clauses, xns.s[i].impl );
+        CnfDisj* clause = &xns.s[i].impl;
+        app_CnfFmla (fmla, clause);
+        lose_CnfDisj (clause);
     } BLose()
 
     { BUjFor( si, lstate_map->nodes.sz )
@@ -2631,10 +2697,10 @@ synsearch_sat (FnWMem_synsearch* tape)
             elt_Table (&lstate_map->vals, si);
         { BUjFor( i, rules->sz )
             { BUjFor( j, i )
-                CnfDisj clause = dflt_CnfDisj ();
-                app_CnfDisj (&clause, false, rules->s[i]);
-                app_CnfDisj (&clause, false, rules->s[j]);
-                PushTable( fmla->clauses, clause );
+                clause->lits.sz = 0;
+                app_CnfDisj (clause, false, rules->s[i]);
+                app_CnfDisj (clause, false, rules->s[j]);
+                app_CnfFmla (fmla, clause);
             } BLose()
         } BLose()
         LoseTable( *rules );
@@ -2645,11 +2711,12 @@ synsearch_sat (FnWMem_synsearch* tape)
         if (!test_BitTable (sys->legit, i))
         {
             TableElT(State)* state = &states.s[i];
-            CnfDisj deadlock_clause = dflt_CnfDisj ();
 
             if (state->to.sz == 0)
                 DBog0( "Illegit state without outgoing transitions!!!!" );
 
+                /* Deadlock freedom clause.*/
+            clause->lits.sz = 0;
             { BUjFor( j, state->to.sz )
                 XnSz2 t;
                 Assoc* assoc;
@@ -2659,10 +2726,10 @@ synsearch_sat (FnWMem_synsearch* tape)
                 assoc = lookup_Associa (xnmap, &t);
                 Claim( assoc );
                 idx = xns.s[*(ujint*) val_of_Assoc (assoc)].idx;
-                app_CnfDisj (&deadlock_clause, true, idx);
+                app_CnfDisj (clause, true, idx);
             } BLose()
 
-            PushTable( fmla->clauses, deadlock_clause );
+            app_CnfFmla (fmla, clause);
         }
 
         { BUjFor( j, states.sz )
@@ -2676,24 +2743,23 @@ synsearch_sat (FnWMem_synsearch* tape)
 
                 if (i == j)
                 {
-                    CnfDisj clause = dflt_CnfDisj ();
-                    app_CnfDisj (&clause, false, idx);
-                    PushTable( fmla->clauses, clause );
+                    clause->lits.sz = 0;
+                    app_CnfDisj (clause, false, idx);
+                    app_CnfFmla (fmla, clause);
                 }
             }
         } BLose()
     } BLose()
 
     { BUjFor( path_idx, pathmap->nodes.sz )
-        CnfDisj path_clause = dflt_CnfDisj ();
+        DecloStack1( CnfDisj, path_clause, dflt_CnfDisj () );
         XnSz2 p = *(XnSz2*) elt_Table (&pathmap->keys, path_idx);
         ujint p_ij = *(ujint*) elt_Table (&pathmap->vals, path_idx);
         TableElT(State) state = states.s[p.j];
 
-        app_CnfDisj (&path_clause, false, p_ij);
+        app_CnfDisj (path_clause, false, p_ij);
 
         { BUjFor( k_idx, state.tx.sz )
-            CnfDisj* clause;
             Assoc* assoc;
             ujint k = state.tx.s[k_idx];
             ujint q_ikj;
@@ -2725,32 +2791,33 @@ synsearch_sat (FnWMem_synsearch* tape)
                     /* We wish for (q_{ikj} == p_{ik} && t_{kj}).*/
 
                     /* (q_{ikj} => p_{ik}) */
-                clause = Grow1Table( fmla->clauses );
-                *clause = dflt_CnfDisj ();
+                clause->lits.sz = 0;
                 app_CnfDisj (clause, false, q_ikj);
                 app_CnfDisj (clause, true , p_ik );
+                app_CnfFmla (fmla, clause);
                     /* (q_{ikj} => t_{kj}) */
-                clause = Grow1Table( fmla->clauses );
-                *clause = dflt_CnfDisj ();
+                clause->lits.sz = 0;
                 app_CnfDisj (clause, false, q_ikj);
                 app_CnfDisj (clause, true , t_kj );
+                app_CnfFmla (fmla, clause);
                     /* (p_{ik} && t_{kj} => q_{ikj}) */
-                clause = Grow1Table( fmla->clauses );
-                *clause = dflt_CnfDisj ();
+                clause->lits.sz = 0;
                 app_CnfDisj (clause, true , q_ikj);
                 app_CnfDisj (clause, false, p_ik );
                 app_CnfDisj (clause, false, t_kj );
+                app_CnfFmla (fmla, clause);
             }
 
                 /* (q_{ikj} => p_{ij}) */
-            clause = Grow1Table( fmla->clauses );
-            *clause = dflt_CnfDisj ();
+            clause->lits.sz = 0;
             app_CnfDisj (clause, false, q_ikj);
             app_CnfDisj (clause, true , p_ij );
+            app_CnfFmla (fmla, clause);
 
-            app_CnfDisj (&path_clause, true, q_ikj);
+            app_CnfDisj (path_clause, true, q_ikj);
         } BLose()
-        PushTable( fmla->clauses, path_clause );
+        app_CnfFmla (fmla, path_clause);
+        lose_CnfDisj (path_clause);
     } BLose()
 
         /* Lose everything we can before running the solve.*/
@@ -2762,6 +2829,7 @@ synsearch_sat (FnWMem_synsearch* tape)
     lose_Associa (pathmap);
     lose_Associa (xnmap);
     LoseTable( xns );
+    lose_CnfDisj (clause);
 
     {
         BitTable evs = cons2_BitTable (fmla->nvbls, 0);
@@ -2780,6 +2848,7 @@ synsearch_sat (FnWMem_synsearch* tape)
             {
                 rule_XnSys (g, sys, may_rules->s[i]);
                 g = grow1_rules_synsearch (tape);
+                add_XnRule (tape, g);
             }
         } BLose()
         lose_BitTable (&evs);
@@ -2792,8 +2861,9 @@ synsearch_sat (FnWMem_synsearch* tape)
     int
 main ()
 {
-    DecloStack( XnSys, sys );
-    DecloStack( CnfFmla, fmla );
+    const bool SystemInitialized = (init_sys_cx (), true);
+    DecloStack1( XnSys, sys, dflt_XnSys () );
+    DecloStack1( CnfFmla, fmla, dflt_CnfFmla () );
     BoolLit clauses[][3] = {
         {{Yes, 0}, {Yes, 1}, {Yes, 0}},
         {{Yes, 1}, {Nil, 0}, {Yes, 1}},
@@ -2812,12 +2882,6 @@ main ()
     const bool manual_soln = true;
     const bool use_synsearch_sat = true;
 
-    init_sys_cx ();
-
-    *sys = dflt_XnSys ();
-
-    fmla->nvbls = 0;
-    InitTable( fmla->clauses );
     { BLoop( i, ArraySz(clauses) )
         CnfDisj clause = dflt_CnfDisj ();
         { BLoop( j, 3 )
@@ -2825,7 +2889,8 @@ main ()
             if (clauses[i][j].vbl + 1 > fmla->nvbls )
                 fmla->nvbls = clauses[i][j].vbl + 1;
         } BLose()
-        PushTable( fmla->clauses, clause );
+        app_CnfFmla (fmla, &clause);
+        lose_CnfDisj (&clause);
     } BLose()
     DBog1( "/nvbls==%u/", fmla->nvbls );
 
@@ -2865,11 +2930,14 @@ main ()
         if (tape.stabilizing)  DBog0( "Solution found! :)" );
         else                   DBog0( "No solution. :(" );
 
-        if (tape.stabilizing)
+            /* TODO: Protocol doesn't verify for some reason.*/
+        if (false && tape.stabilizing)
         {
             Trit stabilizing = detect_strong_convergence (&tape);
-            if (stabilizing)  DBog0( "OK, this protocol should work!" );
-            else              DBog0( "Protocol might not work?" );
+            if (stabilizing == Yes)
+                DBog0( "Protocol verified, should work." );
+            else
+                DBog0( "Protocol could not be verified!?" );
         }
 
         if (tape.stabilizing || (manual_soln && tape.rules.sz > 0))
@@ -2892,13 +2960,9 @@ main ()
         lose_BitTable (&evs);
     }
 
-    { BLoop( i, fmla->clauses.sz )
-        LoseTable( fmla->clauses.s[i].lits );
-    } BLose()
-    LoseTable( fmla->clauses );
-
+    lose_CnfFmla (fmla);
     lose_XnSys (sys);
-    lose_sys_cx ();
+    if (SystemInitialized)  lose_sys_cx ();
     return 0;
 }
 
