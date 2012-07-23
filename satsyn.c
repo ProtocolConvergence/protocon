@@ -2847,8 +2847,8 @@ synsearch_sat (FnWMem_synsearch* tape)
             if (test_BitTable (evs, i))
             {
                 rule_XnSys (g, sys, may_rules->s[i]);
-                g = grow1_rules_synsearch (tape);
                 add_XnRule (tape, g);
+                g = grow1_rules_synsearch (tape);
             }
         } BLose()
         lose_BitTable (&evs);
@@ -2930,8 +2930,7 @@ main ()
         if (tape.stabilizing)  DBog0( "Solution found! :)" );
         else                   DBog0( "No solution. :(" );
 
-            /* TODO: Protocol doesn't verify for some reason.*/
-        if (false && tape.stabilizing)
+        if (tape.stabilizing)
         {
             Trit stabilizing = detect_strong_convergence (&tape);
             if (stabilizing == Yes)
