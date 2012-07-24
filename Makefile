@@ -8,7 +8,7 @@ CFLAGS += -g
 cx_path = ../cx
 bin_path = ../bin
 
-IFLAGS = -I$(cx_path)/..
+IFLAGS = -I..
 
 CFLAGS += $(IFLAGS)
 
@@ -23,12 +23,6 @@ cx_obj_list := $(addprefix $(cx_path)/,$(cx_obj_list))
 $(bin_path)/satsyn: satsyn.o $(cx_obj_list)
 	$(CC) $(CFLAGS) -o $@ $^
 
-$(exe_list): | $(cx_path)
-
-.PHONY: $(cx_path)
-$(cx_path):
-	$(MAKE) -C $(cx_path)
-
 %.o: %.c
 	$(CC) -c $(CFLAGS) $^ -o $@
 
@@ -39,5 +33,5 @@ $(bin_path):
 
 .PHONY: clean
 clean:
-	rm -f *.o $(exe_list)
+	rm -f *.o $(exe_list) $(cx_path)/*.o
 
