@@ -1,4 +1,8 @@
-
+/**
+ * \file satsyn.c
+ *
+ * SAT-based stabilization synthesis.
+ **/
 #include "cx/associa.h"
 #include "cx/bittable.h"
 #include "cx/fileb.h"
@@ -13,7 +17,10 @@ static const bool DBog_AssertRule = true;
 static const bool DBog_SearchStep = true;
 static const bool DBog_QuickTrim = false;
 
+/** Use Z3 instead of MiniSat.**/
 static const bool SatSolve_Z3 = false;
+/** Allow new transitions in the set of legitimate states.**/
+static const bool SynLegit = false;
 
 typedef struct XnPc XnPc;
 typedef struct XnVbl XnVbl;
@@ -43,50 +50,61 @@ DeclTableT( XnSz2, XnSz2 );
 DeclTableT( DomSz, DomSz );
 
 
+/** Holds two XnSz values.**/
 struct XnSz2 { XnSz i; XnSz j; };
 
+/** Process in a transition system.**/
 struct XnPc
 {
+    /** Variables this process uses.
+     * Variables which this process can write all appear at the beginning.
+     **/
     TableT(XnSz) vbls;
+    /** Number of variables for which this
+     * process has write and read permissions.
+     **/
     XnSz nwvbls;
 
-    XnSz nstates;  /* Same as /legit.sz/.*/
+    XnSz nstates; /**< Same as /legit.sz/.**/
 
     XnSz rule_step;
     TableT(XnSz) rule_stepsz_p;
     TableT(XnSz) rule_stepsz_q;
 };
 
+/** Variable in a transition system.**/
 struct XnVbl
 {
-    TableT(char) name;
-    DomSz max;
-    TableT(XnSz) pcs;
-    XnSz nwpcs;
-    XnSz nrpcs;
-    XnSz stepsz;  /* In global state space.*/
+    AlphaTab name;
+    DomSz max; /**< Maximum value in the domain.**/
+    TableT(XnSz) pcs; /**< List of processes which use this variable.**/
+    XnSz nwpcs;  /**< Number of processes with write (and read) permission.**/
+    XnSz stepsz; /**< Step size global state space.**/
 };
 
+/** Evaluation of an XnVbl.**/
 struct XnEVbl
 {
-    DomSz val;  /* Evaluation.*/
+    DomSz val; /**< Evaluation.**/
     const XnVbl* vbl;
 };
 
+/** Transition rule (aka "action" or "transition group").**/
 struct XnRule
 {
-    uint pc;
-    TableT(DomSz) p;
-    TableT(DomSz) q;
+    uint pc; /**< Process to which this rule belongs.**/
+    TableT(DomSz) p; /**< Local state of the process to enable this action.**/
+    TableT(DomSz) q; /**< New values of writable variables.**/
 };
 
+/** Transition system.**/
 struct XnSys
 {
     TableT(XnPc) pcs;
     TableT(XnVbl) vbls;
-    BitTable legit;
+    BitTable legit; 
     TableT(XnRule) legit_rules;
-    XnSz nstates;  /* Same as /legit.sz/.*/
+    XnSz nstates; /**< Same as /legit.sz/.**/
     XnSz n_rule_steps;
 };
 
@@ -135,18 +153,26 @@ struct FnWMem_synsearch
     TableT(Xns) legit_xns;
 };
 
+/** Boolean literal.
+ * This is a variable which appears in a positive form or negated.
+ **/
 struct BoolLit {
-    Bit  val;
-    uint vbl;
+    Bit  val; /**< Positive (1) or negated (0).**/
+    uint vbl; /**< Index of the boolean variable.**/
 };
+/** Disjunction of boolean literals.**/
 struct CnfDisj {
     TableT(BoolLit) lits;
 };
+/** Boolean formula in Conjunctive Normal Form (CNF).
+ * An example CNF is:\n
+ * (a || !b || c) && (!b || d) && (b || !a) && (a)
+ **/
 struct CnfFmla {
     uint nvbls;
-    TableT(ujint) idcs;  /* Clause indices.*/
-    TableT(uint) vbls;  /* Clause variables.*/
-    BitTable vals;  /* Clause values, negative (0) or positive (1).*/
+    TableT(ujint) idcs;  /**< Clause indices.**/
+    TableT(uint) vbls;  /**< Clause variables.**/
+    BitTable vals;  /**< Clause values, negative (0) or positive (1).**/
 };
 
     XnPc
@@ -177,14 +203,10 @@ lose_XnPc (XnPc* pc)
 dflt_XnVbl ()
 {
     XnVbl x;
-    InitTable( x.name );
-    SizeTable( x.name, 2 );
-    x.name.s[0] = 'x';
-    x.name.s[1] = '\0';
+    x.name = cons1_AlphaTab ("x");
     x.max = 0;
     InitTable( x.pcs );
     x.nwpcs = 0;
-    x.nrpcs = 0;
     x.stepsz = 0;
     return x;
 }
@@ -192,7 +214,7 @@ dflt_XnVbl ()
     void
 lose_XnVbl (XnVbl* x)
 {
-    LoseTable( x->name );
+    lose_AlphaTab (&x->name);
     LoseTable( x->pcs );
 }
 
@@ -391,10 +413,7 @@ wpcs_XnVbl (XnVbl* x)
     TableT(XnSz)
 rpcs_XnVbl (XnVbl* x)
 {
-    DeclTable( XnSz, t );
-    t.s = &x->pcs.s[x->pcs.sz - x->nrpcs];
-    t.sz = x->nrpcs;
-    return t;
+    return x->pcs;
 }
 
     XnSz
@@ -416,24 +435,26 @@ size_XnSys (const XnSys* sys)
     return sz;
 }
 
-    /**
-     * mode:
-     *   Nil - write-only
-     *   Yes - read-write
-     *   May - read-only
-     **/
+/**
+ * mode:
+ * - Nil - write-only (NOT SUPPORTED)
+ * - Yes - read-write
+ * - May - read-only
+ **/
     void
 assoc_XnSys (XnSys* sys, uint pc_idx, uint vbl_idx, Trit mode)
 {
     XnPc* const pc = &sys->pcs.s[pc_idx];
     XnVbl* const x = &sys->vbls.s[vbl_idx];
 
+    Claim2( mode ,!=, Nil );
+
     if (mode == May)
     {
         PushTable( pc->vbls, vbl_idx );
         PushTable( x->pcs, pc_idx );
     }
-    else
+    if (mode == Yes)
     {
         GrowTable( pc->vbls, 1 );
         GrowTable( x->pcs, 1 );
@@ -443,7 +464,7 @@ assoc_XnSys (XnSys* sys, uint pc_idx, uint vbl_idx, Trit mode)
                 pc->vbls.s[pc->vbls.sz-i-2];
         } BLose()
 
-        { BLoop( i, x->nrpcs )
+        { BLoop( i, x->pcs.sz )
             x->pcs.s[x->pcs.sz-i-1] =
                 x->pcs.s[x->pcs.sz-i-2];
         } BLose()
@@ -451,16 +472,11 @@ assoc_XnSys (XnSys* sys, uint pc_idx, uint vbl_idx, Trit mode)
         pc->vbls.s[pc->nwvbls ++] = vbl_idx;
         x->pcs.s[x->nwpcs ++] = pc_idx;
     }
-
-    if (mode != Nil)
-    {
-        x->nrpcs ++;
-    }
 }
 
-    /** Call this when you're done specifying all processes and variables
-     * and wish to start specifying invariants.
-     **/
+/** Call this when you're done specifying all processes and variables
+ * and wish to start specifying invariants.
+ **/
     void
 accept_topology_XnSys (XnSys* sys)
 {
@@ -476,7 +492,7 @@ accept_topology_XnSys (XnSys* sys)
         }
     } BLose()
 
-        /* All legit states.*/
+    /* All legit states.*/
     sys->nstates = stepsz;
     sys->legit = cons2_BitTable (sys->nstates, 1);
 
@@ -533,7 +549,7 @@ accept_topology_XnSys (XnSys* sys)
     void
 dump_XnEVbl (OFileB* of, const XnEVbl* ev, const char* delim)
 {
-    dump_cstr_OFileB (of, ev->vbl->name.s);
+    dump_AlphaTab (of, &ev->vbl->name);
     if (!delim)  delim = "=";
     dump_cstr_OFileB (of, delim);
     dump_uint_OFileB (of, ev->val);
@@ -762,6 +778,11 @@ lose_FnWMem_detect_livelock (FnWMem_detect_livelock* tape)
     LoseTable( tape->testing );
 }
 
+/**
+ * Detect a livelock in the current set of transition rules.
+ * This is just a cycle check.
+ **/
+static
     bool
 detect_livelock (FnWMem_detect_livelock* tape,
                  const TableT(Xns) xns)
@@ -869,10 +890,10 @@ lose_FnWMem_detect_convergence (FnWMem_detect_convergence* tape)
     lose_BitTable (&tape->tested);
 }
 
-    /**
-     * Check to see that, for any state, there exists a path to a legit state.
-     * Assume the set of legit states is closed under all transitions.
-     **/
+/**
+ * Check to see that, for any state, there exists a path to a legit state.
+ * Assume the set of legit states is closed under all transitions.
+ **/
     bool
 detect_convergence (FnWMem_detect_convergence* tape,
                     const TableT(Xns) xns)
@@ -920,12 +941,12 @@ detect_convergence (FnWMem_detect_convergence* tape,
     return (nreached == tested.sz);
 }
 
-    /** Check for livelock and deadlock freedom
-     * along with fulfillment of the original protocol.
-     *
-     * It is assumed that all transitions in legit states are found in the
-     * original protocol (we just check edge counts).
-     **/
+/** Check for livelock and deadlock freedom
+ * along with fulfillment of the original protocol.
+ *
+ * It is assumed that all transitions in legit states are found in the
+ * original protocol (we just check edge counts).
+ **/
     Trit
 detect_strong_convergence (FnWMem_synsearch* tape)
 {
@@ -937,6 +958,7 @@ detect_strong_convergence (FnWMem_synsearch* tape)
                 return May;
     } BLose()
 
+    if (!SynLegit)
     { BLoopT( XnSz, i, tape->legit_states.sz )
         XnSz s0 = tape->legit_states.s[i];
         if (tape->xns.s[s0].sz != tape->legit_xns.s[i].sz)
@@ -1094,7 +1116,7 @@ add_XnRule (FnWMem_synsearch* tape, const XnRule* g)
         set0_BitTable (fix->fixed, vi);
     } BLose()
 
-        /* Overlay the table.*/
+    /* Overlay the table.*/
     t.s = &stk->s[nadds];
     t.sz = stk->sz - nadds;
     stk->sz = nadds;
@@ -1142,7 +1164,7 @@ cmp_XnSz (const void* pa, const void* pb)
 }
 
 #if 1
-    /* Only sort by the first member.*/
+/** Only sort by the first member.**/
 static
     int
 cmp_XnSz2 (const void* pa, const void* pb)
@@ -1151,13 +1173,26 @@ cmp_XnSz2 (const void* pa, const void* pb)
 }
 #endif
 
+/**
+ * Find the initial set of potential transition rules (actions).
+ *
+ * The procedure is:
+ * - Ensure the existing protocol is closed.
+ * - Add rules which have already been given.
+ * - Add rules which do not include legitimate states in the source states.
+ *   Unless either...
+ *  - All legitimate source states are mapped to legitimate destination states
+ *    in the legitimate protocol.
+ *  - /\ref SynLegit==true/ and all legitimate source states are mapped to
+ *    legitimate destination states.
+ **/
 static
     void
 set_may_rules (FnWMem_synsearch* tape, TableT(XnSz)* may_rules, XnRule* g)
 {
     const XnSys* restrict sys = tape->sys;
 
-        /* Ensure protocol is closed.*/
+    /* Ensure protocol is closed.*/
     { BLoopT( XnSz, i, tape->legit_xns.sz )
         const TableT(XnSz)* t = &tape->legit_xns.s[i];
         { BLoopT( XnSz, j, t->sz )
@@ -1170,8 +1205,8 @@ set_may_rules (FnWMem_synsearch* tape, TableT(XnSz)* may_rules, XnRule* g)
         } BLose()
     } BLose()
 
-        /* Note: Scrap variable /g/ is the most recent rule.*/
-        /* Add preexisting rules.*/
+    /* Note: Scrap variable /g/ is the most recent rule.*/
+    /* Add preexisting rules.*/
     { BLoopT( XnSz, i, tape->rules.sz - 1 )
         add_XnRule (tape, &tape->rules.s[i]);
         if (0 == *TopTable( tape->xn_stk ))
@@ -1183,7 +1218,7 @@ set_may_rules (FnWMem_synsearch* tape, TableT(XnSz)* may_rules, XnRule* g)
 
 
     { BLoopT( XnSz, i, sys->n_rule_steps )
-            /* XnSz rule_step = i; */
+        /* XnSz rule_step = i; */
         XnSz rule_step = sys->n_rule_steps - 1 - i;
 
         bool add = true;
@@ -1203,13 +1238,19 @@ set_may_rules (FnWMem_synsearch* tape, TableT(XnSz)* may_rules, XnRule* g)
         if (add)
         { BLoopT( XnSz, j, t.sz )
             const XnSz s0 = t.s[j];
+            const XnSz s1 = *TopTable( tape->xns.s[s0] );
 
-                /* Do not add rules which cause
-                 * bad transitions from legit states.
-                 */
-            if (test_BitTable (sys->legit, s0))
+            if (SynLegit
+                && test_BitTable (sys->legit, s0)
+                && test_BitTable (sys->legit, s1))
             {
-                const XnSz s1 = *TopTable( tape->xns.s[s0] );
+                /* This is just fine.*/
+            }
+            /* Do not add rules which cause
+             * bad transitions from legit states.
+             */
+            else if (test_BitTable (sys->legit, s0))
+            {
                 const XnSz* elt;
                 XnSz legit_idx;
 
@@ -1279,10 +1320,10 @@ grow1_may_rules_synsearch (FnWMem_synsearch* tape)
     return may_rules;
 }
 
-    /**
-     * Only allow self-disabling actions in /mayrules/.
-     * The top of /tape->rules/ must be allocated for temp memory.
-     */
+/**
+ * Only allow self-disabling actions in /mayrules/.
+ * The top of /tape->rules/ must be allocated for temp memory.
+ **/
     void
 synsearch_quicktrim_mayrules (FnWMem_synsearch* tape, XnSz nadded)
 {
@@ -1312,7 +1353,7 @@ synsearch_quicktrim_mayrules (FnWMem_synsearch* tape, XnSz nadded)
 
             if (match)
             {
-                    /* Can't have two actions with the same guard.*/
+                /* Can't have two actions with the same guard.*/
                 match = true;
                 { BLoop( k, g0->q.sz )
                     match = (g0->q.s[k] == g1->p.s[k]);
@@ -1321,7 +1362,7 @@ synsearch_quicktrim_mayrules (FnWMem_synsearch* tape, XnSz nadded)
                 add = !match;
                 if (!add)  break;
 
-                    /* Remove actions which would not be self-disabling.*/
+                /* Remove actions which would not be self-disabling.*/
                 match = true;
                 { BLoop( k, g0->q.sz )
                     match = (g0->p.s[k] == g1->p.s[k]);
@@ -1343,6 +1384,13 @@ synsearch_quicktrim_mayrules (FnWMem_synsearch* tape, XnSz nadded)
     may_rules->sz = off;
 }
 
+/**
+ * Trim rules at a new synsearch() depth.
+ * Try adding each remaining potential action.
+ * - If the action causes a livelock, discard it.
+ * - If the action achieves strong convergence,
+ *   return with /tape->stabilizing=true/.
+ **/
     void
 synsearch_trim (FnWMem_synsearch* tape)
 {
@@ -1350,7 +1398,7 @@ synsearch_trim (FnWMem_synsearch* tape)
     TableT(XnSz)* may_rules = TopTable( tape->may_rules );
     XnRule* g = TopTable( tape->rules );
 
-        /* Trim down the next possible steps.*/
+    /* Trim down the next possible steps.*/
     if (true)
     {
         XnSz off = 0;
@@ -1372,9 +1420,9 @@ synsearch_trim (FnWMem_synsearch* tape)
                 return;
             }
 
-                /* Prune if the rule doesn't add any useful transitions.
-                 * Note: This is probably invalid if we assume weak fairness.
-                 */
+            /* Prune if the rule doesn't add any useful transitions.
+             * Note: This is probably invalid if we assume weak fairness.
+             */
             if (stabilizing == May)
             {
                 DeclTable( XnSz, t );
@@ -1387,16 +1435,16 @@ synsearch_trim (FnWMem_synsearch* tape)
                     const XnSz s0 = t.s[j];
                     const XnSz s1 = *TopTable( tape->xns.s[s0] );
 
-                        /* Resolves a deadlock or
-                         * helps fulfill the original protocol.
-                         */
+                    /* Resolves a deadlock or
+                     * helps fulfill the original protocol.
+                     */
                     if (tape->xns.s[s0].sz == 1 ||
                         test_BitTable (sys->legit, s0))
                     {
-                            /* TODO: Make this count extra(?)
-                             * if the reachable states from the destination
-                             * include a legit state.
-                             */
+                        /* TODO: Make this count extra(?)
+                         * if the reachable states from the destination
+                         * include a legit state.
+                         */
                         ++ nresolved;
                         if (test_BitTable (sys->legit, s1))  tolegit = true;
                     }
@@ -1429,7 +1477,7 @@ synsearch_trim (FnWMem_synsearch* tape)
                sizeof(*tape->influence_order.s),
                cmp_XnSz2);
         { BLoopT( XnSz, i, tape->influence_order.sz )
-                /* XnSz idx = tape->influence_order.sz - 1 - i; */
+            /* XnSz idx = tape->influence_order.sz - 1 - i; */
             XnSz idx = i;
             may_rules->s[i] = tape->influence_order.s[idx].j;
         } BLose()
@@ -1445,9 +1493,9 @@ synsearch_check_weak (FnWMem_synsearch* tape, XnSz* ret_nreqrules)
     XnRule* g = TopTable( tape->rules );
     XnSz nreqrules = 0;
 
-        /* Check that a weakly stabilizing protocol
-         * exists with the rules we have left.
-         */
+    /* Check that a weakly stabilizing protocol
+     * exists with the rules we have left.
+     */
     if (true)
     {
         bool weak = true;
@@ -1493,13 +1541,13 @@ synsearch_check_weak (FnWMem_synsearch* tape, XnSz* ret_nreqrules)
         }
     }
 
-        /* Find rules which are necessary.*/
+    /* Find rules which are necessary.*/
     if (true)
     {
         XnSz off = 0;
         XnSz stk_idx, cmp_stk_idx;
 
-            /* Add all rules backwards, to find which are absolutely required.*/
+        /* Add all rules backwards, to find which are absolutely required.*/
         { BLoopT( XnSz, i, may_rules->sz )
             XnSz rule_step = may_rules->s[may_rules->sz - 1 - i];
             rule_XnSys (g, sys, rule_step);
@@ -1563,10 +1611,10 @@ synsearch_check_weak (FnWMem_synsearch* tape, XnSz* ret_nreqrules)
     return true;
 }
 
-    /**
-     * TODO: Make sure this works when the protocol has
-     * transitions defined in the legit states.
-     **/
+/**
+ * TODO: Make sure this works when the protocol has
+ * transitions defined in the legit states.
+ **/
     void
 synsearch (FnWMem_synsearch* tape)
 {
@@ -1635,9 +1683,9 @@ synsearch (FnWMem_synsearch* tape)
                 add_XnRule (tape, g + i);
             } BLose()
 
-                /* If the number of required rules is greater than 1,
-                 * we haven't checked its validity.
-                 */
+            /* If the number of required rules is greater than 1,
+             * we haven't checked its validity.
+             */
             if (nreqrules > 1)
             {
                 stabilizing = detect_strong_convergence (tape);
@@ -1698,10 +1746,14 @@ synsearch (FnWMem_synsearch* tape)
     else                -- tape->rules.sz;
 
     -- tape->may_rules.sz;
-        /* if (tape->rules.sz == 58)  exit(1); */
+    /* if (tape->rules.sz == 58)  exit(1); */
 }
 
 
+/** \test
+ * Test that detect_livelock() works.
+ * \sa detect_livelock()
+ **/
     void
 testfn_detect_livelock ()
 {
@@ -1740,6 +1792,7 @@ testfn_detect_livelock ()
     lose_BitTable (&legit);
 }
 
+/** Set the legitimate states of a 3-SAT to AddConvergence reduction.**/
 static
     void
 sat3_legit_XnSys (FnWMem_do_XnSys* fix,
@@ -1758,7 +1811,7 @@ sat3_legit_XnSys (FnWMem_do_XnSys* fix,
 #endif
 
 #if 1
-        /* Enforce identity.*/
+    /* Enforce identity.*/
     { BLoop( lo, npcs )
         const uint nsatvbls = 1 + (uint) sys->vbls.s[x_idcs[0]].max;
 
@@ -1796,7 +1849,7 @@ sat3_legit_XnSys (FnWMem_do_XnSys* fix,
     } BLose()
 #endif
 
-        /* Clauses.*/
+    /* Clauses.*/
     { BLoop( ci, cnf.sz )
         static const byte perms[][3] = {
             { 0, 1, 2 },
@@ -1806,9 +1859,9 @@ sat3_legit_XnSys (FnWMem_do_XnSys* fix,
             { 2, 0, 1 },
             { 2, 1, 0 }
         };
-            /* Only use permutations for the ring.*/
+        /* Only use permutations for the ring.*/
         const uint nperms = (ring ? ArraySz( perms ) : 1);
-            /* Only slide the window for the ring.*/
+        /* Only slide the window for the ring.*/
         const uint nwindows = (ring ? npcs : 1);
 
         { BLoop( permi, nperms )
@@ -1823,7 +1876,7 @@ sat3_legit_XnSys (FnWMem_do_XnSys* fix,
 
                 wipe_BitTable (bt, 0);
 
-                    /* Get variables on the stack.*/
+                /* Get variables on the stack.*/
                 { BLoop( i, 3 )
                     const uint pcidx = x_idcs[(lo + i) % npcs];
 
@@ -1921,9 +1974,20 @@ load_dimacs_result (XFileB* xf, bool* sat, BitTable evs)
     }
 }
 
+/** 
+ * Use an external SAT solver to solve /fmla/.
+ * If /\ref SatSolve_Z3==true/, use Z3.
+ * Otherwise, use MiniSat.
+ *
+ * \param fmla  CNF formula to solve. This is freed before the solver is run!
+ * \param sat   Result. Whether formula is satisfiable.
+ * \param evs   Result. Satisfying valuation. This should be allocated to the
+ * proper size!
+ **/
     void
 extl_solve_CnfFmla (CnfFmla* fmla, bool* sat, BitTable evs)
 {
+    int ret = -1;
     DecloStack( FileB, fb );
     init_FileB (fb);
     seto_FileB (fb, true);
@@ -1935,13 +1999,21 @@ extl_solve_CnfFmla (CnfFmla* fmla, bool* sat, BitTable evs)
     *fmla = dflt_CnfFmla ();
 
     if (SatSolve_Z3)
-        system ("z3 -dimacs sat.in > sat.out");
+        ret = system ("z3 -dimacs sat.in > sat.out");
     else
-        system ("minisat -verb=0 sat.in sat.out");
+        ret = system ("minisat -verb=0 sat.in sat.out");
 
-    seto_FileB (fb, false);
-    open_FileB (fb, 0, "sat.out");
-    load_dimacs_result (&fb->xo, sat, evs);
+    if (ret < 0)
+    {
+        DBog0( "External solve failed!" );
+        *sat = false;
+    }
+    else
+    {
+        seto_FileB (fb, false);
+        open_FileB (fb, 0, "sat.out");
+        load_dimacs_result (&fb->xo, sat, evs);
+    }
     lose_FileB (fb);
 }
 
@@ -1979,11 +2051,13 @@ sat3_XnSys (const CnfFmla* fmla)
 
         flush_OFileB (&name);
         printf_OFileB (&name, "x%u", r);
-        CopyTable( x->name, name.buf );
+        x->name.sz = 0;
+        cat_AlphaTab_OFileB (&x->name, &name);
 
         flush_OFileB (&name);
         printf_OFileB (&name, "y%u", r);
-        CopyTable( y->name, name.buf );
+        y->name.sz = 0;
+        cat_AlphaTab_OFileB (&y->name, &name);
 
         assoc_XnSys (sys, r, x_idcs[r], May);
         assoc_XnSys (sys, r, y_idcs[r], Yes);
@@ -1996,7 +2070,8 @@ sat3_XnSys (const CnfFmla* fmla)
     sys->vbls.s[sat_idx].max = 1;
     flush_OFileB (&name);
     dump_cstr_OFileB (&name, "sat");
-    CopyTable( sys->vbls.s[sat_idx].name, name.buf );
+    sys->vbls.s[sat_idx].name.sz = 0;
+    cat_AlphaTab_OFileB (&sys->vbls.s[sat_idx].name, &name);
     assoc_XnSys (sys, 3, sat_idx, Yes);
 
     accept_topology_XnSys (sys);
@@ -2080,22 +2155,24 @@ sat3_ring_XnSys (const CnfFmla* fmla, const bool use_sat)
 
         flush_OFileB (&name);
         printf_OFileB (&name, "x%u", r);
-        CopyTable( x->name, name.buf );
+        x->name.sz = 0;
+        cat_AlphaTab_OFileB (&x->name, &name);
 
         flush_OFileB (&name);
         printf_OFileB (&name, "y%u", r);
-        CopyTable( y->name, name.buf );
+        y->name.sz = 0;
+        cat_AlphaTab_OFileB (&y->name, &name);
 
 
-            /* Process r */
+        /* Process r */
         assoc_XnSys (sys, r, x_idcs[r], May);
         assoc_XnSys (sys, r, y_idcs[r], Yes);
 
-            /* Process r+1 */
+        /* Process r+1 */
         assoc_XnSys (sys, (r + 1) % npcs, x_idcs[r], May);
         assoc_XnSys (sys, (r + 1) % npcs, y_idcs[r], May);
 
-            /* Process r-1 */
+        /* Process r-1 */
         assoc_XnSys (sys, (r + npcs - 1) % npcs, x_idcs[r], May);
         assoc_XnSys (sys, (r + npcs - 1) % npcs, y_idcs[r], May);
     } BLose()
@@ -2107,12 +2184,13 @@ sat3_ring_XnSys (const CnfFmla* fmla, const bool use_sat)
 
         flush_OFileB (&name);
         printf_OFileB (&name, "sat%u", r);
-        CopyTable( sat->name, name.buf );
-            /* Process r */
+        sat->name.sz = 0;
+        cat_AlphaTab_OFileB (&sat->name, &name);
+        /* Process r */
         assoc_XnSys (sys, r, sat_idcs[r], Yes);
-            /* Process r+1 */
+        /* Process r+1 */
         assoc_XnSys (sys, (r + 1) % npcs, sat_idcs[r], May);
-            /* Process r-1 */
+        /* Process r-1 */
         assoc_XnSys (sys, (r + npcs - 1) % npcs, sat_idcs[r], May);
     } BLose()
 
@@ -2168,6 +2246,7 @@ sat3_ring_XnSys (const CnfFmla* fmla, const bool use_sat)
     return *sys;
 }
 
+/** Give a solution hint for the simple 3-SAT to AddConvergence reduction.**/
     void
 sat3_soln_XnSys (TableT(XnRule)* rules,
                  const BitTable evs, const XnSys* sys)
@@ -2204,6 +2283,7 @@ sat3_soln_XnSys (TableT(XnRule)* rules,
     } BLose()
 }
 
+/** Give a solution hint for a 3-SAT to AddConvergence ring reduction.**/
     void
 sat3_ring_soln_XnSys (TableT(XnRule)* rules,
                       const BitTable evs, const XnSys* sys,
@@ -2484,7 +2564,7 @@ dump_promela (OFileB* of, const XnSys* sys, const TableT(XnRule) rules)
             dump_cstr_OFileB (of, "byte");
 
         dump_char_OFileB (of, ' ');
-        dump_cstr_OFileB (of, x->name.s );
+        dump_AlphaTab (of, &x->name );
         dump_cstr_OFileB (of, ";\n");
     } BLose()
 
@@ -2554,12 +2634,12 @@ swapped_XnSz2 (const XnSz2* a, const XnSz2* b)
             : swapped);
 }
 
-    /**
-     * Reduce the AddConvergence problem to SAT and solve it.
-     *
-     * TODO: Make this work when the protocol has
-     * transitions defined in the legit states.
-     **/
+/**
+ * Reduce the AddConvergence problem to SAT and solve it.
+ *
+ * TODO: Make this work when the protocol has
+ * transitions defined in the legit states.
+ **/
     void
 synsearch_sat (FnWMem_synsearch* tape)
 {
@@ -2715,7 +2795,7 @@ synsearch_sat (FnWMem_synsearch* tape)
             if (state->to.sz == 0)
                 DBog0( "Illegit state without outgoing transitions!!!!" );
 
-                /* Deadlock freedom clause.*/
+            /* Deadlock freedom clause.*/
             clause->lits.sz = 0;
             { BUjFor( j, state->to.sz )
                 XnSz2 t;
@@ -2765,7 +2845,7 @@ synsearch_sat (FnWMem_synsearch* tape)
             ujint q_ikj;
             if (k == p.i)
             {
-                    /* In this case, just let q_{ikj} = t_{ij}.*/
+                /* In this case, just let q_{ikj} = t_{ij}.*/
                 assoc = lookup_Associa (xnmap, &p);
                 Claim( assoc );
                 q_ikj = xns.s[*(ujint*) val_of_Assoc (assoc)].idx;
@@ -2788,19 +2868,19 @@ synsearch_sat (FnWMem_synsearch* tape)
                 t_kj = xns.s[*(ujint*) val_of_Assoc (assoc)].idx;
 
                 q_ikj = fmla->nvbls ++;
-                    /* We wish for (q_{ikj} == p_{ik} && t_{kj}).*/
+                /* We wish for (q_{ikj} == p_{ik} && t_{kj}).*/
 
-                    /* (q_{ikj} => p_{ik}) */
+                /* (q_{ikj} => p_{ik}) */
                 clause->lits.sz = 0;
                 app_CnfDisj (clause, false, q_ikj);
                 app_CnfDisj (clause, true , p_ik );
                 app_CnfFmla (fmla, clause);
-                    /* (q_{ikj} => t_{kj}) */
+                /* (q_{ikj} => t_{kj}) */
                 clause->lits.sz = 0;
                 app_CnfDisj (clause, false, q_ikj);
                 app_CnfDisj (clause, true , t_kj );
                 app_CnfFmla (fmla, clause);
-                    /* (p_{ik} && t_{kj} => q_{ikj}) */
+                /* (p_{ik} && t_{kj} => q_{ikj}) */
                 clause->lits.sz = 0;
                 app_CnfDisj (clause, true , q_ikj);
                 app_CnfDisj (clause, false, p_ik );
@@ -2808,7 +2888,7 @@ synsearch_sat (FnWMem_synsearch* tape)
                 app_CnfFmla (fmla, clause);
             }
 
-                /* (q_{ikj} => p_{ij}) */
+            /* (q_{ikj} => p_{ij}) */
             clause->lits.sz = 0;
             app_CnfDisj (clause, false, q_ikj);
             app_CnfDisj (clause, true , p_ij );
@@ -2820,7 +2900,7 @@ synsearch_sat (FnWMem_synsearch* tape)
         lose_CnfDisj (path_clause);
     } BLose()
 
-        /* Lose everything we can before running the solve.*/
+    /* Lose everything we can before running the solve.*/
     { BUjFor( i, states.sz )
         LoseTable( states.s[i].tx );
         LoseTable( states.s[i].to );
@@ -2865,17 +2945,22 @@ main ()
     DecloStack1( XnSys, sys, dflt_XnSys () );
     DecloStack1( CnfFmla, fmla, dflt_CnfFmla () );
     BoolLit clauses[][3] = {
+#if 0
+#elif 1
         {{Yes, 0}, {Yes, 1}, {Yes, 0}},
         {{Yes, 1}, {Nil, 0}, {Yes, 1}},
-            /* {{Nil, 1}, {Yes, 0}, {Nil, 1}}, */
         {{Yes, 1}, {Yes, 1}, {Nil, 1}},
         {{Yes, 2}, {Yes, 1}, {Nil, 2}},
         {{Nil, 2}, {Nil, 2}, {Yes, 3}},
-            /* {{Nil, 3}, {Nil, 3}, {Nil, 3}}, */
-            /* {{Yes, 0}, {Nil, 0}, {Yes, 0}}, */
-            /* {{Yes, 0}, {Nil, 0}, {Yes, 0}}, */
-            /* {{Nil, 0}, {Nil, 0}, {Nil, 0}} */
         {{Nil, 0}, {Nil, 0}, {Nil, 0}}
+#elif 0
+        {{Nil, 0}, {Nil, 0}, {Nil, 0}}
+#elif 0
+        /* No solution, but not super trivial.*/
+        {{Yes, 1}, {Yes, 1}, {Yes, 1}},
+        {{Nil, 0}, {Nil, 0}, {Nil, 0}},
+        {{Yes, 0}, {Nil, 1}, {Nil, 1}}
+#endif
     };
     const bool ring = false;
     const bool use_sat_vbl = false; /* Only applies to ring.*/
