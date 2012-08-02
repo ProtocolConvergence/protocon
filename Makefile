@@ -21,10 +21,12 @@ cx_obj_list = fileb.o sys-cx.o bstree.o rbtree.o
 cx_obj_list := $(addprefix $(cx_path)/,$(cx_obj_list))
 
 $(bin_path)/satsyn: satsyn.o $(cx_obj_list)
-	$(CC) $(CFLAGS) -o $@ $^
+	$(CC) $(CFLAGS) -o $@ satsyn.o $(cx_obj_list)
 
 %.o: %.c
-	$(CC) -c $(CFLAGS) $^ -o $@
+	$(CC) -c $(CFLAGS) $< -o $@
+
+satsyn.o: pla.c
 
 $(exe_list): | $(bin_path)
 

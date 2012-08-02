@@ -464,7 +464,7 @@ assoc_XnSys (XnSys* sys, uint pc_idx, uint vbl_idx, Trit mode)
                 pc->vbls.s[pc->vbls.sz-i-2];
         } BLose()
 
-        { BLoop( i, x->pcs.sz )
+        { BLoop( i, x->pcs.sz-1 )
             x->pcs.s[x->pcs.sz-i-1] =
                 x->pcs.s[x->pcs.sz-i-2];
         } BLose()
@@ -2938,6 +2938,8 @@ synsearch_sat (FnWMem_synsearch* tape)
     lose_CnfFmla (fmla);
 }
 
+#include "pla.c"
+
     int
 main ()
 {
@@ -2954,6 +2956,9 @@ main ()
         {{Nil, 2}, {Nil, 2}, {Yes, 3}},
         {{Nil, 0}, {Nil, 0}, {Nil, 0}}
 #elif 0
+        {{Nil, 0}, {Nil, 0}, {Nil, 0}}
+#elif 0
+        {{Yes, 1}, {Nil, 1}, {Yes, 0}},
         {{Nil, 0}, {Nil, 0}, {Nil, 0}}
 #elif 0
         /* No solution, but not super trivial.*/
@@ -3026,7 +3031,8 @@ main ()
 
         if (tape.stabilizing || (manual_soln && tape.rules.sz > 0))
         {
-            FileB pmlf;
+            FileB pmlf; /* Promela.*/
+            FileB plaf; /* PLA (for espresso).*/
 #if 0
             { BLoopT( XnSz, i, tape.rules.sz )
                 dump_promela_XnRule (stderr_OFileB (), &tape.rules.s[i], sys);
@@ -3039,9 +3045,29 @@ main ()
             open_FileB (&pmlf, 0, "model.pml");
             dump_promela (&pmlf.xo, sys, tape.rules);
             lose_FileB (&pmlf);
+
+
+            /* This is just a test, but should be used to
+             * minimize the representation for transition rules.
+             */
+            init_FileB (&plaf);
+            seto_FileB (&plaf, true);
+            open_FileB (&plaf, 0, "pc.esp");
+            dump_pla_pc (&plaf.xo, &sys->pcs.s[3], sys, tape.rules);
+            lose_FileB (&plaf);
         }
+
         lose_FnWMem_synsearch (&tape);
         lose_BitTable (&evs);
+    }
+
+    {
+        FileB plaf;
+        init_FileB (&plaf);
+        seto_FileB (&plaf, true);
+        open_FileB (&plaf, 0, "legit.esp");
+        dump_pla_legit (&plaf.xo, sys);
+        lose_FileB (&plaf);
     }
 
     lose_CnfFmla (fmla);
