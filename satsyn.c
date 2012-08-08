@@ -3,10 +3,11 @@
  *
  * SAT-based stabilization synthesis.
  **/
+#include "cx/syscx.h"
 #include "cx/associa.h"
 #include "cx/bittable.h"
 #include "cx/fileb.h"
-#include "cx/sys-cx.h"
+#include "cx/ospc.h"
 #include "cx/table.h"
 
 #include <assert.h>
@@ -488,7 +489,7 @@ accept_topology_XnSys (XnSys* sys)
         if (x->max != 0 && x->stepsz >= stepsz)
         {
             DBog0( "Cannot hold all the states!" );
-            fail_exit_sys_cx (0);
+            fail_exit_sysCx (0);
         }
     } BLose()
 
@@ -515,7 +516,7 @@ accept_topology_XnSys (XnSys* sys)
             if (max != 0 && *x >= stepsz)
             {
                 DBog0( "Cannot hold all the rules!" );
-                fail_exit_sys_cx (0);
+                fail_exit_sysCx (0);
             }
         } BLose()
 
@@ -531,7 +532,7 @@ accept_topology_XnSys (XnSys* sys)
             if (max != 0 && *x >= stepsz)
             {
                 DBog0( "Cannot hold all the rules!" );
-                fail_exit_sys_cx (0);
+                fail_exit_sysCx (0);
             }
         } BLose()
 
@@ -1928,95 +1929,7 @@ sat3_legit_XnSys (FnWMem_do_XnSys* fix,
 #endif
 }
 
-    void
-dump_dimacs_CnfFmla (OFileB* of, const CnfFmla* fmla)
-{
-    DecloStack1( CnfDisj, clause, dflt_CnfDisj () );
-    printf_OFileB (of, "p cnf %u %u\n",
-                   (uint) fmla->nvbls,
-                   (uint) fmla->idcs.sz);
-    { BLoop( i, fmla->idcs.sz )
-        clause_of_CnfFmla (clause, fmla, i);
-        { BLoop( j, clause->lits.sz )
-            if (!clause->lits.s[j].val)
-                dump_char_OFileB (of, '-');
-            dump_uint_OFileB (of, 1+clause->lits.s[j].vbl);
-            dump_char_OFileB (of, ' ');
-        } BLose()
-        dump_cstr_OFileB (of, "0\n");
-    } BLose()
-    lose_CnfDisj (clause);
-}
-
-    void
-load_dimacs_result (XFileB* xf, bool* sat, BitTable evs)
-{
-    const char* line = getline_XFileB (xf);
-    wipe_BitTable (evs, 0);
-    if (0 == strcmp (line, "UNSAT") ||
-        0 == strcmp (line, "unsat"))
-    {
-        *sat = false;
-    }
-    else
-    {
-        int v;
-        bool good;
-        *sat = true;
-
-        good = load_int_XFileB (xf, &v);
-        while (good)
-        {
-            if      (v > 0)  set1_BitTable (evs, +v-1);
-            else if (v < 0)  set0_BitTable (evs, -v-1);
-            good = load_int_XFileB (xf, &v);
-        }
-    }
-}
-
-/** 
- * Use an external SAT solver to solve /fmla/.
- * If /\ref SatSolve_Z3==true/, use Z3.
- * Otherwise, use MiniSat.
- *
- * \param fmla  CNF formula to solve. This is freed before the solver is run!
- * \param sat   Result. Whether formula is satisfiable.
- * \param evs   Result. Satisfying valuation. This should be allocated to the
- * proper size!
- **/
-    void
-extl_solve_CnfFmla (CnfFmla* fmla, bool* sat, BitTable evs)
-{
-    int ret = -1;
-    DecloStack( FileB, fb );
-    init_FileB (fb);
-    seto_FileB (fb, true);
-    open_FileB (fb, 0, "sat.in");
-    dump_dimacs_CnfFmla (&fb->xo, fmla);
-    close_FileB (fb);
-
-    lose_CnfFmla (fmla);
-    *fmla = dflt_CnfFmla ();
-
-    if (SatSolve_Z3)
-        ret = system ("z3 -dimacs sat.in > sat.out");
-    else
-        ret = system ("minisat -verb=0 sat.in sat.out");
-
-    if (ret < 0)
-    {
-        DBog0( "External solve failed!" );
-        *sat = false;
-    }
-    else
-    {
-        seto_FileB (fb, false);
-        open_FileB (fb, 0, "sat.out");
-        load_dimacs_result (&fb->xo, sat, evs);
-    }
-    lose_FileB (fb);
-}
-
+#include "dimacs.c"
 
     XnSys
 sat3_XnSys (const CnfFmla* fmla)
@@ -2941,9 +2854,9 @@ synsearch_sat (FnWMem_synsearch* tape)
 #include "pla.c"
 
     int
-main ()
+main (int argc, char** argv)
 {
-    const bool SystemInitialized = (init_sys_cx (), true);
+    const bool SystemInitialized = (init_sysCx (&argc, &argv), true);
     DecloStack1( XnSys, sys, dflt_XnSys () );
     DecloStack1( CnfFmla, fmla, dflt_CnfFmla () );
     BoolLit clauses[][3] = {
@@ -3032,13 +2945,6 @@ main ()
         if (tape.stabilizing || (manual_soln && tape.rules.sz > 0))
         {
             FileB pmlf; /* Promela.*/
-            FileB plaf; /* PLA (for espresso).*/
-#if 0
-            { BLoopT( XnSz, i, tape.rules.sz )
-                dump_promela_XnRule (stderr_OFileB (), &tape.rules.s[i], sys);
-                dump_char_OFileB (stderr_OFileB (), '\n');
-            } BLose()
-#endif
 
             init_FileB (&pmlf);
             seto_FileB (&pmlf, true);
@@ -3050,29 +2956,16 @@ main ()
             /* This is just a test, but should be used to
              * minimize the representation for transition rules.
              */
-            init_FileB (&plaf);
-            seto_FileB (&plaf, true);
-            open_FileB (&plaf, 0, "pc.esp");
-            dump_pla_pc (&plaf.xo, &sys->pcs.s[3], sys, tape.rules);
-            lose_FileB (&plaf);
+            do_pla_XnSys (sys, tape.rules);
         }
 
         lose_FnWMem_synsearch (&tape);
         lose_BitTable (&evs);
     }
 
-    {
-        FileB plaf;
-        init_FileB (&plaf);
-        seto_FileB (&plaf, true);
-        open_FileB (&plaf, 0, "legit.esp");
-        dump_pla_legit (&plaf.xo, sys);
-        lose_FileB (&plaf);
-    }
-
     lose_CnfFmla (fmla);
     lose_XnSys (sys);
-    if (SystemInitialized)  lose_sys_cx ();
+    if (SystemInitialized)  lose_sysCx ();
     return 0;
 }
 

@@ -36,12 +36,6 @@ dump_pla_legit (OFileB* of, const XnSys* sys)
         dump_uint_OFileB (of, (uint)sys->vbls.s[i].max + 1);
     } BLose()
     dump_cstr_OFileB (of, " 2\n");
-#if 0
-    /* Not needed.*/
-    dump_cstr_OFileB (of, ".p ");
-    dump_ujint_OFileB (of, sys->nstates);
-    dump_char_OFileB (of, '\n');
-#endif
     { BUjFor( i, sys->nstates )
         dump_pla_state_XnSys (of, sys, i);
         dump_char_OFileB (of, '\n');
@@ -108,5 +102,56 @@ dump_pla_pc (OFileB* of, const XnPc* pc, const XnSys* sys,
         }
     } BLose()
     dump_cstr_OFileB (of, ".e\n");
+}
+
+    bool
+do_pla_XnSys (const XnSys* sys, const TableT(XnRule) rules)
+{
+    bool good = true;
+    DecloStack1( OSPc, ospc, dflt_OSPc () );
+    OFileB* of = stdout_OFileB ();
+
+#if 0
+    FileB ofb;
+    init_FileB (&ofb);
+    seto_FileB (&ofb, true);
+    open_FileB (&ofb, 0, "legit0.esp");
+    of = &ofb.xo;
+    dump_pla_legit (of, sys);
+#endif
+
+    BInit();
+
+    stdxpipe_OSPc (ospc);
+    stdopipe_OSPc (ospc);
+    ospc->cmd = cons1_AlphaTab ("espresso");
+    PushTable( ospc->args, cons1_AlphaTab ("-Dexact") );
+    good = spawn_OSPc (ospc);
+    BCasc( good, good, "spawn_OSPc()" );
+
+    dump_pla_legit (ospc->of, sys);
+    close_OFileB (ospc->of);
+    load_XFileB (ospc->xf);
+    if (0)
+        dump_cstr_OFileB (of, cstr1_XFileB (ospc->xf, 0));
+    close_OSPc (ospc);
+
+    if (0)
+    { BUjFor( pcidx, sys->pcs.sz )
+        good = spawn_OSPc (ospc);
+        if (!good)  break;
+        dump_pla_pc (ospc->of, &sys->pcs.s[pcidx], sys, rules);
+        close_OFileB (ospc->of);
+        dump_cstr_OFileB (of, load_FileB (&ospc->xfb));
+        close_OSPc (ospc);
+    } BLose()
+
+    BCasc( good, good, "spawn_OSPc()" );
+
+    BLose();
+
+    /* lose_FileB (&ofb); */
+    lose_OSPc (ospc);
+    return good;
 }
 
