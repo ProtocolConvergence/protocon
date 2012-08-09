@@ -13,6 +13,18 @@
 #include <assert.h>
 #include <stdio.h>
 
+enum XnSysInstance {
+    Sat3Inst,
+    Sat3RingInst,
+    Sat3RingWSatInst,
+    MatchingInst,
+    ColoringInst,
+    Bit3Inst,
+    NXnSysInstances
+};
+
+typedef enum XnSysInstance XnSysInstance;
+
 static const bool DBog_WeakChk    = true;
 static const bool DBog_AssertRule = true;
 static const bool DBog_SearchStep = true;
@@ -20,8 +32,6 @@ static const bool DBog_QuickTrim = false;
 
 /** Use Z3 instead of MiniSat.**/
 static const bool SatSolve_Z3 = false;
-/** Allow new transitions in the set of legitimate states.**/
-static const bool SynLegit = false;
 
 typedef struct XnPc XnPc;
 typedef struct XnVbl XnVbl;
@@ -107,6 +117,8 @@ struct XnSys
     TableT(XnRule) legit_rules;
     XnSz nstates; /**< Same as /legit.sz/.**/
     XnSz n_rule_steps;
+    /** Allow new transitions in the set of legitimate states.**/
+    bool syn_legit;
 };
 
 struct FnWMem_detect_livelock
@@ -279,6 +291,7 @@ dflt_XnSys ()
     InitTable( sys.legit_rules );
     sys.nstates = 0;
     sys.n_rule_steps = 0;
+    sys.syn_legit = false;
     return sys;
 }
 
@@ -457,22 +470,33 @@ assoc_XnSys (XnSys* sys, uint pc_idx, uint vbl_idx, Trit mode)
     }
     if (mode == Yes)
     {
+        uint i;
         GrowTable( pc->vbls, 1 );
         GrowTable( x->pcs, 1 );
 
-        { BLoop( i, pc->vbls.sz-1 )
-            pc->vbls.s[pc->vbls.sz-i-1] =
-                pc->vbls.s[pc->vbls.sz-i-2];
-        } BLose()
 
-        { BLoop( i, x->pcs.sz-1 )
-            x->pcs.s[x->pcs.sz-i-1] =
-                x->pcs.s[x->pcs.sz-i-2];
-        } BLose()
+        for (i = pc->vbls.sz - 1; i > pc->nwvbls; --i)
+            pc->vbls.s[i] = pc->vbls.s[i-1];
+        for (i = x->pcs.sz - 1; i > x->nwpcs; --i)
+            x->pcs.s[i] = x->pcs.s[i-1];
 
         pc->vbls.s[pc->nwvbls ++] = vbl_idx;
         x->pcs.s[x->nwpcs ++] = pc_idx;
     }
+}
+
+qual_inline
+    uint
+inc1mod (uint i, uint n)
+{
+    return (i + 1) % n;
+}
+
+qual_inline
+    uint
+dec1mod (uint i, uint n)
+{
+    return (i + n - 1) % n;
 }
 
 /** Call this when you're done specifying all processes and variables
@@ -489,7 +513,7 @@ accept_topology_XnSys (XnSys* sys)
         if (x->max != 0 && x->stepsz >= stepsz)
         {
             DBog0( "Cannot hold all the states!" );
-            fail_exit_sysCx (0);
+            failout_sysCx ("");
         }
     } BLose()
 
@@ -516,7 +540,7 @@ accept_topology_XnSys (XnSys* sys)
             if (max != 0 && *x >= stepsz)
             {
                 DBog0( "Cannot hold all the rules!" );
-                fail_exit_sysCx (0);
+                failout_sysCx (0);
             }
         } BLose()
 
@@ -532,7 +556,7 @@ accept_topology_XnSys (XnSys* sys)
             if (max != 0 && *x >= stepsz)
             {
                 DBog0( "Cannot hold all the rules!" );
-                fail_exit_sysCx (0);
+                failout_sysCx (0);
             }
         } BLose()
 
@@ -547,6 +571,20 @@ accept_topology_XnSys (XnSys* sys)
 }
 
 
+/** Given a state index, find the corresponding variable assignments.
+ **/
+    void
+statevs_of_XnSys (TableT(DomSz)* t, const XnSys* sys, XnSz sidx)
+{
+    SizeTable( *t, sys->vbls.sz );
+    { BLoop( i, sys->vbls.sz )
+        const XnVbl* x = &sys->vbls.s[i];
+        t->s[i] = (sidx / x->stepsz);
+        sidx = (sidx % x->stepsz);
+    } BLose()
+}
+
+
     void
 dump_XnEVbl (OFileB* of, const XnEVbl* ev, const char* delim)
 {
@@ -554,19 +592,6 @@ dump_XnEVbl (OFileB* of, const XnEVbl* ev, const char* delim)
     if (!delim)  delim = "=";
     dump_cstr_OFileB (of, delim);
     dump_uint_OFileB (of, ev->val);
-}
-
-    void
-dump_promela_state_XnSys (OFileB* of, const XnSys* sys, XnSz sidx)
-{
-    { BLoop( i, sys->vbls.sz )
-        XnEVbl x;
-        x.vbl = &sys->vbls.s[i];
-        x.val = sidx / x.vbl->stepsz;
-        sidx = sidx % x.vbl->stepsz;
-        if (i > 0)  dump_cstr_OFileB (of, " && ");
-        dump_XnEVbl (of, &x, "==");
-    } BLose()
 }
 
     void
@@ -616,49 +641,7 @@ step_XnRule (const XnRule* g, const XnSys* sys)
     return step;
 }
 
-    void
-dump_promela_XnRule (OFileB* of, const XnRule* g, const XnSys* sys)
-{
-    bool had;
-    XnPc* pc = &sys->pcs.s[g->pc];
-    TableT(XnSz) t;
-    dump_cstr_OFileB (of, "/*P");
-    dump_uint_OFileB (of, g->pc);
-    dump_cstr_OFileB (of, "*/ ");
-
-    t = rvbls_XnPc (pc);
-    had = false;
-    { BLoop( i, sys->vbls.sz )
-        { BLoop( j, t.sz )
-            if (t.s[j] == i)
-            {
-                XnEVbl x;
-                x.vbl = &sys->vbls.s[i];
-                x.val = g->p.s[j];
-                if (had)  dump_cstr_OFileB (of, " && ");
-                had = true;
-                dump_XnEVbl (of, &x, "==");
-            }
-        } BLose()
-    } BLose()
-
-    dump_cstr_OFileB (of, " ->");
-
-    t = wvbls_XnPc (pc);
-    { BLoop( i, sys->vbls.sz )
-        { BLoop( j, t.sz )
-            if (t.s[j] == i)
-            {
-                XnEVbl x;
-                dump_char_OFileB (of, ' ');
-                x.vbl = &sys->vbls.s[i];
-                x.val = g->q.s[j];
-                dump_XnEVbl (of, &x, "=");
-                dump_char_OFileB (of, ';');
-            }
-        } BLose()
-    } BLose()
-}
+#include "promela.c"
 
 
     FnWMem_do_XnSys
@@ -959,7 +942,7 @@ detect_strong_convergence (FnWMem_synsearch* tape)
                 return May;
     } BLose()
 
-    if (!SynLegit)
+    if (!tape->sys->syn_legit)
     { BLoopT( XnSz, i, tape->legit_states.sz )
         XnSz s0 = tape->legit_states.s[i];
         if (tape->xns.s[s0].sz != tape->legit_xns.s[i].sz)
@@ -1131,7 +1114,10 @@ add_XnRule (FnWMem_synsearch* tape, const XnRule* g)
         bool add = true;
         XnSz s0 = t.s[i];
         XnSz s1 = AppDelta( s0, sa, sb );
+        /* XnSz s1 = apply1_XnRule (g, tape->sys, s0); */
         TableT(XnSz)* src = &xns->s[s0];
+        Claim2( s0 ,<, tape->sys->nstates );
+        Claim2( s1 ,<, tape->sys->nstates );
 
         { BLoopT( XnSz, j, src->sz )
             if (src->s[j] == s1)
@@ -1184,7 +1170,7 @@ cmp_XnSz2 (const void* pa, const void* pb)
  *   Unless either...
  *  - All legitimate source states are mapped to legitimate destination states
  *    in the legitimate protocol.
- *  - /\ref SynLegit==true/ and all legitimate source states are mapped to
+ *  - /syn_legit==true/ and all legitimate source states are mapped to
  *    legitimate destination states.
  **/
 static
@@ -1241,16 +1227,19 @@ set_may_rules (FnWMem_synsearch* tape, TableT(XnSz)* may_rules, XnRule* g)
             const XnSz s0 = t.s[j];
             const XnSz s1 = *TopTable( tape->xns.s[s0] );
 
-            if (SynLegit
-                && test_BitTable (sys->legit, s0)
-                && test_BitTable (sys->legit, s1))
+            if (!test_BitTable (sys->legit, s0))
             {
-                /* This is just fine.*/
+                /* Ok, start state is illegitimate.*/
             }
-            /* Do not add rules which cause
-             * bad transitions from legit states.
-             */
-            else if (test_BitTable (sys->legit, s0))
+            else if (sys->syn_legit)
+            {
+                if (!test_BitTable (sys->legit, s1))
+                    add = false;
+            }
+            else
+                /* Do not add rules which cause
+                 * bad transitions from legit states.
+                 */
             {
                 const XnSz* elt;
                 XnSz legit_idx;
@@ -1272,11 +1261,9 @@ set_may_rules (FnWMem_synsearch* tape, TableT(XnSz)* may_rules, XnRule* g)
                              cmp_XnSz);
 
                 if (!elt)
-                {
                     add = false;
-                    break;
-                }
             }
+            if (!add)  break;
         } BLose()
 
         if (add && test_selfloop)
@@ -1508,6 +1495,7 @@ synsearch_check_weak (FnWMem_synsearch* tape, XnSz* ret_nreqrules)
 
         weak = detect_convergence (&tape->convergence_tape, tape->xns);
 
+        if (!tape->sys->syn_legit)
         { BLoopT( XnSz, i, tape->legit_states.sz )
             XnSz nout = tape->xns.s[tape->legit_states.s[i]].sz;
             if (nout != tape->legit_xns.s[i].sz)
@@ -1575,8 +1563,8 @@ synsearch_check_weak (FnWMem_synsearch* tape, XnSz* ret_nreqrules)
                 const XnSz s0 = as[j];
                 { BLoopT( XnSz, k, nbs )
                     if (s0 == bs[k] &&
-                        (tape->xns.s[s0].sz == 1 ||
-                         test_BitTable (sys->legit, s0)))
+                        tape->xns.s[s0].sz == 1 &&
+                        !(sys->syn_legit && test_BitTable (sys->legit, s0)))
                     {
                         required = true;
                         j = nas;
@@ -1636,7 +1624,6 @@ synsearch (FnWMem_synsearch* tape)
         {
             tape->stabilizing = true;
             CopyTable( tape->rules, sys->legit_rules );
-            -- tape->rules.sz;
             return;
         }
 
@@ -1793,744 +1780,10 @@ testfn_detect_livelock ()
     lose_BitTable (&legit);
 }
 
-/** Set the legitimate states of a 3-SAT to AddConvergence reduction.**/
-static
-    void
-sat3_legit_XnSys (FnWMem_do_XnSys* fix,
-                  BitTable bt,
-                  XnSys* sys,
-                  TableT(CnfDisj) cnf,
-                  const uint npcs,
-                  const uint* x_idcs,
-                  const uint* y_idcs)
-{
-    bool ring = (npcs != 3);
-#if 0
-    OFileB* of = stderr_OFileB ();
-    dump_BitTable (of, sys->legit);
-    dump_char_OFileB (of, '\n');
-#endif
-
-#if 1
-    /* Enforce identity.*/
-    { BLoop( lo, npcs )
-        const uint nsatvbls = 1 + (uint) sys->vbls.s[x_idcs[0]].max;
-
-        { BLoop( offset, 2 )
-            const uint hi = (lo+1+offset) % npcs;
-
-            wipe_BitTable (bt, 0);
-
-            set1_BitTable (fix->fixed, x_idcs[lo]);
-            set1_BitTable (fix->fixed, x_idcs[hi]);
-
-            { BLoop( val, nsatvbls )
-                fix->vals[x_idcs[lo]] = val;
-                fix->vals[x_idcs[hi]] = val;
-                do_XnSys (fix, bt);
-            } BLose()
-
-            set0_BitTable (fix->fixed, x_idcs[lo]);
-            set0_BitTable (fix->fixed, x_idcs[hi]);
-
-            op_BitTable (bt, bt, BitOp_NOT);
-
-            set1_BitTable (fix->fixed, y_idcs[lo]);
-            set1_BitTable (fix->fixed, y_idcs[hi]);
-            { BLoop( val, 2 )
-                fix->vals[y_idcs[lo]] = val;
-                fix->vals[y_idcs[hi]] = val;
-                do_XnSys (fix, bt);
-            } BLose()
-            set0_BitTable (fix->fixed, y_idcs[lo]);
-            set0_BitTable (fix->fixed, y_idcs[hi]);
-
-            op_BitTable (sys->legit, bt, BitOp_AND);
-        } BLose()
-    } BLose()
-#endif
-
-    /* Clauses.*/
-    { BLoop( ci, cnf.sz )
-        static const byte perms[][3] = {
-            { 0, 1, 2 },
-            { 0, 2, 1 },
-            { 1, 0, 2 },
-            { 1, 2, 0 },
-            { 2, 0, 1 },
-            { 2, 1, 0 }
-        };
-        /* Only use permutations for the ring.*/
-        const uint nperms = (ring ? ArraySz( perms ) : 1);
-        /* Only slide the window for the ring.*/
-        const uint nwindows = (ring ? npcs : 1);
-
-        { BLoop( permi, nperms )
-            BoolLit lits[3];
-
-            { BLoop( i, 3 )
-                byte idx = perms[permi][i];
-                lits[i] = cnf.s[ci].lits.s[idx];
-            } BLose()
-
-            { BLoop( lo, nwindows )
-
-                wipe_BitTable (bt, 0);
-
-                /* Get variables on the stack.*/
-                { BLoop( i, 3 )
-                    const uint pcidx = x_idcs[(lo + i) % npcs];
-
-                    set1_BitTable (fix->fixed, pcidx);
-                    fix->vals[pcidx] = (DomSz) lits[i].vbl;
-                } BLose()
-
-                do_XnSys (fix, bt);
-                op_BitTable (bt, bt, BitOp_NOT);
-
-                { BLoop( i, 3 )
-                    const uint pcidx = y_idcs[(lo + i) % npcs];
-
-                    set1_BitTable (fix->fixed, pcidx);
-                    fix->vals[pcidx] = lits[i].val;
-                    do_XnSys (fix, bt);
-                    set0_BitTable (fix->fixed, pcidx);
-                } BLose()
-
-                op_BitTable (sys->legit, bt, BitOp_AND);
-
-                wipe_BitTable (fix->fixed, 0);
-            } BLose()
-        } BLose()
-    } BLose()
-
-
-#if 0
-    dump_BitTable (of, sys->legit);
-    dump_char_OFileB (of, '\n');
-
-    if (false)
-    { BLoopT( XnSz, i, sys->legit.sz )
-        if (test_BitTable (sys->legit, i))
-        {
-            dump_char_OFileB (of, '+');
-            dump_promela_state_XnSys (of, sys, i);
-            dump_char_OFileB (of, '\n');
-        }
-        else
-        {
-            dump_char_OFileB (of, '-');
-            dump_promela_state_XnSys (of, sys, i);
-            dump_char_OFileB (of, '\n');
-        }
-    } BLose()
-
-    flush_OFileB (of);
-#endif
-}
-
-#include "dimacs.c"
-
-    XnSys
-sat3_XnSys (const CnfFmla* fmla)
-{
-    uint x_idcs[3];
-    uint y_idcs[3];
-    uint sat_idx;
-    DecloStack( XnSys, sys );
-    OFileB name = dflt_OFileB ();
-
-    *sys = dflt_XnSys ();
-
-    { BLoop( r, 3 )
-        PushTable( sys->pcs, dflt_XnPc () );
-
-        x_idcs[r] = sys->vbls.sz;
-        PushTable( sys->vbls, dflt_XnVbl () );
-        y_idcs[r] = sys->vbls.sz;
-        PushTable( sys->vbls, dflt_XnVbl () );
-    } BLose()
-
-    PushTable( sys->pcs, dflt_XnPc () );
-    sat_idx = sys->vbls.sz;
-    PushTable( sys->vbls, dflt_XnVbl () );
-
-    { BLoop( r, 3 )
-        XnVbl* x = &sys->vbls.s[x_idcs[r]];
-        XnVbl* y = &sys->vbls.s[y_idcs[r]];
-
-        x->max = fmla->nvbls-1;
-        y->max = 1;
-
-        flush_OFileB (&name);
-        printf_OFileB (&name, "x%u", r);
-        x->name.sz = 0;
-        cat_AlphaTab_OFileB (&x->name, &name);
-
-        flush_OFileB (&name);
-        printf_OFileB (&name, "y%u", r);
-        y->name.sz = 0;
-        cat_AlphaTab_OFileB (&y->name, &name);
-
-        assoc_XnSys (sys, r, x_idcs[r], May);
-        assoc_XnSys (sys, r, y_idcs[r], Yes);
-        assoc_XnSys (sys, r, sat_idx, May);
-
-        assoc_XnSys (sys, 3, x_idcs[r], May);
-        assoc_XnSys (sys, 3, y_idcs[r], May);
-    } BLose()
-
-    sys->vbls.s[sat_idx].max = 1;
-    flush_OFileB (&name);
-    dump_cstr_OFileB (&name, "sat");
-    sys->vbls.s[sat_idx].name.sz = 0;
-    cat_AlphaTab_OFileB (&sys->vbls.s[sat_idx].name, &name);
-    assoc_XnSys (sys, 3, sat_idx, Yes);
-
-    accept_topology_XnSys (sys);
-
-    {
-        DeclTable( CnfDisj, clauses );
-        DecloStack1( FnWMem_do_XnSys, fix, cons1_FnWMem_do_XnSys (sys) );
-        BitTable bt = cons2_BitTable (sys->legit.sz, 0);
-
-        { BUjFor( i, fmla->idcs.sz )
-            CnfDisj clause = dflt_CnfDisj ();
-            clause_of_CnfFmla (&clause, fmla, i);
-            PushTable( clauses, clause );
-        } BLose()
-
-        fix->vals[sat_idx] = 1;
-        set1_BitTable (fix->fixed, sat_idx);
-        do_XnSys (fix, bt);
-        op_BitTable (sys->legit, bt, BitOp_AND);
-
-        sat3_legit_XnSys (fix, bt, sys, clauses, 3, x_idcs, y_idcs);
-
-        lose_BitTable (&bt);
-        lose_FnWMem_do_XnSys (fix);
-        { BUjFor( i, clauses.sz )
-            lose_CnfDisj (&clauses.s[i]);
-        } BLose()
-        LoseTable( clauses );
-    }
-
-    /*
-    { BLoop( i, sys->legit.sz )
-        if (test_BitTable (sys->legit, i))
-            DBog1( "%u is true", i );
-    } BLose()
-    */
-    DBog1( "size is %u", (uint) sys->legit.sz );
-
-    lose_OFileB (&name);
-    return *sys;
-}
-
-    XnSys
-sat3_ring_XnSys (const CnfFmla* fmla, const bool use_sat)
-{
-    uint x_idcs[5];
-    uint y_idcs[ArraySz( x_idcs )];
-    uint sat_idcs[ArraySz( x_idcs )];
-    const uint npcs = ArraySz( x_idcs );
-    DecloStack( XnSys, sys );
-    OFileB name = dflt_OFileB ();
-
-    *sys = dflt_XnSys ();
-
-    { BLoop( r, npcs )
-        PushTable( sys->pcs, dflt_XnPc () );
-    } BLose()
-
-    { BLoop( r, npcs )
-        x_idcs[r] = sys->vbls.sz;
-        PushTable( sys->vbls, dflt_XnVbl () );
-    } BLose()
-
-    { BLoop( r, npcs )
-        y_idcs[r] = sys->vbls.sz;
-        PushTable( sys->vbls, dflt_XnVbl () );
-    } BLose()
-
-    if (use_sat)
-    { BLoop( r, npcs )
-        sat_idcs[r] = sys->vbls.sz;
-        PushTable( sys->vbls, dflt_XnVbl () );
-    } BLose()
-
-    { BLoop( r, npcs )
-        XnVbl* x = &sys->vbls.s[x_idcs[r]];
-        XnVbl* y = &sys->vbls.s[y_idcs[r]];
-
-        x->max = fmla->nvbls - 1;
-        y->max = (use_sat ? 1 : 2);
-
-        flush_OFileB (&name);
-        printf_OFileB (&name, "x%u", r);
-        x->name.sz = 0;
-        cat_AlphaTab_OFileB (&x->name, &name);
-
-        flush_OFileB (&name);
-        printf_OFileB (&name, "y%u", r);
-        y->name.sz = 0;
-        cat_AlphaTab_OFileB (&y->name, &name);
-
-
-        /* Process r */
-        assoc_XnSys (sys, r, x_idcs[r], May);
-        assoc_XnSys (sys, r, y_idcs[r], Yes);
-
-        /* Process r+1 */
-        assoc_XnSys (sys, (r + 1) % npcs, x_idcs[r], May);
-        assoc_XnSys (sys, (r + 1) % npcs, y_idcs[r], May);
-
-        /* Process r-1 */
-        assoc_XnSys (sys, (r + npcs - 1) % npcs, x_idcs[r], May);
-        assoc_XnSys (sys, (r + npcs - 1) % npcs, y_idcs[r], May);
-    } BLose()
-
-    if (use_sat)
-    { BLoop( r, npcs )
-        XnVbl* sat = &sys->vbls.s[sat_idcs[r]];
-        sat->max = 1;
-
-        flush_OFileB (&name);
-        printf_OFileB (&name, "sat%u", r);
-        sat->name.sz = 0;
-        cat_AlphaTab_OFileB (&sat->name, &name);
-        /* Process r */
-        assoc_XnSys (sys, r, sat_idcs[r], Yes);
-        /* Process r+1 */
-        assoc_XnSys (sys, (r + 1) % npcs, sat_idcs[r], May);
-        /* Process r-1 */
-        assoc_XnSys (sys, (r + npcs - 1) % npcs, sat_idcs[r], May);
-    } BLose()
-
-    lose_OFileB (&name);
-
-    accept_topology_XnSys (sys);
-
-    {
-        DeclTable( CnfDisj, clauses );
-        DecloStack1( FnWMem_do_XnSys, fix, cons1_FnWMem_do_XnSys (sys) );
-        BitTable bt = cons2_BitTable (sys->legit.sz, 0);
-
-        { BUjFor( i, fmla->idcs.sz )
-            CnfDisj clause = dflt_CnfDisj ();
-            clause_of_CnfFmla (&clause, fmla, i);
-            PushTable( clauses, clause );
-        } BLose()
-
-        if (use_sat)
-        {
-            { BLoop( i, npcs )
-                fix->vals[sat_idcs[i]] = 1;
-                set1_BitTable (fix->fixed, sat_idcs[i]);
-            } BLose()
-            do_XnSys (fix, bt);
-            op_BitTable (sys->legit, bt, BitOp_AND);
-        }
-        else
-        {
-            { BLoop( i, npcs )
-                set1_BitTable (fix->fixed, y_idcs[i]);
-                fix->vals[y_idcs[i]] = 2;
-                wipe_BitTable (bt, 0);
-                do_XnSys (fix, bt);
-                op_BitTable (bt, bt, BitOp_NOT);
-                op_BitTable (sys->legit, bt, BitOp_AND);
-                set0_BitTable (fix->fixed, y_idcs[i]);
-            } BLose()
-        }
-
-        wipe_BitTable (bt, 0);
-
-        sat3_legit_XnSys (fix, bt, sys, clauses, npcs, x_idcs, y_idcs);
-
-        lose_BitTable (&bt);
-        lose_FnWMem_do_XnSys (fix);
-        { BUjFor( i, clauses.sz )
-            lose_CnfDisj (&clauses.s[i]);
-        } BLose()
-        LoseTable( clauses );
-    }
-
-    return *sys;
-}
-
-/** Give a solution hint for the simple 3-SAT to AddConvergence reduction.**/
-    void
-sat3_soln_XnSys (TableT(XnRule)* rules,
-                 const BitTable evs, const XnSys* sys)
-{
-    { BLoop( pcidx, 3 )
-        const XnPc* pc = &sys->pcs.s[pcidx];
-        uint x_idx = 0;
-        uint y_idx = 0;
-        uint sat_idx = 0;
-        const XnVbl* x_vbl;
-        const XnVbl* y_vbl;
-
-        { BLoop( i, 3 )
-            char c = sys->vbls.s[pc->vbls.s[i]].name.s[0];
-            if (c == 'x')  x_idx = i;
-            if (c == 'y')  y_idx = i;
-            if (c == 's')  sat_idx = i;
-        } BLose()
-
-        x_vbl = &sys->vbls.s[pc->vbls.s[x_idx]];
-        y_vbl = &sys->vbls.s[pc->vbls.s[y_idx]];
-
-        { BLoop( x_val, (uint) (x_vbl->max + 1) )
-            XnRule g = cons2_XnRule (3, 1);
-            Bit y_val = test_BitTable (evs, x_val);
-
-            g.pc = pcidx;
-            g.p.s[x_idx] = x_val;
-            g.p.s[y_idx] = !y_val;
-            g.p.s[sat_idx] = 0;
-            g.q.s[y_idx] = y_val;
-            PushTable( *rules, g );
-        } BLose()
-    } BLose()
-}
-
-/** Give a solution hint for a 3-SAT to AddConvergence ring reduction.**/
-    void
-sat3_ring_soln_XnSys (TableT(XnRule)* rules,
-                      const BitTable evs, const XnSys* sys,
-                      const CnfFmla* fmla)
-{
-    const bool use_sat = (sys->pcs.s[0].nwvbls == 2);
-    CnfDisj clause = dflt_CnfDisj ();
-    DeclTable( XnSz, x_idcs );
-    DeclTable( XnSz, y_idcs );
-    DeclTable( XnSz, sat_idcs );
-
-    EnsizeTable( x_idcs, sys->pcs.sz );
-    EnsizeTable( y_idcs, sys->pcs.sz );
-    EnsizeTable( sat_idcs, sys->pcs.sz );
-    { BLoop( pcidx, sys->pcs.sz )
-        x_idcs.s[pcidx] = sys->vbls.sz;
-        y_idcs.s[pcidx] = sys->vbls.sz;
-        sat_idcs.s[pcidx] = sys->vbls.sz;
-    } BLose()
-
-    { BLoop( i, sys->vbls.sz )
-        const XnVbl* x = &sys->vbls.s[i];
-        char c = x->name.s[0];
-        uint pcidx = 0;
-        uint mid = x->pcs.s[2];
-        uint min = mid;
-        uint max = mid;
-
-        Claim2( x->pcs.sz ,==, 3 );
-        { BLoop( j, 2 )
-            uint a = x->pcs.s[j];
-            if      (a < min) { mid = min; min = a; }
-            else if (a > max) { mid = max; max = a; }
-            else              { mid = a; }
-        } BLose()
-        Claim2( min ,<, mid );
-        Claim2( mid ,<, max );
-
-        if (mid == min + 1)
-        {
-            if (mid == max - 1)  pcidx = mid;
-            else                 pcidx = min;
-        }
-        else                     pcidx = max;
-
-        if (c == 'x')  x_idcs.s[pcidx] = i;
-        if (c == 'y')  y_idcs.s[pcidx] = i;
-        if (c == 's')  sat_idcs.s[pcidx] = i;
-        Claim( c == 'x' || c == 'y' || c == 's' );
-    } BLose()
-
-    { BLoop( pcidx, sys->pcs.sz )
-        Claim2( x_idcs.s[pcidx] ,<, sys->vbls.sz );
-        Claim2( y_idcs.s[pcidx] ,<, sys->vbls.sz );
-        if (use_sat)
-            Claim2( sat_idcs.s[pcidx] ,<, sys->vbls.sz );
-    } BLose()
-
-    { BLoop( pcidx, sys->pcs.sz )
-        const uint npcs = sys->pcs.sz;
-        const uint oh_pcidx = pcidx;
-        const uint hi_pcidx = (oh_pcidx + 1) % npcs;
-        const uint lo_pcidx = (oh_pcidx + npcs - 1) % npcs;
-
-        const XnPc* pc = &sys->pcs.s[pcidx];
-        const XnSz n_rule_steps =
-            pc->rule_stepsz_q.s[0] *
-            ((uint) sys->vbls.s[pc->vbls.s[0]].max + 1);
-        XnRule g = cons3_XnRule (pcidx, pc->vbls.sz, pc->nwvbls);
-        uint x_pidcs[3];
-        uint y_pidcs[3];
-        uint sat_pidcs[3];
-        TableT(XnSz) vbls;
-
-        vbls = pc->vbls;
-        if (!use_sat)  Claim2( vbls.sz ,==, 6 );
-        else           Claim2( vbls.sz ,==, 9 );
-
-        { BLoop( i, 3 )
-            x_pidcs[i] = vbls.sz;
-            y_pidcs[i] = vbls.sz;
-            sat_pidcs[i] = vbls.sz;
-        } BLose()
-
-        { BLoop( i, vbls.sz )
-            if      (vbls.s[i] == x_idcs.s[oh_pcidx])  x_pidcs[0] = i;
-            else if (vbls.s[i] == x_idcs.s[lo_pcidx])  x_pidcs[1] = i;
-            else if (vbls.s[i] == x_idcs.s[hi_pcidx])  x_pidcs[2] = i;
-            else if (vbls.s[i] == y_idcs.s[oh_pcidx])  y_pidcs[0] = i;
-            else if (vbls.s[i] == y_idcs.s[lo_pcidx])  y_pidcs[1] = i;
-            else if (vbls.s[i] == y_idcs.s[hi_pcidx])  y_pidcs[2] = i;
-            else if (!use_sat)  Claim( 0 );
-            else if (vbls.s[i] == sat_idcs.s[oh_pcidx])  sat_pidcs[0] = i;
-            else if (vbls.s[i] == sat_idcs.s[lo_pcidx])  sat_pidcs[1] = i;
-            else if (vbls.s[i] == sat_idcs.s[hi_pcidx])  sat_pidcs[2] = i;
-            else  Claim( 0 );
-        } BLose()
-
-        { BLoop( i, 3 )
-            Claim2( x_pidcs[i] ,<, vbls.sz );
-            Claim2( y_pidcs[i] ,<, vbls.sz );
-            if (use_sat)
-                Claim2( sat_pidcs[i] ,<, vbls.sz );
-        } BLose()
-
-        { BLoopT( XnSz, rule_step_idx, n_rule_steps )
-            const XnSz rule_step = pc->rule_step + rule_step_idx;
-            bool add = false;
-            Bit soln_y = test_BitTable (evs, g.p.s[x_pidcs[0]]);
-            Bit lo_soln_y = test_BitTable (evs, g.p.s[x_pidcs[1]]);
-            Bit hi_soln_y = test_BitTable (evs, g.p.s[x_pidcs[2]]);
-            bool xy_legit = true;
-
-            rule_XnSys (&g, sys, rule_step);
-
-            { BLoop( i, fmla->idcs.sz )
-                bool allin = true;
-                bool satisfied = false;
-
-                clause.lits.sz = 0;
-                clause_of_CnfFmla (&clause, fmla, i);
-
-                { BLoop( j, 3 )
-                    bool found = false;
-
-                    { BLoop( k, 3 )
-                        if (g.p.s[x_pidcs[j]] == clause.lits.s[j].vbl)
-                        {
-                            if (g.p.s[y_pidcs[j]] == clause.lits.s[j].val)
-                                satisfied = true;
-                            found = true;
-                        }
-                    } BLose()
-
-                    if (satisfied)  break;
-                    if (!found)
-                    {
-                        allin = false;
-                        break;
-                    }
-                } BLose()
-
-                if (allin && !satisfied)
-                {
-                    xy_legit = false;
-                    break;
-                }
-            } BLose()
-
-            if (use_sat &&
-                (!xy_legit ||
-                 g.p.s[sat_pidcs[0]] == 0 ||
-                 g.p.s[sat_pidcs[1]] == 0 ||
-                 g.p.s[sat_pidcs[2]] == 0)
-                && ((g.p.s[y_pidcs[0]] != soln_y) ||
-                    (g.p.s[sat_pidcs[0]] == 0))
-                && (g.q.s[y_pidcs[0]] == soln_y)
-                && (g.q.s[sat_pidcs[0]] == 1)
-                && ((g.p.s[x_pidcs[1]] != g.p.s[x_pidcs[2]])
-                    || (((g.p.s[y_pidcs[1]] == lo_soln_y)
-                         || (g.p.s[sat_pidcs[1]] == 0))
-                        &&
-                        ((g.p.s[y_pidcs[2]] == hi_soln_y)
-                         || (g.p.s[sat_pidcs[2]] == 0)))))
-            {
-                add = true;
-            }
-            if (0 && !use_sat
-                && (g.q.s[y_pidcs[0]] == soln_y)
-                && ((g.p.s[y_pidcs[0]] == 2)
-                    || (!xy_legit && (g.p.s[y_pidcs[0]] != soln_y)))
-                && ((g.p.s[y_pidcs[1]] == lo_soln_y)
-                    || (g.p.s[y_pidcs[1]] == 2))
-                && ((g.p.s[y_pidcs[2]] == hi_soln_y)
-                    || (g.p.s[y_pidcs[2]] == 2)))
-            {
-                add = true;
-            }
-            if (!add && !use_sat
-                && (g.q.s[y_pidcs[0]] == 2)
-                && (!xy_legit ||
-                    ((g.p.s[x_pidcs[1]] == g.p.s[x_pidcs[2]])
-                     && (g.p.s[y_pidcs[1]] != g.p.s[y_pidcs[2]])))
-                && (g.p.s[y_pidcs[0]] != 2)
-                && (((g.p.s[y_pidcs[1]] != 2)
-                     && (g.p.s[y_pidcs[1]] != lo_soln_y))
-                    ||
-                    ((g.p.s[y_pidcs[2]] != 2)
-                     && (g.p.s[y_pidcs[2]] != hi_soln_y))))
-            {
-                add = true;
-            }
-
-
-            if (add)  PushTable( *rules, dup_XnRule (&g) );
-        } BLose()
-
-        lose_XnRule (&g);
-    } BLose()
-
-    LoseTable( x_idcs );
-    LoseTable( y_idcs );
-    LoseTable( sat_idcs );
-    lose_CnfDisj (&clause);
-}
-
-    void
-dump_promela_select (OFileB* of, const XnVbl* vbl)
-{
-    XnEVbl x;
-    x.vbl = vbl;
-    dump_cstr_OFileB (of, "if\n");
-    { BLoop( i, (uint) (vbl->max+1) )
-        x.val = i;
-        dump_cstr_OFileB (of, ":: true -> ");
-        dump_XnEVbl (of, &x, "=");
-        dump_cstr_OFileB (of, ";\n");
-    } BLose()
-
-    dump_cstr_OFileB (of, "fi;\n");
-}
-
-    void
-dump_promela_pc (OFileB* of, const XnPc* pc, const XnSys* sys,
-                 const TableT(XnRule) rules)
-{
-    const uint pcidx = IdxEltTable (sys->pcs, pc);
-    dump_cstr_OFileB (of, "proctype P");
-    dump_uint_OFileB (of, pcidx);
-    dump_cstr_OFileB (of, " ()\n{\n");
-
-    {
-        bool found = false;
-        XnSz i;
-        UFor( i, rules.sz )
-            if (rules.s[i].pc == pcidx)
-                found = true;
-        if (!found)
-        {
-            dump_cstr_OFileB (of, "skip;\n}\n\n");
-            return;
-        }
-    }
-
-    dump_cstr_OFileB (of, "end_");
-    dump_uint_OFileB (of, pcidx);
-    dump_cstr_OFileB (of, ":\n");
-    dump_cstr_OFileB (of, "do\n");
-    { BLoopT( XnSz, i, rules.sz )
-        const XnRule* g = &rules.s[i];
-        if (g->pc == pcidx)
-        {
-            dump_cstr_OFileB (of, ":: atomic {");
-            dump_promela_XnRule (of, g, sys);
-            dump_cstr_OFileB (of, "};\n");
-        }
-    } BLose()
-    dump_cstr_OFileB (of, "od;\n");
-    dump_cstr_OFileB (of, "}\n\n");
-    
-}
-
-    void
-dump_promela (OFileB* of, const XnSys* sys, const TableT(XnRule) rules)
-{
-#define dumpl(s)  dump_cstr_OFileB(of, s); dump_char_OFileB(of, '\n')
-    dumpl( "/*** Use acceptance cycle check with the LTL claim for a full verification!" );
-    dumpl( " *** Assertions, end states, and progress conditions are present to help debugging." );
-    dumpl( " *** A safety check and liveness check (BOTH WITH LTL CLAIM DISABLED) should be" );
-    dumpl( " *** equivalent to verifying the LTL claim holds via the acceptance cycle check." );
-    dumpl( " ***/" );
-    dumpl( "bool Legit = false;" );
-    { BLoop( i, sys->vbls.sz )
-        const XnVbl* x = &sys->vbls.s[i];
-        if (x->max <= 1)
-            dump_cstr_OFileB (of, "bit");
-        else
-            dump_cstr_OFileB (of, "byte");
-
-        dump_char_OFileB (of, ' ');
-        dump_AlphaTab (of, &x->name );
-        dump_cstr_OFileB (of, ";\n");
-    } BLose()
-
-    { BLoop( i, sys->pcs.sz )
-        dump_promela_pc (of, &sys->pcs.s[i], sys, rules);
-    } BLose()
-
-    dumpl( "init {" );
-    { BLoop( i, sys->vbls.sz )
-        const XnVbl* x = &sys->vbls.s[i];
-        dump_promela_select (of, x);
-    } BLose()
-
-    { BLoop( i, sys->pcs.sz )
-        dump_cstr_OFileB (of, "run P");
-        dump_uint_OFileB (of, i);
-        dump_cstr_OFileB (of, " ();\n");
-    } BLose()
-
-    dumpl( "if" );
-    { BLoopT( XnSz, i, sys->legit.sz )
-        if (test_BitTable (sys->legit, i))
-        {
-            dump_cstr_OFileB (of, ":: ");
-            dump_promela_state_XnSys (of, sys, i);
-            dump_cstr_OFileB (of, " -> skip;\n");
-        }
-    } BLose()
-    dumpl( "fi;" );
-
-    dumpl( "Legit = true;" );
-    dumpl( "progress: skip;" );
-
-    dumpl( "end:" );
-    dumpl( "if" );
-    { BLoopT( XnSz, i, sys->legit.sz )
-        if (!test_BitTable (sys->legit, i))
-        {
-            dump_cstr_OFileB (of, ":: ");
-            dump_promela_state_XnSys (of, sys, i);
-            dump_cstr_OFileB (of, " -> skip;\n");
-        }
-    } BLose()
-    dumpl( "fi;" );
-    dumpl( "Legit = false;" );
-    dumpl( "assert(0);" );
-    dumpl( "}" );
-
-    dumpl( "ltl {" );
-    dumpl( "<> Legit && [] (Legit -> [] Legit)" );
-    dumpl( "}" );
-#undef dumpl
-}
+#include "inst-sat3.c"
+#include "inst-matching.c"
+#include "inst-coloring.c"
+#include "inst-bit3.c"
 
     Trit
 swapped_XnSz (const XnSz* a, const XnSz* b)
@@ -2587,7 +1840,6 @@ synsearch_sat (FnWMem_synsearch* tape)
     {
         tape->stabilizing = true;
         CopyTable( tape->rules, sys->legit_rules );
-        -- tape->rules.sz;
         return;
     }
     else
@@ -2856,7 +2108,19 @@ synsearch_sat (FnWMem_synsearch* tape)
     int
 main (int argc, char** argv)
 {
-    const bool SystemInitialized = (init_sysCx (&argc, &argv), true);
+    int argi = (init_sysCx (&argc, &argv), 1);
+    const XnSysInstance inst_kind =
+        Sat3Inst
+        /* Sat3RingInst */
+        /* Sat3RingWSatInst */
+        /* MatchingInst */
+        /* ColoringInst */
+        /* Bit3Inst */
+        ;
+    const bool use_synsearch_sat = true;
+    const uint n_ring_pcs = 4;  /* For rings (excluding 3-SAT rings).*/
+    const uint dom_max = 2;
+    const bool manual_soln = true;
     DecloStack1( XnSys, sys, dflt_XnSys () );
     DecloStack1( CnfFmla, fmla, dflt_CnfFmla () );
     BoolLit clauses[][3] = {
@@ -2880,10 +2144,9 @@ main (int argc, char** argv)
         {{Yes, 0}, {Nil, 1}, {Nil, 1}}
 #endif
     };
-    const bool ring = false;
-    const bool use_sat_vbl = false; /* Only applies to ring.*/
-    const bool manual_soln = true;
-    const bool use_synsearch_sat = true;
+
+    if (argi < argc)
+        failout_sysCx ("No arguments expected.");
 
     { BLoop( i, ArraySz(clauses) )
         CnfDisj clause = dflt_CnfDisj ();
@@ -2897,32 +2160,61 @@ main (int argc, char** argv)
     } BLose()
     DBog1( "/nvbls==%u/", fmla->nvbls );
 
-    if (!ring)
-        *sys = sat3_XnSys (fmla);
-    else
-        *sys = sat3_ring_XnSys (fmla, use_sat_vbl);
+
+    switch (inst_kind)
+    {
+    case Sat3Inst:
+        *sys = inst_sat3_XnSys (fmla);
+        break;
+    case Sat3RingInst:
+        *sys = inst_sat3_ring_XnSys (fmla, false);
+        break;
+    case Sat3RingWSatInst:
+        *sys = inst_sat3_ring_XnSys (fmla, true);
+        break;
+    case MatchingInst:
+        *sys = inst_matching_XnSys (n_ring_pcs);
+        break;
+    case ColoringInst:
+        *sys = inst_coloring_XnSys (n_ring_pcs, dom_max);
+        break;
+    case Bit3Inst:
+        *sys = inst_bit3_XnSys (n_ring_pcs);
+        break;
+    default:
+        failout_sysCx ("Invalid problem instance.");
+        break;
+    };
+
+    DBog1( "size is %u", (uint) sys->nstates );
 
     testfn_detect_livelock ();
 
     {
-        bool sat = false;
-        BitTable evs = cons2_BitTable (fmla->nvbls, 0);
         FnWMem_synsearch tape = cons1_FnWMem_synsearch (sys);
-
-        extl_solve_CnfFmla (fmla, &sat, evs);
-        if (sat)
+        if (inst_kind == Sat3Inst ||
+            inst_kind == Sat3RingInst ||
+            inst_kind == Sat3RingWSatInst)
         {
-            DBog1( "Should be satisfiable? %s", sat ? "YES" : "NO" );
-            if (manual_soln)
-            {
-                if (!ring)
-                    sat3_soln_XnSys (&tape.rules, evs, sys);
-                else
-                    sat3_ring_soln_XnSys (&tape.rules, evs, sys, fmla);
+            bool sat = false;
+            BitTable evs = cons2_BitTable (fmla->nvbls, 0);
 
-                DBog1( "Giving %u hints.", (uint)tape.rules.sz );
-                tape.n_cached_rules = tape.rules.sz;
+            extl_solve_CnfFmla (fmla, &sat, evs);
+            if (sat)
+            {
+                DBog1( "Should be satisfiable? %s", sat ? "YES" : "NO" );
+                if (manual_soln)
+                {
+                    if (inst_kind == Sat3Inst)
+                        sat3_soln_XnSys (&tape.rules, evs, sys);
+                    else if (inst_kind == Sat3RingInst)
+                        sat3_ring_soln_XnSys (&tape.rules, evs, sys, fmla);
+
+                    DBog1( "Giving %u hints.", (uint)tape.rules.sz );
+                    tape.n_cached_rules = tape.rules.sz;
+                }
             }
+            lose_BitTable (&evs);
         }
 
         if (use_synsearch_sat)
@@ -2944,9 +2236,9 @@ main (int argc, char** argv)
 
         if (tape.stabilizing || (manual_soln && tape.rules.sz > 0))
         {
-            FileB pmlf; /* Promela.*/
+            /* Promela.*/
+            FileB pmlf = dflt_FileB ();
 
-            init_FileB (&pmlf);
             seto_FileB (&pmlf, true);
             open_FileB (&pmlf, 0, "model.pml");
             dump_promela (&pmlf.xo, sys, tape.rules);
@@ -2960,12 +2252,11 @@ main (int argc, char** argv)
         }
 
         lose_FnWMem_synsearch (&tape);
-        lose_BitTable (&evs);
     }
 
     lose_CnfFmla (fmla);
     lose_XnSys (sys);
-    if (SystemInitialized)  lose_sysCx ();
+    lose_sysCx ();
     return 0;
 }
 

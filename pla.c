@@ -125,7 +125,8 @@ do_pla_XnSys (const XnSys* sys, const TableT(XnRule) rules)
     stdxpipe_OSPc (ospc);
     stdopipe_OSPc (ospc);
     ospc->cmd = cons1_AlphaTab ("espresso");
-    PushTable( ospc->args, cons1_AlphaTab ("-Dexact") );
+    /* Using -Dexact can take a long time.*/
+    /* PushTable( ospc->args, cons1_AlphaTab ("-Dexact") ); */
     good = spawn_OSPc (ospc);
     BCasc( good, good, "spawn_OSPc()" );
 

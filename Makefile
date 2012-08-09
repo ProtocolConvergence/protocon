@@ -1,9 +1,10 @@
 
 CC = gcc
-CFLAGS = -ansi -pedantic
-CFLAGS += -Wall -Wextra -Wstrict-aliasing
+CFLAGS =
 CFLAGS += -g
 #CFLAGS += -O3
+CFLAGS += -ansi -pedantic
+CFLAGS += -Wall -Wextra -Wstrict-aliasing
 
 cx_path = ../cx
 bin_path = ../bin
@@ -26,7 +27,8 @@ $(bin_path)/satsyn: satsyn.o $(cx_obj_list)
 %.o: %.c
 	$(CC) -c $(CFLAGS) $< -o $@
 
-satsyn.o: dimacs.c pla.c
+satsyn.o: dimacs.c pla.c promela.c \
+	inst-sat3.c inst-matching.c inst-coloring.c inst-bit3.c
 
 $(exe_list): | $(bin_path)
 
