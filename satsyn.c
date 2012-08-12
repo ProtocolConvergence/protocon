@@ -1812,24 +1812,20 @@ synsearch_sat (FnWMem_synsearch* tape)
     DeclTableT( XnInfo, struct { ujint idx; CnfDisj impl; } );
     DeclTableT( State, struct { TableT(XnSz) tx; TableT(XnSz) to; } );
 
-    DecloStack( Associa, lstate_map );
-    DecloStack( Associa, xnmap );
+    DeclAssocia( XnSz, TableT(ujint), lstate_map, (SwappedFn) swapped_XnSz );
+    DeclAssocia( XnSz2, ujint, xnmap, (SwappedFn) swapped_XnSz2 );
+    DeclAssocia( XnSz2, ujint, pathmap, (SwappedFn) swapped_XnSz2 );
+
     DeclTable( State, states );
     DecloStack1( CnfFmla, fmla, dflt_CnfFmla () );
     DeclTable( XnInfo, xns );
-    DecloStack( Associa, pathmap );
     DecloStack1( CnfDisj, clause, dflt_CnfDisj () );
 
     const XnSys* restrict sys = tape->sys;
     XnRule* g;
     TableT(XnSz)* may_rules;
+    Assoc* assoc;
 
-    init3_Associa (lstate_map, sizeof(XnSz), sizeof(TableT(ujint)),
-                   (SwappedFn) swapped_XnSz);
-    init3_Associa (xnmap, sizeof(XnSz2), sizeof(ujint),
-                   (SwappedFn) swapped_XnSz2);
-    init3_Associa (pathmap, sizeof(XnSz2), sizeof(ujint),
-                   (SwappedFn) swapped_XnSz2);
 
     g = grow1_rules_synsearch (tape);
     may_rules = grow1_may_rules_synsearch (tape);
@@ -1937,9 +1933,11 @@ synsearch_sat (FnWMem_synsearch* tape)
         lose_CnfDisj (clause);
     } BLose()
 
-    { BUjFor( si, lstate_map->nodes.sz )
-        TableT(ujint)* rules = (TableT(ujint)*)
-            elt_Table (&lstate_map->vals, si);
+    for (assoc = beg_Associa (lstate_map);
+         assoc;
+         assoc = next_Assoc (assoc))
+    {
+        TableT(ujint)* rules = val_of_Assoc (assoc);
         { BUjFor( i, rules->sz )
             { BUjFor( j, i )
                 clause->lits.sz = 0;
@@ -1949,7 +1947,7 @@ synsearch_sat (FnWMem_synsearch* tape)
             } BLose()
         } BLose()
         LoseTable( *rules );
-    } BLose()
+    }
     lose_Associa (lstate_map);
 
     { BUjFor( i, states.sz )
@@ -1996,10 +1994,14 @@ synsearch_sat (FnWMem_synsearch* tape)
         } BLose()
     } BLose()
 
-    { BUjFor( path_idx, pathmap->nodes.sz )
+    for (assoc = beg_Associa (pathmap);
+         assoc;
+         assoc = next_Assoc (assoc))
+    {
         DecloStack1( CnfDisj, path_clause, dflt_CnfDisj () );
-        XnSz2 p = *(XnSz2*) elt_Table (&pathmap->keys, path_idx);
-        ujint p_ij = *(ujint*) elt_Table (&pathmap->vals, path_idx);
+
+        XnSz2 p = *(XnSz2*) key_of_Assoc (assoc);
+        ujint p_ij = *(ujint*) val_of_Assoc (assoc);
         TableElT(State) state = states.s[p.j];
 
         app_CnfDisj (path_clause, false, p_ij);
@@ -2063,7 +2065,7 @@ synsearch_sat (FnWMem_synsearch* tape)
         } BLose()
         app_CnfFmla (fmla, path_clause);
         lose_CnfDisj (path_clause);
-    } BLose()
+    }
 
     /* Lose everything we can before running the solve.*/
     { BUjFor( i, states.sz )
