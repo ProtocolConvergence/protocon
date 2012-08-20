@@ -470,14 +470,13 @@ assoc_XnSys (XnSys* sys, uint pc_idx, uint vbl_idx, Trit mode)
     }
     if (mode == Yes)
     {
-        uint i;
         GrowTable( pc->vbls, 1 );
         GrowTable( x->pcs, 1 );
 
 
-        for (i = pc->vbls.sz - 1; i > pc->nwvbls; --i)
+        for (uint i = pc->vbls.sz - 1; i > pc->nwvbls; --i)
             pc->vbls.s[i] = pc->vbls.s[i-1];
-        for (i = x->pcs.sz - 1; i > x->nwpcs; --i)
+        for (uint i = x->pcs.sz - 1; i > x->nwpcs; --i)
             x->pcs.s[i] = x->pcs.s[i-1];
 
         pc->vbls.s[pc->nwvbls ++] = vbl_idx;

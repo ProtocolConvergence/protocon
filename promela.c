@@ -133,9 +133,8 @@ dump_promela (OFileB* of, const XnSys* sys, const TableT(XnRule) rules)
         dump_cstr_OFileB (of, ";\n");
     } BLose()
 
-    { BLoop( i, sys->pcs.sz )
+    for (uint i = 0; i < sys->pcs.sz; ++i)
         dump_promela_pc (of, &sys->pcs.s[i], sys, rules);
-    } BLose()
 
     dumpl( "init {" );
     { BLoop( i, sys->vbls.sz )
@@ -165,14 +164,15 @@ dump_promela (OFileB* of, const XnSys* sys, const TableT(XnRule) rules)
 
     dumpl( "end:" );
     dumpl( "if" );
-    { BLoopT( XnSz, i, sys->legit.sz )
+    for (ujint i = 0; i < sys->legit.sz; ++i)
+    {
         if (!test_BitTable (sys->legit, i))
         {
             dump_cstr_OFileB (of, ":: ");
             dump_promela_state_XnSys (of, sys, i);
             dump_cstr_OFileB (of, " -> skip;\n");
         }
-    } BLose()
+    }
     dumpl( "fi;" );
     dumpl( "Legit = false;" );
     dumpl( "assert(0);" );

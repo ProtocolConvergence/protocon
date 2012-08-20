@@ -6,10 +6,6 @@ CC = gcc
 CONFIG += ansi
 CONFIG += debug
 
-IFLAGS = -I..
-
-CFLAGS += $(IFLAGS)
-
 CxPath = ../cx
 BinPath = ../bin
 PfxBldPath = ../satsyn-bld
@@ -28,9 +24,9 @@ $(BinPath)/satsyn: $(BldPath)/satsyn.o \
 	$(addprefix $(CxBldPath)/, bstree.o fileb.o ospc.o rbtree.o syscx.o)
 	$(CC) $(CFLAGS) -o $@ $^
 
-$(BldPath)/satsyn.o: dimacs.c pla.c promela.c \
-	inst-sat3.c inst-matching.c inst-coloring.c inst-bit3.c
-
+$(BldPath)/satsyn.c: $(addprefix $(BldPath)/,\
+	dimacs.c pla.c promela.c \
+	inst-sat3.c inst-matching.c inst-coloring.c inst-bit3.c)
 
 .PHONY: clean
 clean:
