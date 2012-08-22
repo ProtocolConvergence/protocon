@@ -16,7 +16,7 @@ list (APPEND HFiles
 include (${CxPath}/include.cmake)
 
 
-set (RUNTIME_OUTPUT_DIRECTORY ${BinPath})
+set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${BinPath})
 
 add_executable (satsyn ${BldPath}/satsyn.c ${CxFullCFiles})
 
