@@ -8,8 +8,7 @@ CONFIG += debug
 
 CxPath = ../cx
 BinPath = ../bin
-PfxBldPath = ../satsyn-bld
-BldPath = $(PfxBldPath)/satsyn
+BldPath = satsyn
 
 ExeList = satsyn
 Deps := $(ExeList)
