@@ -18,6 +18,6 @@ include (${CxPath}/include.cmake)
 
 set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${BinPath})
 
-add_executable (satsyn ${BldPath}/satsyn.c ${CxFullCFiles})
+addbinexe (satsyn)
 
 

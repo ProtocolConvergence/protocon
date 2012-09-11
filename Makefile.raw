@@ -19,7 +19,7 @@ include $(CxPath)/include.mk
 
 all: $(ExeList)
 
-$(BinPath)/satsyn: $(BldPath)/satsyn.o \
+$(call binexe,satsyn): $(BldPath)/satsyn.o \
 	$(addprefix $(CxBldPath)/, bstree.o fileb.o ospc.o rbtree.o syscx.o)
 	$(CC) $(CFLAGS) -o $@ $^
 

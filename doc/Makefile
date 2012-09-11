@@ -1,6 +1,7 @@
 
+all: tosat.pdf
 
-tosat.pdf: tosat.tex preamble.tex
+%.pdf: %.tex preamble.tex
 	pdflatex $<
 
 .PHONY: clean
