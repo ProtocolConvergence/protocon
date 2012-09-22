@@ -21,7 +21,7 @@ sat3_legit_XnSys (FnWMem_do_XnSys* fix,
 #if 1
     /* Enforce identity.*/
     { BLoop( lo, npcs )
-        const uint nsatvbls = 1 + (uint) sys->vbls.s[x_idcs[0]].max;
+        const uint nsatvbls = sys->vbls.s[x_idcs[0]].domsz;
 
         { BLoop( offset, 2 )
             const uint hi = (lo+1+offset) % npcs;
@@ -155,14 +155,14 @@ inst_sat3_XnSys (const CnfFmla* fmla)
 
         PushTable( sys->pcs, dflt_XnPc () );
 
-        x.max = fmla->nvbls-1;
+        x.domsz = fmla->nvbls;
         flush_OFileB (&name);
         printf_OFileB (&name, "x%u", r);
         copy_AlphaTab_OFileB (&x.name, &name);
         x_idcs[r] = sys->vbls.sz;
         PushTable( sys->vbls, x );
 
-        y.max = 1;
+        y.domsz = 2;
         flush_OFileB (&name);
         printf_OFileB (&name, "y%u", r);
         copy_AlphaTab_OFileB (&y.name, &name);
@@ -174,7 +174,7 @@ inst_sat3_XnSys (const CnfFmla* fmla)
 
     {
         XnVbl sat = dflt_XnVbl ();
-        sat.max = 1;
+        sat.domsz = 2;
         flush_OFileB (&name);
         dump_cstr_OFileB (&name, "sat");
         copy_AlphaTab_OFileB (&sat.name, &name);
@@ -268,8 +268,8 @@ inst_sat3_ring_XnSys (const CnfFmla* fmla, const bool use_sat)
         XnVbl* x = &sys->vbls.s[x_idcs[r]];
         XnVbl* y = &sys->vbls.s[y_idcs[r]];
 
-        x->max = fmla->nvbls - 1;
-        y->max = (use_sat ? 1 : 2);
+        x->domsz = fmla->nvbls;
+        y->domsz = (use_sat ? 2 : 3);
 
         flush_OFileB (&name);
         printf_OFileB (&name, "x%u", r);
@@ -296,7 +296,7 @@ inst_sat3_ring_XnSys (const CnfFmla* fmla, const bool use_sat)
     if (use_sat)
     { BLoop( r, npcs )
         XnVbl* sat = &sys->vbls.s[sat_idcs[r]];
-        sat->max = 1;
+        sat->domsz = 2;
 
         flush_OFileB (&name);
         printf_OFileB (&name, "sat%u", r);
@@ -384,7 +384,7 @@ sat3_soln_XnSys (TableT(XnRule)* rules,
         x_vbl = &sys->vbls.s[pc->vbls.s[x_idx]];
         y_vbl = &sys->vbls.s[pc->vbls.s[y_idx]];
 
-        { BLoop( x_val, (uint) (x_vbl->max + 1) )
+        { BLoop( x_val, x_vbl->domsz )
             XnRule g = cons2_XnRule (3, 1);
             Bit y_val = test_BitTable (evs, x_val);
 
@@ -466,7 +466,7 @@ sat3_ring_soln_XnSys (TableT(XnRule)* rules,
         const XnPc* pc = &sys->pcs.s[pcidx];
         const XnSz n_rule_steps =
             pc->rule_stepsz_q.s[0] *
-            ((uint) sys->vbls.s[pc->vbls.s[0]].max + 1);
+            sys->vbls.s[pc->vbls.s[0]].domsz;
         XnRule g = cons3_XnRule (pcidx, pc->vbls.sz, pc->nwvbls);
         uint x_pidcs[3];
         uint y_pidcs[3];

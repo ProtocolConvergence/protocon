@@ -2,7 +2,7 @@
     void
 dump_pla_XnEVbl (OFileB* of, const XnEVbl* x)
 {
-    const uint n = (uint) x->vbl->max + 1;
+    const uint n = x->vbl->domsz;
     { BLoop( i, n )
         dump_char_OFileB (of, (i == (uint) x->val) ? '1' : '0');
     } BLose()
@@ -33,7 +33,7 @@ dump_pla_legit (OFileB* of, const XnSys* sys)
     dump_cstr_OFileB (of, " 0");
     { BLoop( i, sys->vbls.sz )
         dump_char_OFileB (of, ' ');
-        dump_uint_OFileB (of, (uint)sys->vbls.s[i].max + 1);
+        dump_uint_OFileB (of, sys->vbls.s[i].domsz);
     } BLose()
     dump_cstr_OFileB (of, " 2\n");
     { BUjFor( i, sys->nstates )
@@ -73,11 +73,11 @@ dump_pla_pc (OFileB* of, const XnPc* pc, const XnSys* sys,
     dump_cstr_OFileB (of, " 0");
     { BLoop( i, pc->vbls.sz )
         dump_char_OFileB (of, ' ');
-        dump_uint_OFileB (of, sys->vbls.s[pc->vbls.s[i]].max + 1);
+        dump_uint_OFileB (of, sys->vbls.s[pc->vbls.s[i]].domsz);
     } BLose()
     { BLoop( i, pc->nwvbls )
         dump_char_OFileB (of, ' ');
-        dump_uint_OFileB (of, sys->vbls.s[pc->vbls.s[i]].max + 1);
+        dump_uint_OFileB (of, sys->vbls.s[pc->vbls.s[i]].domsz);
     } BLose()
     dump_char_OFileB (of, '\n');
 

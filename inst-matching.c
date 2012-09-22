@@ -15,7 +15,7 @@ inst_matching_XnSys (uint npcs)
     { BLoop( r, npcs )
         XnVbl vbl = dflt_XnVbl ();
 
-        vbl.max = 2;
+        vbl.domsz = 3;
 
         flush_OFileB (&name);
         printf_OFileB (&name, "m%u", r);

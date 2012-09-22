@@ -25,21 +25,21 @@ inst_bit3_XnSys (uint npcs)
 
         PushTable( sys->pcs, dflt_XnPc () );
 
-        e_vbl.max = 1;
+        e_vbl.domsz = 2;
         flush_OFileB (&name);
         printf_OFileB (&name, "e%u", r);
         copy_AlphaTab_OFileB (&e_vbl.name, &name);
         PushTable( e_idcs, sys->vbls.sz );
         PushTable( sys->vbls, e_vbl );
 
-        t_vbl.max = 1;
+        t_vbl.domsz = 2;
         flush_OFileB (&name);
         printf_OFileB (&name, "t%u", r);
         copy_AlphaTab_OFileB (&t_vbl.name, &name);
         PushTable( t_idcs, sys->vbls.sz );
         PushTable( sys->vbls, t_vbl );
 
-        ready_vbl.max = 1;
+        ready_vbl.domsz = 2;
         flush_OFileB (&name);
         printf_OFileB (&name, "ready%u", r);
         copy_AlphaTab_OFileB (&ready_vbl.name, &name);

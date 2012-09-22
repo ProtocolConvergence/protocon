@@ -1,5 +1,5 @@
 
-all: tosat.pdf
+all: tosat.pdf algo.pdf
 
 %.pdf: %.tex preamble.tex
 	pdflatex $<

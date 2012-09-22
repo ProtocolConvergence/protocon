@@ -87,7 +87,7 @@ struct XnPc
 struct XnVbl
 {
     AlphaTab name;
-    DomSz max; /**< Maximum value in the domain.**/
+    DomSz domsz; /**< Maximum value in the domain.**/
     TableT(XnSz) pcs; /**< List of processes which use this variable.**/
     XnSz nwpcs;  /**< Number of processes with write (and read) permission.**/
     XnSz stepsz; /**< Step size global state space.**/
@@ -217,7 +217,7 @@ dflt_XnVbl ()
 {
     XnVbl x;
     x.name = cons1_AlphaTab ("x");
-    x.max = 0;
+    x.domsz = 1;
     InitTable( x.pcs );
     x.nwpcs = 0;
     x.stepsz = 0;
@@ -437,7 +437,7 @@ size_XnSys (const XnSys* sys)
 
     { BLoop( i, sys->vbls.sz )
         const XnSz psz = sz;
-        sz *= (XnSz) sys->vbls.s[i].max + 1;
+        sz *= (XnSz) sys->vbls.s[i].domsz;
 
         if (sz <= psz)
         {
@@ -508,8 +508,13 @@ accept_topology_XnSys (XnSys* sys)
     { BLoop( i, sys->vbls.sz )
         XnVbl* x = &sys->vbls.s[sys->vbls.sz-1-i];
         x->stepsz = stepsz;
-        stepsz *= (1 + x->max);
-        if (x->max != 0 && x->stepsz >= stepsz)
+        stepsz *= x->domsz;
+        if (x->domsz == 0)
+        {
+            DBog0( "Impossible domain size of zero." );
+            failout_sysCx ("");
+        }
+        if (x->domsz != 1 && x->stepsz >= stepsz)
         {
             DBog0( "Cannot hold all the states!" );
             failout_sysCx ("");
@@ -532,11 +537,11 @@ accept_topology_XnSys (XnSys* sys)
         n = pc->rule_stepsz_p.sz;
         { BLoop( i, n )
             XnSz* x = &pc->rule_stepsz_p.s[n-1-i];
-            DomSz max = sys->vbls.s[pc->vbls.s[n-1-i]].max;
+            DomSz domsz = sys->vbls.s[pc->vbls.s[n-1-i]].domsz;
 
             *x = stepsz;
-            stepsz *= (1 + max);
-            if (max != 0 && *x >= stepsz)
+            stepsz *= domsz;
+            if (domsz != 1 && *x >= stepsz)
             {
                 DBog0( "Cannot hold all the rules!" );
                 failout_sysCx (0);
@@ -548,11 +553,11 @@ accept_topology_XnSys (XnSys* sys)
         n = pc->rule_stepsz_q.sz;
         { BLoop( i, n )
             XnSz* x = &pc->rule_stepsz_q.s[n-1-i];
-            DomSz max = sys->vbls.s[pc->vbls.s[n-1-i]].max;
+            DomSz domsz = sys->vbls.s[pc->vbls.s[n-1-i]].domsz;
 
             *x = stepsz;
-            stepsz *= (1 + max);
-            if (max != 0 && *x >= stepsz)
+            stepsz *= domsz;
+            if (domsz != 1 && *x >= stepsz)
             {
                 DBog0( "Cannot hold all the rules!" );
                 failout_sysCx (0);
@@ -679,7 +684,7 @@ recu_do_XnSys (BitTable* bt, const XnEVbl* a, uint n, XnSz step, XnSz bel)
     }
 
     stepsz = a[0].vbl->stepsz;
-    bigstepsz = stepsz * (1 + a[0].vbl->max);
+    bigstepsz = stepsz * a[0].vbl->domsz;
     step += stepsz * a[0].val;
 
     for (; step < bel; step += bigstepsz)
@@ -716,7 +721,7 @@ recu_do_push_XnSys (TableT(XnSz)* t, const XnEVbl* a, uint n, XnSz step, XnSz be
     }
 
     stepsz = a[0].vbl->stepsz;
-    bigstepsz = stepsz * (1 + a[0].vbl->max);
+    bigstepsz = stepsz * a[0].vbl->domsz;
     step += stepsz * a[0].val;
 
     for (; step < bel; step += bigstepsz)
@@ -2120,7 +2125,7 @@ main (int argc, char** argv)
         ;
     const bool use_synsearch_sat = true;
     const uint n_ring_pcs = 4;  /* For rings (excluding 3-SAT rings).*/
-    const uint dom_max = 2;
+    const uint domsz = 3;
     const bool manual_soln = true;
     DecloStack1( XnSys, sys, dflt_XnSys () );
     DecloStack1( CnfFmla, fmla, dflt_CnfFmla () );
@@ -2177,7 +2182,7 @@ main (int argc, char** argv)
         *sys = inst_matching_XnSys (n_ring_pcs);
         break;
     case ColoringInst:
-        *sys = inst_coloring_XnSys (n_ring_pcs, dom_max);
+        *sys = inst_coloring_XnSys (n_ring_pcs, domsz);
         break;
     case Bit3Inst:
         *sys = inst_bit3_XnSys (n_ring_pcs);

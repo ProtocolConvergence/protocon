@@ -61,7 +61,7 @@ dump_promela_select (OFileB* of, const XnVbl* vbl)
     XnEVbl x;
     x.vbl = vbl;
     dump_cstr_OFileB (of, "if\n");
-    { BLoop( i, (uint) (vbl->max+1) )
+    { BLoop( i, vbl->domsz )
         x.val = i;
         dump_cstr_OFileB (of, ":: true -> ");
         dump_XnEVbl (of, &x, "=");
@@ -123,7 +123,7 @@ dump_promela (OFileB* of, const XnSys* sys, const TableT(XnRule) rules)
     dumpl( "bool Legit = false;" );
     { BLoop( i, sys->vbls.sz )
         const XnVbl* x = &sys->vbls.s[i];
-        if (x->max <= 1)
+        if (x->domsz <= 2)
             dump_cstr_OFileB (of, "bit");
         else
             dump_cstr_OFileB (of, "byte");

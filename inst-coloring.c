@@ -5,7 +5,7 @@
 
 static
     XnSys
-inst_coloring_XnSys (uint npcs, uint dom_max)
+inst_coloring_XnSys (uint npcs, uint domsz)
 {
     DeclTable( DomSz, vs );
     DecloStack1( XnSys, sys, dflt_XnSys () );
@@ -15,7 +15,7 @@ inst_coloring_XnSys (uint npcs, uint dom_max)
     { BLoop( r, npcs )
         XnVbl vbl = dflt_XnVbl ();
 
-        vbl.max = dom_max;
+        vbl.domsz = domsz;
 
         flush_OFileB (&name);
         printf_OFileB (&name, "c%u", r);

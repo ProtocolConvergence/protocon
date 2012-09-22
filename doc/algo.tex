@@ -1,0 +1,66 @@
+
+\input{preamble}
+
+\begin{document}
+\title{Search Algorithm}
+\author{Alex Klinkhamer}
+\maketitle
+
+\section{Depth-First Search}
+I use a depth-first search when not using a SAT solver.
+
+\begin{enumerate}
+ \item Prune all actions which break closure.
+ \item For each remaining action,
+  \begin{enumerate}
+   \item Add the action.
+   \item If a livelock is created, remove from list of remaining actions.
+   \item If all deadlocks are resolved, Return Yes.
+   \item Note how many deadlocks the action resolves.
+   \item Remove the action.
+  \end{enumerate}
+ \item Order actions by number of resolved deadlocks.
+ \item If remaining actions do not add weak convergence, Return Nil.
+ \item For each remaining action,
+  \begin{enumerate}
+   \item Add the action and recurse (to try remaining actions).
+   \item If solution found, Return Yes.
+   \item Remove the action.
+   \item If there exist deadlock states which can only be resolved by a single action,
+    \begin{enumerate}
+     \item Add all required actions.
+     \item Recurse (to try remaining actions).
+     \item Return the result of the function call.
+    \end{enumerate}
+  \end{enumerate}
+\end{enumerate}
+
+\section{Future}
+\begin{enumerate}
+ \item Allow for weak fairness.
+ \item If any illegitimate state is locally checkable, one of the local state variables must be changed, at least to something not locally-checkable.
+  This is like the outermost ring of the "best ranking" algorithm.
+\end{enumerate}
+
+\subsection{Permutations}
+Let vector $\vect{d}$ specify the domain of variables.
+That is, $\vect{e}$ is a valuation of $\vect{d}$ iff $\forall i: \vect{e}[i]\in\Nat_{\vect{d}[i]}$.
+Any valuation of $\vect{d}$ can be mapped uniquely to an integer from $0$ to $\prod_{i=0}^{\mathit{Size}(\vect{d})-1} \vect{d}[i]-1$.
+That is, $\vect{e}[i]$ represents the $i$th digit of a variable-base number.
+The $i$th digit is of base $\vect{d}[i]$.
+Addition modulo $\vect{d}$ can be implemented with carry.
+
+Looping through all valuations of $\vect{d}$ is equivalent to looping through all numbers representable by valuations of $\vect{d}$.
+How does one do that?
+We could of course start at $0$ and continue counting up by $1$ until wrapping around, giving the sequence $0,1,2,\dots,\vect{d}-1,0$.
+Really though, we could start at a number $\vect{c}$ which is coprime with $\vect{d}$ and continue adding $\vect{c}$ to get the sequence $\vect{c},2\vect{c},3\vect{c},\dots,(\vect{d}-1)\vect{c},\vect{c}$, all modulo $\vect{d}$.
+This can be achieved by repetitive addition of $\vect{c}$ instead of multiplication.
+
+Use a coprime of $\vect{d}$ around $(\phi-1)\vect{d}$, where $\phi$ is the golden ratio, for best results.
+
+Permutations of an $N$-element array can be represented uniquely by a each valuation of $\vect{d}=(N,N-1,\dots,2,1)$.
+Iterate of all valuations of this $\vect{d}$ as shown above to get all permutations.
+
+
+\end{document}
+
