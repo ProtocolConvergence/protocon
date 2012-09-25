@@ -1,8 +1,10 @@
 
+CxPfx = ../../cx
+
 all: tosat.pdf algo.pdf
 
-%.pdf: %.tex preamble.tex
-	pdflatex $<
+%.pdf: %.tex $(CxPfx)/doc/preamble.tex
+	env TEXINPUTS=$(CxPfx)/doc:.: pdflatex $<
 
 .PHONY: clean
 clean:
