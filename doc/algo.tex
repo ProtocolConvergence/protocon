@@ -42,25 +42,5 @@ I use a depth-first search when not using a SAT solver.
   This is like the outermost ring of the "best ranking" algorithm.
 \end{enumerate}
 
-\subsection{Permutations}
-Let vector $\vect{d}$ specify the domain of variables.
-That is, $\vect{e}$ is a valuation of $\vect{d}$ iff $\forall i: \vect{e}[i]\in\Nat_{\vect{d}[i]}$.
-Any valuation of $\vect{d}$ can be mapped uniquely to an integer from $0$ to $\prod_{i=0}^{\mathit{Size}(\vect{d})-1} \vect{d}[i]-1$.
-That is, $\vect{e}[i]$ represents the $i$th digit of a variable-base number.
-The $i$th digit is of base $\vect{d}[i]$.
-Addition modulo $\vect{d}$ can be implemented with carry.
-
-Looping through all valuations of $\vect{d}$ is equivalent to looping through all numbers representable by valuations of $\vect{d}$.
-How does one do that?
-We could of course start at $0$ and continue counting up by $1$ until wrapping around, giving the sequence $0,1,2,\dots,\vect{d}-1,0$.
-Really though, we could start at a number $\vect{c}$ which is coprime with $\vect{d}$ and continue adding $\vect{c}$ to get the sequence $\vect{c},2\vect{c},3\vect{c},\dots,(\vect{d}-1)\vect{c},\vect{c}$, all modulo $\vect{d}$.
-This can be achieved by repetitive addition of $\vect{c}$ instead of multiplication.
-
-Use a coprime of $\vect{d}$ around $(\phi-1)\vect{d}$, where $\phi$ is the golden ratio, for best results.
-
-Permutations of an $N$-element array can be represented uniquely by a each valuation of $\vect{d}=(N,N-1,\dots,2,1)$.
-Iterate of all valuations of this $\vect{d}$ as shown above to get all permutations.
-
-
 \end{document}
 
