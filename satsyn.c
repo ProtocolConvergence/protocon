@@ -392,11 +392,11 @@ clause_of_CnfFmla (CnfDisj* clause, const CnfFmla* fmla, ujint i)
 
 qual_inline
     void
-dump_BitTable (OFileB* f, const BitTable bt)
+oput_BitTable (OFileB* f, const BitTable bt)
 {
     ujint i;
     UFor( i, bt.sz )
-        dump_char_OFileB (f, test_BitTable (bt, i) ? '1' : '0');
+        oput_char_OFileB (f, test_BitTable (bt, i) ? '1' : '0');
 }
 
 
@@ -590,12 +590,12 @@ statevs_of_XnSys (TableT(DomSz)* t, const XnSys* sys, XnSz sidx)
 
 
     void
-dump_XnEVbl (OFileB* of, const XnEVbl* ev, const char* delim)
+oput_XnEVbl (OFileB* of, const XnEVbl* ev, const char* delim)
 {
-    dump_AlphaTab (of, &ev->vbl->name);
+    oput_AlphaTab (of, &ev->vbl->name);
     if (!delim)  delim = "=";
-    dump_cstr_OFileB (of, delim);
-    dump_uint_OFileB (of, ev->val);
+    oput_cstr_OFileB (of, delim);
+    oput_uint_OFileB (of, ev->val);
 }
 
     void
@@ -1715,13 +1715,13 @@ synsearch (FnWMem_synsearch* tape)
                 || tape->may_rules.sz-1 < 40)
             {
                 OFileB* of = stderr_OFileB ();
-                dump_cstr_OFileB (of, " -- ");
-                dump_uint_OFileB (of, tape->may_rules.sz - 1);
-                dump_cstr_OFileB (of, " -- ");
-                dump_uint_OFileB (of, may_rules->sz);
-                dump_cstr_OFileB (of, " -- ");
-                dump_promela_XnRule (of, g, sys);
-                dump_char_OFileB (of, '\n');
+                oput_cstr_OFileB (of, " -- ");
+                oput_uint_OFileB (of, tape->may_rules.sz - 1);
+                oput_cstr_OFileB (of, " -- ");
+                oput_uint_OFileB (of, may_rules->sz);
+                oput_cstr_OFileB (of, " -- ");
+                oput_promela_XnRule (of, g, sys);
+                oput_char_OFileB (of, '\n');
                 flush_OFileB (of);
             }
 
@@ -2088,8 +2088,8 @@ synsearch_sat (FnWMem_synsearch* tape)
         extl_solve_CnfFmla (fmla, &sat, evs);
         if (0)
         {
-            dump_BitTable (stderr_OFileB (), evs);
-            dump_char_OFileB (stderr_OFileB (), '\n');
+            oput_BitTable (stderr_OFileB (), evs);
+            oput_char_OFileB (stderr_OFileB (), '\n');
         }
 
         tape->stabilizing = sat;
@@ -2247,7 +2247,7 @@ main (int argc, char** argv)
 
             seto_FileB (&pmlf, true);
             open_FileB (&pmlf, 0, "model.pml");
-            dump_promela (&pmlf.xo, sys, tape.rules);
+            oput_promela (&pmlf.xo, sys, tape.rules);
             lose_FileB (&pmlf);
 
 

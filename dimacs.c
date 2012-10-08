@@ -1,7 +1,7 @@
 
 
     void
-dump_dimacs_CnfFmla (OFileB* of, const CnfFmla* fmla)
+oput_dimacs_CnfFmla (OFileB* of, const CnfFmla* fmla)
 {
     DecloStack1( CnfDisj, clause, dflt_CnfDisj () );
     printf_OFileB (of, "p cnf %u %u\n",
@@ -11,17 +11,17 @@ dump_dimacs_CnfFmla (OFileB* of, const CnfFmla* fmla)
         clause_of_CnfFmla (clause, fmla, i);
         { BLoop( j, clause->lits.sz )
             if (!clause->lits.s[j].val)
-                dump_char_OFileB (of, '-');
-            dump_uint_OFileB (of, 1+clause->lits.s[j].vbl);
-            dump_char_OFileB (of, ' ');
+                oput_char_OFileB (of, '-');
+            oput_uint_OFileB (of, 1+clause->lits.s[j].vbl);
+            oput_char_OFileB (of, ' ');
         } BLose()
-        dump_cstr_OFileB (of, "0\n");
+        oput_cstr_OFileB (of, "0\n");
     } BLose()
     lose_CnfDisj (clause);
 }
 
     void
-load_dimacs_result (XFileB* xf, bool* sat, BitTable evs)
+xget_dimacs_result (XFileB* xf, bool* sat, BitTable evs)
 {
     const char* line = getline_XFileB (xf);
     wipe_BitTable (evs, 0);
@@ -42,12 +42,12 @@ load_dimacs_result (XFileB* xf, bool* sat, BitTable evs)
         bool good;
         *sat = true;
 
-        good = load_int_XFileB (xf, &v);
+        good = xget_int_XFileB (xf, &v);
         while (good)
         {
             if      (v > 0)  set1_BitTable (evs, +v-1);
             else if (v < 0)  set0_BitTable (evs, -v-1);
-            good = load_int_XFileB (xf, &v);
+            good = xget_int_XFileB (xf, &v);
         }
     }
 }
@@ -74,7 +74,7 @@ extl_solve_CnfFmla (CnfFmla* fmla, bool* sat, BitTable evs)
     init_FileB (fb);
     seto_FileB (fb, true);
     open_FileB (fb, 0, "sat.in");
-    dump_dimacs_CnfFmla (&fb->xo, fmla);
+    oput_dimacs_CnfFmla (&fb->xo, fmla);
     close_FileB (fb);
 
     lose_CnfFmla (fmla);
@@ -102,14 +102,14 @@ extl_solve_CnfFmla (CnfFmla* fmla, bool* sat, BitTable evs)
 
     if (SatSolve_Z3)
     {
-        load_dimacs_result (ospc->xf, sat, evs);
+        xget_dimacs_result (ospc->xf, sat, evs);
     }
     else
     {
         close_OSPc (ospc);
         seto_FileB (fb, false);
         open_FileB (fb, 0, "sat.out");
-        load_dimacs_result (&fb->xo, sat, evs);
+        xget_dimacs_result (&fb->xo, sat, evs);
     }
     BLose();
 

@@ -14,8 +14,8 @@ sat3_legit_XnSys (FnWMem_do_XnSys* fix,
     bool ring = (npcs != 3);
 #if 0
     OFileB* of = stderr_OFileB ();
-    dump_BitTable (of, sys->legit);
-    dump_char_OFileB (of, '\n');
+    oput_BitTable (of, sys->legit);
+    oput_char_OFileB (of, '\n');
 #endif
 
 #if 1
@@ -113,22 +113,22 @@ sat3_legit_XnSys (FnWMem_do_XnSys* fix,
 
 
 #if 0
-    dump_BitTable (of, sys->legit);
-    dump_char_OFileB (of, '\n');
+    oput_BitTable (of, sys->legit);
+    oput_char_OFileB (of, '\n');
 
     if (false)
     { BLoopT( XnSz, i, sys->legit.sz )
         if (test_BitTable (sys->legit, i))
         {
-            dump_char_OFileB (of, '+');
-            dump_promela_state_XnSys (of, sys, i);
-            dump_char_OFileB (of, '\n');
+            oput_char_OFileB (of, '+');
+            oput_promela_state_XnSys (of, sys, i);
+            oput_char_OFileB (of, '\n');
         }
         else
         {
-            dump_char_OFileB (of, '-');
-            dump_promela_state_XnSys (of, sys, i);
-            dump_char_OFileB (of, '\n');
+            oput_char_OFileB (of, '-');
+            oput_promela_state_XnSys (of, sys, i);
+            oput_char_OFileB (of, '\n');
         }
     } BLose()
 
@@ -176,7 +176,7 @@ inst_sat3_XnSys (const CnfFmla* fmla)
         XnVbl sat = dflt_XnVbl ();
         sat.domsz = 2;
         flush_OFileB (&name);
-        dump_cstr_OFileB (&name, "sat");
+        oput_cstr_OFileB (&name, "sat");
         copy_AlphaTab_OFileB (&sat.name, &name);
         sat_idx = sys->vbls.sz;
         PushTable( sys->vbls, sat );
