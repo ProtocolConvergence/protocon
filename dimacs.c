@@ -7,16 +7,16 @@ oput_dimacs_CnfFmla (OFileB* of, const CnfFmla* fmla)
     printf_OFileB (of, "p cnf %u %u\n",
                    (uint) fmla->nvbls,
                    (uint) fmla->idcs.sz);
-    { BLoop( i, fmla->idcs.sz )
+    {:for (i ; fmla->idcs.sz)
         clause_of_CnfFmla (clause, fmla, i);
-        { BLoop( j, clause->lits.sz )
+        {:for (j ; clause->lits.sz)
             if (!clause->lits.s[j].val)
                 oput_char_OFileB (of, '-');
             oput_uint_OFileB (of, 1+clause->lits.s[j].vbl);
             oput_char_OFileB (of, ' ');
-        } BLose()
+        }
         oput_cstr_OFileB (of, "0\n");
-    } BLose()
+    }
     lose_CnfDisj (clause);
 }
 

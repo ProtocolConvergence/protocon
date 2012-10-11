@@ -18,7 +18,7 @@ inst_bit3_XnSys (uint npcs)
     OFileB name = dflt_OFileB ();
 
     /* Make processes and variables.*/
-    { BLoop( r, npcs )
+    {:for (r ; npcs)
         XnVbl e_vbl = dflt_XnVbl ();
         XnVbl t_vbl = dflt_XnVbl ();
         XnVbl ready_vbl = dflt_XnVbl ();
@@ -45,25 +45,25 @@ inst_bit3_XnSys (uint npcs)
         copy_AlphaTab_OFileB (&ready_vbl.name, &name);
         PushTable( ready_idcs, sys->vbls.sz );
         PushTable( sys->vbls, ready_vbl );
-    } BLose()
+    }
 
     /* Make bidirectional ring topology.*/
-    { BLoop( r, npcs )
+    {:for (r ; npcs)
         assoc_XnSys (sys, r, e_idcs.s[r], Yes);
         assoc_XnSys (sys, r, t_idcs.s[r], Yes);
         assoc_XnSys (sys, r, ready_idcs.s[r], Yes);
         assoc_XnSys (sys, r, e_idcs.s[dec1mod (r, npcs)], May);
         assoc_XnSys (sys, r, t_idcs.s[dec1mod (r, npcs)], May);
-    } BLose()
+    }
 
     sys->syn_legit = true;
     accept_topology_XnSys (sys);
 
-    { BUjFor( sidx, sys->nstates )
+    {:for (sidx ; sys->nstates)
         uint ntokens = 0;
         uint nenabled = 0;
         statevs_of_XnSys (&vs, sys, sidx);
-        { BLoop( r, npcs )
+        {:for (r ; npcs)
             ntokens +=
                 (vs.s[t_idcs.s[r]] == vs.s[t_idcs.s[dec1mod (r, npcs)]]
                  ? (r == 0 ? 1 : 0)
@@ -72,9 +72,9 @@ inst_bit3_XnSys (uint npcs)
                 (vs.s[e_idcs.s[r]] == vs.s[e_idcs.s[dec1mod (r, npcs)]]
                  ? (r == 0 ? 1 : 0)
                  : (r == 0 ? 0 : 1));
-        } BLose()
+        }
         setb_BitTable (sys->legit, sidx, (ntokens == 1 && nenabled >= 1));
-    } BLose()
+    }
 
     lose_OFileB (&name);
     LoseTable( vs );
