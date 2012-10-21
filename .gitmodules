@@ -1,0 +1,3 @@
+[submodule "glu-2.4"]
+	path = glu-2.4
+	url = wopr:/home/campus14/apklinkh/repo/glu-2.4.git
