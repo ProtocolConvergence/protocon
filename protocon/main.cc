@@ -104,7 +104,7 @@ int main(int argc, char** argv)
   array_t* vars = array_alloc(uint, 0);
   array_insert_last(uint, vars, 0); // m_0
   array_insert_last(uint, vars, 1); // m_0'
-  array_insert_last(uint, vars, 2); // m_1'
+  array_insert_last(uint, vars, 2); // m_1
   array_insert_last(uint, vars, 3); // m_1'
   array_insert_last(uint, vars, 4); // m_2
   array_insert_last(uint, vars, 5); // m_2'
