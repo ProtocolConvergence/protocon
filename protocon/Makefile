@@ -12,6 +12,9 @@ BinPath = ../bin
 GluPath = ../glu-2.4
 GluIncludePath = $(GluPath)/include
 
+IXXFLAGS += -I$(GluPath)/include
+LXXFLAGS += -L$(GluPath) -lcmu -lglu -lcu -lcal -lm
+
 ifneq (,$(filter debug,$(CONFIG)))
 	CXXFLAGS += -g
 endif
@@ -35,11 +38,11 @@ CXXFLAGS += -Wall -Wextra -Wstrict-aliasing
 
 all: $(BinPath)/protocon
 
-$(BinPath)/protocon: main.o
+$(BinPath)/protocon: main.o synhax.o
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(LXXFLAGS)
 
 %.o: %.cc
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(IXXFLAGS) -c $< -o $@
 
 $(BinPath)/protocon: | $(BinPath)
 
