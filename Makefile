@@ -30,6 +30,7 @@ tags:
 		-not -path '*/.*' \
 		-not -path '*/html/*' -not -path '*/bld/*' \
 		-not -path './bin/*' \
+		-not -path './doc/*' \
 		-not -path './$(GluPath)/src/*' \
 		'(' -name '*.h' -or -name '*.c' -or -name '*.cc' -or -name '*.hh' ')' \
 		-prune \
