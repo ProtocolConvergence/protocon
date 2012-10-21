@@ -13,6 +13,7 @@ mdd_assign(mdd_t** a, mdd_t* b)
   *a = b;
 }
 
+
   void
 init_unchanged(mdd_t** unchange, mdd_manager* ctx)
 {
@@ -32,6 +33,7 @@ init_unchanged(mdd_t** unchange, mdd_manager* ctx)
     mdd_free(eq);
   }
 }
+
 
 int main(int argc, char** argv)
 {
@@ -70,19 +72,48 @@ int main(int argc, char** argv)
   DBog0("Showing all variables");
   print_mvar_list(ctx);
 
+  mdd_t* acts = 0;
+  // Construct the action (technically, two actions):
+  //   m0=0 & (m1=0 | m1=2) & m2=1 --> m1:=1
+  {
+    mdd_t* a = 0;
+    mdd_t* b = 0;
+    mdd_assign(&a, mdd_eq_c(ctx, 2, 0)); // m1=0
 
-  // Build an array of variables to see (m_0, m_0', m_2, m_2').
+    mdd_assign(&b, mdd_eq_c(ctx, 2, 2)); // m1=2
+    mdd_assign(&a, mdd_or(a, b, 1, 1)); // m1=0 | m1=2
+
+    mdd_assign(&b, mdd_eq_c(ctx, 3, 1)); // m2:=1
+    mdd_assign(&a, mdd_and(a, b, 1, 1)); // m1=0 | m1=2 --> m1:=1
+
+    mdd_assign(&b, mdd_eq_c(ctx, 0, 0)); // m0=0
+    mdd_assign(&a, mdd_and(a, b, 1, 1)); // m0=0 & (m1=0 | m1=2) --> m1:=1
+
+    mdd_assign(&b, mdd_eq_c(ctx, 4, 1)); // m2=0
+    mdd_assign(&a, mdd_and(a, b, 1, 1)); // m0=0 & (m1=0 | m1=2) & m2=0 --> m1:=1
+
+    mdd_assign(&acts, a);
+    //mdd_free(a);
+    mdd_free(b);
+  }
+  // Need to conjuct with /unchange[1]/ to ensure $m_0=m_0'$ and $m_2=m_2'$.
+  // Actually, it enforces all $m_i=m_i'$ where $i \ne 1$.
+  mdd_assign(&acts, mdd_and(acts, unchange[1], 1, 1));
+
+  // Build an array of variables to see (m_0, m_0', m_1, m_1', m_2, m_2').
   array_t* vars = array_alloc(uint, 0);
   array_insert_last(uint, vars, 0); // m_0
   array_insert_last(uint, vars, 1); // m_0'
+  array_insert_last(uint, vars, 2); // m_1'
+  array_insert_last(uint, vars, 3); // m_1'
   array_insert_last(uint, vars, 4); // m_2
   array_insert_last(uint, vars, 5); // m_2'
 
   mdd_gen* gen;
   array_t* minterm;
-  // Show all satisfying valuations of the variables for the formula stored in /unchange[0]/.
-  DBog0("Showing satisfying valuations on m_0, m_0', m_2, m_2' of unchanged[0]");
-  foreach_mdd_minterm(unchange[0], gen, minterm, vars) {
+  // Show all satisfying valuations of the variables for the formula stored in /acts/
+  DBog0("Showing satisfying valuations on m_0, m_0', m_1, m_1', m_2, m_2' of /acts/");
+  foreach_mdd_minterm(acts, gen, minterm, vars) {
     for (uint i = 0; i < (uint) minterm->num; ++i) {
       uint x = array_fetch(uint, minterm, i);
       uint vidx = array_fetch(uint, vars, i);
@@ -91,6 +122,7 @@ int main(int argc, char** argv)
     fputc('\n', stdout);
     array_free(minterm);
   }
+  mdd_free(acts);
 
   for (uint i = 0; i < ArraySz( unchange ); ++i) {
     mdd_free(unchange[i]);
