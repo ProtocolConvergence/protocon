@@ -14,8 +14,8 @@ $(GluPath)/configure:
 	git submodule init $(GluPath)
 	git submodule update $(GluPath)
 
-$(GluPath)/Makefile:
-	cd $(GluPath) && ./configure
+$(GluPath)/Makefile: $(GluPath)/configure
+	cd $(GluPath) && ./configure --enable-gcc
 
 $(GluPath)/libglu.a: $(GluPath)/Makefile
 	cd $(GluPath) && make
