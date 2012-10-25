@@ -83,7 +83,7 @@ int main(int argc, char** argv)
     mdd_assign(&b, mdd_eq_c(ctx, 2, 2)); // m1=2
     mdd_assign(&a, mdd_or(a, b, 1, 1)); // m1=0 | m1=2
 
-    mdd_assign(&b, mdd_eq_c(ctx, 3, 1)); // m2:=1
+    mdd_assign(&b, mdd_eq_c(ctx, 3, 1)); // m1:=1   (equiv to m1'=1)
     mdd_assign(&a, mdd_and(a, b, 1, 1)); // m1=0 | m1=2 --> m1:=1
 
     mdd_assign(&b, mdd_eq_c(ctx, 0, 0)); // m0=0
