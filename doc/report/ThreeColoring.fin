@@ -1,0 +1,34 @@
+program Coloring;
+
+var int c.0..5: domain 0..2;
+
+
+process first
+  false --> c.0:=0;
+
+  read:  c.5, c.0, c.1;
+  write: c.0;
+endprocess
+
+
+process q: 1..4
+  false --> c.q:=0;
+      
+  read:  c.(q - 1), c.q, c.(q + 1); 
+  write: c.q;
+endprocess
+
+
+process last
+  false --> c.5 := 0;
+
+  read: c.4, c.5, c.0;
+  write: c.5;
+endprocess
+
+                c_{i-1}\ne c_i \wedge c_i \ne c_{i+1})
+invariant
+  (((c.5 != c.0) & (c.0 != c.1))
+   & (forall i in 1..4 ::
+      ((c.(i-1) != c.i) & (c.i != c.(i+1))))
+      ((c.4) != c.5) & (c.5 != c.0))
