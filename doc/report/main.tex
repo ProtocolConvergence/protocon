@@ -32,7 +32,6 @@
 
 \section{Future Work}
 
-{\it Provide time estimates and tasks. Identify tasks for project group members.}
 Our current to-do list consists primarily of constructing a detailed list of activities required to finish this project, with a rough timeline 
 and initial task assignments for each member, all of which will be taken care of early in the next week, and then we will begin with whichever tasks top
 the new list.  After that, our broader to-do list consists of the items laid out in section 2 of the proposal, less items already completed:
@@ -53,9 +52,9 @@ Now we have a rough format close to the format representing the protocol states 
 \[
     m_0 = 0, {m'}_0 = 0, m_1 = 2, {m'}_1 = 1, m_2 = 1, {m'}_2 = 1\\
 \]
-After checking the values of each process, it is obvious that there are some variables changed their values as time goes. Namely, $m_1 = 0, {m'}_1 = 1$ and $m_1 = 2, {m'}_1 = 1$, both of them take an action ${m'}_1 = 1$. This could be the way using state predicate to indicate actions.
+After checking the values of each process, it is obvious that there are some variables which will change their values as time goes on. Namely, $m_1 = 0, {m'}_1 = 1$ and $m_1 = 2, {m'}_1 = 1$, both of them take an action ${m'}_1 = 1$. This could be the way of using a state predicate to indicate actions.
 
-In another aspect, a formula could be created as the evaluation standard judging whether a state is a legitimate state or not. Still in the above instance, if $(m_0={m'}_0)\cap (m_2={m'}_2)\cap (m_0=0)\cap (m_2=1)\cap (m_1=0\cup m_1=2)\cap ({m'}_1=1)$ is the standard for telling whether the questioned state is in illegitimate state, then the two states above are in illegitimate state since the output from the standard is true. Therefore, an action is required, which could be ${m'}_1=1$, to transfer the state into legitimate state region, and therefore stabilize the system.
+In another aspect, a formula could be created as the evaluation standard for judging whether a state is a legitimate state or not. Still in the above instance, if $(m_0={m'}_0)\cap (m_2={m'}_2)\cap (m_0=0)\cap (m_2=1)\cap (m_1=0\cup m_1=2)\cap ({m'}_1=1)$ is the standard for telling whether the questioned state is an illegitimate state, then the two states above are illegitimate states since the output from the standard is true. Therefore, an action is required, which could be ${m'}_1=1$, to transfer the state into legitimate state region, and therefore stabilize the system.
 
 \section{Examples}
 Some examples of stabilizing protocols follow.
