@@ -23,18 +23,18 @@ YES
 
 {\it Formulate the search problem: states, actions, goals.
 \begin{itemize}
-\item Show how BDDs represent states.
 \item Show the input file format
 \end{itemize}
 }
 
+\section{Progress}
 {\it A SAT solver is a special case of a CSP solver. How will your methods be different from the SAT solver?}
 
 It blows up in size when given to a SAT solver.
 
 {\it How can the manual step in 1 be automated?}
 
-TODO
+\section{Future Work}
 
 {\it Aim to have a working system for a very simple example even if heuristics do not perform well.}
 
@@ -46,6 +46,24 @@ and initial task assignments for each member, all of which will be taken care of
 the new list.  After that, our broader to-do list consists of the items laid out in section 2 of the proposal, less items already completed:
 cycle checking, weak stabilization checking, the backtracking algorithm, implementing the most-constrained variable and AC-3 heuristics, and performing
 tests to measure the effectiveness of our implementation.
+
+\section{BDD Algorithms}
+As in regular software or any search algorithm, the states could be of large amount and rather complex. Simply listing the states is inefficient and coercing analysis. Here we resort to Multiple-Valued Logic for describing the state of a protocol system and a multiple-valued decision diagram(MDD), which is general version of BDD. This allows countermeasures to be formated that address states that share common features. 
+
+Both BDD and MDD employ expressions connected with either disjunctive or conjunctive to form the state predicate and output true or false. The difference between BDD and MDD is that BDD only permit boolean values assigned to each variable while MDD assigns numbers within an indicated domain to the variables as state predicate. MDD has been developed and implemented to construct BDD. 
+
+Consider a totally-specified $5$-valued function with $3$ inputs $x, y, z$. Initially, there are $5^3 = 125$ states in the system. But with value assigned to one variable $x$ here as $3$, then for the other two variables, they are $25$ different state assignments. So state predicate $x=3$ is one state in the case of MDD that equals to $25$ states in the original scenario. 
+
+Now we have a rough format close to the format representing the protocol states later on. Say there are 3 processes as nodes in the bi-directional ring, and each node could read from its two neighbors and write to itself. We use $m_0$ as the variable whose value indicates the current state of process $P_0$. ${m'}_0$ means the same except the value is the one in the next time step. Similarly, this rule applies to process $P_1$ and process $P_2$. We have the following state predicate:
+\[
+    m_0 = 0, {m'}_0 = 0, m_1 = 0, {m'}_1 = 1, m_2 = 1, {m'}_2 = 1
+\]
+\[
+    m_0 = 0, {m'}_0 = 0, m_1 = 2, {m'}_1 = 1, m_2 = 1, {m'}_2 = 1\\
+\]
+After checking the values of each process, it is obvious that there are some variables changed their values as time goes. Namely, $m_1 = 0, {m'}_1 = 1$ and $m_1 = 2, {m'}_1 = 1$, both of them take an action ${m'}_1 = 1$. This could be the way using state predicate to indicate actions.
+
+In another aspect, a formula could be created as the evaluation standard judging whether a state is a legitimate state or not. Still in the above instance, if $(m_0={m'}_0)\cap (m_2={m'}_2)\cap (m_0=0)\cap (m_2=1)\cap (m_1=0\cup m_1=2)\cap ({m'}_1=1)$ is the standard for telling whether the questioned state is in illegitimate state, then the two states above are in illegitimate state since the output from the standard is true. Therefore, an action is required, which could be ${m'}_1=1$, to transfer the state into legitimate state region, and therefore stablize the system.
 
 \section{Examples}
 Some examples of stabilizing protocols follow.
