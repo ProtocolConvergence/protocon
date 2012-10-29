@@ -19,6 +19,28 @@
 
 %{\it Formulate the search problem: states, actions, goals.}
 
+\section{Tasks}
+
+\begin{center}
+\begin{tabular}{|c||c|c|c|}
+\hline
+ Task & Estimate & People & Status \\
+\hline
+ BDD & 1 week, 2 people & all & done \\
+ Topology & 1 week, 3 people & all & \\
+ Input File & 3 days, 3 people & all & \\
+ Weak Stabilization Check & 2 days, 1 person & Mandy & \\
+ Cycle Check & 1 week, 1 person & Alex & \\
+ Backtracking Algorithm & 4 days, 2 people & Brandon \& Mandy & \\
+ Output File & 1 day, 1 person &  Brandon & \\
+ Output Model & 1 day, 1 person & Alex & \\
+ Most-Constrained Variable & 1 week, 3 people & all & \\
+ AC-3 & 1 week, 3 people & all & \\
+ Examples and Comparison & 2 weeks, 3 people & all & \\
+\hline
+\end{tabular}
+\end{center}
+
 \section{Progress}
 
 \begin{itemize}
@@ -41,7 +63,11 @@ tests to measure the effectiveness of our implementation.
 \section{BDD Algorithms}
 As in regular software or any search algorithm, the states could be of large amount and rather complex. Simply listing the states is inefficient and complicates analysis. Here we resort to Multiple-Valued Logic for describing the state of a system, represented by a multiple-valued decision diagram (MDD), which is general version of BDD. This allows countermeasures to be formated that address states that share common features. 
 
-Both BDDs and MDDs represent expressions connected by disjunctions and conjunctions to form a state predicate and output true or false. The difference between BDD and MDD is that BDD only permit boolean values assigned to each variable while MDD assigns numbers within an indicated domain to the variables as state predicate. MDD has been developed and implemented to construct BDD. 
+Both BDDs and MDDs provide a uniform way to represent formulas which evaluate to {\it true} or {\it false} based on variable values (i.e., predicate functions).
+We use them because they can also use {\em much less} space than a truth-table.
+BDDs and MDDs differ only by the domains of variables. BDDs only allows boolean variables, so they can express the input formulas of the satisfiability problem.
+MDDs, on the other hand, allow variables to have finite domains (conventionally represented by natural numbers starting at $0$).
+As any integer can be represented by string of bits, MDDs can be implemented using BDDs.
 
 Consider a predicate over three variables $x, y, z$, each with values ranging from $0$ to $4$ (domain size 3). Initially, there are $5^3 = 125$ states in the system. If we specify the state predicate as $x=3$, the number of states for which the predicate returns {\it true} is $25$, since the value of $x$ is totally fixed. We could use an MDD to symbolically represent this set of $25$ states.
 

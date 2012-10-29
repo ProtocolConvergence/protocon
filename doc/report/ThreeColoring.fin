@@ -26,7 +26,6 @@ process last
   write: c.5;
 endprocess
 
-                c_{i-1}\ne c_i \wedge c_i \ne c_{i+1})
 invariant
   (((c.5 != c.0) & (c.0 != c.1))
    & (forall i in 1..4 ::
