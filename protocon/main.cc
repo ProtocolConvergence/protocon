@@ -3,76 +3,57 @@
 
 #include <stdio.h>
 #include "synhax.hh"
-
-#define NPs 6
-
-  void
-init_unchanged(vector<PF>& unchange, PFCtx& ctx)
-{
-  unchange.resize(NPs);
-
-  for (uint i = 0; i < NPs; ++i) {
-    PF eq = (ctx.vbl(2*i+0) == ctx.vbl(2*i+1));
-
-    for (uint j = 0; j < NPs; ++j) {
-      if (i != j) {
-        unchange[j] &= eq;
-      }
-    }
-  }
-}
+#include "xnsys.hh"
 
 int main(int argc, char** argv)
 {
   int argi = 1;
+  const uint NPs = 6;
 
   if (argi < argc) {
     printf("%s: No arguments supported!\n", argv[0]);
     return 1;
   }
 
-
-  // Build variable info (domain and names).
-  // Variables are: m_0, m_0', m_1, m_1', ..., m_{N-1}, m_{N-1}'
-  PFCtx ctx;
-  for (uint i = 0; i < 2*NPs; ++i) {
+  // Build a bidirectional ring where each process P_i
+  // has variable m_i of domain size 3.
+  XnNet topo;
+  for (uint i = 0; i < NPs; ++i) {
     char name[10];
-    if (i % 2 == 0)
-      sprintf(name, "m%u", i / 2);
-    else
-      sprintf(name, "m%up", i / 2);
-    ctx.add(PFVbl(name, 3));
+    sprintf(name, "m%u", i);
+
+    XnPc& pc = Grow1(topo.pcs);
+    pc.addVbl(XnVbl(name, 3));
+    pc.addPriv((i+NPs-1) % NPs, 0);
+    pc.addPriv((i+1) % NPs, 0);
   }
 
-  // Actually create the variables in this context (or manager, if you will).
-  ctx.initialize();
+  // Commit to using this topology.
+  // MDD stuff is initialized.
+  topo.commitInitialization();
 
   DBog0("Showing all variables");
-  print_mvar_list(ctx.mdd_ctx());
+  print_mvar_list(topo.pfCtx.mdd_ctx());
 
-  // Ensure every variable but $m_i$ variable does not change.
-  // unchange[i] = (m_0=m_0' & m_1=m_1' & ... &
-  //                m_{i-1}=m{i-1}' & m_{i+1}=m_{i+1}' &
-  //                ... & m_{N-1}=m_{N-1}')
-  vector<PF> unchange;
-  init_unchanged(unchange, ctx);
+  PFCtx& ctx = topo.pfCtx;
 
-  //   m0=0 & (m1=0 | m1=2) & m2=1 --> m1:=1
+  //   m0==0 && (m1==0 || m1==2) && m2==1 --> m1:=1
+  //   m0==0 && (m1==0 || m1==2) && m2==1 && m1'==1
   PF pf =
-    unchange[1] &&
-    (ctx.vbl("m0") == 0 &&
-     (ctx.vbl("m1") == 0 || ctx.vbl("m1") == 2) &&
-     ctx.vbl("m2") == 0 &&
-     ctx.vbl("m1p") == 1);
+    topo.pcs[1].actUnchanged &&
+    (topo.pfVbl(0, 0) == 0 && 
+     (topo.pfVbl(1, 0) == 0 || topo.pfVbl(1, 0) == 2) &&
+     topo.pfVbl(2, 0) == 0 &&
+     topo.pfVblPrimed(1, 0) == 1);
 
-  // Build an array of variables to see (m_0, m_0', m_1, m_1', m_2, m_2').
+  // Build an array of variable indices to see (m_0, m_0', m_1, m_1', m_2, m_2').
   array_t* vars = array_alloc(uint, 0);
-  array_insert_last(uint, vars, 0); // m_0
-  array_insert_last(uint, vars, 1); // m_0'
-  array_insert_last(uint, vars, 2); // m_1
-  array_insert_last(uint, vars, 3); // m_1'
-  array_insert_last(uint, vars, 4); // m_2
-  array_insert_last(uint, vars, 5); // m_2'
+  array_insert_last(uint, vars, topo.pfVbl      (0, 0).idx); // m_0
+  array_insert_last(uint, vars, topo.pfVblPrimed(0, 0).idx); // m_0'
+  array_insert_last(uint, vars, topo.pfVbl      (1, 0).idx); // m_1
+  array_insert_last(uint, vars, topo.pfVblPrimed(1, 0).idx); // m_1'
+  array_insert_last(uint, vars, topo.pfVbl      (2, 0).idx); // m_2
+  array_insert_last(uint, vars, topo.pfVblPrimed(2, 0).idx); // m_2'
 
   mdd_gen* gen;
   array_t* minterm;

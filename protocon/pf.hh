@@ -156,7 +156,7 @@ public:
     return &vVbls[idx];
   }
 
-  void initialize()
+  void commitInitialization()
   {
     array_t* doms = array_alloc(uint, 0);
     array_t* names = array_alloc(char*, 0);
@@ -179,6 +179,7 @@ public:
   const PFVbl vbl(const string& s) const
   {
     const uint* idx = MapLookup(vVblMap, s);
+    // Live on the edge!
     //if (!idx)  return NULL;
     return vVbls[*idx];
   }

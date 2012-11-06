@@ -4,10 +4,12 @@
 
 #include <map>
 #include <string>
+#include <utility>
 #include <vector>
 
 using std::map;
 using std::string;
+using std::pair;
 using std::vector;
 
 typedef unsigned int uint;
@@ -51,6 +53,14 @@ MapLookup(map<K,V>& m, const K& key)
   typename map<K,V>::iterator it = m.find(key);
   if (it == m.end())  return NULL;
   return &it->second;
+}
+
+template <class T>
+  T&
+Grow1(vector<T>& a)
+{
+  a.resize(a.size() + 1);
+  return a[a.size() - 1];
 }
 
 
