@@ -1,36 +1,48 @@
 
 \input{preamble}
+\usepackage{verbatim}
 
 \begin{document}
 \title{Search Algorithm}
 \author{Alex Klinkhamer}
 \maketitle
 
-\section{Depth-First Search}
-I use a depth-first search when not using a SAT solver.
+\section{Depth-First Search (Backtracking)}
 
+$\mathsc{SynSearch}(p_{dl})$:
 \begin{enumerate}
+ \item Let $p_{dl}$ be the initial non-stabilizing protocol with deadlock states.
+ \item Create a list $G$ of potential actions.
  \item Prune all actions which break closure.
- \item For each remaining action,
+ \item Prune all actions which cause self-loops.
+ \item Call $p_{ss} \defeq \mathsc{SynSearchBT}(p_{dl}, G)$.
+ \item Return $p_{ss}$ (could be $\mathsc{Nil}$ if no solution found).
+\end{enumerate}
+
+$\mathsc{SynSearchBT}(p_{dl}, G)$:
+\begin{enumerate}
+ \item For each remaining action $g\in G$,
   \begin{enumerate}
-   \item Add the action.
-   \item If a livelock is created, remove from list of remaining actions.
-   \item If all deadlocks are resolved, Return Yes.
+   \item Add the action $g$ to $p_{dl}$.
+   \item If a livelock is created, remove $g$ from $G$.
+   \item If all deadlocks are resolved, Return $p_{dl}$.
    \item Note how many deadlocks the action resolves.
-   \item Remove the action.
+   \item Remove the action $g$ from $p_{dl}$.
   \end{enumerate}
- \item Order actions by number of resolved deadlocks.
- \item If remaining actions do not add weak convergence, Return Nil.
- \item For each remaining action,
+ \item Order actions in $G$ by number of resolved deadlocks.
+ \item If remaining actions do not add weak convergence, Return $\mathsc{Nil}$.
+ \item For each remaining action $g\in G$,
   \begin{enumerate}
-   \item Add the action and recurse (to try remaining actions).
-   \item If solution found, Return Yes.
-   \item Remove the action.
-   \item If there exist deadlock states which can only be resolved by a single action,
+   \item Remove $g$ from $G$.
+   \item Add the action $g$ to $p_{dl}$.
+   \item Call $p_{ss} \defeq \mathsc{SynSearchBT}(p_{dl}, G)$.
+   \item If $p_{ss}\neq \mathsc{Nil}$, Return $p_{ss}$.
+   \item Remove the action $g$ from $p_{dl}$.
+   \item If there exist deadlock states in $p_{dl}$ which can only be resolved by a single action,
     \begin{enumerate}
-     \item Add all required actions.
-     \item Recurse (to try remaining actions).
-     \item Return the result of the function call.
+     \item Add all required actions (and remove them from $G$).
+     \item Call $p_{ss} \defeq \mathsc{SynSearchBT}(p_{dl}, G)$.
+     \item Return $p_{ss}$ (could be $\mathsc{Nil}$ if no solution found).
     \end{enumerate}
   \end{enumerate}
 \end{enumerate}
@@ -38,8 +50,9 @@ I use a depth-first search when not using a SAT solver.
 \section{Future}
 \begin{enumerate}
  \item Allow for weak fairness.
- \item If any illegitimate state is locally checkable, one of the local state variables must be changed, at least to something not locally-checkable.
-  This is like the outermost ring of the "best ranking" algorithm.
+ \item At each level, choose the smallest set of actions of which one must occur to resolve some deadlock state.
+ %\item If any illegitimate state is locally checkable, one of the local state variables must be changed, at least to something not locally-checkable.
+ % This is like the outermost ring of the "best ranking" algorithm.
 \end{enumerate}
 
 \end{document}
