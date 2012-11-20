@@ -130,7 +130,7 @@ uint XnNet::actionIndex(const XnAct& act) const
   return actIdx;
 }
 
-const PF XnNet::actionPF(uint actIdx)
+const PF XnNet::actionPF(uint actIdx) const
 {
   const XnAct act = action(actIdx);
   const XnPc& pc = pcs[act.pcIdx];

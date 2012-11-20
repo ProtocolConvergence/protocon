@@ -1,26 +1,13 @@
 
-#include <iostream>
 
 #include "pf.hh"
-
-#include "synhax.hh"
 #include "xnsys.hh"
 
-using std::ostream;
+#include <list>
+
+using std::list;
 
 static std::ostream& DBogOF = std::cerr;
-
-bool ConvergenceCk(XnSys& sys, const PF& xnRel)
-{
-  PF span0( sys.invariant );
-
-  while (!span0.tautologyCk(true)) {
-    PF span1( span0 | sys.preimage(xnRel, span0) );
-    if (span1.equivCk(span0))  return false;
-    span0 = span1;
-  }
-  return true;
-}
 
 ostream& OPut(ostream& of, const XnAct& act, const XnNet& topo)
 {
@@ -40,6 +27,81 @@ ostream& OPut(ostream& of, const XnAct& act, const XnNet& topo)
   return of;
 }
 
+bool ConvergenceCk(XnSys& sys, const PF& xnRel)
+{
+  PF span0( sys.invariant );
+
+  while (!span0.tautologyCk(true)) {
+    PF span1( span0 | sys.preimage(xnRel, span0) );
+    if (span1.equivCk(span0))  return false;
+    span0 = span1;
+  }
+  return true;
+}
+
+bool CycleCk(XnSys& sys, const PF& xnRel)
+{
+  PF span0( ~sys.invariant );
+
+  while (true)
+  {
+    PF span1( span0 );
+    //span0 -= span0 - sys.image(xnRel, span0);
+    span0 &= sys.preimage(xnRel, span0);
+
+    if (span0.equivCk(span1))  break;
+  }
+
+  return !span0.tautologyCk(false);
+}
+
+/** Rank the deadlocks by how many actions can resolve them.*/
+  void
+RankDeadlocksMCV(list<PF>& deadlocks,
+                 const XnNet& topo,
+                 const vector<uint>& actions,
+                 const PF& deadlockPF)
+{
+  list<PF>::iterator it;
+  deadlocks.clear();
+  deadlocks.push_back(deadlockPF);
+
+  for (uint i = 0; i < actions.size(); ++i) {
+    PF guard( topo.preimage(topo.actionPF(actions[i])) );
+
+    it = deadlocks.begin();
+    PF resolved( *it & guard );
+    if (!resolved.tautologyCk(false)) {
+      *it -= resolved;
+      deadlocks.insert(it, resolved);
+    }
+    ++it;
+
+    while (it != deadlocks.end()) {
+      resolved = *it & guard;
+      if (!resolved.tautologyCk(false)) {
+        --it;
+        *it |= resolved;
+        ++it;
+        *it -= resolved;
+      }
+      ++it;
+    }
+  }
+  deadlocks.reverse();
+
+  if (false) {
+    DBogOF << "Size is: " << deadlocks.size() << '\n';
+
+    it = deadlocks.begin();
+    for (uint i = 0; it != deadlocks.end(); ++i, ++it) {
+      if (!(*it).tautologyCk(false)) {
+        DBogOF << "Fewest possible actions to resolve a deadlock is: " << i << '\n';
+        //break;
+      }
+    }
+  }
+}
 
 bool AddConvergence(XnSys& sys)
 {
@@ -80,10 +142,18 @@ bool AddConvergence(XnSys& sys)
   for (uint i = 0; i < actions.size(); ++i) {
     xnRel |= topo.actionPF(actions[i]);
   }
+
   if (!ConvergenceCk(sys, xnRel)) {
     DBog0("Weak convergence is impossible!");
     return false;
   }
+
+  if (CycleCk(sys, xnRel)) {
+    DBog0("Good, there are cycles in the over approximation.");
+  }
+
+  list<PF> deadlocksMCV;
+  RankDeadlocksMCV(deadlocksMCV, topo, actions, ~sys.invariant);
 
   return false;
 }

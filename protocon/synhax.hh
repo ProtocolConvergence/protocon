@@ -2,15 +2,17 @@
 #ifndef SYNHAX_HH_
 #define SYNHAX_HH_
 
+#include <iostream>
 #include <map>
 #include <string>
 #include <utility>
 #include <vector>
 
 using std::map;
-using std::string;
 using std::pair;
 using std::vector;
+using std::string;
+using std::ostream;
 
 typedef unsigned int uint;
 

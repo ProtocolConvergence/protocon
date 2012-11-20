@@ -5,8 +5,8 @@
 #ifndef PF_HH_
 #define PF_HH_
 
-#include "mdd.h"
 #include "synhax.hh"
+#include "mdd.h"
 
 class PF;
 class PFVbl;
@@ -44,18 +44,34 @@ public:
 
   bool equivCk(const PF& pf) const
   {
+    if (!vMdd || !pf.vMdd) {
+      return (!vMdd && !pf.vMdd);
+    }
     return mdd_equal(vMdd, pf.vMdd);
   }
 
 
-  const PF& operator*=(const PF& pf)
+  PF operator~() const
+  {
+    PF pf;
+    pf.defeq(mdd_not(vMdd));
+    return pf;
+  }
+
+  PF operator-() const
+  { return ~ *this; }
+
+  PF operator!() const
+  { return ~ *this; }
+
+  const PF& operator&=(const PF& pf)
   {
     if (!vMdd)  return (*this = pf);
     defeq(mdd_and(vMdd, pf.vMdd, 1, 1));
     return *this;
   }
 
-  PF operator*(const PF& pf) const
+  PF operator&(const PF& pf) const
   {
     PF x;
     if (!vMdd)  return pf;
@@ -63,24 +79,24 @@ public:
     return x;
   }
 
-  const PF& operator&=(const PF& pf)
-  { return (*this *= pf); }
+  const PF& operator*=(const PF& pf)
+  { return (*this &= pf); }
 
-  PF operator&(const PF& pf) const
-  { return (*this * pf); }
+  PF operator*(const PF& pf) const
+  { return (*this & pf); }
 
   PF operator&&(const PF& pf) const
-  { return (*this * pf); }
+  { return (*this & pf); }
 
 
-  const PF& operator+=(const PF& pf)
+  const PF& operator|=(const PF& pf)
   {
     if (!vMdd)  return (*this = pf);
     defeq(mdd_or(vMdd, pf.vMdd, 1, 1));
     return *this;
   }
 
-  PF operator+(const PF& pf) const
+  PF operator|(const PF& pf) const
   {
     PF x;
     if (!vMdd)  return pf;
@@ -88,14 +104,14 @@ public:
     return x;
   }
 
-  const PF& operator|=(const PF& pf)
-  { return (*this += pf); }
+  const PF& operator+=(const PF& pf)
+  { return (*this |= pf); }
 
-  PF operator|(const PF& pf) const
-  { return (*this + pf); }
+  PF operator+(const PF& pf) const
+  { return (*this | pf); }
 
   PF operator||(const PF& pf) const
-  { return (*this + pf); }
+  { return (*this | pf); }
 
 
   const PF& operator-=(const PF& pf)
@@ -225,6 +241,13 @@ public:
     mdd_create_variables(vCtx, doms, names, 0);
     array_free(doms);
     array_free(names);
+  }
+
+  PF nil() const
+  {
+    PF pf;
+    pf.defeq(mdd_zero(vCtx));
+    return pf;
   }
 
   const PFVbl vbl(uint idx) const

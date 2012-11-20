@@ -97,19 +97,19 @@ public:
     return pcs[p.first].wvbls[p.second];
   }
 
-  const PFVbl pfVbl(uint pcIdx, uint vblIdx)
+  const PFVbl pfVbl(uint pcIdx, uint vblIdx) const
   {
     return pfCtx.vbl(pcs[pcIdx].wvbls[vblIdx].pfIdx);
   }
 
-  const PFVbl pfVblPrimed(uint pcIdx, uint vblIdx)
+  const PFVbl pfVblPrimed(uint pcIdx, uint vblIdx) const
   {
     return pfCtx.vbl(pcs[pcIdx].wvbls[vblIdx].pfIdxPrimed);
   }
 
-  const PFVbl pfVblR(uint pcIdx, uint vblIdx)
+  const PFVbl pfVblR(uint pcIdx, uint vblIdx) const
   {
-    pair<uint,uint>& p = pcs[pcIdx].rvbls[vblIdx];
+    const pair<uint,uint>& p = pcs[pcIdx].rvbls[vblIdx];
     return pfVbl(p.first, p.second);
   }
 
@@ -121,7 +121,7 @@ public:
 
   const XnAct action(uint actIdx) const;
   uint actionIndex(const XnAct& act) const;
-  const PF actionPF(uint actIdx);
+  const PF actionPF(uint actIdx) const;
 
   const PF preimage(const PF& xnRel) const
   {
@@ -137,6 +137,11 @@ public:
   {
     PF pf( pfCtx.smooth(xnRel, vVblList) );
     return pfCtx.substituteNewOld(pf, vVblList, vVblListPrimed);
+  }
+
+  const PF image(const PF& xnRel, const PF& preimage) const
+  {
+    return image(xnRel & preimage);
   }
 
 private:
@@ -158,6 +163,8 @@ public:
   { return topology.preimage(xnRel, image); }
   const PF image(const PF& xnRel) const
   { return topology.image(xnRel); }
+  const PF image(const PF& xnRel, const PF& preimage) const
+  { return topology.image(xnRel, preimage); }
 };
 
 #endif
