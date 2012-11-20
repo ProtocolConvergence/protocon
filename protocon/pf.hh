@@ -14,6 +14,8 @@ class PFCtx;
 
 class PF
 {
+  friend class PFCtx;
+
 private:
   mdd_t* vMdd;
 public:
@@ -40,14 +42,20 @@ public:
     return *this;
   }
 
-  const PF& operator&=(const PF& pf)
+  bool equivCk(const PF& pf) const
+  {
+    return mdd_equal(vMdd, pf.vMdd);
+  }
+
+
+  const PF& operator*=(const PF& pf)
   {
     if (!vMdd)  return (*this = pf);
     defeq(mdd_and(vMdd, pf.vMdd, 1, 1));
     return *this;
   }
 
-  PF operator&(const PF& pf) const
+  PF operator*(const PF& pf) const
   {
     PF x;
     if (!vMdd)  return pf;
@@ -55,19 +63,24 @@ public:
     return x;
   }
 
-  PF operator&&(const PF& pf) const
-  {
-    return *this & pf;
-  }
+  const PF& operator&=(const PF& pf)
+  { return (*this *= pf); }
 
-  const PF& operator|=(const PF& pf)
+  PF operator&(const PF& pf) const
+  { return (*this * pf); }
+
+  PF operator&&(const PF& pf) const
+  { return (*this * pf); }
+
+
+  const PF& operator+=(const PF& pf)
   {
     if (!vMdd)  return (*this = pf);
     defeq(mdd_or(vMdd, pf.vMdd, 1, 1));
     return *this;
   }
 
-  PF operator|(const PF& pf) const
+  PF operator+(const PF& pf) const
   {
     PF x;
     if (!vMdd)  return pf;
@@ -75,9 +88,36 @@ public:
     return x;
   }
 
+  const PF& operator|=(const PF& pf)
+  { return (*this += pf); }
+
+  PF operator|(const PF& pf) const
+  { return (*this + pf); }
+
   PF operator||(const PF& pf) const
+  { return (*this + pf); }
+
+
+  const PF& operator-=(const PF& pf)
   {
-    return *this | pf;
+    if (!vMdd)  return (*this = pf);
+    defeq(mdd_and(vMdd, pf.vMdd, 1, 0));
+    return *this;
+  }
+
+  PF operator-(const PF& pf) const
+  {
+    PF x;
+    if (!vMdd)  return pf;
+    x.defeq(mdd_and(vMdd, pf.vMdd, 1, 0));
+    return x;
+  }
+
+
+  /// Check if this is a tautology.
+  bool tautologyCk(bool t = true) const {
+    if (!vMdd)  return true;
+    return mdd_is_tautology(vMdd, t ? 1 : 0);
   }
 
   mdd_t* dup_mdd() const
@@ -130,6 +170,7 @@ private:
   mdd_manager* vCtx;
   vector<PFVbl> vVbls;
   map<string,uint> vVblMap;
+  vector<array_t*> vVblLists;
 
 public:
   PFCtx() : vCtx(0)
@@ -138,6 +179,9 @@ public:
 
   ~PFCtx()
   {
+    for (uint i = 0; i < vVblLists.size(); ++i) {
+      array_free(vVblLists[i]);
+    }
     if (vCtx) {
       mdd_quit(vCtx);
     }
@@ -154,6 +198,18 @@ public:
     vVblMap[vbl.name] = idx;
     vVbls.push_back(PFVbl(this, idx, vbl.name, vbl.domsz));
     return &vVbls[idx];
+  }
+
+  uint addVblList()
+  {
+    array_t*& a = Grow1(vVblLists);
+    a = array_alloc(uint, 0);
+    return vVblLists.size() - 1;
+  }
+
+  void addToVblList(uint setIdx, uint vblIdx)
+  {
+    array_insert_last(uint, vVblLists[setIdx], vblIdx);
   }
 
   void commitInitialization()
@@ -197,6 +253,22 @@ public:
     pf.defeq(mdd_eq(vCtx, idx1, idx2));
     return pf;
   }
+
+  PF smooth(const PF& a, uint setIdx) const
+  {
+    PF b;
+    b.defeq(mdd_smooth(vCtx, a.vMdd, vVblLists[setIdx]));
+    return b;
+  }
+
+  PF substituteNewOld(const PF& a, uint newSetIdx, uint oldSetIdx) const
+  {
+    PF b;
+    b.defeq(mdd_substitute(vCtx, a.vMdd, vVblLists[oldSetIdx], vVblLists[newSetIdx]));
+    return b;
+  }
+
+  //bool subseteq(const PF& a, const PF& b, uint setIdx);
 
   mdd_manager* mdd_ctx() { return vCtx; }
 };

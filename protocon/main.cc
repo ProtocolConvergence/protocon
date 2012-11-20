@@ -1,9 +1,129 @@
 
+#include <iostream>
+
 #include "pf.hh"
 
-#include <stdio.h>
 #include "synhax.hh"
 #include "xnsys.hh"
+
+using std::ostream;
+
+static std::ostream& DBogOF = std::cerr;
+
+bool ConvergenceCk(XnSys& sys, const PF& xnRel)
+{
+  PF span0( sys.invariant );
+
+  while (!span0.tautologyCk(true)) {
+    PF span1( span0 | sys.preimage(xnRel, span0) );
+    if (span1.equivCk(span0))  return false;
+    span0 = span1;
+  }
+  return true;
+}
+
+ostream& OPut(ostream& of, const XnAct& act, const XnNet& topo)
+{
+  const XnPc& pc = topo.pcs[act.pcIdx];
+  for (uint i = 0; i < pc.wvbls.size(); ++i) {
+    if (i != 0)  of << " && ";
+    of << topo.wvbl(act.pcIdx, i).name << "==" << act.w0[i];
+  }
+  for (uint i = 0; i < pc.rvbls.size(); ++i) {
+    of << " && ";
+    of << topo.rvbl(act.pcIdx, i).name << "==" << act.r0[i];
+  }
+  of << " -->";
+  for (uint i = 0; i < pc.wvbls.size(); ++i) {
+    of << ' ' << topo.wvbl(act.pcIdx, i).name << ":=" << act.w1[i] << ';';
+  }
+  return of;
+}
+
+
+bool AddConvergence(XnSys& sys)
+{
+  vector<uint> actions;
+
+  XnNet& topo = sys.topology;
+  const uint nPossibleActs = topo.nPossibleActs();
+
+  for (uint i = 0; i < nPossibleActs; ++i) {
+    bool add = true;
+
+    XnAct act( topo.action(i) );
+    PF actPF( topo.actionPF(i) );
+
+    // Check for self-loops. This is an inefficient method,
+    // but the check only happens once.
+    if (add && (topo.preimage(actPF).equivCk(topo.image(actPF)))) {
+      add = false;
+      if (false) {
+        OPut((DBogOF << "Action " << i << " is a self-loop: "), topo.action(i), topo) << '\n';
+      }
+    }
+
+    // This action does not start in the invariant.
+    if (add && !(sys.invariant & topo.preimage(actPF)).tautologyCk(false)) {
+      add = false;
+      if (false) {
+        OPut((DBogOF << "Action " << i << " breaks closure: "), topo.action(i), topo) << '\n';
+      }
+    }
+
+    if (add) {
+      actions.push_back(i);
+    }
+  }
+
+  PF xnRel;
+  for (uint i = 0; i < actions.size(); ++i) {
+    xnRel |= topo.actionPF(actions[i]);
+  }
+  if (!ConvergenceCk(sys, xnRel)) {
+    DBog0("Weak convergence is impossible!");
+    return false;
+  }
+
+  return false;
+}
+
+void BidirectionalRing(XnNet& topo, uint npcs, uint domsz)
+{
+  // Build a bidirectional ring where each process P_i
+  // has variable m_i of domain size 3.
+  for (uint i = 0; i < npcs; ++i) {
+    char name[10];
+    sprintf(name, "m%u", i);
+
+    XnPc& pc = Grow1(topo.pcs);
+    pc.addVbl(XnVbl(name, domsz));
+    pc.addPriv((i+npcs-1) % npcs, 0);
+    pc.addPriv((i+1) % npcs, 0);
+  }
+}
+
+void InstMatching(XnSys& sys, uint npcs)
+{
+  XnNet& topo = sys.topology;
+  BidirectionalRing(topo, npcs, 3);
+
+  // Commit to using this topology.
+  // MDD stuff is initialized.
+  topo.commitInitialization();
+
+  for (uint pcidx = 0; pcidx < npcs; ++pcidx) {
+    const PFVbl mp = topo.pfVblR(pcidx, 0);
+    const PFVbl mq = topo.pfVbl (pcidx, 0);
+    const PFVbl mr = topo.pfVblR(pcidx, 1);
+
+    // 0 = Self, 1 = Left, 2 = Right
+    sys.invariant &=
+      (mp == 1 && mq == 0 && mr == 2) || // ( left,  self, right)
+      (mp == 2 && mq == 1           ) || // (right,  left,     X)
+      (           mq == 2 && mr == 1);   // (    X, right,  left)
+  }
+}
 
 int main(int argc, char** argv)
 {
@@ -15,22 +135,10 @@ int main(int argc, char** argv)
     return 1;
   }
 
-  // Build a bidirectional ring where each process P_i
-  // has variable m_i of domain size 3.
-  XnNet topo;
-  for (uint i = 0; i < NPs; ++i) {
-    char name[10];
-    sprintf(name, "m%u", i);
-
-    XnPc& pc = Grow1(topo.pcs);
-    pc.addVbl(XnVbl(name, 3));
-    pc.addPriv((i+NPs-1) % NPs, 0);
-    pc.addPriv((i+1) % NPs, 0);
-  }
-
-  // Commit to using this topology.
-  // MDD stuff is initialized.
-  topo.commitInitialization();
+  XnSys sys;
+  XnNet& topo = sys.topology;
+  InstMatching(sys, NPs);
+  AddConvergence(sys);
 
   DBog0("Showing all variables");
   print_mvar_list(topo.pfCtx.mdd_ctx());

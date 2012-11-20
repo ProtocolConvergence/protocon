@@ -7,7 +7,7 @@
 
 class XnVbl {
 public:
-  string name; //< Proper name of variable, should match the name in PFCtx.
+  string name; ///< Proper name of variable, should match the name in PFCtx.
   uint domsz; ///< Size of domain.
   uint pfIdx; ///< Index of unprimed variable (in a PFCtx).
   uint pfIdxPrimed; ///< Index of the primed variable (in a PFCtx).
@@ -16,6 +16,26 @@ public:
     name(_name)
     , domsz(_domsz)
   {}
+};
+
+/** Variable assignments made by a specific action.*/
+class XnAct {
+public:
+  static const uint NMax = 10;
+
+public:
+  uint pcIdx;
+  uint r0[NMax];
+  uint w0[NMax];
+  uint w1[NMax];
+
+public:
+  XnAct()
+  {
+    for (uint i = 0; i < NMax; ++i) {
+      r0[i] = w0[i] = w1[i] = 0;
+    }
+  }
 };
 
 /** A process.*/
@@ -35,6 +55,8 @@ public:
 
   /// Number of possible local transitions based on topology.
   uint nPossibleActs;
+  /// My local action of index 0 is this global action index.
+  uint actIdxOffset;
 
 public:
   void addVbl(const XnVbl& vbl)
@@ -46,21 +68,34 @@ public:
   {
     pair<uint,uint>& p = Grow1(rvbls);
     p.first = pcIdx;
-    p.first = vblIdx;
+    p.second = vblIdx;
   }
 };
 
+
 /** A network of processes (topology).*/
 class XnNet {
+private:
+  uint vVblList; // Unprimed
+  uint vVblListPrimed; // Primed
+
 public:
   PFCtx pfCtx;
   vector<XnPc> pcs; ///< List of the processes.
 
 public:
-  // TODO - Need some "nice" way to add processes
-  // and hook up their read restrictions.
-
   void commitInitialization();
+
+  const XnVbl& wvbl(uint pcIdx, uint vblIdx) const
+  {
+    return pcs[pcIdx].wvbls[vblIdx];
+  }
+
+  const XnVbl& rvbl(uint pcIdx, uint vblIdx) const
+  {
+    const pair<uint,uint>& p = pcs[pcIdx].rvbls[vblIdx];
+    return pcs[p.first].wvbls[p.second];
+  }
 
   const PFVbl pfVbl(uint pcIdx, uint vblIdx)
   {
@@ -72,21 +107,57 @@ public:
     return pfCtx.vbl(pcs[pcIdx].wvbls[vblIdx].pfIdxPrimed);
   }
 
-  //const PF image(const PF& states);
-  //const PF preimage(const PF& states);
+  const PFVbl pfVblR(uint pcIdx, uint vblIdx)
+  {
+    pair<uint,uint>& p = pcs[pcIdx].rvbls[vblIdx];
+    return pfVbl(p.first, p.second);
+  }
+
+  uint nPossibleActs() const
+  {
+    const XnPc& pc = pcs.back();
+    return pc.actIdxOffset + pc.nPossibleActs;
+  }
+
+  const XnAct action(uint actIdx) const;
+  uint actionIndex(const XnAct& act) const;
+  const PF actionPF(uint actIdx);
+
+  const PF preimage(const PF& xnRel) const
+  {
+    return pfCtx.smooth(xnRel, vVblListPrimed);
+  }
+
+  const PF preimage(const PF& xnRel, const PF& image) const
+  {
+    return preimage(xnRel & pfCtx.substituteNewOld(image, vVblListPrimed, vVblList));
+  }
+
+  const PF image(const PF& xnRel) const
+  {
+    PF pf( pfCtx.smooth(xnRel, vVblList) );
+    return pfCtx.substituteNewOld(pf, vVblList, vVblListPrimed);
+  }
 
 private:
   void initUnchanged();
 };
 
-/** A lightweight class to hold actual transitions?**/
+
+/** This holds the search problem and its solution.**/
 class XnSys {
 public:
-  XnNet* topology;
-  PF actions;
-  //PF invariant;
+  XnNet topology;
+  vector<uint> actions; ///< Actions we are using.
+  PF invariant;
 
 public:
+  const PF preimage(const PF& xnRel) const
+  { return topology.preimage(xnRel); }
+  const PF preimage(const PF& xnRel, const PF& image) const
+  { return topology.preimage(xnRel, image); }
+  const PF image(const PF& xnRel) const
+  { return topology.image(xnRel); }
 };
 
 #endif

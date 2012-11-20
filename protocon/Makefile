@@ -44,7 +44,7 @@ $(BinPath)/protocon: main.o synhax.o xnsys.o
 %.o: %.cc
 	$(CXX) $(CXXFLAGS) $(IXXFLAGS) -c $< -o $@
 
-main.o: pf.hh
+main.o: pf.hh xnsys.hh
 
 $(BinPath)/protocon: | $(BinPath)
 
