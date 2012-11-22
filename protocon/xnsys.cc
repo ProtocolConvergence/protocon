@@ -49,6 +49,7 @@ XnNet::commitInitialization()
       uint domsz = pcs[p.first].wvbls[p.second].domsz;
       n *= domsz;
     }
+
     pc.actIdxOffset = nTotalActs;
     pc.nPossibleActs = n;
     nTotalActs += n;
@@ -64,8 +65,11 @@ XnNet::commitInitialization()
 XnNet::initUnchanged()
 {
   for (uint i = 0; i < pcs.size(); ++i) {
+    pcs[i].actUnchanged = true;
+  }
+  for (uint i = 0; i < pcs.size(); ++i) {
     XnPc& pc = pcs[i];
-    PF eq;
+    PF eq(true);
     for (uint j = 0; j < pc.wvbls.size(); ++j) {
       const XnVbl& xnVbl = pc.wvbls[j];
       eq &= (pfCtx.vbl(xnVbl.pfIdx) == pfCtx.vbl(xnVbl.pfIdxPrimed));
@@ -127,14 +131,14 @@ uint XnNet::actionIndex(const XnAct& act) const
     actIdx *= rvbl(act.pcIdx, i).domsz;
     actIdx += act.r0[i];
   }
-  return actIdx;
+  return actIdx + pc.actIdxOffset;
 }
 
 const PF XnNet::actionPF(uint actIdx) const
 {
   const XnAct act = action(actIdx);
   const XnPc& pc = pcs[act.pcIdx];
-  PF pf;
+  PF pf(true);
   for (uint i = 0; i < pc.wvbls.size(); ++i) {
     pf &= (pfVbl      (act.pcIdx, i) == act.w0[i]);
     pf &= (pfVblPrimed(act.pcIdx, i) == act.w1[i]);

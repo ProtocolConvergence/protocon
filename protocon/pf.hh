@@ -17,45 +17,83 @@ class PF
   friend class PFCtx;
 
 private:
+  bool vPhase;
   mdd_t* vMdd;
-public:
-  PF() : vMdd(0) {}
 
-  PF(const PF& pf)
+public:
+  /** One should never call the default constructor.
+   * It is here only for containers.
+   * A propositional formula should be initialized to true, false,
+   * or anything else before it is used in operations.
+   */
+  PF() :
+    // This comment is intensional.
+    //vPhase( false )
+     vMdd( 0 )
+  {}
+
+  PF(const PF& pf) :
+    vPhase( pf.vPhase )
   {
     vMdd = pf.dup_mdd();
   }
+
+  explicit PF(bool phase) :
+    vPhase( phase )
+    , vMdd( 0 )
+  {}
+
+  explicit PF(mdd_t* a) : vPhase( true ), vMdd( a ) {}
+
   ~PF()
   {
     clear();
   }
 
-  void defeq(mdd_t* a)
+  PF& defeq(mdd_t* a)
   {
+    vPhase = true;
     if (vMdd)  mdd_free(vMdd);
     vMdd = a;
+    return *this;
   }
 
-  const PF& operator=(const PF& pf)
+  PF& operator=(const PF& pf)
   {
-    defeq(mdd_dup(pf.vMdd));
+    if (!pf.vMdd) {
+      clear(pf.vPhase);
+      return *this;
+    }
+    return defeq(pf.dup_mdd());
+  }
+  PF& operator=(bool b)
+  {
+    clear(b);
     return *this;
+  }
+
+  /// Check if this is a tautology.
+  bool tautologyCk(bool t = true) const {
+    if (!vMdd)  return (vPhase == t);
+    return mdd_is_tautology(vMdd, t);
   }
 
   bool equivCk(const PF& pf) const
   {
-    if (!vMdd || !pf.vMdd) {
-      return (!vMdd && !pf.vMdd);
-    }
+    if (!vMdd)  return pf.tautologyCk(vPhase);
+    if (!pf.vMdd)  return tautologyCk(pf.vPhase);
     return mdd_equal(vMdd, pf.vMdd);
   }
 
+  bool operator<=(const PF& pf) const
+  {
+    return pf.equivCk(pf | *this);
+  }
 
   PF operator~() const
   {
-    PF pf;
-    pf.defeq(mdd_not(vMdd));
-    return pf;
+    if (!vMdd)  return PF( !vPhase );
+    return PF( mdd_not(vMdd) );
   }
 
   PF operator-() const
@@ -64,22 +102,33 @@ public:
   PF operator!() const
   { return ~ *this; }
 
-  const PF& operator&=(const PF& pf)
+  PF& operator&=(const PF& pf)
   {
-    if (!vMdd)  return (*this = pf);
-    defeq(mdd_and(vMdd, pf.vMdd, 1, 1));
-    return *this;
+    if (!vMdd) {
+      if (vPhase)  *this = pf;
+      return *this;
+    }
+    if (!pf.vMdd) {
+      if (!pf.vPhase)  *this = pf;
+      return *this;
+    }
+    return defeq(mdd_and(vMdd, pf.vMdd, 1, 1));
   }
 
   PF operator&(const PF& pf) const
   {
-    PF x;
-    if (!vMdd)  return pf;
-    x.defeq(mdd_and(vMdd, pf.vMdd, 1, 1));
-    return x;
+    if (!vMdd) {
+      if (vPhase)  return pf;
+      return *this;
+    }
+    if (!pf.vMdd) {
+      if (!pf.vPhase)  return pf;
+      return *this;
+    }
+    return PF( mdd_and(vMdd, pf.vMdd, 1, 1) );
   }
 
-  const PF& operator*=(const PF& pf)
+  PF& operator*=(const PF& pf)
   { return (*this &= pf); }
 
   PF operator*(const PF& pf) const
@@ -89,22 +138,34 @@ public:
   { return (*this & pf); }
 
 
-  const PF& operator|=(const PF& pf)
+  PF& operator|=(const PF& pf)
   {
-    if (!vMdd)  return (*this = pf);
+    if (!vMdd) {
+      if (!vPhase)  *this = pf; 
+      return *this;
+    }
+    if (!pf.vMdd) {
+      if (pf.vPhase)  *this = pf;
+      return *this;
+    }
     defeq(mdd_or(vMdd, pf.vMdd, 1, 1));
     return *this;
   }
 
   PF operator|(const PF& pf) const
   {
-    PF x;
-    if (!vMdd)  return pf;
-    x.defeq(mdd_or(vMdd, pf.vMdd, 1, 1));
-    return x;
+    if (!vMdd) {
+      if (!vPhase)  return pf; 
+      return *this;
+    }
+    if (!pf.vMdd) {
+      if (pf.vPhase)  return pf;
+      return *this;
+    }
+    return PF( mdd_or(vMdd, pf.vMdd, 1, 1) );
   }
 
-  const PF& operator+=(const PF& pf)
+  PF& operator+=(const PF& pf)
   { return (*this |= pf); }
 
   PF operator+(const PF& pf) const
@@ -114,27 +175,33 @@ public:
   { return (*this | pf); }
 
 
-  const PF& operator-=(const PF& pf)
+  PF& operator-=(const PF& pf)
   {
-    if (!vMdd)  return (*this = pf);
+    if (!vMdd) {
+      if (vPhase)  *this = ~pf;
+      return *this;
+    }
+    if (!pf.vMdd) {
+      if (pf.vPhase)  clear(false);
+      return *this;
+    }
     defeq(mdd_and(vMdd, pf.vMdd, 1, 0));
     return *this;
   }
 
   PF operator-(const PF& pf) const
   {
-    PF x;
-    if (!vMdd)  return pf;
-    x.defeq(mdd_and(vMdd, pf.vMdd, 1, 0));
-    return x;
+    if (!vMdd) {
+      if (vPhase)  return ~pf;
+      return *this;
+    }
+    if (!pf.vMdd) {
+      if (pf.vPhase)  return PF( false );
+      return *this;
+    }
+    return PF( mdd_and(vMdd, pf.vMdd, 1, 0) );
   }
 
-
-  /// Check if this is a tautology.
-  bool tautologyCk(bool t = true) const {
-    if (!vMdd)  return true;
-    return mdd_is_tautology(vMdd, t ? 1 : 0);
-  }
 
   mdd_t* dup_mdd() const
   {
@@ -148,6 +215,10 @@ private:
       mdd_free(vMdd);
       vMdd = 0;
     }
+  }
+  void clear(bool phase) {
+    clear();
+    vPhase = phase;
   }
 };
 
@@ -265,30 +336,24 @@ public:
 
   PF vbleqc(uint idx, uint val) const
   {
-    PF pf;
-    pf.defeq(mdd_eq_c(vCtx, idx, val));
-    return pf;
+    return PF( mdd_eq_c(vCtx, idx, val) );
   }
 
   PF vbleq(uint idx1, uint idx2) const
   {
-    PF pf;
-    pf.defeq(mdd_eq(vCtx, idx1, idx2));
-    return pf;
+    return PF( mdd_eq(vCtx, idx1, idx2) );
   }
 
   PF smooth(const PF& a, uint setIdx) const
   {
-    PF b;
-    b.defeq(mdd_smooth(vCtx, a.vMdd, vVblLists[setIdx]));
-    return b;
+    if (!a.vMdd)  return a;
+    return PF( mdd_smooth(vCtx, a.vMdd, vVblLists[setIdx]) );
   }
 
   PF substituteNewOld(const PF& a, uint newSetIdx, uint oldSetIdx) const
   {
-    PF b;
-    b.defeq(mdd_substitute(vCtx, a.vMdd, vVblLists[oldSetIdx], vVblLists[newSetIdx]));
-    return b;
+    if (!a.vMdd)  return a;
+    return PF( mdd_substitute(vCtx, a.vMdd, vVblLists[oldSetIdx], vVblLists[newSetIdx]) );
   }
 
   //bool subseteq(const PF& a, const PF& b, uint setIdx);

@@ -1,11 +1,7 @@
 
-
 #include "pf.hh"
+#include "set.hh"
 #include "xnsys.hh"
-
-#include <list>
-
-using std::list;
 
 static std::ostream& DBogOF = std::cerr;
 
@@ -27,7 +23,7 @@ ostream& OPut(ostream& of, const XnAct& act, const XnNet& topo)
   return of;
 }
 
-bool ConvergenceCk(XnSys& sys, const PF& xnRel)
+bool ConvergenceCk(const XnSys& sys, const PF& xnRel)
 {
   PF span0( sys.invariant );
 
@@ -39,12 +35,11 @@ bool ConvergenceCk(XnSys& sys, const PF& xnRel)
   return true;
 }
 
-bool CycleCk(XnSys& sys, const PF& xnRel)
+bool CycleCk(const XnSys& sys, const PF& xnRel)
 {
   PF span0( ~sys.invariant );
 
-  while (true)
-  {
+  while (true) {
     PF span1( span0 );
     //span0 -= span0 - sys.image(xnRel, span0);
     span0 &= sys.preimage(xnRel, span0);
@@ -55,60 +50,219 @@ bool CycleCk(XnSys& sys, const PF& xnRel)
   return !span0.tautologyCk(false);
 }
 
+class DeadlockConstraint {
+public:
+  PF deadlockPF;
+  Set<uint> candidates;
+public:
+  explicit DeadlockConstraint(const PF& _deadlockPF) :
+    deadlockPF(_deadlockPF)
+  {}
+};
+
+class FMem_AddConvergence {
+public:
+  PF deadlockPF; ///< Current deadlocks.
+  PF loXnRel; ///< Under-approximation of the transition function.
+  PF hiXnRel; ///< Over-approximation of the transition function.
+  vector<uint> actions; ///< Chosen actions.
+  vector<uint> candidates; ///< Candidate actions.
+
+  /// Deadlocks ranked by how many candidate actions can resolve them.
+  vector<DeadlockConstraint> mrvDeadlocks;
+};
+
+/** Perform forward checking.*/
+  void
+PruneCycles(const XnSys& sys, FMem_AddConvergence& tape)
+{
+  vector<uint> candidates = tape.candidates;
+  tape.candidates.clear();
+
+  for (uint i = 0; i < candidates.size(); ++i) {
+    uint actIdx = candidates[i];
+    PF actPF( sys.actionPF(actIdx) );
+    bool add = false;
+    if (!(tape.deadlockPF & actPF).tautologyCk(false)) {
+      add = true;
+    }
+    if (add && CycleCk(sys, tape.loXnRel | actPF)) {
+      add = false;
+    }
+    if (add) {
+      tape.candidates.push_back(actIdx);
+    }
+  }
+  if (true) {
+    uint n = candidates.size() - tape.candidates.size();
+    if (n > 0) {
+      DBog1("Pruned: %u", n);
+    }
+  }
+}
+
 /** Rank the deadlocks by how many actions can resolve them.*/
   void
-RankDeadlocksMCV(list<PF>& deadlocks,
+RankDeadlocksMRV(vector<DeadlockConstraint>& dlsets,
                  const XnNet& topo,
                  const vector<uint>& actions,
                  const PF& deadlockPF)
 {
-  list<PF>::iterator it;
-  deadlocks.clear();
-  deadlocks.push_back(deadlockPF);
+  dlsets.clear();
+  dlsets.push_back(DeadlockConstraint(deadlockPF));
 
   for (uint i = 0; i < actions.size(); ++i) {
     PF guard( topo.preimage(topo.actionPF(actions[i])) );
 
-    it = deadlocks.begin();
-    PF resolved( *it & guard );
-    if (!resolved.tautologyCk(false)) {
-      *it -= resolved;
-      deadlocks.insert(it, resolved);
-    }
-    ++it;
+    for (uint j = dlsets.size(); j > 0; --j) {
+      PF resolved( dlsets[j-1].deadlockPF & guard );
 
-    while (it != deadlocks.end()) {
-      resolved = *it & guard;
       if (!resolved.tautologyCk(false)) {
-        --it;
-        *it |= resolved;
-        ++it;
-        *it -= resolved;
+        dlsets[j-1].deadlockPF -= resolved;
+        if (j == dlsets.size()) {
+          dlsets.push_back(DeadlockConstraint(resolved));
+        }
+        else {
+          dlsets[j].deadlockPF |= resolved;
+        }
       }
-      ++it;
     }
   }
-  deadlocks.reverse();
 
-  if (false) {
-    DBogOF << "Size is: " << deadlocks.size() << '\n';
+  for (uint i = 0; i < actions.size(); ++i) {
+    PF guard( topo.preimage(topo.actionPF(actions[i])) );
+    for (uint j = 0; j < dlsets.size(); ++j) {
+      if (!(guard & dlsets[j].deadlockPF).tautologyCk(false)) {
+        dlsets[j].candidates |= actions[i];
+      }
+    }
+  }
 
-    it = deadlocks.begin();
-    for (uint i = 0; it != deadlocks.end(); ++i, ++it) {
-      if (!(*it).tautologyCk(false)) {
-        DBogOF << "Fewest possible actions to resolve a deadlock is: " << i << '\n';
-        //break;
+  if (true) {
+    for (uint i = 0; i < dlsets.size(); ++i) {
+      if (!dlsets[i].deadlockPF.tautologyCk(false)) {
+        DBog2( "Rank %u has %u actions.", i, (uint) dlsets[i].candidates.size() );
       }
     }
   }
 }
 
-bool AddConvergence(XnSys& sys)
+/**
+ * Revise the ranks of deadlocks which are ranked by number candidate actions
+ * which can resolve them.
+ * \param adds  Actions which were added to the program.
+ * \param dels  Actions which were pruned from the list of candidates.
+ */
+  void
+ReviseDeadlocksMRV(vector<DeadlockConstraint>& dlsets,
+                   const XnSys& sys,
+                   const Set<uint>& adds,
+                   const Set<uint>& dels)
 {
-  vector<uint> actions;
+  PF addGuardPF(false);
+  PF delGuardPF(false);
+  for (Set<uint>::const_iterator it = adds.begin(); it != adds.end(); ++it) {
+    addGuardPF |= sys.preimage(sys.actionPF(*it));
+  }
+  for (Set<uint>::const_iterator it = adds.begin(); it != adds.end(); ++it) {
+    delGuardPF |= sys.preimage(sys.actionPF(*it));
+  }
 
+  for (uint i = 1; i < dlsets.size(); ++i) {
+    Set<uint>& candidates1 = dlsets[i].candidates;
+    PF& deadlockPF1 = dlsets[i].deadlockPF;
+
+    Set<uint> addCandidates( candidates1 & adds );
+    Set<uint> delCandidates( candidates1 & dels );
+
+    uint prevSize = candidates1.size();
+    candidates1 -= addCandidates;
+    bool changed = (prevSize != candidates1.size());
+    if (changed) {
+      deadlockPF1 -= addGuardPF;
+    }
+
+    prevSize = candidates1.size();
+    candidates1 -= delCandidates;
+    changed = (prevSize != candidates1.size());
+    if (changed) {
+      Set<uint>& candidates0 = dlsets[i-1].candidates;
+      PF& deadlockPF0 = dlsets[i-1].deadlockPF;
+      //deadlockPF1 -= addGuardPF;
+    }
+
+    // TODO: Not done yet.
+    //for (Set<uint>::iterator it = candidates1.begin();
+    //     it != candidates1.end();
+    //     ++it)
+    //  uint actId = *it;
+    //  if (adds.elemCk(actId)) {
+    //  }
+    //  else if (dels.elemCk(actId)) {
+    //    //dlsets[i].candidates.push_back();
+    //  }
+    //}
+  }
+}
+
+
+  bool
+AddConvergence(vector<uint> retActions,
+               const XnSys& sys,
+               FMem_AddConvergence tape)
+{
+  PruneCycles(sys, tape);
+
+  while (!tape.candidates.empty()) {
+    if (!ConvergenceCk(sys, tape.hiXnRel)) {
+      return false;
+    }
+    if (tape.actions.size() < 18) {
+      DBog2( "Level: %u  Remaining: %u",
+             (uint) tape.actions.size(),
+             (uint) tape.candidates.size());
+    }
+
+    uint actIdx = Pop1(tape.candidates);
+    tape.actions.push_back(actIdx);
+    PF actPF = sys.topology.actionPF(actIdx);
+    tape.loXnRel |= actPF;
+
+    PF resolved( sys.preimage(actPF) & tape.deadlockPF );
+    tape.deadlockPF -= resolved;
+
+    bool found = AddConvergence(retActions, sys, tape);
+    if (found) {
+      retActions.push_back(actIdx);
+      return true;
+    }
+    tape.deadlockPF |= resolved;
+    tape.actions.pop_back();
+    tape.loXnRel -= actPF;
+    tape.hiXnRel -= actPF;
+  }
+  return false;
+}
+
+  bool
+AddConvergence(XnSys& sys)
+{
   XnNet& topo = sys.topology;
   const uint nPossibleActs = topo.nPossibleActs();
+
+  FMem_AddConvergence tape;
+  tape.loXnRel = false;
+  tape.hiXnRel = false;
+
+  if (sys.invariant.tautologyCk(false)) {
+    DBog0( "Invariant is empty!" );
+    return false;
+  }
+
+  if (sys.invariant.tautologyCk(true)) {
+    DBog0( "All states are invariant!" );
+    return true;
+  }
 
   for (uint i = 0; i < nPossibleActs; ++i) {
     bool add = true;
@@ -121,7 +275,7 @@ bool AddConvergence(XnSys& sys)
     if (add && (topo.preimage(actPF).equivCk(topo.image(actPF)))) {
       add = false;
       if (false) {
-        OPut((DBogOF << "Action " << i << " is a self-loop: "), topo.action(i), topo) << '\n';
+        OPut((DBogOF << "Action " << i << " is a self-loop: "), act, topo) << '\n';
       }
     }
 
@@ -129,33 +283,33 @@ bool AddConvergence(XnSys& sys)
     if (add && !(sys.invariant & topo.preimage(actPF)).tautologyCk(false)) {
       add = false;
       if (false) {
-        OPut((DBogOF << "Action " << i << " breaks closure: "), topo.action(i), topo) << '\n';
+        OPut((DBogOF << "Action " << i << " breaks closure: "), act, topo) << '\n';
       }
     }
 
     if (add) {
-      actions.push_back(i);
+      tape.candidates.push_back(i);
+      tape.hiXnRel |= topo.actionPF(i);
     }
   }
 
-  PF xnRel;
-  for (uint i = 0; i < actions.size(); ++i) {
-    xnRel |= topo.actionPF(actions[i]);
+  tape.deadlockPF = ~sys.invariant;
+
+  RankDeadlocksMRV(tape.mrvDeadlocks,
+                   sys.topology,
+                   tape.candidates,
+                   tape.deadlockPF);
+
+
+  vector<uint> retActions;
+  bool found = AddConvergence(retActions, sys, tape);
+  if (!found)  return false;
+
+  while (!retActions.empty()) {
+    sys.actions.push_back(Pop1(retActions));
   }
 
-  if (!ConvergenceCk(sys, xnRel)) {
-    DBog0("Weak convergence is impossible!");
-    return false;
-  }
-
-  if (CycleCk(sys, xnRel)) {
-    DBog0("Good, there are cycles in the over approximation.");
-  }
-
-  list<PF> deadlocksMCV;
-  RankDeadlocksMCV(deadlocksMCV, topo, actions, ~sys.invariant);
-
-  return false;
+  return true;
 }
 
 void BidirectionalRing(XnNet& topo, uint npcs, uint domsz)
@@ -181,6 +335,7 @@ void InstMatching(XnSys& sys, uint npcs)
   // Commit to using this topology.
   // MDD stuff is initialized.
   topo.commitInitialization();
+  sys.invariant = true;
 
   for (uint pcidx = 0; pcidx < npcs; ++pcidx) {
     const PFVbl mp = topo.pfVblR(pcidx, 0);
@@ -195,20 +350,109 @@ void InstMatching(XnSys& sys, uint npcs)
   }
 }
 
+void test()
+{
+  XnSys sys;
+  InstMatching(sys, 3);
+
+  XnNet& topo = sys.topology;
+
+  Claim( topo.pcs[1].actUnchanged <= (topo.pfVbl(0, 0) == topo.pfVblPrimed(0, 0)) );
+  Claim( topo.pcs[1].actUnchanged <= (topo.pfVbl(2, 0) == topo.pfVblPrimed(2, 0)) );
+
+  XnAct act;
+  act.pcIdx = 1;
+  act.r0[0] = 1; // Left.
+  act.r0[1] = 2; // Right.
+  act.w0[0] = 2; // Right.
+  act.w1[0] = 0; // Self.
+
+  uint actId = topo.actionIndex(act);
+  {
+    XnAct action = topo.action(actId);
+    Claim2_uint( act.pcIdx ,==, action.pcIdx );
+    Claim2_uint( act.r0[0] ,==, action.r0[0] );
+    Claim2_uint( act.r0[1] ,==, action.r0[1] );
+    Claim2_uint( act.w0[0] ,==, action.w0[0] );
+    Claim2_uint( act.w1[0] ,==, action.w1[0] );
+  }
+
+  PF actPF =
+    topo.pcs[1].actUnchanged &
+    ((topo.pfVblR     (1, 0) == 1) &
+     (topo.pfVblR     (1, 1) == 2) &
+     (topo.pfVbl      (1, 0) == 2) &
+     (topo.pfVblPrimed(1, 0) == 0));
+  Claim( !actPF.tautologyCk(false) );
+  Claim( actPF.equivCk(topo.actionPF(actId)) );
+
+  actPF =
+    topo.pcs[1].actUnchanged &
+    ((topo.pfVbl      (0, 0) == 1) &
+     (topo.pfVbl      (2, 0) == 2) &
+     (topo.pfVbl      (1, 0) == 2) &
+     (topo.pfVblPrimed(1, 0) == 0));
+  Claim( actPF.equivCk(topo.actionPF(actId)) );
+
+  PF srcPF =
+    ((topo.pfVblR(1, 0) == 1) &
+     (topo.pfVblR(1, 1) == 2) &
+     (topo.pfVbl (1, 0) == 2));
+  PF dstPF =
+    ((topo.pfVblR(1, 0) == 1) &
+     (topo.pfVblR(1, 1) == 2) &
+     (topo.pfVbl (1, 0) == 0));
+  Claim( (actPF - srcPF).tautologyCk(false) );
+
+  Claim( (dstPF & srcPF).tautologyCk(false) );
+
+  {
+    Claim( dstPF.equivCk(sys.image(actPF, srcPF)) );
+    // The rest of this block is actually implied by the first check.
+    Claim( dstPF <= sys.image(actPF, srcPF) );
+    Claim( sys.image(actPF, srcPF) <= dstPF );
+    Claim( sys.image(actPF, srcPF) <= (topo.pfVblR(1, 0) == 1) );
+    Claim( sys.image(actPF, srcPF) <= (topo.pfVblR(1, 1) == 2) );
+    Claim( sys.image(actPF, srcPF) <= (topo.pfVbl (1, 0) == 0) );
+  }
+  Claim( dstPF.equivCk(sys.image(actPF & srcPF)) );
+  Claim( srcPF.equivCk(sys.preimage(actPF, dstPF)) );
+
+  Claim( (sys.invariant - sys.invariant).tautologyCk(false) );
+  Claim( (sys.invariant | ~sys.invariant).tautologyCk(true) );
+  Claim( (srcPF & sys.invariant).tautologyCk(false) );
+  Claim( !(dstPF & sys.invariant).tautologyCk(false) );
+  Claim( !(~(dstPF & sys.invariant)).tautologyCk(true) );
+  Claim( (actPF - srcPF).tautologyCk(false) );
+}
+
 int main(int argc, char** argv)
 {
   int argi = 1;
   const uint NPs = 6;
 
   if (argi < argc) {
-    printf("%s: No arguments supported!\n", argv[0]);
+    if (string(argv[argi]) == "test") {
+      DBog0( "Running tests..." );
+      test();
+      DBog0( "Done." );
+      return 0;
+    }
+    printf("%s: Only supported argument is \"test\".\n", argv[0]);
     return 1;
   }
 
+#if 1
   XnSys sys;
   XnNet& topo = sys.topology;
   InstMatching(sys, NPs);
-  AddConvergence(sys);
+  bool found = AddConvergence(sys);
+  if (found) {
+    DBog0("Solution found!");
+  }
+  else {
+    DBog0("No solution found...");
+  }
 
   DBog0("Showing all variables");
   print_mvar_list(topo.pfCtx.mdd_ctx());
@@ -219,7 +463,7 @@ int main(int argc, char** argv)
   //   m0==0 && (m1==0 || m1==2) && m2==1 && m1'==1
   PF pf =
     topo.pcs[1].actUnchanged &&
-    (topo.pfVbl(0, 0) == 0 && 
+    (topo.pfVbl(0, 0) == 0 &&
      (topo.pfVbl(1, 0) == 0 || topo.pfVbl(1, 0) == 2) &&
      topo.pfVbl(2, 0) == 0 &&
      topo.pfVblPrimed(1, 0) == 1);
@@ -249,6 +493,7 @@ int main(int argc, char** argv)
   }
   mdd_free(acts);
   array_free(vars);
+#endif
 
   return 0;
 }

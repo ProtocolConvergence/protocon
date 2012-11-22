@@ -49,7 +49,7 @@ public:
   vector< pair<uint,uint> > rvbls;
 
   /** Conjunct this with actions of the process to ensure only
-   * the process's variables change when it acts. 
+   * the process's variables change when it acts.
    */
   PF actUnchanged;
 
@@ -130,7 +130,8 @@ public:
 
   const PF preimage(const PF& xnRel, const PF& image) const
   {
-    return preimage(xnRel & pfCtx.substituteNewOld(image, vVblListPrimed, vVblList));
+    return preimage(xnRel &
+                    pfCtx.substituteNewOld(image, vVblListPrimed, vVblList));
   }
 
   const PF image(const PF& xnRel) const
@@ -165,6 +166,9 @@ public:
   { return topology.image(xnRel); }
   const PF image(const PF& xnRel, const PF& preimage) const
   { return topology.image(xnRel, preimage); }
+
+  const PF actionPF(uint actIdx) const
+  { return topology.actionPF(actIdx); }
 };
 
 #endif
