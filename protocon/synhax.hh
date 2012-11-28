@@ -96,5 +96,19 @@ Pop1(vector<T>& a)
   return x;
 }
 
+template <class T>
+  bool
+Remove1(vector<T>& a, const T& elem)
+{
+  typename vector<T>::iterator it;
+  for (it = a.begin(); it != a.end(); ++it) {
+    if (*it == elem) {
+      a.erase(it);
+      return true;
+    }
+  }
+  return false;
+}
+
 #endif
 

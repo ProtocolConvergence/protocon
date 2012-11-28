@@ -85,6 +85,11 @@ public:
     return mdd_equal(vMdd, pf.vMdd);
   }
 
+  bool overlapCk(const PF& pf) const
+  {
+    return !(*this & pf).tautologyCk(false);
+  }
+
   bool operator<=(const PF& pf) const
   {
     return pf.equivCk(pf | *this);

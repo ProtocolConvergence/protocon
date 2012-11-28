@@ -8,9 +8,17 @@ template <class T>
 class Set : public std::set<T>
 {
 public:
+  Set() {}
+  explicit Set(const T& e) { *this |= e; }
+
   bool elemCk(const T& e) const
   {
     return (this->find(e) != this->end());
+  }
+
+  const T& elem() const
+  {
+    return *this->begin();
   }
 
   Set<T>& operator|=(const T& e)
@@ -37,7 +45,7 @@ public:
 
     while (ita != a.end() && itb != b.end()) {
       if (f(*ita,*itb)) {
-        ita = b.lower_bound(*ita);
+        ita = a.lower_bound(*itb);
       }
       else if (f(*itb,*ita)) {
         itb = b.lower_bound(*ita);
@@ -70,6 +78,11 @@ public:
       return (*this - (*this - b));
     }
     return (b - (b - *this));
+  }
+
+  void fill(vector<T>& a) const
+  {
+    a.assign(this->begin(), this->end());
   }
 };
 
