@@ -327,6 +327,50 @@ void BidirectionalRing(XnNet& topo, uint npcs, uint domsz)
   }
 }
 
+/**
+ * Performs the 3 color on a ring problem.  Each process must be assigned
+ * a color such that it'd color is not the same as either of its
+ * neighbors.  The domain is [0,2], corresponding to each of 3 arbitrary
+ * colors.
+ *
+ * \param sys  The system context
+ * \param npcs The number of processes
+ */
+void ColorRing(XnSys& sys, uint npcs)
+{
+  // Initializes the system as a bidirectional ring with a 3 value domain
+  // and the topology defined in sys
+  XnNet& topo=sys.topology;
+  BidirectionalRing(topo,npcs,3);
+
+  // Commit to using this topology, and initilize MDD stuff
+  topo.commitInitialization();
+  sys.invariant=true;
+
+  for(uint pcidx=0; pcidx<npcs; pcidx++){
+
+    // mq is the current process, mp is the left process,
+    // and mr is the right process.
+    const PFVbl mp=topo.pfVblR(pcidx,0);
+    const PFVbl mq=topo.pfVbl (pcidx,0);
+    const PFVbl mr=topo.pfVblR(pcidx,1);
+
+    // Add to the accepting states all of the states where
+    // mq is a different color than both mp and mr
+    sys.invariant &=
+      (mp==0 && mq==1 && mr==2) ||
+      (mp==0 && mq==2 && mr==1) ||
+      (mp==1 && mq==2 && mr==0) ||
+      (mq==1 && mq==0 && mr==2) ||
+      (mp==2 && mq==0 && mr==1) ||
+      (mp==2 && mq==1 && mr==0);
+  }
+}
+
+void TokenRing(XnSys& sys, uint npcs)
+{
+}
+
 void InstMatching(XnSys& sys, uint npcs)
 {
   XnNet& topo = sys.topology;
@@ -430,6 +474,7 @@ int main(int argc, char** argv)
 {
   int argi = 1;
   const uint NPs = 6;
+  int problem;
 
   if (argi < argc) {
     if (string(argv[argi]) == "test") {
@@ -438,14 +483,38 @@ int main(int argc, char** argv)
       DBog0( "Done." );
       return 0;
     }
-    printf("%s: Only supported argument is \"test\".\n", argv[0]);
+    else if(string(argv[argi])=="color"){
+      DBog0("Problem: 3 Color Ring");
+      problem=0;
+    }
+    else if(string(argv[argi])=="matching"){
+      DBog0("Problem: Maximal Matching");
+      problem=1;
+    }
+    else if(string(argv[argi])=="token"){
+      DBog0("Problem: Dijkstra's Token Ring");
+      problem=2;
+      return 0;
+    }
+    else{
+      //printf("%s: Only supported argument is \"test\".\n", argv[0]);
+      printf("No valid problem given.\n");
+     return 1;
+    }
+  }
+  else{
+    printf("No valid problem given.\n");
     return 1;
   }
 
 #if 1
   XnSys sys;
   XnNet& topo = sys.topology;
-  InstMatching(sys, NPs);
+  switch(problem){
+    case 0: ColorRing(sys,NPs); break;
+    case 1: InstMatching(sys,NPs); break;
+    case 2: TokenRing(sys,NPs); break;
+  }
   bool found = AddConvergence(sys);
   if (found) {
     DBog0("Solution found!");
