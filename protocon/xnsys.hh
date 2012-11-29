@@ -158,17 +158,6 @@ public:
   PF invariant;
 
 public:
-  const PF preimage(const PF& xnRel) const
-  { return topology.preimage(xnRel); }
-  const PF preimage(const PF& xnRel, const PF& image) const
-  { return topology.preimage(xnRel, image); }
-  const PF image(const PF& xnRel) const
-  { return topology.image(xnRel); }
-  const PF image(const PF& xnRel, const PF& preimage) const
-  { return topology.image(xnRel, preimage); }
-
-  const PF actionPF(uint actIdx) const
-  { return topology.actionPF(actIdx); }
 };
 
 #endif

@@ -5,6 +5,10 @@
 
 static std::ostream& DBogOF = std::cerr;
 
+static const bool DBog_PruneCycles = false;
+static const bool DBog_RankDeadlocksMRV = false;
+static const bool DBog_PickActionMRV = false;
+
 ostream& OPut(ostream& of, const XnAct& act, const XnNet& topo)
 {
   const XnPc& pc = topo.pcs[act.pcIdx];
@@ -27,8 +31,9 @@ bool ConvergenceCk(const XnSys& sys, const PF& xnRel)
 {
   PF span0( sys.invariant );
 
+  const XnNet& topo = sys.topology;
   while (!span0.tautologyCk(true)) {
-    PF span1( span0 | sys.preimage(xnRel, span0) );
+    PF span1( span0 | topo.preimage(xnRel, span0) );
     if (span1.equivCk(span0))  return false;
     span0 = span1;
   }
@@ -39,15 +44,28 @@ bool CycleCk(const XnSys& sys, const PF& xnRel)
 {
   PF span0( ~sys.invariant );
 
+  const XnNet& topo = sys.topology;
   while (true) {
     PF span1( span0 );
     //span0 -= span0 - sys.image(xnRel, span0);
-    span0 &= sys.preimage(xnRel, span0);
+    span0 &= topo.preimage(xnRel, span0);
 
     if (span0.equivCk(span1))  break;
   }
 
   return !span0.tautologyCk(false);
+}
+
+  PF
+BackwardReachability(const PF& xnRel, const PF& pf, const XnNet& topo)
+{
+  PF visitPF( pf );
+  PF layerPF( topo.preimage(xnRel, pf) - visitPF );
+  while (!layerPF.tautologyCk(false)) {
+    visitPF |= layerPF;
+    layerPF = topo.preimage(xnRel, layerPF) - visitPF;
+  }
+  return visitPF;
 }
 
 class DeadlockConstraint {
@@ -65,41 +83,13 @@ public:
   PF deadlockPF; ///< Current deadlocks.
   PF loXnRel; ///< Under-approximation of the transition function.
   PF hiXnRel; ///< Over-approximation of the transition function.
+  PF backReachPF; ///< Backwards reachable from invariant.
   vector<uint> actions; ///< Chosen actions.
   vector<uint> candidates; ///< Candidate actions.
 
   /// Deadlocks ranked by how many candidate actions can resolve them.
   vector<DeadlockConstraint> mrvDeadlocks;
 };
-
-/** Perform forward checking.*/
-  void
-PruneCycles(const XnSys& sys, FMem_AddConvergence& tape)
-{
-  vector<uint> candidates = tape.candidates;
-  tape.candidates.clear();
-
-  for (uint i = 0; i < candidates.size(); ++i) {
-    uint actIdx = candidates[i];
-    PF actPF( sys.actionPF(actIdx) );
-    bool add = false;
-    if (!(tape.deadlockPF & actPF).tautologyCk(false)) {
-      add = true;
-    }
-    if (add && CycleCk(sys, tape.loXnRel | actPF)) {
-      add = false;
-    }
-    if (add) {
-      tape.candidates.push_back(actIdx);
-    }
-  }
-  if (true) {
-    uint n = candidates.size() - tape.candidates.size();
-    if (n > 0) {
-      DBog1("Pruned: %u", n);
-    }
-  }
-}
 
 /** Rank the deadlocks by how many actions can resolve them.*/
   void
@@ -138,7 +128,7 @@ RankDeadlocksMRV(vector<DeadlockConstraint>& dlsets,
     }
   }
 
-  if (true) {
+  if (DBog_RankDeadlocksMRV) {
     for (uint i = 0; i < dlsets.size(); ++i) {
       if (!dlsets[i].deadlockPF.tautologyCk(false)) {
         DBog2( "Rank %u has %u actions.", i, (uint) dlsets[i].candidates.size() );
@@ -155,17 +145,17 @@ RankDeadlocksMRV(vector<DeadlockConstraint>& dlsets,
  */
   void
 ReviseDeadlocksMRV(vector<DeadlockConstraint>& dlsets,
-                   const XnSys& sys,
+                   const XnNet& topo,
                    const Set<uint>& adds,
                    const Set<uint>& dels)
 {
   PF addGuardPF(false);
   PF delGuardPF(false);
   for (Set<uint>::const_iterator it = adds.begin(); it != adds.end(); ++it) {
-    addGuardPF |= sys.preimage(sys.actionPF(*it));
+    addGuardPF |= topo.preimage(topo.actionPF(*it));
   }
-  for (Set<uint>::const_iterator it = adds.begin(); it != adds.end(); ++it) {
-    delGuardPF |= sys.preimage(sys.actionPF(*it));
+  for (Set<uint>::const_iterator it = dels.begin(); it != dels.end(); ++it) {
+    delGuardPF |= topo.preimage(topo.actionPF(*it));
   }
 
   for (uint i = 1; i < dlsets.size(); ++i) {
@@ -179,7 +169,19 @@ ReviseDeadlocksMRV(vector<DeadlockConstraint>& dlsets,
     candidates1 -= addCandidates;
     bool changed = (prevSize != candidates1.size());
     if (changed) {
-      deadlockPF1 -= addGuardPF;
+      PF diffDeadlockPF = deadlockPF1 & addGuardPF;
+      deadlockPF1 -= diffDeadlockPF;
+      Set<uint> diffCandidates1; // To remove from this rank.
+      Set<uint>::iterator it;
+      for (it = candidates1.begin(); it != candidates1.end(); ++it) {
+        uint actId = *it;
+        PF candidateGuardPF = topo.actionPF(actId);
+        if ((deadlockPF1 & candidateGuardPF).tautologyCk(false)) {
+          // Action no longer resolves any deadlocks in this rank.
+          diffCandidates1 |= actId;
+        }
+      }
+      candidates1 -= diffCandidates1;
     }
 
     prevSize = candidates1.size();
@@ -188,57 +190,145 @@ ReviseDeadlocksMRV(vector<DeadlockConstraint>& dlsets,
     if (changed) {
       Set<uint>& candidates0 = dlsets[i-1].candidates;
       PF& deadlockPF0 = dlsets[i-1].deadlockPF;
-      //deadlockPF1 -= addGuardPF;
-    }
+      PF diffDeadlockPF = deadlockPF1 & delGuardPF;
+      deadlockPF1 -= diffDeadlockPF;
+      deadlockPF0 |= diffDeadlockPF;
 
-    // TODO: Not done yet.
-    //for (Set<uint>::iterator it = candidates1.begin();
-    //     it != candidates1.end();
-    //     ++it)
-    //  uint actId = *it;
-    //  if (adds.elemCk(actId)) {
-    //  }
-    //  else if (dels.elemCk(actId)) {
-    //    //dlsets[i].candidates.push_back();
-    //  }
-    //}
+      Set<uint> diffCandidates0; // To add to previous rank.
+      Set<uint> diffCandidates1; // To remove from this rank.
+      Set<uint>::iterator it;
+      for (it = candidates1.begin(); it != candidates1.end(); ++it) {
+        uint actId = *it;
+        PF candidateGuardPF = topo.actionPF(actId);
+        if (!(diffDeadlockPF & candidateGuardPF).tautologyCk(false)) {
+          // Action resolves deadlocks in previous rank.
+          diffCandidates0 |= actId;
+          if ((deadlockPF1 & candidateGuardPF).tautologyCk(false)) {
+            // Action no longer resolves any deadlocks in this rank.
+            diffCandidates1 |= actId;
+          }
+        }
+      }
+      candidates0 |= diffCandidates0;
+      candidates1 -= diffCandidates1;
+    }
   }
 }
 
+  bool
+PickActionMRV(uint& ret_actId,
+              const vector<DeadlockConstraint>& dlsets,
+              const XnNet& topo,
+              const PF& backReachPF)
+{
+  for (uint i = 0; i < dlsets.size(); ++i) {
+    const Set<uint>& candidates = dlsets[i].candidates;
+    Set<uint>::const_iterator it;
+    for (it = candidates.begin(); it != candidates.end(); ++it) {
+      uint actId = *it;
+      if (backReachPF.overlapCk(topo.image(topo.actionPF(actId)))) {
+        ret_actId = actId;
+        //if (true && candidates.begin() != it) {
+        //  DBog0("Oh, this actually makes a difference!");
+        //}
+        return true;
+      }
+    }
+
+    if (!candidates.empty()) {
+      uint actId = candidates.elem();
+      if (DBog_PickActionMRV) {
+        DBog1( "Picked at rank %u", i );
+      }
+      ret_actId = actId;
+      return true;
+    }
+  }
+  return false;
+}
+
+/** Perform forward checking.*/
+  void
+PruneCycles(const XnSys& sys, FMem_AddConvergence& tape)
+{
+  vector<uint> candidates = tape.candidates;
+  tape.candidates.clear();
+  Set<uint> pruned;
+
+  const XnNet& topo = sys.topology;
+  for (uint i = 0; i < candidates.size(); ++i) {
+    uint actId = candidates[i];
+    PF actPF( topo.actionPF(actId) );
+    bool add = false;
+    if (!(tape.deadlockPF & actPF).tautologyCk(false)) {
+      add = true;
+    }
+    if (add && CycleCk(sys, tape.loXnRel | actPF)) {
+      add = false;
+    }
+    if (add) {
+      tape.candidates.push_back(actId);
+    }
+    else {
+      pruned |= actId;
+      tape.hiXnRel -= actPF;
+    }
+  }
+  ReviseDeadlocksMRV(tape.mrvDeadlocks, topo, Set<uint>(), pruned);
+  if (DBog_PruneCycles) {
+    if (pruned.size() > 0) {
+      DBog1("Pruned: %u", (uint) pruned.size());
+    }
+  }
+}
 
   bool
 AddConvergence(vector<uint> retActions,
                const XnSys& sys,
-               FMem_AddConvergence tape)
+               FMem_AddConvergence& tape)
 {
   PruneCycles(sys, tape);
 
+  const XnNet& topo = sys.topology;
   while (!tape.candidates.empty()) {
+
     if (!ConvergenceCk(sys, tape.hiXnRel)) {
       return false;
     }
     if (tape.actions.size() < 18) {
       DBog2( "Level: %u  Remaining: %u",
              (uint) tape.actions.size(),
-             (uint) tape.candidates.size());
+             (uint) tape.candidates.size() );
     }
 
-    uint actIdx = Pop1(tape.candidates);
-    tape.actions.push_back(actIdx);
-    PF actPF = sys.topology.actionPF(actIdx);
-    tape.loXnRel |= actPF;
+#if 0
+    uint actId = Pop1(tape.candidates);
+#else
+    uint actId = 0;
+    if (!PickActionMRV(actId, tape.mrvDeadlocks, topo, tape.backReachPF)) {
+      return false;
+    }
+    Remove1(tape.candidates, actId);
+#endif
+    FMem_AddConvergence next( tape );
+    ReviseDeadlocksMRV(tape.mrvDeadlocks, topo, Set<uint>(), Set<uint>(actId));
+    ReviseDeadlocksMRV(next.mrvDeadlocks, topo, Set<uint>(actId), Set<uint>());
+    next.actions.push_back(actId);
 
-    PF resolved( sys.preimage(actPF) & tape.deadlockPF );
-    tape.deadlockPF -= resolved;
+    PF actPF = topo.actionPF(actId);
+    next.loXnRel |= actPF;
+    next.backReachPF =
+      BackwardReachability(next.loXnRel, next.backReachPF, topo);
 
-    bool found = AddConvergence(retActions, sys, tape);
+    PF resolved( topo.preimage(actPF) & tape.deadlockPF );
+    next.deadlockPF -= resolved;
+
+    bool found = AddConvergence(retActions, sys, next);
     if (found) {
-      retActions.push_back(actIdx);
+      retActions.push_back(actId);
       return true;
     }
-    tape.deadlockPF |= resolved;
-    tape.actions.pop_back();
-    tape.loXnRel -= actPF;
+
     tape.hiXnRel -= actPF;
   }
   return false;
@@ -294,6 +384,7 @@ AddConvergence(XnSys& sys)
   }
 
   tape.deadlockPF = ~sys.invariant;
+  tape.backReachPF = sys.invariant;
 
   RankDeadlocksMRV(tape.mrvDeadlocks,
                    sys.topology,
@@ -451,16 +542,16 @@ void test()
   Claim( (dstPF & srcPF).tautologyCk(false) );
 
   {
-    Claim( dstPF.equivCk(sys.image(actPF, srcPF)) );
+    Claim( dstPF.equivCk(topo.image(actPF, srcPF)) );
     // The rest of this block is actually implied by the first check.
-    Claim( dstPF <= sys.image(actPF, srcPF) );
-    Claim( sys.image(actPF, srcPF) <= dstPF );
-    Claim( sys.image(actPF, srcPF) <= (topo.pfVblR(1, 0) == 1) );
-    Claim( sys.image(actPF, srcPF) <= (topo.pfVblR(1, 1) == 2) );
-    Claim( sys.image(actPF, srcPF) <= (topo.pfVbl (1, 0) == 0) );
+    Claim( dstPF <= topo.image(actPF, srcPF) );
+    Claim( topo.image(actPF, srcPF) <= dstPF );
+    Claim( topo.image(actPF, srcPF) <= (topo.pfVblR(1, 0) == 1) );
+    Claim( topo.image(actPF, srcPF) <= (topo.pfVblR(1, 1) == 2) );
+    Claim( topo.image(actPF, srcPF) <= (topo.pfVbl (1, 0) == 0) );
   }
-  Claim( dstPF.equivCk(sys.image(actPF & srcPF)) );
-  Claim( srcPF.equivCk(sys.preimage(actPF, dstPF)) );
+  Claim( dstPF.equivCk(topo.image(actPF & srcPF)) );
+  Claim( srcPF.equivCk(topo.preimage(actPF, dstPF)) );
 
   Claim( (sys.invariant - sys.invariant).tautologyCk(false) );
   Claim( (sys.invariant | ~sys.invariant).tautologyCk(true) );
