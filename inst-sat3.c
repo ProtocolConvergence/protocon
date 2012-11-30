@@ -3,7 +3,7 @@
 /** Set the legitimate states of a 3-SAT to AddConvergence reduction.**/
 static
     void
-sat3_legit_XnSys (FnWMem_do_XnSys* fix,
+sat3_legit_XnSys (FMem_do_XnSys* fix,
                   BitTable bt,
                   XnSys* sys,
                   TableT(CnfDisj) cnf,
@@ -197,7 +197,7 @@ inst_sat3_XnSys (const CnfFmla* fmla)
 
     {
         DeclTable( CnfDisj, clauses );
-        DecloStack1( FnWMem_do_XnSys, fix, cons1_FnWMem_do_XnSys (sys) );
+        DecloStack1( FMem_do_XnSys, fix, cons1_FMem_do_XnSys (sys) );
         BitTable bt = cons2_BitTable (sys->legit.sz, 0);
 
         {:for (i ; fmla->idcs.sz)
@@ -214,7 +214,7 @@ inst_sat3_XnSys (const CnfFmla* fmla)
         sat3_legit_XnSys (fix, bt, sys, clauses, 3, x_idcs, y_idcs);
 
         lose_BitTable (&bt);
-        lose_FnWMem_do_XnSys (fix);
+        lose_FMem_do_XnSys (fix);
         {:for (i ; clauses.sz)
             lose_CnfDisj (&clauses.s[i]);
         }
@@ -315,7 +315,7 @@ inst_sat3_ring_XnSys (const CnfFmla* fmla, const bool use_sat)
 
     {
         DeclTable( CnfDisj, clauses );
-        DecloStack1( FnWMem_do_XnSys, fix, cons1_FnWMem_do_XnSys (sys) );
+        DecloStack1( FMem_do_XnSys, fix, cons1_FMem_do_XnSys (sys) );
         BitTable bt = cons2_BitTable (sys->legit.sz, 0);
 
         {:for (i ; fmla->idcs.sz)
@@ -351,7 +351,7 @@ inst_sat3_ring_XnSys (const CnfFmla* fmla, const bool use_sat)
         sat3_legit_XnSys (fix, bt, sys, clauses, npcs, x_idcs, y_idcs);
 
         lose_BitTable (&bt);
-        lose_FnWMem_do_XnSys (fix);
+        lose_FMem_do_XnSys (fix);
         {:for (i ; clauses.sz)
             lose_CnfDisj (&clauses.s[i]);
         }

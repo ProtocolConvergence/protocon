@@ -13,6 +13,8 @@
 #include <assert.h>
 #include <stdio.h>
 
+#define NMaxXnPcVbls 10
+
 enum XnSysInstance {
     Sat3Inst,
     Sat3RingInst,
@@ -46,10 +48,10 @@ typedef struct BoolLit BoolLit;
 typedef struct CnfDisj CnfDisj;
 typedef struct CnfFmla CnfFmla;
 typedef struct XnSz2 XnSz2;
-typedef struct FnWMem_detect_livelock FnWMem_detect_livelock;
-typedef struct FnWMem_detect_convergence FnWMem_detect_convergence;
-typedef struct FnWMem_do_XnSys FnWMem_do_XnSys;
-typedef struct FnWMem_synsearch FnWMem_synsearch;
+typedef struct FMem_detect_livelock FMem_detect_livelock;
+typedef struct FMem_detect_convergence FMem_detect_convergence;
+typedef struct FMem_do_XnSys FMem_do_XnSys;
+typedef struct FMem_synsearch FMem_synsearch;
 
 DeclTableT( XnPc, XnPc );
 DeclTableT( XnVbl, XnVbl );
@@ -106,8 +108,8 @@ struct XnEVbl
 struct XnRule
 {
     uint pc; /**< Process to which this rule belongs.**/
-    TableT(DomSz) p; /**< Local state of the process to enable this action.**/
-    TableT(DomSz) q; /**< New values of writable variables.**/
+    FixTableT(DomSz, NMaxXnPcVbls) p; /**< Local state of the process to enable this action.**/
+    FixTableT(DomSz, NMaxXnPcVbls) q; /**< New values of writable variables.**/
 };
 
 /** Transition system.**/
@@ -123,7 +125,7 @@ struct XnSys
     bool syn_legit;
 };
 
-struct FnWMem_detect_livelock
+struct FMem_detect_livelock
 {
     BitTable cycle;
     BitTable tested;
@@ -131,7 +133,7 @@ struct FnWMem_detect_livelock
     const BitTable* legit;
 };
 
-struct FnWMem_detect_convergence
+struct FMem_detect_convergence
 {
     const BitTable* legit;
     TableT(Xns) bxns;
@@ -139,7 +141,7 @@ struct FnWMem_detect_convergence
     BitTable tested;
 };
 
-struct FnWMem_do_XnSys
+struct FMem_do_XnSys
 {
     DomSz* vals;
     BitTable fixed;
@@ -147,13 +149,13 @@ struct FnWMem_do_XnSys
     const XnSys* sys;
 };
 
-struct FnWMem_synsearch
+struct FMem_synsearch
 {
     bool stabilizing;
     const XnSys* sys;
-    FnWMem_detect_livelock livelock_tape;
-    FnWMem_detect_convergence convergence_tape;
-    FnWMem_do_XnSys dostates_tape;
+    FMem_detect_livelock livelock_tape;
+    FMem_detect_convergence convergence_tape;
+    FMem_do_XnSys dostates_tape;
     TableT(Xns) xns;
     TableT(XnSz) xn_stk;
     TableT(XnRule) rules;
@@ -204,7 +206,7 @@ dflt_XnPc ()
 }
 
 void
-add_XnRule (FnWMem_synsearch* tape, const XnRule* g);
+add_XnRule (FMem_synsearch* tape, const XnRule* g);
 
     void
 lose_XnPc (XnPc* pc)
@@ -238,8 +240,8 @@ dflt_XnRule ()
 {
     XnRule g;
     g.pc = 0;
-    InitTable( g.p );
-    InitTable( g.q );
+    InitFixTable( g.p );
+    InitFixTable( g.q );
     return g;
 }
 
@@ -649,10 +651,10 @@ step_XnRule (const XnRule* g, const XnSys* sys)
 #include "promela.c"
 
 
-    FnWMem_do_XnSys
-cons1_FnWMem_do_XnSys (const XnSys* sys)
+    FMem_do_XnSys
+cons1_FMem_do_XnSys (const XnSys* sys)
 {
-    FnWMem_do_XnSys tape;
+    FMem_do_XnSys tape;
     const ujint n = sys->vbls.sz;
 
     tape.sys = sys;
@@ -665,7 +667,7 @@ cons1_FnWMem_do_XnSys (const XnSys* sys)
 }
 
     void
-lose_FnWMem_do_XnSys (FnWMem_do_XnSys* tape)
+lose_FMem_do_XnSys (FMem_do_XnSys* tape)
 {
     if (tape->vals)  free (tape->vals);
     lose_BitTable (&tape->fixed);
@@ -693,7 +695,7 @@ recu_do_XnSys (BitTable* bt, const XnEVbl* a, uint n, XnSz step, XnSz bel)
 }
 
     void
-do_XnSys (FnWMem_do_XnSys* tape, BitTable bt)
+do_XnSys (FMem_do_XnSys* tape, BitTable bt)
 {
     tape->evs.sz = 0;
     {:for (i ; tape->fixed.sz)
@@ -730,7 +732,7 @@ recu_do_push_XnSys (TableT(XnSz)* t, const XnEVbl* a, uint n, XnSz step, XnSz be
 }
 
     void
-do_push_XnSys (FnWMem_do_XnSys* tape, TableT(XnSz)* t)
+do_push_XnSys (FMem_do_XnSys* tape, TableT(XnSz)* t)
 {
     tape->evs.sz = 0;
     {:for (i ; tape->fixed.sz)
@@ -746,10 +748,10 @@ do_push_XnSys (FnWMem_do_XnSys* tape, TableT(XnSz)* t)
     recu_do_push_XnSys (t, tape->evs.s, tape->evs.sz, 0, tape->sys->legit.sz);
 }
 
-    FnWMem_detect_livelock
-cons1_FnWMem_detect_livelock (const BitTable* legit)
+    FMem_detect_livelock
+cons1_FMem_detect_livelock (const BitTable* legit)
 {
-    FnWMem_detect_livelock tape;
+    FMem_detect_livelock tape;
 
     tape.legit = legit;
 
@@ -760,7 +762,7 @@ cons1_FnWMem_detect_livelock (const BitTable* legit)
 }
 
     void
-lose_FnWMem_detect_livelock (FnWMem_detect_livelock* tape)
+lose_FMem_detect_livelock (FMem_detect_livelock* tape)
 {
     lose_BitTable (&tape->cycle);
     lose_BitTable (&tape->tested);
@@ -773,7 +775,7 @@ lose_FnWMem_detect_livelock (FnWMem_detect_livelock* tape)
  **/
 static
     bool
-detect_livelock (FnWMem_detect_livelock* tape,
+detect_livelock (FMem_detect_livelock* tape,
                  const TableT(Xns) xns)
 {
     ujint testidx = 0;
@@ -848,11 +850,11 @@ detect_livelock (FnWMem_detect_livelock* tape,
     return false;
 }
 
-    FnWMem_detect_convergence
-cons1_FnWMem_detect_convergence (const BitTable* legit)
+    FMem_detect_convergence
+cons1_FMem_detect_convergence (const BitTable* legit)
 {
     XnSz n = legit->sz;
-    FnWMem_detect_convergence tape;
+    FMem_detect_convergence tape;
 
     tape.legit = legit;
 
@@ -868,7 +870,7 @@ cons1_FnWMem_detect_convergence (const BitTable* legit)
 }
 
     void
-lose_FnWMem_detect_convergence (FnWMem_detect_convergence* tape)
+lose_FMem_detect_convergence (FMem_detect_convergence* tape)
 {
     {:for (i ; tape->bxns.sz)
         LoseTable( tape->bxns.s[i] );
@@ -884,7 +886,7 @@ lose_FnWMem_detect_convergence (FnWMem_detect_convergence* tape)
  * Assume the set of legit states is closed under all transitions.
  **/
     bool
-detect_convergence (FnWMem_detect_convergence* tape,
+detect_convergence (FMem_detect_convergence* tape,
                     const TableT(Xns) xns)
 {
     TableT(Xns) bxns = tape->bxns;
@@ -937,7 +939,7 @@ detect_convergence (FnWMem_detect_convergence* tape,
  * original protocol (we just check edge counts).
  **/
     Trit
-detect_strong_convergence (FnWMem_synsearch* tape)
+detect_strong_convergence (FMem_synsearch* tape)
 {
     if (detect_livelock (&tape->livelock_tape, tape->xns))  return Nil;
 
@@ -970,16 +972,16 @@ back1_Xn (TableT(Xns)* xns, TableT(XnSz)* stk)
     stk->sz = off;
 }
 
-    FnWMem_synsearch
-cons1_FnWMem_synsearch (const XnSys* sys)
+    FMem_synsearch
+cons1_FMem_synsearch (const XnSys* sys)
 {
-    FnWMem_synsearch tape;
+    FMem_synsearch tape;
 
     tape.stabilizing = false;
     tape.sys = sys;
-    tape.livelock_tape = cons1_FnWMem_detect_livelock (&sys->legit);
-    tape.convergence_tape = cons1_FnWMem_detect_convergence (&sys->legit);
-    tape.dostates_tape = cons1_FnWMem_do_XnSys (sys);
+    tape.livelock_tape = cons1_FMem_detect_livelock (&sys->legit);
+    tape.convergence_tape = cons1_FMem_detect_convergence (&sys->legit);
+    tape.dostates_tape = cons1_FMem_do_XnSys (sys);
 
     InitTable( tape.xns );
     GrowTable( tape.xns, sys->legit.sz );
@@ -1028,11 +1030,11 @@ cons1_FnWMem_synsearch (const XnSys* sys)
 }
 
     void
-lose_FnWMem_synsearch (FnWMem_synsearch* tape)
+lose_FMem_synsearch (FMem_synsearch* tape)
 {
-    lose_FnWMem_detect_livelock (&tape->livelock_tape);
-    lose_FnWMem_detect_convergence (&tape->convergence_tape);
-    lose_FnWMem_do_XnSys (&tape->dostates_tape);
+    lose_FMem_detect_livelock (&tape->livelock_tape);
+    lose_FMem_detect_convergence (&tape->convergence_tape);
+    lose_FMem_do_XnSys (&tape->dostates_tape);
 
     {:for (i ; tape->xns.sz)
         LoseTable( tape->xns.s[i] );
@@ -1079,14 +1081,14 @@ apply1_XnRule (const XnRule* g, const XnSys* sys, XnSz sidx)
 }
 
     void
-add_XnRule (FnWMem_synsearch* tape, const XnRule* g)
+add_XnRule (FMem_synsearch* tape, const XnRule* g)
 {
     TableT(Xns)* xns = &tape->xns;
     TableT(XnSz)* stk = &tape->xn_stk;
     XnSz nadds = 0;
     XnSz sa, sb;
     DeclTable( XnSz, t );
-    FnWMem_do_XnSys* fix = &tape->dostates_tape;
+    FMem_do_XnSys* fix = &tape->dostates_tape;
 
     nadds = stk->sz;
 
@@ -1180,7 +1182,7 @@ cmp_XnSz2 (const void* pa, const void* pb)
  **/
 static
     void
-set_may_rules (FnWMem_synsearch* tape, TableT(XnSz)* may_rules, XnRule* g)
+set_may_rules (FMem_synsearch* tape, TableT(XnSz)* may_rules, XnRule* g)
 {
     const XnSys* restrict sys = tape->sys;
 
@@ -1286,7 +1288,7 @@ set_may_rules (FnWMem_synsearch* tape, TableT(XnSz)* may_rules, XnRule* g)
 
 static
     XnRule*
-grow1_rules_synsearch (FnWMem_synsearch* tape)
+grow1_rules_synsearch (FMem_synsearch* tape)
 {
     XnRule* g = Grow1Table( tape->rules );
     if (tape->rules.sz > tape->n_cached_rules)
@@ -1300,7 +1302,7 @@ grow1_rules_synsearch (FnWMem_synsearch* tape)
 
 static
     TableT(XnSz)*
-grow1_may_rules_synsearch (FnWMem_synsearch* tape)
+grow1_may_rules_synsearch (FMem_synsearch* tape)
 {
     TableT(XnSz)* may_rules = Grow1Table( tape->may_rules );
 
@@ -1318,7 +1320,7 @@ grow1_may_rules_synsearch (FnWMem_synsearch* tape)
  * The top of /tape->rules/ must be allocated for temp memory.
  **/
     void
-synsearch_quicktrim_mayrules (FnWMem_synsearch* tape, XnSz nadded)
+synsearch_quicktrim_mayrules (FMem_synsearch* tape, XnSz nadded)
 {
     const XnSys* sys = tape->sys;
     TableT(XnSz)* may_rules = TopTable( tape->may_rules );
@@ -1392,7 +1394,7 @@ synsearch_quicktrim_mayrules (FnWMem_synsearch* tape, XnSz nadded)
  *   return with /tape->stabilizing=true/.
  **/
     void
-synsearch_trim (FnWMem_synsearch* tape)
+synsearch_trim (FMem_synsearch* tape)
 {
     const XnSys* sys = tape->sys;
     TableT(XnSz)* may_rules = TopTable( tape->may_rules );
@@ -1493,7 +1495,7 @@ synsearch_trim (FnWMem_synsearch* tape)
 }
 
     bool
-synsearch_check_weak (FnWMem_synsearch* tape, XnSz* ret_nreqrules)
+synsearch_check_weak (FMem_synsearch* tape, XnSz* ret_nreqrules)
 {
     const XnSys* sys = tape->sys;
     TableT(XnSz)* may_rules = TopTable( tape->may_rules );
@@ -1624,7 +1626,7 @@ synsearch_check_weak (FnWMem_synsearch* tape, XnSz* ret_nreqrules)
  * transitions defined in the legit states.
  **/
     void
-synsearch (FnWMem_synsearch* tape)
+synsearch (FMem_synsearch* tape)
 {
     const XnSys* restrict sys = tape->sys;
     XnRule* g;
@@ -1766,7 +1768,7 @@ testfn_detect_livelock ()
 {
     BitTable legit = cons2_BitTable (6, 0);
     DeclTable( Xns, xns );
-    FnWMem_detect_livelock mem_detect_livelock;
+    FMem_detect_livelock mem_detect_livelock;
     bool livelock_exists;
 
     GrowTable( xns, legit.sz );
@@ -1774,7 +1776,7 @@ testfn_detect_livelock ()
         InitTable( xns.s[i] );
     }
 
-    mem_detect_livelock = cons1_FnWMem_detect_livelock (&legit);
+    mem_detect_livelock = cons1_FMem_detect_livelock (&legit);
 
 
     PushTable( xns.s[0], 1 );
@@ -1790,7 +1792,7 @@ testfn_detect_livelock ()
     livelock_exists = detect_livelock (&mem_detect_livelock, xns);
     Claim( livelock_exists );
 
-    lose_FnWMem_detect_livelock (&mem_detect_livelock);
+    lose_FMem_detect_livelock (&mem_detect_livelock);
 
     {:for (i ; xns.sz)
         LoseTable( xns.s[i] );
@@ -1827,7 +1829,7 @@ swapped_XnSz2 (const XnSz2* a, const XnSz2* b)
  * transitions defined in the legit states.
  **/
     void
-synsearch_sat (FnWMem_synsearch* tape)
+synsearch_sat (FMem_synsearch* tape)
 {
     DeclTableT( XnInfo, struct { ujint idx; CnfDisj impl; } );
     DeclTableT( State, struct { TableT(XnSz) tx; TableT(XnSz) to; } );
@@ -2217,7 +2219,7 @@ main (int argc, char** argv)
     testfn_detect_livelock ();
 
     {
-        FnWMem_synsearch tape = cons1_FnWMem_synsearch (sys);
+        FMem_synsearch tape = cons1_FMem_synsearch (sys);
         if (inst_kind == Sat3Inst ||
             inst_kind == Sat3RingInst ||
             inst_kind == Sat3RingWSatInst)
@@ -2277,7 +2279,7 @@ main (int argc, char** argv)
             do_pla_XnSys (sys, tape.rules);
         }
 
-        lose_FnWMem_synsearch (&tape);
+        lose_FMem_synsearch (&tape);
     }
 
     lose_CnfFmla (fmla);
