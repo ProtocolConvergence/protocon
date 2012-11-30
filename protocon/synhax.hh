@@ -84,7 +84,7 @@ template <class T>
 Grow1(vector<T>& a)
 {
   a.resize(a.size() + 1);
-  return a[a.size() - 1];
+  return a.back();
 }
 
 template <class T>

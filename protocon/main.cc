@@ -9,9 +9,14 @@ static const bool DBog_PruneCycles = false;
 static const bool DBog_RankDeadlocksMRV = false;
 static const bool DBog_PickActionMRV = false;
 
-ostream& OPut(ostream& of, const XnAct& act, const XnNet& topo)
+/**
+ * Output an action in a valid Promela format.
+ */
+  ostream&
+OPut(ostream& of, const XnAct& act, const XnNet& topo)
 {
   const XnPc& pc = topo.pcs[act.pcIdx];
+  of << "/*P" << act.pcIdx << "*/ ";
   for (uint i = 0; i < pc.wvbls.size(); ++i) {
     if (i != 0)  of << " && ";
     of << topo.wvbl(act.pcIdx, i).name << "==" << act.w0[i];
@@ -20,14 +25,18 @@ ostream& OPut(ostream& of, const XnAct& act, const XnNet& topo)
     of << " && ";
     of << topo.rvbl(act.pcIdx, i).name << "==" << act.r0[i];
   }
-  of << " -->";
+  of << " ->";
   for (uint i = 0; i < pc.wvbls.size(); ++i) {
-    of << ' ' << topo.wvbl(act.pcIdx, i).name << ":=" << act.w1[i] << ';';
+    of << ' ' << topo.wvbl(act.pcIdx, i).name << "=" << act.w1[i] << ';';
   }
   return of;
 }
 
-bool ConvergenceCk(const XnSys& sys, const PF& xnRel)
+/**
+ * Check for weak convergence to the invariant.
+ */
+  bool
+WeakConvergenceCk(const XnSys& sys, const PF& xnRel)
 {
   PF span0( sys.invariant );
 
@@ -40,6 +49,9 @@ bool ConvergenceCk(const XnSys& sys, const PF& xnRel)
   return true;
 }
 
+/**
+ * Check for cycles outside of the invariant.
+ */
 bool CycleCk(const XnSys& sys, const PF& xnRel)
 {
   PF span0( ~sys.invariant );
@@ -56,6 +68,12 @@ bool CycleCk(const XnSys& sys, const PF& xnRel)
   return !span0.tautologyCk(false);
 }
 
+/**
+ * Perform backwards reachability.
+ * \param xnRel  Transition function.
+ * \param pf  Initial states.
+ * \param topo  Topology of the system.
+ */
   PF
 BackwardReachability(const PF& xnRel, const PF& pf, const XnNet& topo)
 {
@@ -215,36 +233,170 @@ ReviseDeadlocksMRV(vector<DeadlockConstraint>& dlsets,
   }
 }
 
+/**
+ * Pick the next candidate action to use.
+ * The minimum remaining values (MRV) heuristic may be used.
+ *
+ * \param ret_actId  Return value. Action to use.
+ * \param dlsets  Deadlock sets ordered by number of
+ *   resolving candidate actions.
+ * \param backReachPF  Backwards reachability from invariant.
+ * \return True iff an action was picked. It should return
+ *   true unless you're doing it wrong).
+ */
   bool
 PickActionMRV(uint& ret_actId,
               const vector<DeadlockConstraint>& dlsets,
               const XnNet& topo,
-              const PF& backReachPF)
+              const PF& backReachPF,
+              const map<uint,uint>& conflicts)
 {
-  for (uint i = 0; i < dlsets.size(); ++i) {
-    const Set<uint>& candidates = dlsets[i].candidates;
-    Set<uint>::const_iterator it;
-    for (it = candidates.begin(); it != candidates.end(); ++it) {
-      uint actId = *it;
-      if (backReachPF.overlapCk(topo.image(topo.actionPF(actId)))) {
-        ret_actId = actId;
-        //if (true && candidates.begin() != it) {
-        //  DBog0("Oh, this actually makes a difference!");
-        //}
-        return true;
+  if (true) {
+    //(void) conflicts;
+    // This block picks the action which resolves the most deadlocks.
+    // The number of resolved deadlocks is computed by the deadlock sets.
+    map< uint, uint > resolveMap;
+    for (uint i = 1; i < dlsets.size(); ++i) {
+      const Set<uint>& candidates = dlsets[i].candidates;
+      Set<uint>::const_iterator it;
+      for (it = candidates.begin(); it != candidates.end(); ++it) {
+        uint* n = MapLookup(resolveMap, *it);
+        if (!n) {
+          resolveMap[*it] = i-1;
+        }
+        else {
+          *n += i-1;
+        }
       }
     }
 
-    if (!candidates.empty()) {
-      uint actId = candidates.elem();
-      if (DBog_PickActionMRV) {
-        DBog1( "Picked at rank %u", i );
+    if (!resolveMap.empty()) {
+      uint actId = 0;
+      uint nMax = 0;
+      map<uint,uint>::const_iterator it;
+      for (it = resolveMap.begin(); it != resolveMap.end(); ++it) {
+        uint n = it->second;
+        if (backReachPF.overlapCk(topo.image(topo.actionPF(it->first)))) {
+          n += dlsets.size();
+        }
+        if (n > nMax) {
+          actId = it->first;
+          nMax = n;
+        }
       }
       ret_actId = actId;
       return true;
     }
   }
+  else if (false) {
+    //(void) conflicts;
+    // Do minimum remaining values (MRV).
+    // That is, find an action which resolves a deadlock for which
+    // can only be resolved by some small number of actions.
+    // Try to choose an action which adds a new path to the invariant.
+    for (uint i = 0; i < dlsets.size(); ++i) {
+      const Set<uint>& candidates = dlsets[i].candidates;
+      Set<uint>::const_iterator it;
+      for (it = candidates.begin(); it != candidates.end(); ++it) {
+        uint actId = *it;
+        if (backReachPF.overlapCk(topo.image(topo.actionPF(actId)))) {
+          ret_actId = actId;
+          if (false && candidates.begin() != it) {
+            DBog0("Oh, this actually makes a difference!");
+          }
+          return true;
+        }
+      }
+
+      if (!candidates.empty()) {
+        uint actId = candidates.elem();
+        if (DBog_PickActionMRV) {
+          DBog1( "Picked at rank %u", i );
+        }
+        ret_actId = actId;
+        return true;
+      }
+    }
+  }
+  else if (false) {
+    //(void) backReachPF;
+    // Do minimum remaining values (MRV) with least constraining value (LCV).
+    for (uint i = 0; i < dlsets.size(); ++i) {
+      const Set<uint>& candidates = dlsets[i].candidates;
+      Set<uint>::const_iterator it;
+      if (!candidates.empty()) {
+        it = candidates.begin();
+        uint actId = *it;
+
+        bool maximize = false;
+        bool have = false;
+        uint nConflictsExtremum = 0;
+
+        for (++it; it != candidates.end(); ++it) {
+          uint nConflicts = *MapLookup(conflicts, *it);
+          if (!have) {
+            have = true;
+            nConflictsExtremum = nConflicts;
+            actId = *it;
+          }
+          else if (maximize && nConflicts > nConflictsExtremum) {
+            nConflictsExtremum = nConflicts;
+            actId = *it;
+          }
+          else if (!maximize && nConflicts < nConflictsExtremum) {
+            nConflictsExtremum = nConflicts;
+            actId = *it;
+          }
+        }
+
+        ret_actId = actId;
+        return true;
+      }
+    }
+  }
   return false;
+}
+
+/**
+ * Do trivial trimming of the candidate actions after using an action.
+ * The pruned candidate actions would break our assumption that processes are
+ * self-disabling.
+ */
+  void
+QuickTrim(Set<uint>& delSet,
+          const vector<uint>& candidates,
+          const XnNet& topo,
+          uint actId)
+{
+  XnAct act0 = topo.action(actId);
+  const XnPc& pc = topo.pcs[act0.pcIdx];
+  for (uint i = 0; i < candidates.size(); ++i) {
+    XnAct act1 = topo.action(candidates[i]);
+    bool add = true;
+    if (act0.pcIdx == act1.pcIdx) {
+      bool enabling = true;
+      for (uint j = 0; enabling && j < pc.rvbls.size(); ++j) {
+        if (act0.r0[j] != act1.r0[j]) {
+          enabling = false;
+        }
+      }
+      bool enabling01 = enabling;
+      bool enabling10 = enabling;
+      for (uint j = 0; enabling && j < pc.wvbls.size(); ++j) {
+        if (act0.w1[j] != act1.w0[j]) {
+          enabling01 = false;
+        }
+        if (act1.w1[j] != act0.w0[j]) {
+          enabling10 = false;
+        }
+        enabling = (enabling01 || enabling10);
+      }
+      add = !enabling;
+    }
+    if (!add) {
+      delSet |= candidates[i];
+    }
+  }
 }
 
 /** Perform forward checking.*/
@@ -259,9 +411,9 @@ PruneCycles(const XnSys& sys, FMem_AddConvergence& tape)
   for (uint i = 0; i < candidates.size(); ++i) {
     uint actId = candidates[i];
     PF actPF( topo.actionPF(actId) );
-    bool add = false;
-    if (!(tape.deadlockPF & actPF).tautologyCk(false)) {
-      add = true;
+    bool add = true;
+    if (add && !tape.deadlockPF.overlapCk(topo.preimage(actPF))) {
+      add = false;
     }
     if (add && CycleCk(sys, tape.loXnRel | actPF)) {
       add = false;
@@ -272,6 +424,7 @@ PruneCycles(const XnSys& sys, FMem_AddConvergence& tape)
     else {
       pruned |= actId;
       tape.hiXnRel -= actPF;
+      //OPut( DBogOF << "Pruned: ", topo.action(actId), topo) << '\n';
     }
   }
   ReviseDeadlocksMRV(tape.mrvDeadlocks, topo, Set<uint>(), pruned);
@@ -282,37 +435,131 @@ PruneCycles(const XnSys& sys, FMem_AddConvergence& tape)
   }
 }
 
+/**
+ * For each action, check to see if its inclusion will make the
+ * solution impossible after one step of pruning.
+ */
+  map<uint,uint>
+PruneCandidatesAC3(const XnSys& sys, FMem_AddConvergence& tape)
+{
+  const XnNet& topo = sys.topology;
+  vector<uint>& candidates = tape.candidates;
+  bool changed = true;
+  map<uint,uint> conflicts;
+  while (changed) {
+    changed = false;
+    conflicts.clear();
+    for (uint i = 0; i < candidates.size();) {
+      uint actId = candidates[i];
+
+      FMem_AddConvergence tmptape(tape);
+      PF actPF = topo.actionPF(actId);
+      tmptape.loXnRel |= actPF;
+      PruneCycles(sys, tmptape);
+      {
+        Set<uint> delSet;
+        QuickTrim(delSet, tmptape.candidates, sys.topology, actId);
+        Set<uint>::const_iterator delit;
+        for (delit = delSet.begin(); delit != delSet.end(); ++delit) {
+          tmptape.hiXnRel -= topo.actionPF(*delit);
+          Remove1(tmptape.candidates, *delit);
+        }
+      }
+      conflicts[actId] = candidates.size() - tmptape.candidates.size();
+      bool prune = !WeakConvergenceCk(sys, tmptape.hiXnRel);
+
+      if (!prune) {
+        ++i;
+      }
+      else {
+        DBog0("AC3 pruned something!");
+        changed = true;
+        tape.hiXnRel -= actPF;
+        if (!WeakConvergenceCk(sys, tape.hiXnRel)) {
+          return map<uint,uint>();
+        }
+        candidates.erase(candidates.begin() + i);
+        ReviseDeadlocksMRV(tape.mrvDeadlocks, topo, Set<uint>(), Set<uint>(actId));
+      }
+    }
+  }
+  return conflicts;
+}
+
+/**
+ * Add convergence to a system.
+ * The system will therefore be self-stabilizing.
+ * This is the recursive function.
+ *
+ * \param sys  System definition. It is modified if convergence is added.
+ * \return  True iff convergence could be added.
+ */
   bool
 AddConvergence(vector<uint> retActions,
                const XnSys& sys,
                FMem_AddConvergence& tape)
 {
+  if (tape.deadlockPF.tautologyCk(false)) {
+    return true;
+  }
   PruneCycles(sys, tape);
 
   const XnNet& topo = sys.topology;
   while (!tape.candidates.empty()) {
 
-    if (!ConvergenceCk(sys, tape.hiXnRel)) {
-      return false;
-    }
-    if (tape.actions.size() < 18) {
-      DBog2( "Level: %u  Remaining: %u",
-             (uint) tape.actions.size(),
-             (uint) tape.candidates.size() );
+
+    map<uint,uint> conflicts;
+    if (false) {
+      // AC3 is slooooww and doesn't help as implemented!
+      // We already have forward checking, which does well.
+      conflicts = PruneCandidatesAC3(sys, tape);
     }
 
-#if 0
-    uint actId = Pop1(tape.candidates);
-#else
-    uint actId = 0;
-    if (!PickActionMRV(actId, tape.mrvDeadlocks, topo, tape.backReachPF)) {
+    if (!WeakConvergenceCk(sys, tape.hiXnRel)) {
       return false;
     }
-    Remove1(tape.candidates, actId);
-#endif
+
+    // Pick the action.
+    uint actId;
+    if (true) {
+      actId = 0;
+      if (!PickActionMRV(actId, tape.mrvDeadlocks, topo, tape.backReachPF, conflicts)) {
+        return false;
+      }
+      Remove1(tape.candidates, actId);
+    }
+    else if (false) {
+      actId = Pop1(tape.candidates);
+    }
+    else if (false) {
+      actId = tape.candidates[0];
+      bool maximize = false;
+      bool have = false;
+      uint nConflictsExtremum = 0;
+      for (uint i = 0; i < tape.candidates.size(); ++i) {
+        uint nConflicts = *MapLookup(conflicts, tape.candidates[i]);
+        if (!tape.backReachPF.overlapCk(topo.image(topo.actionPF(tape.candidates[i])))) {
+          // Don't use
+        }
+        else if (!have) {
+          have = true;
+          nConflictsExtremum = nConflicts;
+          actId = tape.candidates[i];
+        }
+        else if (maximize && nConflicts > nConflictsExtremum) {
+          nConflictsExtremum = nConflicts;
+          actId = tape.candidates[i];
+        }
+        else if (!maximize && nConflicts < nConflictsExtremum) {
+          nConflictsExtremum = nConflicts;
+          actId = tape.candidates[i];
+        }
+      }
+      Remove1(tape.candidates, actId);
+    }
+
     FMem_AddConvergence next( tape );
     ReviseDeadlocksMRV(tape.mrvDeadlocks, topo, Set<uint>(), Set<uint>(actId));
-    ReviseDeadlocksMRV(next.mrvDeadlocks, topo, Set<uint>(actId), Set<uint>());
     next.actions.push_back(actId);
 
     PF actPF = topo.actionPF(actId);
@@ -322,6 +569,24 @@ AddConvergence(vector<uint> retActions,
 
     PF resolved( topo.preimage(actPF) & tape.deadlockPF );
     next.deadlockPF -= resolved;
+
+    if (true || tape.actions.size() < 18) {
+      DBogOF << " -- " << tape.actions.size()
+        << " -- " << tape.candidates.size() << " -- ";
+      OPut(DBogOF, topo.action(actId), topo) << '\n';
+    }
+
+    {
+      Set<uint> delSet;
+      QuickTrim(delSet, next.candidates, sys.topology, actId);
+      Set<uint>::const_iterator delit;
+      for (delit = delSet.begin(); delit != delSet.end(); ++delit) {
+        next.hiXnRel -= topo.actionPF(*delit);
+        Remove1(next.candidates, *delit);
+        //OPut( DBogOF << "Pruned: ", topo.action(*delit), topo) << '\n';
+      }
+      ReviseDeadlocksMRV(next.mrvDeadlocks, topo, Set<uint>(actId), delSet);
+    }
 
     bool found = AddConvergence(retActions, sys, next);
     if (found) {
@@ -334,6 +599,13 @@ AddConvergence(vector<uint> retActions,
   return false;
 }
 
+/**
+ * Add convergence to a system.
+ * The system will therefore be self-stabilizing.
+ *
+ * \param sys  System definition. It is modified if convergence is added.
+ * \return  True iff convergence could be added.
+ */
   bool
 AddConvergence(XnSys& sys)
 {
@@ -360,11 +632,17 @@ AddConvergence(XnSys& sys)
     XnAct act( topo.action(i) );
     PF actPF( topo.actionPF(i) );
 
-    // Check for self-loops. This is an inefficient method,
-    // but the check only happens once.
-    if (add && (topo.preimage(actPF).equivCk(topo.image(actPF)))) {
-      add = false;
-      if (false) {
+    // Check for self-loops.
+    if (add) {
+      const XnPc& pc = topo.pcs[act.pcIdx];
+      bool selfloop = true;
+      for (uint j = 0; j < pc.wvbls.size(); ++j) {
+        if (act.w1[j] != act.w0[j]) {
+          selfloop = false;
+        }
+      }
+      add = !selfloop;
+      if (false && selfloop) {
         OPut((DBogOF << "Action " << i << " is a self-loop: "), act, topo) << '\n';
       }
     }
@@ -448,13 +726,7 @@ void ColorRing(XnSys& sys, uint npcs)
 
     // Add to the accepting states all of the states where
     // mq is a different color than both mp and mr
-    sys.invariant &=
-      (mp==0 && mq==1 && mr==2) ||
-      (mp==0 && mq==2 && mr==1) ||
-      (mp==1 && mq==2 && mr==0) ||
-      (mq==1 && mq==0 && mr==2) ||
-      (mp==2 && mq==0 && mr==1) ||
-      (mp==2 && mq==1 && mr==0);
+    sys.invariant &= !(mp==mq) && !(mq==mr);
   }
 }
 
@@ -485,7 +757,10 @@ void InstMatching(XnSys& sys, uint npcs)
   }
 }
 
-void test()
+/**
+ * Test dat code.
+ */
+void Test()
 {
   XnSys sys;
   InstMatching(sys, 3);
@@ -559,8 +834,23 @@ void test()
   Claim( !(dstPF & sys.invariant).tautologyCk(false) );
   Claim( !(~(dstPF & sys.invariant)).tautologyCk(true) );
   Claim( (actPF - srcPF).tautologyCk(false) );
+
+  {
+    PF cyclePF =
+      ((topo.pfVbl(0, 0) == 1) &
+       (topo.pfVblR(0, 0) == 1) &
+       (topo.pfVblR(0, 1) == 2) &
+       (topo.pfVblPrimed(0, 0) == 0))
+      |
+      ((topo.pfVbl(0, 0) == 2) &
+       (topo.pfVblR(0, 0) == 1) &
+       (topo.pfVblR(0, 1) == 2) &
+       (topo.pfVblPrimed(0, 0) == 1));
+    Claim( CycleCk(sys, cyclePF) );
+  }
 }
 
+/** Execute me now!*/
 int main(int argc, char** argv)
 {
   int argi = 1;
@@ -570,7 +860,7 @@ int main(int argc, char** argv)
   if (argi < argc) {
     if (string(argv[argi]) == "test") {
       DBog0( "Running tests..." );
-      test();
+      Test();
       DBog0( "Done." );
       return 0;
     }
@@ -598,9 +888,7 @@ int main(int argc, char** argv)
     return 1;
   }
 
-#if 1
   XnSys sys;
-  XnNet& topo = sys.topology;
   switch(problem){
     case 0: ColorRing(sys,NPs); break;
     case 1: InstMatching(sys,NPs); break;
@@ -614,6 +902,8 @@ int main(int argc, char** argv)
     DBog0("No solution found...");
   }
 
+#if 0
+  XnNet& topo = sys.topology;
   DBog0("Showing all variables");
   print_mvar_list(topo.pfCtx.mdd_ctx());
 

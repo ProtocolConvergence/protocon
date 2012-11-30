@@ -94,7 +94,7 @@ public:
   const XnVbl& rvbl(uint pcIdx, uint vblIdx) const
   {
     const pair<uint,uint>& p = pcs[pcIdx].rvbls[vblIdx];
-    return pcs[p.first].wvbls[p.second];
+    return wvbl(p.first, p.second);
   }
 
   const PFVbl pfVbl(uint pcIdx, uint vblIdx) const
