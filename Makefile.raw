@@ -5,6 +5,7 @@ CC = gcc
 
 CONFIG += ansi
 CONFIG += debug
+#CONFIG += fast
 
 CxPath = ../cx
 BinPath = ../bin
@@ -25,7 +26,7 @@ $(call binexe,satsyn): $(BldPath)/satsyn.o \
 
 $(BldPath)/satsyn.c: $(addprefix $(BldPath)/,\
 	dimacs.c pla.c promela.c \
-	inst-sat3.c inst-matching.c inst-coloring.c inst-bit3.c)
+	inst-sat3.c inst-matching.c inst-coloring.c inst-bit3.c inst-dijkstra.c)
 
 .PHONY: clean
 clean:

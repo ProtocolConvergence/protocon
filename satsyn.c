@@ -19,7 +19,8 @@ enum XnSysInstance {
     Sat3RingWSatInst,
     MatchingInst,
     ColoringInst,
-    Bit3Inst,
+    TokenRing3BitInst,
+    TokenRingDijkstraInst,
     NXnSysInstances
 };
 
@@ -1370,6 +1371,13 @@ synsearch_quicktrim_mayrules (FnWMem_synsearch* tape, XnSz nadded)
             may_rules->s[off] = may_rules->s[i];
             ++ off;
         }
+        else if (false)
+        {
+            OFileB* of = stderr_OFileB ();
+            oput_cstr_OFileB (of, "Pruned: ");
+            oput_promela_XnRule (of, g0, sys);
+            oput_char_OFileB (of, '\n');
+        }
     }
     if (DBog_QuickTrim)
         DBog1( "Removed:%lu", may_rules->sz - off );
@@ -1456,6 +1464,13 @@ synsearch_trim (FnWMem_synsearch* tape)
 
                 may_rules->s[off] = may_rules->s[i];
                 ++ off;
+            }
+            else if (false)
+            {
+                OFileB* of = stderr_OFileB ();
+                oput_cstr_OFileB (of, "Pruned: ");
+                oput_promela_XnRule (of, g, sys);
+                oput_char_OFileB (of, '\n');
             }
 
             back1_Xn (&tape->xns, &tape->xn_stk);
@@ -1788,6 +1803,7 @@ testfn_detect_livelock ()
 #include "inst-matching.c"
 #include "inst-coloring.c"
 #include "inst-bit3.c"
+#include "inst-dijkstra.c"
 
     Trit
 swapped_XnSz (const XnSz* a, const XnSz* b)
@@ -2121,7 +2137,8 @@ main (int argc, char** argv)
         /* Sat3RingWSatInst */
         /* MatchingInst */
         /* ColoringInst */
-        /* Bit3Inst */
+        /* TokenRing3BitInst */
+        /* TokenRingDijkstraInst */
         ;
     const bool use_synsearch_sat = true;
     const uint n_ring_pcs = 4;  /* For rings (excluding 3-SAT rings).*/
@@ -2184,8 +2201,11 @@ main (int argc, char** argv)
     case ColoringInst:
         *sys = inst_coloring_XnSys (n_ring_pcs, domsz);
         break;
-    case Bit3Inst:
+    case TokenRing3BitInst:
         *sys = inst_bit3_XnSys (n_ring_pcs);
+        break;
+    case TokenRingDijkstraInst:
+        *sys = inst_dijkstra_XnSys (n_ring_pcs);
         break;
     default:
         failout_sysCx ("Invalid problem instance.");

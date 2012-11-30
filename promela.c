@@ -24,6 +24,29 @@ oput_promela_XnRule (OFileB* of, const XnRule* g, const XnSys* sys)
 
     t = rvbls_XnPc (pc);
     had = false;
+
+#if 1
+    {:for (j ; t.sz)
+        XnEVbl x;
+        x.vbl = &sys->vbls.s[pc->vbls.s[j]];
+        x.val = g->p.s[j];
+        if (had)  oput_cstr_OFileB (of, " && ");
+        had = true;
+        oput_XnEVbl (of, &x, "==");
+    }
+
+    oput_cstr_OFileB (of, " ->");
+
+    t = wvbls_XnPc (pc);
+    {:for (j ; t.sz)
+        XnEVbl x;
+        oput_char_OFileB (of, ' ');
+        x.vbl = &sys->vbls.s[pc->vbls.s[j]];
+        x.val = g->q.s[j];
+        oput_XnEVbl (of, &x, "=");
+        oput_char_OFileB (of, ';');
+    }
+#else
     {:for (i ; sys->vbls.sz)
         {:for (j ; t.sz)
             if (t.s[j] == i)
@@ -54,6 +77,7 @@ oput_promela_XnRule (OFileB* of, const XnRule* g, const XnSys* sys)
             }
         }
     }
+#endif
 }
     void
 oput_promela_select (OFileB* of, const XnVbl* vbl)
