@@ -1,0 +1,127 @@
+
+\input{preamble}
+
+\newcommand{\actxnto}{\,\to\,}
+
+\begin{document}
+\title{Enforcing Process Behavior}
+\author{Alex Klinkhamer}
+\maketitle
+
+\section{Read-Only Variable}
+If we want process $P_i$ to have a read-only variable $x$, then constrain $P_i$ by the following the following stabilizing system.
+Let there be a system of two processes, $P_i$ and $P_W$, which each have a variable $x$ of the same domain size.
+$P_i$ may have other variables.
+Define the invariant as
+\[I \equiv (P_i\oodot x = P_W\oodot x)\]
+The protocol is self-stabilizing iff the following hold.
+\begin{itemize}
+\item $P_W$ is programmed as $P_W\oodot x \ne P_i\oodot x \actxnto P_W\oodot x\defeq P_i\oodot x$.
+\item $P_i$ contains no self-loops.
+\item $P_i$ never changes $P_i\oodot x$.
+\end{itemize}
+
+\section{Read-Only Variable in a System}
+We can also enforce $P_i\oodot x$ is read-only by $P_i$ without constraining $P_i$ by an additional system.
+Create two new processes $P_R$ and $P_W$, each with the variable $x$ of the same domain size as $P_i\oodot x$.
+Let $P_W$ read $P_i\oodot x$.
+Define the invariant as
+\[I'\equiv (I\vee (P_i\oodot x = P_R\oodot x)) \wedge (P_i\oodot x = P_W\oodot x)\]
+
+\section{Fixed Process Actions}
+If we want to fully define actions of a process $P_i$, then constrain $P_i$ by the following stabilizing system.
+Let there be a system with processes $P_C$, $P_i$, $P_W$, and $P_R$, each owning a set of variables $X$.
+Define $P_i\oodot X$, $P_W\oodot X$, and $P_R\oodot X$ to hold variables of the same names and domains.
+Let $P_i$ read all variables $P_C\oodot X$, noting that $P_C\oodot X$ is not similar to any of the other sets of process variables.
+Let $P_W$ read $P_i\oodot X$.
+Define $P_C$ and $P_R$ as read-only.
+Define the invariant using $C\defeq P_C\oodot X$, $W\defeq P_W\oodot X$, and $R\defeq P_R\oodot X$.
+\begin{eqnarray*}
+I & \equiv & \cvbl{enable\_ck}(C \wedge P_i\oodot X) \wedge ((P_i\oodot X = W) \vee \cvbl{act}(C\wedge W \actxnto P_i\oodot X))
+\\ & \vee & \cvbl{enable\_ck}(C \wedge P_i\oodot X) \wedge (P_i\oodot X = W = R)
+\end{eqnarray*}
+Where the \cvbl{enable\_ck} and \cvbl{act\_ck} predicates consult our desired definition for $P_i$.
+That is, $\cvbl{enable\_ck}(C\wedge P_i\oodot X)$ should be true iff we want $P_i$ to transition somewhere else.
+Further, $\cvbl{act\_ck}(C\wedge W \actxnto Y)$ should be true iff we want $P_i$ to have the action $C \wedge W \actxnto Y$.
+
+\section{Token Ring of Three Bits}
+Synthesizing this token ring properly is tricky because the invariant is a result of human ingenuity.
+That is to say, we cannot claim a tool can synthesize a stabilizing protocol for this system if we have to provide such a clever invariant.
+
+Consider a token ring of $1$ bit per process.
+There are $N$ processes, $P_0,\dots,P_{N-1}$, each having a variable $x\in\Nat_2$.
+Each $P_i$ can read $P_{i-1}$ (assume $P_{i-1\modop{N}}$), calling it $P_i\oodot \vbl{xp}$.
+Processes $P_1,\dots,P_{N-1}$ are symmetric.
+$P_0$ is said to have a token when $(P_0\oodot x = P_0\oodot \vbl{xp})$.
+Any other other $P_i$ is said to have a token when $(P_i\oodot x \ne P_i\oodot \vbl{xp})$.
+
+Fix $P_0$ to have the actions
+\[ P_0:\; (x = \vbl{xp}) \actxnto x\defeq \neg \vbl{xp}; \]
+Fix all other $P_i$ to have actions
+\[ P_i:\; (x \ne \vbl{xp}) \actxnto x\defeq \vbl{xp}; \]
+
+Let us augment this system for synthesis.
+
+Introduce $N$ more processes $A_0,\dots,A_{N-1}$ to the system.
+Each $A_i$ owns $5$ variables.
+\begin{enumerate}
+\item $\vbl{xp} \in \Nat_2$.
+\item $\vbl{lock} \in \Nat_2$.
+\item $e,t,\vbl{ready} \in \Nat_2$.
+\end{enumerate}
+Each $A_i$ reads $5$ variables.
+\begin{enumerate}
+\item $A_i\oodot\vbl{x}$ being $x$ from $P_i$.
+\item $A_i\oodot\vbl{lockp}$ and $A_i\oodot\vbl{lockq}$ being \vbl{lock} from $A_{i-1}$ and $A_{i+1}$.
+\item $A_i\oodot\vbl{ep}$ and $A_i\oodot\vbl{tp}$ being $e$ and $t$ from $A_{i-1}$.
+\end{enumerate}
+
+Now the important steps.
+\begin{itemize}
+\item Augment $P_i\oodot\vbl{xp}$ to look at $A_i\oodot\vbl{xp}$ instead of $P_{i-1}$.
+\item Fix all programs for $P_i$ as defined by the non-stabilizing token ring.
+\item Define the following of actions of each $A_i$.
+ \begin{itemize}
+ \item $A_i:\; \vbl{lock}=1 \wedge (\vbl{lockp}=1 \vee \vbl{lockq}=1) \actxnto \vbl{lock}\defeq 0;$
+  \begin{itemize}
+  \item Note that this also ensures $A_i$ is disabled when $\vbl{lock}=0 \wedge (\vbl{lockp}=1 \vee \vbl{lockq}=1)$.
+  \end{itemize}
+ \item $A_i:\; \vbl{lock}=0 \wedge \vbl{lockp}=0 \wedge \vbl{lockq}=0 \wedge \cvbl{enable\_ck}(P_i) \actxnto \vbl{lock}\defeq 1;$
+  \begin{itemize}
+  \item This helps define the system without overdoing it.
+  \item Perhaps this would not be good in the general case.
+  \end{itemize}
+ \end{itemize}
+\item Define the invariant as a conjunction of:
+ \begin{itemize}
+ \item TODO: This is too strict, closure cannot be achieved!
+ \item $(\forall i\in\Nat_N: A_i\oodot\vbl{lock}=0) \implies (\exists i\in \Nat_N: \cvbl{only\_token\_ck}(i))$
+  \begin{itemize}
+  \item This is the original invariant on all $P_i$.
+  \item Def. $\cvbl{only\_token\_ck}(i)\equiv \cvbl{token\_ck}(i) \wedge (\forall j\in\Nat_N: i=j \vee \neg \cvbl{token\_ck}(j))$
+  \item Def. $\cvbl{token\_ck}(i)\equiv (i=0\wedge P_i\oodot x = P_{i-1}\oodot x) \vee (i\ne 0\wedge P_i\oodot x \ne P_{i-1}\oodot x)$
+  \end{itemize}
+ \item $\forall i\in\Nat_N: \cvbl{enable\_ck}(P_i) \implies A_i\oodot\vbl{lock}=1$
+  \begin{itemize}
+  \item Probably not needed.
+  \end{itemize}
+ \item $\forall i\in\Nat_N: (A_i\oodot\vbl{lock}=1) \implies (P_{i-1}\oodot x = A_i\oodot\vbl{xp})$
+  \begin{itemize}
+  \item This ensures that $A_i$ does not lie to $P_i$.
+  \end{itemize}
+ \end{itemize}
+ \item Enforce that $A_i$ must have an action which is equivalent to
+ \begin{eqnarray*}
+ A_i: & & (\vbl{lock} = \vbl{lockp} = \vbl{lockq} = 0) \wedge \neg \cvbl{enable\_ck}(P_i) \wedge (\vbl{xp} \ne P_{i-1}\oodot x)
+ \\& \actxnto & \vbl{xp} \defeq P_{i-1}\oodot x;
+ \\& & \vbl{lock} \defeq 1 \mbox{ or remains } 0;
+ \end{eqnarray*}
+  \begin{itemize}
+  \item TODO
+  \item Do this by constraining $A_i$ by another system containing only $P_i$, $P_{i-1}$, $A_i$, and a new process $D$ which has all the variables of $A_{i-1}$ which are read by $P_{i-1}$ and $A_i$.
+  \item Invariant $I \equiv \neg \cvbl{enable\_ck}(P_{i-1}) \wedge (A_i\oodot\vbl{xp} = P_{i-1}\oodot x)$
+  \end{itemize}
+\end{itemize}
+
+\end{document}
+

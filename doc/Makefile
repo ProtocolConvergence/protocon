@@ -1,9 +1,9 @@
 
 CxPfx = ../../cx
 
-all: tosat.pdf algo.pdf
+all: tosat.pdf algo.pdf behavior.pdf
 
-%.pdf: %.tex $(CxPfx)/doc/preamble.tex
+%.pdf: %.tex $(addprefix $(CxPfx)/doc/,preamble.tex predef.tex)
 	env TEXINPUTS=$(CxPfx)/doc:.: pdflatex $<
 
 .PHONY: clean
