@@ -17,7 +17,7 @@ oput_promela_XnRule (OFileB* of, const XnRule* g, const XnSys* sys)
 {
     bool had;
     XnPc* pc = &sys->pcs.s[g->pc];
-    TableT(XnSz) t;
+    TableT(uint) t;
     oput_cstr_OFileB (of, "/*P");
     oput_uint_OFileB (of, g->pc);
     oput_cstr_OFileB (of, "*/ ");

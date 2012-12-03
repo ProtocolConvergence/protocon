@@ -9,7 +9,7 @@ static
 inst_dijkstra_XnSys (uint npcs)
 {
     DeclTable( uint, x_idcs );
-    DeclTable( DomSz, vs );
+    DeclTable( XnDomSz, vs );
     DecloStack1( XnSys, sys, dflt_XnSys () );
     OFileB name = dflt_OFileB ();
 
@@ -26,7 +26,7 @@ inst_dijkstra_XnSys (uint npcs)
         PushTable( sys->vbls, x_vbl );
     }
 
-    /* Make bidirectional ring topology.*/
+    /* Make unidirectional ring topology.*/
     {:for (r ; npcs)
         assoc_XnSys (sys, r, x_idcs.s[r], Yes);
         assoc_XnSys (sys, r, x_idcs.s[dec1mod (r, npcs)], May);

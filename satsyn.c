@@ -13,7 +13,7 @@
 #include <assert.h>
 #include <stdio.h>
 
-#define NMaxXnPcVbls 10
+#include "xnsys.h"
 
 enum XnSysInstance {
     Sat3Inst,
@@ -23,6 +23,7 @@ enum XnSysInstance {
     ColoringInst,
     TokenRing3BitInst,
     TokenRingDijkstraInst,
+    TokenRingDijkstra4StateInst,
     NXnSysInstances
 };
 
@@ -36,94 +37,17 @@ static const bool DBog_QuickTrim = false;
 /** Use Z3 instead of MiniSat.**/
 static const bool SatSolve_Z3 = false;
 
-typedef struct XnPc XnPc;
-typedef struct XnVbl XnVbl;
-typedef struct XnEVbl XnEVbl;
-typedef struct XnRule XnRule;
-typedef struct XnSys XnSys;
-//typedef ujint XnSz;
-typedef uint XnSz;
-typedef byte DomSz;
 typedef struct BoolLit BoolLit;
 typedef struct CnfDisj CnfDisj;
 typedef struct CnfFmla CnfFmla;
-typedef struct XnSz2 XnSz2;
 typedef struct FMem_detect_livelock FMem_detect_livelock;
 typedef struct FMem_detect_convergence FMem_detect_convergence;
 typedef struct FMem_do_XnSys FMem_do_XnSys;
 typedef struct FMem_synsearch FMem_synsearch;
 
-DeclTableT( XnPc, XnPc );
-DeclTableT( XnVbl, XnVbl );
-DeclTableT( XnEVbl, XnEVbl );
-DeclTableT( XnRule, XnRule );
-DeclTableT( XnSz, XnSz );
 DeclTableT( BoolLit, BoolLit );
 DeclTableT( CnfDisj, CnfDisj );
-DeclTableT( Xns, TableT(XnSz) );
-DeclTableT( XnSz2, XnSz2 );
-DeclTableT( DomSz, DomSz );
 
-
-/** Holds two XnSz values.**/
-struct XnSz2 { XnSz i; XnSz j; };
-
-/** Process in a transition system.**/
-struct XnPc
-{
-    /** Variables this process uses.
-     * Variables which this process can write all appear at the beginning.
-     **/
-    TableT(XnSz) vbls;
-    /** Number of variables for which this
-     * process has write and read permissions.
-     **/
-    XnSz nwvbls;
-
-    XnSz nstates; /**< Same as /legit.sz/.**/
-
-    XnSz rule_step;
-    TableT(XnSz) rule_stepsz_p;
-    TableT(XnSz) rule_stepsz_q;
-};
-
-/** Variable in a transition system.**/
-struct XnVbl
-{
-    AlphaTab name;
-    DomSz domsz; /**< Maximum value in the domain.**/
-    TableT(XnSz) pcs; /**< List of processes which use this variable.**/
-    XnSz nwpcs;  /**< Number of processes with write (and read) permission.**/
-    XnSz stepsz; /**< Step size global state space.**/
-};
-
-/** Evaluation of an XnVbl.**/
-struct XnEVbl
-{
-    DomSz val; /**< Evaluation.**/
-    const XnVbl* vbl;
-};
-
-/** Transition rule (aka "action" or "transition group").**/
-struct XnRule
-{
-    uint pc; /**< Process to which this rule belongs.**/
-    FixTableT(DomSz, NMaxXnPcVbls) p; /**< Local state of the process to enable this action.**/
-    FixTableT(DomSz, NMaxXnPcVbls) q; /**< New values of writable variables.**/
-};
-
-/** Transition system.**/
-struct XnSys
-{
-    TableT(XnPc) pcs;
-    TableT(XnVbl) vbls;
-    BitTable legit; 
-    TableT(XnRule) legit_rules;
-    XnSz nstates; /**< Same as /legit.sz/.**/
-    XnSz n_rule_steps;
-    /** Allow new transitions in the set of legitimate states.**/
-    bool syn_legit;
-};
 
 struct FMem_detect_livelock
 {
@@ -143,7 +67,7 @@ struct FMem_detect_convergence
 
 struct FMem_do_XnSys
 {
-    DomSz* vals;
+    XnDomSz* vals;
     BitTable fixed;
     TableT(XnEVbl) evs;
     const XnSys* sys;
@@ -192,130 +116,8 @@ struct CnfFmla {
     BitTable vals;  /**< Clause values, negative (0) or positive (1).**/
 };
 
-    XnPc
-dflt_XnPc ()
-{
-    XnPc pc;
-    InitTable( pc.vbls );
-    pc.nwvbls = 0;
-    pc.nstates = 0;
-    pc.rule_step = 0;
-    InitTable( pc.rule_stepsz_p );
-    InitTable( pc.rule_stepsz_q );
-    return pc;
-}
-
 void
 add_XnRule (FMem_synsearch* tape, const XnRule* g);
-
-    void
-lose_XnPc (XnPc* pc)
-{
-    LoseTable( pc->vbls );
-    LoseTable( pc->rule_stepsz_p );
-    LoseTable( pc->rule_stepsz_q );
-}
-
-    XnVbl
-dflt_XnVbl ()
-{
-    XnVbl x;
-    x.name = cons1_AlphaTab ("x");
-    x.domsz = 1;
-    InitTable( x.pcs );
-    x.nwpcs = 0;
-    x.stepsz = 0;
-    return x;
-}
-
-    void
-lose_XnVbl (XnVbl* x)
-{
-    lose_AlphaTab (&x->name);
-    LoseTable( x->pcs );
-}
-
-    XnRule
-dflt_XnRule ()
-{
-    XnRule g;
-    g.pc = 0;
-    InitFixTable( g.p );
-    InitFixTable( g.q );
-    return g;
-}
-
-    XnRule
-cons2_XnRule (uint np, uint nq)
-{
-    XnRule g = dflt_XnRule ();
-    EnsizeTable( g.p, np );
-    EnsizeTable( g.q, nq );
-    {:for (i ; np)
-        g.p.s[i] = 0;
-    }
-    {:for (i ; nq)
-        g.q.s[i] = 0;
-    }
-    return g;
-}
-
-    XnRule
-cons3_XnRule (uint pcidx, uint np, uint nq)
-{
-    XnRule g = cons2_XnRule (np, nq);
-    g.pc = pcidx;
-    return g;
-}
-
-    XnRule
-dup_XnRule (const XnRule* src)
-{
-    XnRule dst = dflt_XnRule ();
-    dst.pc = src->pc;
-    CopyTable( dst.p, src->p );
-    CopyTable( dst.q, src->q );
-    return dst;
-}
-
-    void
-lose_XnRule (XnRule* g)
-{
-    LoseTable( g->p );
-    LoseTable( g->q );
-}
-
-    XnSys
-dflt_XnSys ()
-{
-    XnSys sys;
-    InitTable( sys.pcs );
-    InitTable( sys.vbls );
-    sys.legit = dflt_BitTable ();
-    InitTable( sys.legit_rules );
-    sys.nstates = 0;
-    sys.n_rule_steps = 0;
-    sys.syn_legit = false;
-    return sys;
-}
-
-    void
-lose_XnSys (XnSys* sys)
-{
-    {:for (i ; sys->pcs.sz)
-        lose_XnPc (&sys->pcs.s[i]);
-    }
-    LoseTable( sys->pcs );
-    {:for (i ; sys->vbls.sz)
-        lose_XnVbl (&sys->vbls.s[i]);
-    }
-    LoseTable( sys->vbls );
-    lose_BitTable (&sys->legit);
-    {:for (i ; sys->legit_rules.sz)
-        lose_XnRule (&sys->legit_rules.s[i]);
-    }
-    LoseTable( sys->legit_rules );
-}
 
     BoolLit
 dflt2_BoolLit (bool val, uint vbl)
@@ -403,90 +205,6 @@ oput_BitTable (OFileB* f, const BitTable bt)
 }
 
 
-    TableT(XnSz)
-wvbls_XnPc (const XnPc* pc)
-{
-    DeclTable( XnSz, t );
-    t.s = pc->vbls.s;
-    t.sz = pc->nwvbls;
-    return t;
-}
-
-    TableT(XnSz)
-rvbls_XnPc (const XnPc* pc)
-{
-    return pc->vbls;
-}
-
-    TableT(XnSz)
-wpcs_XnVbl (XnVbl* x)
-{
-    DeclTable( XnSz, t );
-    t.s = x->pcs.s;
-    t.sz = x->nwpcs;
-    return t;
-}
-
-    TableT(XnSz)
-rpcs_XnVbl (XnVbl* x)
-{
-    return x->pcs;
-}
-
-    XnSz
-size_XnSys (const XnSys* sys)
-{
-    XnSz sz = 1;
-
-    {:for (i ; sys->vbls.sz)
-        const XnSz psz = sz;
-        sz *= (XnSz) sys->vbls.s[i].domsz;
-
-        if (sz <= psz)
-        {
-            fprintf (stderr, "Size shrunk!\n");
-            return 0;
-        }
-    }
-
-    return sz;
-}
-
-/**
- * mode:
- * - Nil - write-only (NOT SUPPORTED)
- * - Yes - read-write
- * - May - read-only
- **/
-    void
-assoc_XnSys (XnSys* sys, uint pc_idx, uint vbl_idx, Trit mode)
-{
-    XnPc* const pc = &sys->pcs.s[pc_idx];
-    XnVbl* const x = &sys->vbls.s[vbl_idx];
-
-    Claim2( mode ,!=, Nil );
-
-    if (mode == May)
-    {
-        PushTable( pc->vbls, vbl_idx );
-        PushTable( x->pcs, pc_idx );
-    }
-    if (mode == Yes)
-    {
-        GrowTable( pc->vbls, 1 );
-        GrowTable( x->pcs, 1 );
-
-
-        for (uint i = pc->vbls.sz - 1; i > pc->nwvbls; --i)
-            pc->vbls.s[i] = pc->vbls.s[i-1];
-        for (uint i = x->pcs.sz - 1; i > x->nwpcs; --i)
-            x->pcs.s[i] = x->pcs.s[i-1];
-
-        pc->vbls.s[pc->nwvbls ++] = vbl_idx;
-        x->pcs.s[x->nwpcs ++] = pc_idx;
-    }
-}
-
 qual_inline
     uint
 inc1mod (uint i, uint n)
@@ -501,152 +219,6 @@ dec1mod (uint i, uint n)
     return (i + n - 1) % n;
 }
 
-/** Call this when you're done specifying all processes and variables
- * and wish to start specifying invariants.
- **/
-    void
-accept_topology_XnSys (XnSys* sys)
-{
-    XnSz stepsz = 1;
-    {:for (i ; sys->vbls.sz)
-        XnVbl* x = &sys->vbls.s[sys->vbls.sz-1-i];
-        x->stepsz = stepsz;
-        stepsz *= x->domsz;
-        if (x->domsz == 0)
-        {
-            DBog0( "Impossible domain size of zero." );
-            failout_sysCx ("");
-        }
-        if (x->domsz != 1 && x->stepsz >= stepsz)
-        {
-            DBog0( "Cannot hold all the states!" );
-            failout_sysCx ("");
-        }
-    }
-
-    /* All legit states.*/
-    sys->nstates = stepsz;
-    sys->legit = cons2_BitTable (sys->nstates, 1);
-
-    {:for (pcidx ; sys->pcs.sz)
-        XnPc* pc = &sys->pcs.s[pcidx];
-        uint n;
-
-        SizeTable( pc->rule_stepsz_p, pc->vbls.sz );
-        SizeTable( pc->rule_stepsz_q, pc->nwvbls );
-
-        stepsz = 1;
-
-        n = pc->rule_stepsz_p.sz;
-        {:for (i ; n)
-            XnSz* x = &pc->rule_stepsz_p.s[n-1-i];
-            DomSz domsz = sys->vbls.s[pc->vbls.s[n-1-i]].domsz;
-
-            *x = stepsz;
-            stepsz *= domsz;
-            if (domsz != 1 && *x >= stepsz)
-            {
-                DBog0( "Cannot hold all the rules!" );
-                failout_sysCx (0);
-            }
-        }
-
-        pc->nstates = stepsz;
-
-        n = pc->rule_stepsz_q.sz;
-        {:for (i ; n)
-            XnSz* x = &pc->rule_stepsz_q.s[n-1-i];
-            DomSz domsz = sys->vbls.s[pc->vbls.s[n-1-i]].domsz;
-
-            *x = stepsz;
-            stepsz *= domsz;
-            if (domsz != 1 && *x >= stepsz)
-            {
-                DBog0( "Cannot hold all the rules!" );
-                failout_sysCx (0);
-            }
-        }
-
-        if (pcidx == 0)
-            pc->rule_step = 0;
-
-        sys->n_rule_steps = pc->rule_step + stepsz;
-
-        if (pcidx < sys->pcs.sz-1)
-            sys->pcs.s[pcidx+1].rule_step = sys->n_rule_steps;
-    }
-}
-
-
-/** Given a state index, find the corresponding variable assignments.
- **/
-    void
-statevs_of_XnSys (TableT(DomSz)* t, const XnSys* sys, XnSz sidx)
-{
-    SizeTable( *t, sys->vbls.sz );
-    {:for (i ; sys->vbls.sz)
-        const XnVbl* x = &sys->vbls.s[i];
-        t->s[i] = (sidx / x->stepsz);
-        sidx = (sidx % x->stepsz);
-    }
-}
-
-
-    void
-oput_XnEVbl (OFileB* of, const XnEVbl* ev, const char* delim)
-{
-    oput_AlphaTab (of, &ev->vbl->name);
-    if (!delim)  delim = "=";
-    oput_cstr_OFileB (of, delim);
-    oput_uint_OFileB (of, ev->val);
-}
-
-    void
-rule_XnSys (XnRule* g, const XnSys* sys, XnSz idx)
-{
-    const XnPc* pc = 0;
-    g->pc = sys->pcs.sz - 1;
-    {:for (i ; sys->pcs.sz-1)
-        if (idx < sys->pcs.s[i+1].rule_step)
-        {
-            g->pc = i;
-            break;
-        }
-    }
-
-    pc = &sys->pcs.s[g->pc];
-    idx -= pc->rule_step;
-
-    EnsizeTable( g->q, pc->rule_stepsz_q.sz );
-    {:for (i ; g->q.sz)
-        XnSz d = pc->rule_stepsz_q.s[i];
-        g->q.s[i] = idx / d;
-        idx = idx % d;
-    }
-
-    EnsizeTable( g->p, pc->rule_stepsz_p.sz );
-    {:for (i ; g->p.sz)
-        XnSz d = pc->rule_stepsz_p.s[i];
-        g->p.s[i] = idx / d;
-        idx = idx % d;
-    }
-}
-
-    XnSz
-step_XnRule (const XnRule* g, const XnSys* sys)
-{
-    const XnPc* pc = &sys->pcs.s[g->pc];
-    XnSz step = pc->rule_step;
-
-    {:for (i ; g->p.sz)
-        step += g->p.s[i] * pc->rule_stepsz_p.s[i];
-    }
-    {:for (i ; g->q.sz)
-        step += g->q.s[i] * pc->rule_stepsz_q.s[i];
-    }
-
-    return step;
-}
 
 #include "promela.c"
 
@@ -658,7 +230,7 @@ cons1_FMem_do_XnSys (const XnSys* sys)
     const ujint n = sys->vbls.sz;
 
     tape.sys = sys;
-    tape.vals = AllocT( DomSz, n);
+    tape.vals = AllocT( XnDomSz, n);
     tape.fixed = cons2_BitTable( n, 0 );
     InitTable( tape.evs );
     GrowTable( tape.evs, n );
@@ -1806,6 +1378,7 @@ testfn_detect_livelock ()
 #include "inst-coloring.c"
 #include "inst-bit3.c"
 #include "inst-dijkstra.c"
+#include "inst-dijkstra4state.c"
 
     Trit
 swapped_XnSz (const XnSz* a, const XnSz* b)
@@ -2134,16 +1707,17 @@ main (int argc, char** argv)
 {
     int argi = (init_sysCx (&argc, &argv), 1);
     const XnSysInstance inst_kind =
-        Sat3Inst
+        /* Sat3Inst */
         /* Sat3RingInst */
         /* Sat3RingWSatInst */
         /* MatchingInst */
-        /* ColoringInst */
+        ColoringInst
         /* TokenRing3BitInst */
         /* TokenRingDijkstraInst */
+        /* TokenRingDijkstra4StateInst */
         ;
-    const bool use_synsearch_sat = true;
-    const uint n_ring_pcs = 4;  /* For rings (excluding 3-SAT rings).*/
+    const bool use_synsearch_sat = false;
+    const uint n_ring_pcs = 6;  /* For rings (excluding 3-SAT rings).*/
     const uint domsz = 3;
     const bool manual_soln = true;
     DecloStack1( XnSys, sys, dflt_XnSys () );
@@ -2208,6 +1782,9 @@ main (int argc, char** argv)
         break;
     case TokenRingDijkstraInst:
         *sys = inst_dijkstra_XnSys (n_ring_pcs);
+        break;
+    case TokenRingDijkstra4StateInst:
+        *sys = inst_dijkstra4state_XnSys (n_ring_pcs);
         break;
     default:
         failout_sysCx ("Invalid problem instance.");

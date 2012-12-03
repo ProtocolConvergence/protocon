@@ -7,9 +7,21 @@ static
     XnSys
 inst_coloring_XnSys (uint npcs, uint domsz)
 {
-    DeclTable( DomSz, vs );
+    DeclTable( XnDomSz, vs );
     DecloStack1( XnSys, sys, dflt_XnSys () );
     OFileB name = dflt_OFileB ();
+
+#if 0
+    const bool symmetric = true;
+    if (symmetric)
+    {
+        XnPcSymm pc = cons1_XnPcSymm ("P");
+        add_vbl_XnPcSymm (&pc, "c-", 3, Nil);
+        add_vbl_XnPcSymm (&pc, "c+", 3, Nil);
+        add_vbl_XnPcSymm (&pc, "c" , 3, Yes);
+        PushTable( sys->pcsymms, pc );
+    }
+#endif
 
     /* Make processes and variables.*/
     {:for (r ; npcs)

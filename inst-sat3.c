@@ -89,7 +89,7 @@ sat3_legit_XnSys (FMem_do_XnSys* fix,
                     const uint pcidx = x_idcs[(lo + i) % npcs];
 
                     set1_BitTable (fix->fixed, pcidx);
-                    fix->vals[pcidx] = (DomSz) lits[i].vbl;
+                    fix->vals[pcidx] = (XnDomSz) lits[i].vbl;
                 }
 
                 do_XnSys (fix, bt);
@@ -471,7 +471,7 @@ sat3_ring_soln_XnSys (TableT(XnRule)* rules,
         uint x_pidcs[3];
         uint y_pidcs[3];
         uint sat_pidcs[3];
-        TableT(XnSz) vbls;
+        TableT(uint) vbls;
 
         vbls = pc->vbls;
         if (!use_sat)  Claim2( vbls.sz ,==, 6 );

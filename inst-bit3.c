@@ -13,7 +13,7 @@ inst_bit3_XnSys (uint npcs)
     DeclTable( uint, e_idcs );
     DeclTable( uint, t_idcs );
     DeclTable( uint, ready_idcs );
-    DeclTable( DomSz, vs );
+    DeclTable( XnDomSz, vs );
     DecloStack1( XnSys, sys, dflt_XnSys () );
     OFileB name = dflt_OFileB ();
 

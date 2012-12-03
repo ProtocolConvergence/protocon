@@ -7,7 +7,7 @@ static
     XnSys
 inst_matching_XnSys (uint npcs)
 {
-    DeclTable( DomSz, vs );
+    DeclTable( XnDomSz, vs );
     DecloStack1( XnSys, sys, dflt_XnSys () );
     OFileB name = dflt_OFileB ();
 
