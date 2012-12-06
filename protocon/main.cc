@@ -38,9 +38,11 @@ OPut(ostream& of, const XnAct& act, const XnNet& topo)
   bool
 WeakConvergenceCk(const XnSys& sys, const PF& xnRel)
 {
-  PF span0( sys.invariant );
-
   const XnNet& topo = sys.topology;
+  if (sys.liveLegit && !(sys.invariant <= topo.preimage(xnRel))) {
+    return false;
+  }
+  PF span0( sys.invariant );
   while (!span0.tautologyCk(true)) {
     PF span1( span0 | topo.preimage(xnRel, span0) );
     if (span1.equivCk(span0))  return false;
@@ -251,7 +253,7 @@ PickActionMRV(uint& ret_actId,
               const PF& backReachPF,
               const map<uint,uint>& conflicts)
 {
-  if (true) {
+  if (false) {
     //(void) conflicts;
     // This block picks the action which resolves the most deadlocks.
     // The number of resolved deadlocks is computed by the deadlock sets.
@@ -261,11 +263,16 @@ PickActionMRV(uint& ret_actId,
       Set<uint>::const_iterator it;
       for (it = candidates.begin(); it != candidates.end(); ++it) {
         uint* n = MapLookup(resolveMap, *it);
+        uint w = i-1;
+        if (i == 1) {
+          // We shall assert this action.
+          w = dlsets.size() * dlsets.size() * dlsets.size();
+        }
         if (!n) {
-          resolveMap[*it] = i-1;
+          resolveMap[*it] = w;
         }
         else {
-          *n += i-1;
+          *n += w;
         }
       }
     }
@@ -277,7 +284,9 @@ PickActionMRV(uint& ret_actId,
       for (it = resolveMap.begin(); it != resolveMap.end(); ++it) {
         uint n = it->second;
         if (backReachPF.overlapCk(topo.image(topo.actionPF(it->first)))) {
-          n += dlsets.size();
+          if (!(topo.preimage(topo.actionPF(it->first)) <= backReachPF)) {
+            n += dlsets.size() * dlsets.size();
+          }
         }
         if (n > nMax) {
           actId = it->first;
@@ -288,7 +297,7 @@ PickActionMRV(uint& ret_actId,
       return true;
     }
   }
-  else if (false) {
+  else if (true) {
     //(void) conflicts;
     // Do minimum remaining values (MRV).
     // That is, find an action which resolves a deadlock for which
@@ -299,12 +308,15 @@ PickActionMRV(uint& ret_actId,
       Set<uint>::const_iterator it;
       for (it = candidates.begin(); it != candidates.end(); ++it) {
         uint actId = *it;
-        if (backReachPF.overlapCk(topo.image(topo.actionPF(actId)))) {
-          ret_actId = actId;
-          if (false && candidates.begin() != it) {
-            DBog0("Oh, this actually makes a difference!");
+        const PF actPF( topo.actionPF(actId) );
+        if (backReachPF.overlapCk(topo.image(actPF))) {
+          if (!(topo.preimage(actPF) <= backReachPF)) {
+            ret_actId = actId;
+            if (false && candidates.begin() != it) {
+              DBog0("Oh, this actually makes a difference!");
+            }
+            return true;
           }
-          return true;
         }
       }
 
@@ -446,6 +458,10 @@ PruneCandidatesAC3(const XnSys& sys, FMem_AddConvergence& tape)
   vector<uint>& candidates = tape.candidates;
   bool changed = true;
   map<uint,uint> conflicts;
+  // Does this help when enforcing liveness in the invariant?
+  //if (!(tape.deadlockPF <= sys.invariant)) {
+  //  return conflicts;
+  //}
   while (changed) {
     changed = false;
     conflicts.clear();
@@ -495,7 +511,7 @@ PruneCandidatesAC3(const XnSys& sys, FMem_AddConvergence& tape)
  * \return  True iff convergence could be added.
  */
   bool
-AddConvergence(vector<uint> retActions,
+AddConvergence(vector<uint>& retActions,
                const XnSys& sys,
                FMem_AddConvergence& tape)
 {
@@ -570,6 +586,7 @@ AddConvergence(vector<uint> retActions,
     PF resolved( topo.preimage(actPF) & tape.deadlockPF );
     next.deadlockPF -= resolved;
 
+    //if (true || tape.candidates.size() > 30) {
     if (true || tape.actions.size() < 18) {
       DBogOF << " -- " << tape.actions.size()
         << " -- " << tape.candidates.size() << " -- ";
@@ -612,6 +629,11 @@ AddConvergence(XnSys& sys)
   XnNet& topo = sys.topology;
   const uint nPossibleActs = topo.nPossibleActs();
 
+  if (sys.liveLegit && !sys.synLegit) {
+    DBog0( "For liveness in the invariant, we must be able to add actions there!" );
+    return false;
+  }
+
   FMem_AddConvergence tape;
   tape.loXnRel = false;
   tape.hiXnRel = false;
@@ -647,11 +669,15 @@ AddConvergence(XnSys& sys)
       }
     }
 
-    // This action does not start in the invariant.
-    if (add && !(sys.invariant & topo.preimage(actPF)).tautologyCk(false)) {
-      add = false;
-      if (false) {
-        OPut((DBogOF << "Action " << i << " breaks closure: "), act, topo) << '\n';
+    if (add && sys.invariant.overlapCk(topo.preimage(actPF))) {
+      // This action does starts in the invariant.
+      // If /!sys.synLegit/, we shouldn't add any actions
+      // within the legitimate states, even if closure isn't broken.
+      if (!sys.synLegit || (~sys.invariant).overlapCk(topo.image(actPF, sys.invariant))) {
+        add = false;
+        if (false) {
+          OPut((DBogOF << "Action " << i << " breaks closure: "), act, topo) << '\n';
+        }
       }
     }
 
@@ -661,7 +687,12 @@ AddConvergence(XnSys& sys)
     }
   }
 
-  tape.deadlockPF = ~sys.invariant;
+  if (sys.liveLegit) {
+    tape.deadlockPF = true;
+  }
+  else {
+    tape.deadlockPF = ~sys.invariant;
+  }
   tape.backReachPF = sys.invariant;
 
   RankDeadlocksMRV(tape.mrvDeadlocks,
@@ -696,6 +727,20 @@ void BidirectionalRing(XnNet& topo, uint npcs, uint domsz)
   }
 }
 
+void UnidirectionalRing(XnNet& topo, uint npcs, uint domsz)
+{
+  // Build a bidirectional ring where each process P_i
+  // has variable m_i of domain size 3.
+  for (uint i = 0; i < npcs; ++i) {
+    char name[10];
+    sprintf(name, "m%u", i);
+
+    XnPc& pc = Grow1(topo.pcs);
+    pc.addVbl(XnVbl(name, domsz));
+    pc.addPriv((i+npcs-1) % npcs, 0);
+  }
+}
+
 /**
  * Performs the 3 color on a ring problem.  Each process must be assigned
  * a color such that it'd color is not the same as either of its
@@ -726,12 +771,8 @@ void ColorRing(XnSys& sys, uint npcs)
 
     // Add to the accepting states all of the states where
     // mq is a different color than both mp and mr
-    sys.invariant &= !(mp==mq) && !(mq==mr);
+    sys.invariant &= (mp!=mq) && (mq!=mr);
   }
-}
-
-void TokenRing(XnSys& sys, uint npcs)
-{
 }
 
 void InstMatching(XnSys& sys, uint npcs)
@@ -756,6 +797,48 @@ void InstMatching(XnSys& sys, uint npcs)
       (           mq == 2 && mr == 1);   // (    X, right,  left)
   }
 }
+
+void InstDijkstraTokenRing(XnSys& sys, uint npcs)
+{
+  XnNet& topo = sys.topology;
+  UnidirectionalRing(topo, npcs, npcs+1);
+
+  // Commit to using this topology, and initilize MDD stuff
+  topo.commitInitialization();
+  sys.synLegit = true;
+  sys.liveLegit = true;
+
+  // Build an array of formulas which require exactly one process has a token.
+  vector<PF> singleToken(npcs, PF(true));
+  for (uint pcIdx = 0; pcIdx < npcs; ++pcIdx) {
+    PF tokenPF;  // Formula for this process having a token.
+    if (pcIdx == 0) {
+      tokenPF = (topo.pfVbl(pcIdx, 0) == topo.pfVblR(pcIdx, 0));
+    }
+    else {
+      tokenPF = (topo.pfVbl(pcIdx, 0) != topo.pfVblR(pcIdx, 0));
+    }
+
+    for (uint j = 0; j < npcs; ++j) {
+      if (j == pcIdx) {
+        // Process pcIdx has the only token
+        // in the /singleToken[j]/ formula.
+        singleToken[j] &= tokenPF; 
+      }
+      else {
+        // Process pcIdx does not have a token
+        // in the /singleToken[j]/ formula.
+        singleToken[j] -= tokenPF; 
+      }
+    }
+  }
+
+  sys.invariant = false;
+  for (uint pcIdx = 0; pcIdx < npcs; ++pcIdx) {
+    sys.invariant |= singleToken[pcIdx];
+  }
+}
+
 
 /**
  * Test dat code.
@@ -854,7 +937,7 @@ void Test()
 int main(int argc, char** argv)
 {
   int argi = 1;
-  const uint NPs = 6;
+  const uint NPs = 4;
   int problem;
 
   if (argi < argc) {
@@ -875,7 +958,6 @@ int main(int argc, char** argv)
     else if(string(argv[argi])=="token"){
       DBog0("Problem: Dijkstra's Token Ring");
       problem=2;
-      return 0;
     }
     else{
       //printf("%s: Only supported argument is \"test\".\n", argv[0]);
@@ -892,11 +974,15 @@ int main(int argc, char** argv)
   switch(problem){
     case 0: ColorRing(sys,NPs); break;
     case 1: InstMatching(sys,NPs); break;
-    case 2: TokenRing(sys,NPs); break;
+    case 2: InstDijkstraTokenRing(sys,NPs); break;
   }
   bool found = AddConvergence(sys);
   if (found) {
     DBog0("Solution found!");
+    for (uint i = 0; i < sys.actions.size(); ++i) {
+      const XnNet& topo = sys.topology;
+      OPut(DBogOF, topo.action(sys.actions[i]), topo) << '\n';
+    }
   }
   else {
     DBog0("No solution found...");

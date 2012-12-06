@@ -156,8 +156,11 @@ public:
   XnNet topology;
   vector<uint> actions; ///< Actions we are using.
   PF invariant;
+  bool synLegit; ///< Allow synthesized actions to be in legitimate states.
+  bool liveLegit; ///< Ensure no deadlocks in the invariant.
 
 public:
+  XnSys() : synLegit(false), liveLegit(false) {}
 };
 
 #endif

@@ -254,6 +254,8 @@ public:
 
   PF operator==(uint x) const;
   PF operator==(const PFVbl& x) const;
+  PF operator!=(uint x) const;
+  PF operator!=(const PFVbl& x) const;
 };
 
 class PFCtx
@@ -374,6 +376,16 @@ inline PF PFVbl::operator==(uint x) const
 inline PF PFVbl::operator==(const PFVbl& x) const
 {
   return vCtx->vbleq(idx, x.idx);
+}
+
+inline PF PFVbl::operator!=(uint x) const
+{
+  return ~((*this) == x);
+}
+
+inline PF PFVbl::operator!=(const PFVbl& x) const
+{
+  return ~((*this) == x);
 }
 
 #endif
