@@ -1,0 +1,52 @@
+
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{amsfonts}
+\usepackage{graphicx}
+\usepackage{mathtools}
+\usepackage{hyperref}
+
+%\usepackage[g]{esvect}
+
+\DeclarePairedDelimiter{\abs}{\lvert}{\rvert}
+\DeclarePairedDelimiter{\ceil}{\lceil}{\rceil}
+\DeclarePairedDelimiter{\floor}{\lfloor}{\rfloor}
+\DeclarePairedDelimiter{\avect}{\langle}{\rangle}
+\DeclarePairedDelimiter{\aset}{\allowbreak\lbrace}{\rbrace}
+
+%\newcommand{\true}{\mathit{true}}
+%\newcommand{\fals}{\mathit{false}}
+\newcommand{\true}{\mbox{T}}
+\newcommand{\fals}{\mbox{F}}
+\newcommand{\Nat}{\mathbb{N}}
+\newcommand{\Int}{\mathbb{Z}}
+\newcommand{\defeq}{:=}
+\newcommand{\transpose}{^ \top }
+\newcommand{\queseq}{\overset{?}{=}}
+%\newcommand{\transpose}{^ \intercal }
+\newcommand{\pipe}{\,|\,}
+\newcommand{\vbl}[1]{\ensuremath{\mathit{#1}}}
+\newcommand{\detop}[1]{\det(#1)}
+%\newcommand{\vect}[1]{\boldsymbol{\vbl{#1}}}
+\newcommand{\vect}[1]{{\overrightarrow{#1}}}
+\newcommand{\slfrac}[2]{\left.#1\middle/#2\right.}
+%\newcommand{\vect}[1]{{\vv{#1}}}
+\newcommand{\modop}[1]{\mbox{ mod }#1}
+\newcommand{\mathsc}[1]{\text{\normalfont\scshape#1}}
+
+\newcounter{exercisecnt}
+\def\theexercisecnt{\arabic{exercisecnt}}
+\newenvironment{exercise}
+{\refstepcounter{exercisecnt}
+ {\bf Exercise \theexercisecnt.}}
+{}
+
+\newcounter{exercisepartcnt}[exercisecnt]
+\def\theexercisepartcnt{\theexercisecnt.\alph{exercisepartcnt}}
+\newenvironment{exercisepart}
+{\refstepcounter{exercisepartcnt}
+ {\bf Exercise \theexercisepartcnt.}}
+{}
+

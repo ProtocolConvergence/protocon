@@ -1,6 +1,4 @@
 
-%preamble
-
 \documentclass[english]{article}
 \usepackage{fullpage}
 \usepackage[T1]{fontenc}
@@ -8,36 +6,25 @@
 \setlength{\parskip}{\medskipamount}
 \setlength{\parindent}{0pt}
 
-\usepackage{amsmath}
-\usepackage{amssymb}
-\usepackage{amsthm}
-\usepackage{amsfonts}
-\usepackage{graphicx}
-\usepackage[all,arc,curve,frame]{xy}
-\usepackage{mathtools}
+\input{predef}
 
-\DeclarePairedDelimiter{\abs}{\lvert}{\rvert}
-\DeclarePairedDelimiter{\ceil}{\lceil}{\rceil}
-\DeclarePairedDelimiter{\floor}{\lfloor}{\rfloor}
+\makeatletter
+\@ifundefined{ifusesection}{%
+ \newif\ifusesection %
+ \usesectiontrue %
+}{}
+\makeatother
 
-\newcommand{\Nat}{\mathbb{N}}
-\newcommand{\defeq}{:=}
-\newcommand{\transpose}{^ \top }
-%\newcommand{\transpose}{^ \intercal }
-\newcommand{\pipe}{\ |\ }
-\newcommand{\vbl}[1]{\mathit{#1}}
-%\newcommand{\vect}[1]{\boldsymbol{\vbl{#1}}}
-\newcommand{\vect}[1]{{\overrightarrow{#1}}}
-\newcommand{\modop}[1]{\mbox{ mod }#1}
-\newcommand\mathsc[1]{\text{\normalfont\scshape#1}}
+\ifusesection
+ \newtheorem{theorem}{Theorem}[section]
+\else
+ \newtheorem{theorem}{Theorem}
+\fi
 
-\theoremstyle{definition}
-\newcounter{exercisecnt}
-\newcounter{exercisepartcnt}[exercisecnt]
-\newtheorem{exercise}[exercisecnt]{Exercise}
-\newtheorem{exercisepart}[exercisepartcnt]{Exercise}
-%\renewcommand\theexercisepart{\theexercise.\alph{exercise}}
-
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
 
 \renewcommand{\labelenumii}{\arabic{enumi}.\arabic{enumii}.}
 \renewcommand{\labelenumiii}{\arabic{enumi}.\arabic{enumii}.\arabic{enumiii}.}
