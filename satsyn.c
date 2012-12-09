@@ -1706,7 +1706,7 @@ synsearch_sat (FMem_synsearch* tape)
 main (int argc, char** argv)
 {
     int argi = (init_sysCx (&argc, &argv), 1);
-    const XnSysInstance inst_kind =
+    XnSysInstance inst_kind =
         /* Sat3Inst */
         /* Sat3RingInst */
         /* Sat3RingWSatInst */
@@ -1717,7 +1717,7 @@ main (int argc, char** argv)
         /* TokenRingDijkstra4StateInst */
         ;
     const bool use_synsearch_sat = false;
-    const uint n_ring_pcs = 6;  /* For rings (excluding 3-SAT rings).*/
+    uint n_ring_pcs = 6;  /* For rings (excluding 3-SAT rings).*/
     const uint domsz = 3;
     const bool manual_soln = true;
     DecloStack1( XnSys, sys, dflt_XnSys () );
@@ -1744,6 +1744,58 @@ main (int argc, char** argv)
 #endif
     };
 
+    while (argi < argc)
+    {
+        {:if (eql_cstr (argv[argi], "-h"))
+           failout_sysCx ("There is no help for you.");
+        }
+        {:else if (eql_cstr (argv[argi], "-inst"))
+            bool need_npcs = false;
+            ++argi;
+            {:if (eql_cstr (argv[argi], "coloring"))
+                need_npcs = true;
+                inst_kind = ColoringInst;
+            }
+            {:else if (eql_cstr (argv[argi], "matching"))
+                need_npcs = true;
+                inst_kind = MatchingInst;
+            }
+            {:else if (eql_cstr (argv[argi], "dijkstra"))
+                need_npcs = true;
+                inst_kind = TokenRingDijkstraInst;
+            }
+            {:else if (eql_cstr (argv[argi], "dijkstra4state"))
+                need_npcs = true;
+                inst_kind = TokenRingDijkstra4StateInst;
+            }
+            {:else if (eql_cstr (argv[argi], "bit3"))
+                need_npcs = true;
+                inst_kind = TokenRing3BitInst;
+            }
+            {:else if (eql_cstr (argv[argi], "sat3"))
+                inst_kind = Sat3Inst;
+            }
+            {:else
+                failout_sysCx ("bad -inst");
+            }
+
+            ++argi;
+            {:if (need_npcs)
+
+                {:if (xget_uint_cstr (&n_ring_pcs, argv[argi]))
+                    ++argi;
+                }
+                {:else
+                    failout_sysCx ("bad number of processes");
+                }
+            }
+        }
+        {:else
+            DBog1("arg: %s", argv[argi]);
+            failout_sysCx ("Bad argument.");
+        }
+        ++argi;
+    }
     if (argi < argc)
         failout_sysCx ("No arguments expected.");
 
