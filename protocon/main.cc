@@ -23,15 +23,27 @@ public:
 
 class FMem_AddConvergence {
 public:
+  bool bt_dbog;
+  uint bt_level;
+
+  vector<uint> actions; ///< Chosen actions.
+  vector<uint> candidates; ///< Candidate actions.
   PF deadlockPF; ///< Current deadlocks.
   PF loXnRel; ///< Under-approximation of the transition function.
   PF hiXnRel; ///< Over-approximation of the transition function.
   PF backReachPF; ///< Backwards reachable from invariant.
-  vector<uint> actions; ///< Chosen actions.
-  vector<uint> candidates; ///< Candidate actions.
+
+public:
+  FMem_AddConvergence() :
+    bt_dbog( false )
+    , bt_level( 0 )
+  {}
 
   /// Deadlocks ranked by how many candidate actions can resolve them.
   vector<DeadlockConstraint> mrvDeadlocks;
+
+  void reviseActions(const XnSys& sys, Set<uint> adds, Set<uint> dels,
+                     bool forcePrune=false);
 };
 
 /** Rank the deadlocks by how many actions can resolve them.*/
@@ -370,6 +382,115 @@ PruneCycles(const XnSys& sys, FMem_AddConvergence& tape)
   }
 }
 
+/** Add actions to protocol and delete actions from candidate list.**/
+  void
+FMem_AddConvergence::reviseActions(const XnSys& sys,
+                                   Set<uint> adds,
+                                   Set<uint> dels,
+                                   bool forcePrune)
+{
+  const XnNet& topo = sys.topology;
+  typename Set<uint>::const_iterator it;
+
+  adds |= this->mrvDeadlocks[1].candidates;
+
+  PF addActPF( false );
+  for (it = adds.begin(); it != adds.end(); ++it) {
+    uint actId = *it;
+    Remove1(this->candidates, actId);
+    this->actions.push_back(actId);
+    QuickTrim(dels, this->candidates, topo, actId);
+    addActPF |= topo.actionPF(actId);
+  }
+
+  this->deadlockPF -= topo.preimage(addActPF);
+  this->loXnRel |= addActPF;
+  this->backReachPF =
+    BackwardReachability(this->loXnRel, this->backReachPF, topo);
+
+#if 1
+  if (!adds.empty() || forcePrune) {
+    for (uint i = 0; i < this->candidates.size(); ++i) {
+      uint actId = this->candidates[i];
+      if (dels.elemCk(actId))  continue;
+
+      PF actPF = topo.actionPF(actId);
+      if (!this->deadlockPF.overlapCk(topo.preimage(actPF))) {
+        dels |= actId;
+        continue;
+      }
+      if (CycleCk(sys, this->loXnRel | actPF)) {
+        dels |= actId;
+        continue;
+      }
+    }
+  }
+#else
+  if (!adds.empty() || forcePrune) {
+    bool changed = true;
+    while (changed) {
+      changed = false;
+
+      for (uint i = 0; i < this->candidates.size(); ++i) {
+        uint actId = this->candidates[i];
+        if (dels.elemCk(actId))  continue;
+
+        PF actPF = topo.actionPF(actId);
+        if (!this->deadlockPF.overlapCk(topo.preimage(actPF))) {
+          dels |= actId;
+          changed = true;
+          continue;
+        }
+
+        vector<DeadlockConstraint> tmpDeadlocks(this->mrvDeadlocks.begin(),
+                                                this->mrvDeadlocks.begin() + 3);
+
+        ReviseDeadlocksMRV(tmpDeadlocks, topo, adds | Set<uint>(actId), dels);
+        for (it = tmpDeadlocks[1].candidates.begin();
+             it != tmpDeadlocks[1].candidates.end();
+             ++it) {
+          actPF |= topo.actionPF(*it);
+          DBog0("wat");
+        }
+
+        if (CycleCk(sys, this->loXnRel | actPF)) {
+          dels |= actId;
+          changed = true;
+          continue;
+        }
+      }
+    }
+  }
+#endif
+
+  PF delActPF( false );
+  for (it = dels.begin(); it != dels.end(); ++it) {
+    uint actId = *it;
+    Remove1(this->candidates, actId);
+    delActPF |= topo.actionPF(actId);
+  }
+  this->hiXnRel -= delActPF;
+
+  ReviseDeadlocksMRV(this->mrvDeadlocks, topo, adds, dels);
+
+  for (it = adds.begin(); it != adds.end(); ++it) {
+    uint actId = *it;
+    if (this->bt_dbog) {
+      DBogOF
+        << " (lvl " << this->bt_level
+        << ") (sz " << this->actions.size()
+        << ") (rem " << this->candidates.size()
+        << ")  ";
+      OPut(DBogOF, topo.action(actId), topo) << '\n';
+    }
+  }
+
+  if (!this->mrvDeadlocks[1].candidates.empty()) {
+    adds = this->mrvDeadlocks[1].candidates;
+    this->reviseActions(sys, adds, Set<uint>());
+  }
+}
+
 /**
  * For each action, check to see if its inclusion will make the
  * solution impossible after one step of pruning.
@@ -438,15 +559,8 @@ AddConvergence(vector<uint>& retActions,
                const XnSys& sys,
                FMem_AddConvergence& tape)
 {
-  if (tape.deadlockPF.tautologyCk(false)) {
-    return true;
-  }
-  PruneCycles(sys, tape);
-
   const XnNet& topo = sys.topology;
   while (!tape.candidates.empty()) {
-
-
     map<uint,uint> conflicts;
     if (false) {
       // AC3 is slooooww and doesn't help as implemented!
@@ -465,10 +579,9 @@ AddConvergence(vector<uint>& retActions,
       if (!PickActionMRV(actId, tape.mrvDeadlocks, topo, tape.backReachPF, conflicts)) {
         return false;
       }
-      Remove1(tape.candidates, actId);
     }
     else if (false) {
-      actId = Pop1(tape.candidates);
+      actId = tape.candidates.back();
     }
     else if (false) {
       actId = tape.candidates[0];
@@ -494,47 +607,26 @@ AddConvergence(vector<uint>& retActions,
           actId = tape.candidates[i];
         }
       }
-      Remove1(tape.candidates, actId);
     }
 
     FMem_AddConvergence next( tape );
-    ReviseDeadlocksMRV(tape.mrvDeadlocks, topo, Set<uint>(), Set<uint>(actId));
-    next.actions.push_back(actId);
-
-    PF actPF = topo.actionPF(actId);
-    next.loXnRel |= actPF;
-    next.backReachPF =
-      BackwardReachability(next.loXnRel, next.backReachPF, topo);
-
-    PF resolved( topo.preimage(actPF) & tape.deadlockPF );
-    next.deadlockPF -= resolved;
-
-    //if (true || tape.candidates.size() > 30) {
-    if (true || tape.actions.size() < 18) {
-      DBogOF << " -- " << tape.actions.size()
-        << " -- " << tape.candidates.size() << " -- ";
-      OPut(DBogOF, topo.action(actId), topo) << '\n';
-    }
-
-    {
-      Set<uint> delSet;
-      QuickTrim(delSet, next.candidates, sys.topology, actId);
-      Set<uint>::const_iterator delit;
-      for (delit = delSet.begin(); delit != delSet.end(); ++delit) {
-        next.hiXnRel -= topo.actionPF(*delit);
-        Remove1(next.candidates, *delit);
-        //OPut( DBogOF << "Pruned: ", topo.action(*delit), topo) << '\n';
-      }
-      ReviseDeadlocksMRV(next.mrvDeadlocks, topo, Set<uint>(actId), delSet);
-    }
+    next.bt_dbog = (true || tape.bt_level < 18);
+    next.bt_level = tape.bt_level + 1;
+    next.reviseActions(sys, Set<uint>(actId), Set<uint>());
 
     bool found = AddConvergence(retActions, sys, next);
     if (found) {
-      retActions.push_back(actId);
       return true;
     }
+    tape.reviseActions(sys, Set<uint>(), Set<uint>(actId));
+  }
 
-    tape.hiXnRel -= actPF;
+  if (tape.deadlockPF.tautologyCk(false)) {
+    if (CycleCk(sys, tape.loXnRel)) {
+      return false;
+    }
+    retActions = tape.actions;
+    return true;
   }
   return false;
 }
@@ -624,14 +716,17 @@ AddConvergence(XnSys& sys)
                    tape.deadlockPF);
 
 
+  {
+    const bool forcePrune = true;
+    tape.bt_dbog = true;
+    tape.reviseActions(sys, Set<uint>(), Set<uint>(), forcePrune);
+  }
+
   vector<uint> retActions;
   bool found = AddConvergence(retActions, sys, tape);
   if (!found)  return false;
 
-  while (!retActions.empty()) {
-    sys.actions.push_back(Pop1(retActions));
-  }
-
+  sys.actions = retActions;
   return true;
 }
 
