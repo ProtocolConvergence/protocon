@@ -1,4 +1,18 @@
 
 protocon/*.o
 bin
+tags
+
+doc/*/main.pdf
+doc/*/quick.pdf
+doc/*/full.pdf
+doc/*/*.aux
+doc/*/*.bbl
+doc/*/*.blg
+doc/*/*.log
+doc/*/*.nav
+doc/*/*.out
+doc/*/*.snm
+doc/*/*.toc
+doc/*/*.vrb
 

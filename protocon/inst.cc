@@ -4,7 +4,11 @@
  * Functions to set up problem instances.
  */
 
+#include "inst.hh"
+#include "xnsys.hh"
+
 /** Increment followed by modulo.**/
+static
   uint
 incmod(uint i, uint by, uint n)
 {
@@ -12,22 +16,41 @@ incmod(uint i, uint by, uint n)
 }
 
 /** Decrement followed by modulo.**/
+static
   uint
 decmod(uint i, uint by, uint n)
 {
   return (i + n - (by % n)) % n;
 }
 
-/** Create a bidirectional ring topology.
- */
+/** Create a unidirectional ring topology.**/
+static
   void
-BidirectionalRing(XnNet& topo, uint npcs, uint domsz)
+UnidirectionalRing(XnNet& topo, uint npcs, uint domsz, const char* basename)
 {
   // Build a bidirectional ring where each process P_i
   // has variable m_i of domain size 3.
   for (uint i = 0; i < npcs; ++i) {
     char name[10];
-    sprintf(name, "m%u", i);
+    sprintf(name, "%s%u", basename, i);
+
+    XnPc& pc = Grow1(topo.pcs);
+    pc.addVbl(XnVbl(name, domsz));
+    pc.addPriv(decmod(i, 1, npcs), 0);
+  }
+}
+
+/** Create a bidirectional ring topology.
+ **/
+static
+  void
+BidirectionalRing(XnNet& topo, uint npcs, uint domsz, const char* basename)
+{
+  // Build a bidirectional ring where each process P_i
+  // has variable m_i of domain size 3.
+  for (uint i = 0; i < npcs; ++i) {
+    char name[10];
+    sprintf(name, "%s%u", basename, i);
 
     XnPc& pc = Grow1(topo.pcs);
     pc.addVbl(XnVbl(name, domsz));
@@ -36,19 +59,36 @@ BidirectionalRing(XnNet& topo, uint npcs, uint domsz)
   }
 }
 
-  void
-UnidirectionalRing(XnNet& topo, uint npcs, uint domsz)
+/**
+ * Return the states for which only one process has a token.
+ * \param tokenPFs  Formulas for each process having a token.
+ */
+static
+  PF
+SingleTokenPF(const vector<PF>& tokenPFs)
 {
-  // Build a bidirectional ring where each process P_i
-  // has variable m_i of domain size 3.
-  for (uint i = 0; i < npcs; ++i) {
-    char name[10];
-    sprintf(name, "m%u", i);
-
-    XnPc& pc = Grow1(topo.pcs);
-    pc.addVbl(XnVbl(name, domsz));
-    pc.addPriv(decmod(i, 1, npcs), 0);
+  const uint n = tokenPFs.size();
+  vector<PF> singleToken(n, PF(true));
+  for (uint i = 0; i < n; ++i) {
+    for (uint j = 0; j < n; ++j) {
+      if (j == i) {
+        // Process pcIdx has the only token
+        // in the /singleToken[j]/ formula.
+        singleToken[j] &= tokenPFs[i]; 
+      }
+      else {
+        // Process pcIdx does not have a token
+        // in the /singleToken[j]/ formula.
+        singleToken[j] -= tokenPFs[i]; 
+      }
+    }
   }
+
+  PF pf( false );
+  for (uint i = 0; i < n; ++i) {
+    pf |= singleToken[i];
+  }
+  return pf;
 }
 
 /**
@@ -66,7 +106,7 @@ ColorRing(XnSys& sys, uint npcs)
   // Initializes the system as a bidirectional ring with a 3 value domain
   // and the topology defined in sys
   XnNet& topo=sys.topology;
-  BidirectionalRing(topo,npcs,3);
+  BidirectionalRing(topo,npcs,3,"c");
 
   // Commit to using this topology, and initilize MDD stuff
   topo.commitInitialization();
@@ -90,7 +130,7 @@ ColorRing(XnSys& sys, uint npcs)
 InstMatching(XnSys& sys, uint npcs)
 {
   XnNet& topo = sys.topology;
-  BidirectionalRing(topo, npcs, 3);
+  BidirectionalRing(topo, npcs, 3, "m");
 
   // Commit to using this topology.
   // MDD stuff is initialized.
@@ -110,49 +150,32 @@ InstMatching(XnSys& sys, uint npcs)
   }
 }
 
+/** Dijkstra's original token ring
+ * with each process's variable with a domain of size N+1.
+ **/
   void
 InstDijkstraTokenRing(XnSys& sys, uint npcs)
 {
   XnNet& topo = sys.topology;
-  UnidirectionalRing(topo, npcs, npcs+1);
+  UnidirectionalRing(topo, npcs, npcs+1, "x");
 
   // Commit to using this topology, and initilize MDD stuff
   topo.commitInitialization();
   sys.synLegit = true;
   sys.liveLegit = true;
 
-  // Build an array of formulas which require exactly one process has a token.
-  vector<PF> singleToken(npcs, PF(true));
-  for (uint pcIdx = 0; pcIdx < npcs; ++pcIdx) {
-    PF tokenPF;  // Formula for this process having a token.
-    if (pcIdx == 0) {
-      tokenPF = (topo.pfVbl(pcIdx, 0) == topo.pfVblR(pcIdx, 0));
-    }
-    else {
-      tokenPF = (topo.pfVbl(pcIdx, 0) != topo.pfVblR(pcIdx, 0));
-    }
-
-    for (uint j = 0; j < npcs; ++j) {
-      if (j == pcIdx) {
-        // Process pcIdx has the only token
-        // in the /singleToken[j]/ formula.
-        singleToken[j] &= tokenPF; 
-      }
-      else {
-        // Process pcIdx does not have a token
-        // in the /singleToken[j]/ formula.
-        singleToken[j] -= tokenPF; 
-      }
-    }
+  // Formulas for each process having a token.
+  vector<PF> tokenPFs(npcs);
+  // (x[0] == x[N-1])
+  tokenPFs[0] = (topo.pfVbl(0, 0) == topo.pfVblR(0, 0));
+  for (uint pcIdx = 1; pcIdx < npcs; ++pcIdx) {
+    // (x[i] == x[i-1])
+    tokenPFs[pcIdx] = (topo.pfVbl(pcIdx, 0) != topo.pfVblR(pcIdx, 0));
   }
-
-  sys.invariant = false;
-  for (uint pcIdx = 0; pcIdx < npcs; ++pcIdx) {
-    sys.invariant |= singleToken[pcIdx];
-  }
+  sys.invariant = SingleTokenPF(tokenPFs);
 }
 
-/** Three bit token ring.**/
+/** Gouda's three bit token ring.**/
   void
 InstThreeBitTokenRing(XnSys& sys, uint npcs)
 {
@@ -179,48 +202,85 @@ InstThreeBitTokenRing(XnSys& sys, uint npcs)
   sys.synLegit = true;
   sys.liveLegit = true;
 
-  // Build an array of formulas which require exactly one process has a token.
-  vector<PF> singleToken(npcs, PF(true));
+  // Formulas for each process having a token.
+  vector<PF> tokenPFs(npcs);
+  // Formula for existence of an enabled process.
   PF existEnabled(false);
 
-  for (uint pcIdx = 0; pcIdx < npcs; ++pcIdx) {
-    if (pcIdx == 0) {
-      // e_i == e_{i-1}
-      existEnabled |= (topo.pfVbl(pcIdx, 0) == topo.pfVblR(pcIdx, 0));
-    }
-    else {
-      // e_i != e_{i-1}
-      existEnabled |= (topo.pfVbl(pcIdx, 0) != topo.pfVblR(pcIdx, 0));
-    }
+  // e[0] == e[N-1]
+  existEnabled |= (topo.pfVbl(0, 0) == topo.pfVblR(0, 0));
+  // t_{i-1} == t_i
+  tokenPFs[0] = (topo.pfVbl(0, 1) == topo.pfVblR(0, 1));
 
-    PF tokenPF;  // Formula for this process having a token.
-    if (pcIdx == 0) {
-      // t_{i-1} == t_i
-      tokenPF = (topo.pfVbl(pcIdx, 1) == topo.pfVblR(pcIdx, 1));
-    }
-    else {
-      // t_{i-1} != t_i
-      tokenPF = (topo.pfVbl(pcIdx, 1) != topo.pfVblR(pcIdx, 1));
-    }
-
-    for (uint j = 0; j < npcs; ++j) {
-      if (j == pcIdx) {
-        // Process pcIdx has the only token
-        // in the /singleToken[j]/ formula.
-        singleToken[j] &= tokenPF; 
-      }
-      else {
-        // Process pcIdx does not have a token
-        // in the /singleToken[j]/ formula.
-        singleToken[j] -= tokenPF; 
-      }
-    }
+  for (uint pcIdx = 1; pcIdx < npcs; ++pcIdx) {
+    // e_i != e_{i-1}
+    existEnabled |= (topo.pfVbl(pcIdx, 0) != topo.pfVblR(pcIdx, 0));
+    // t_{i-1} != t_i
+    tokenPFs[pcIdx] = (topo.pfVbl(pcIdx, 1) != topo.pfVblR(pcIdx, 1));
   }
 
-  sys.invariant = false;
-  for (uint pcIdx = 0; pcIdx < npcs; ++pcIdx) {
-    sys.invariant |= singleToken[pcIdx];
+  sys.invariant = (SingleTokenPF(tokenPFs) & existEnabled);
+}
+
+/** Dijkstra's two bit token "spring".**/
+  void
+InstTwoBitTokenSpring(XnSys& sys, uint npcs)
+{
+  if (npcs < 2) {
+    DBog1( "Not enough processes (%u), need at least 2.", npcs );
+    exit(1);
   }
-  sys.invariant &= existEnabled;
+
+  XnNet& topo = sys.topology;
+  // Build a bidirectional ring where each process P_i
+  // has variable m_i of domain size 3.
+  for (uint i = 0; i < npcs; ++i) {
+    char name[10];
+    XnPc& pc = Grow1(topo.pcs);
+
+    sprintf(name, "x%u", i);
+    pc.addVbl(XnVbl(name, 2));
+    sprintf(name, "up%u", i);
+    pc.addVbl(XnVbl(name, 2));
+
+    if (i > 0) {
+      pc.addPriv(i-1, 0);
+    }
+    if (i < npcs-1) {
+      pc.addPriv(i+1, 0);
+      pc.addPriv(i+1, 1);
+    }
+  }
+  // Commit to using this topology, and initilize MDD stuff
+  topo.commitInitialization();
+  sys.synLegit = true;
+  sys.liveLegit = true;
+
+  // Formulas for each process having a token.
+  vector<PF> tokenPFs(npcs);
+  // ((x[0] == x[1]) &&
+  //  (up[1] == 0))
+  tokenPFs[0] = ((topo.pfVbl(0, 0) == topo.pfVbl(1, 0)) &&
+                 (topo.pfVbl(1, 1) == 0));
+  for (uint pcIdx = 1; pcIdx < npcs-1; ++pcIdx) {
+      // ((x[i] != x[i-1])
+      //  ||
+      //  ((x[i] == x[i+1]) &&
+      //  (up[i] == 1) &&
+      //  (up[i+1] == 0)))
+      tokenPFs[pcIdx] =
+        ((topo.pfVbl(pcIdx, 0) != topo.pfVbl(pcIdx-1, 0))
+         ||
+         ((topo.pfVbl(pcIdx, 0) == topo.pfVbl(pcIdx+1, 0)) &&
+          (topo.pfVbl(pcIdx, 1) == 1) &&
+          (topo.pfVbl(pcIdx+1, 1) == 0)));
+  }
+  // (x[N-1] != x[N-2])
+  tokenPFs[npcs-1] = (topo.pfVbl(npcs-1, 0) != topo.pfVbl(npcs-2, 0));
+
+  // ((exactly_one_token) && (up[0] == 1) && (up[N-1] == 0))
+  sys.invariant = (SingleTokenPF(tokenPFs) &
+                   (topo.pfVbl(0, 1) == 1) &
+                   (topo.pfVbl(npcs-1, 1) == 0));
 }
 

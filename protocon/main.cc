@@ -1,6 +1,8 @@
 
 #include "pf.hh"
+#include "inst.hh"
 #include "set.hh"
+#include "test.hh"
 #include "xnsys.hh"
 
 static std::ostream& DBogOF = std::cerr;
@@ -8,85 +10,6 @@ static std::ostream& DBogOF = std::cerr;
 static const bool DBog_PruneCycles = false;
 static const bool DBog_RankDeadlocksMRV = false;
 static const bool DBog_PickActionMRV = false;
-
-/**
- * Output an action in a valid Promela format.
- */
-  ostream&
-OPut(ostream& of, const XnAct& act, const XnNet& topo)
-{
-  const XnPc& pc = topo.pcs[act.pcIdx];
-  of << "/*P" << act.pcIdx << "*/ ";
-  for (uint i = 0; i < pc.wvbls.size(); ++i) {
-    if (i != 0)  of << " && ";
-    of << topo.wvbl(act.pcIdx, i).name << "==" << act.w0[i];
-  }
-  for (uint i = 0; i < pc.rvbls.size(); ++i) {
-    of << " && ";
-    of << topo.rvbl(act.pcIdx, i).name << "==" << act.r0[i];
-  }
-  of << " ->";
-  for (uint i = 0; i < pc.wvbls.size(); ++i) {
-    of << ' ' << topo.wvbl(act.pcIdx, i).name << "=" << act.w1[i] << ';';
-  }
-  return of;
-}
-
-/**
- * Check for weak convergence to the invariant.
- */
-  bool
-WeakConvergenceCk(const XnSys& sys, const PF& xnRel)
-{
-  const XnNet& topo = sys.topology;
-  if (sys.liveLegit && !(sys.invariant <= topo.preimage(xnRel))) {
-    return false;
-  }
-  PF span0( sys.invariant );
-  while (!span0.tautologyCk(true)) {
-    PF span1( span0 | topo.preimage(xnRel, span0) );
-    if (span1.equivCk(span0))  return false;
-    span0 = span1;
-  }
-  return true;
-}
-
-/**
- * Check for cycles outside of the invariant.
- */
-bool CycleCk(const XnSys& sys, const PF& xnRel)
-{
-  PF span0( ~sys.invariant );
-
-  const XnNet& topo = sys.topology;
-  while (true) {
-    PF span1( span0 );
-    //span0 -= span0 - sys.image(xnRel, span0);
-    span0 &= topo.preimage(xnRel, span0);
-
-    if (span0.equivCk(span1))  break;
-  }
-
-  return !span0.tautologyCk(false);
-}
-
-/**
- * Perform backwards reachability.
- * \param xnRel  Transition function.
- * \param pf  Initial states.
- * \param topo  Topology of the system.
- */
-  PF
-BackwardReachability(const PF& xnRel, const PF& pf, const XnNet& topo)
-{
-  PF visitPF( pf );
-  PF layerPF( topo.preimage(xnRel, pf) - visitPF );
-  while (!layerPF.tautologyCk(false)) {
-    visitPF |= layerPF;
-    layerPF = topo.preimage(xnRel, layerPF) - visitPF;
-  }
-  return visitPF;
-}
 
 class DeadlockConstraint {
 public:
@@ -712,9 +635,6 @@ AddConvergence(XnSys& sys)
   return true;
 }
 
-#include "inst.cc"
-#include "test.cc"
-
 /** Execute me now!*/
 int main(int argc, char** argv)
 {
@@ -723,6 +643,7 @@ int main(int argc, char** argv)
     MaximalMatchingInstance,
     DijkstraTokenRingInstance,
     ThreeBitTokenRingInstance,
+    TwoBitTokenSpingInstance,
     NProblemInstances
   } problem = NProblemInstances;
   int argi = 1;
@@ -748,8 +669,12 @@ int main(int argc, char** argv)
       problem = DijkstraTokenRingInstance;
     }
     else if(string(argv[argi])=="3-bit-tr"){
-      DBog0("Problem: Dijkstra's Token Ring");
+      DBog0("Problem: Gouda's Three Bit Token Ring");
       problem = ThreeBitTokenRingInstance;
+    }
+    else if(string(argv[argi])=="2-bit-tr"){
+      DBog0("Problem: Dijkstra's Two Bit Token Spring");
+      problem = TwoBitTokenSpingInstance;
     }
     else{
       //printf("%s: Only supported argument is \"test\".\n", argv[0]);
@@ -785,6 +710,8 @@ int main(int argc, char** argv)
       InstDijkstraTokenRing(sys, npcs);  break;
     case ThreeBitTokenRingInstance:
       InstThreeBitTokenRing(sys, npcs);  break;
+    case TwoBitTokenSpingInstance:
+      InstTwoBitTokenSpring(sys, npcs);  break;
     case NProblemInstances:
     default:
       DBog0("No case for this problem instance!");

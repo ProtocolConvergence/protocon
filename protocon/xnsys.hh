@@ -163,5 +163,14 @@ public:
   XnSys() : synLegit(false), liveLegit(false) {}
 };
 
+ostream&
+OPut(ostream& of, const XnAct& act, const XnNet& topo);
+bool
+WeakConvergenceCk(const XnSys& sys, const PF& xnRel);
+bool
+CycleCk(const XnSys& sys, const PF& xnRel);
+PF
+BackwardReachability(const PF& xnRel, const PF& pf, const XnNet& topo);
+
 #endif
 

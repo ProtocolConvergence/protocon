@@ -1,4 +1,9 @@
 
+#include "test.hh"
+
+#include "inst.hh"
+#include "xnsys.hh"
+
 /**
  * Test dat code.
  */

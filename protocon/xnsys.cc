@@ -150,3 +150,84 @@ const PF XnNet::actionPF(uint actIdx) const
   return pf;
 }
 
+
+/**
+ * Output an action in a valid Promela format.
+ */
+  ostream&
+OPut(ostream& of, const XnAct& act, const XnNet& topo)
+{
+  const XnPc& pc = topo.pcs[act.pcIdx];
+  of << "/*P" << act.pcIdx << "*/ ";
+  for (uint i = 0; i < pc.wvbls.size(); ++i) {
+    if (i != 0)  of << " && ";
+    of << topo.wvbl(act.pcIdx, i).name << "==" << act.w0[i];
+  }
+  for (uint i = 0; i < pc.rvbls.size(); ++i) {
+    of << " && ";
+    of << topo.rvbl(act.pcIdx, i).name << "==" << act.r0[i];
+  }
+  of << " ->";
+  for (uint i = 0; i < pc.wvbls.size(); ++i) {
+    of << ' ' << topo.wvbl(act.pcIdx, i).name << "=" << act.w1[i] << ';';
+  }
+  return of;
+}
+
+/**
+ * Check for weak convergence to the invariant.
+ */
+  bool
+WeakConvergenceCk(const XnSys& sys, const PF& xnRel)
+{
+  const XnNet& topo = sys.topology;
+  if (sys.liveLegit && !(sys.invariant <= topo.preimage(xnRel))) {
+    return false;
+  }
+  PF span0( sys.invariant );
+  while (!span0.tautologyCk(true)) {
+    PF span1( span0 | topo.preimage(xnRel, span0) );
+    if (span1.equivCk(span0))  return false;
+    span0 = span1;
+  }
+  return true;
+}
+
+/**
+ * Check for cycles outside of the invariant.
+ */
+  bool
+CycleCk(const XnSys& sys, const PF& xnRel)
+{
+  PF span0( ~sys.invariant );
+
+  const XnNet& topo = sys.topology;
+  while (true) {
+    PF span1( span0 );
+    //span0 -= span0 - sys.image(xnRel, span0);
+    span0 &= topo.preimage(xnRel, span0);
+
+    if (span0.equivCk(span1))  break;
+  }
+
+  return !span0.tautologyCk(false);
+}
+
+/**
+ * Perform backwards reachability.
+ * \param xnRel  Transition function.
+ * \param pf  Initial states.
+ * \param topo  Topology of the system.
+ */
+  PF
+BackwardReachability(const PF& xnRel, const PF& pf, const XnNet& topo)
+{
+  PF visitPF( pf );
+  PF layerPF( topo.preimage(xnRel, pf) - visitPF );
+  while (!layerPF.tautologyCk(false)) {
+    visitPF |= layerPF;
+    layerPF = topo.preimage(xnRel, layerPF) - visitPF;
+  }
+  return visitPF;
+}
+
