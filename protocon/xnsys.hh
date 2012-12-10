@@ -78,12 +78,19 @@ class XnNet {
 private:
   uint vVblList; // Unprimed
   uint vVblListPrimed; // Primed
+  vector<PF> actionPFs; ///< Storage of action formulas.
 
 public:
   PFCtx pfCtx;
   vector<XnPc> pcs; ///< List of the processes.
 
 public:
+  ~XnNet() {
+    // These need to be destroyed before the context goes away.
+    actionPFs.clear();
+    pcs.clear();
+  }
+
   void commitInitialization();
 
   const XnVbl& wvbl(uint pcIdx, uint vblIdx) const
@@ -119,9 +126,12 @@ public:
     return pc.actIdxOffset + pc.nPossibleActs;
   }
 
+  uint actionPcIdx(uint actIdx) const;
   const XnAct action(uint actIdx) const;
   uint actionIndex(const XnAct& act) const;
-  const PF actionPF(uint actIdx) const;
+
+  const PF& actionPF(uint actIdx) const
+  { return actionPFs[actIdx]; }
 
   const PF preimage(const PF& xnRel) const
   {
@@ -147,6 +157,7 @@ public:
 
 private:
   void initUnchanged();
+  void makeActionPF(uint actIdx);
 };
 
 
@@ -159,8 +170,22 @@ public:
   bool synLegit; ///< Allow synthesized actions to be in legitimate states.
   bool liveLegit; ///< Ensure no deadlocks in the invariant.
 
+private:
+  map<uint,uint> niceIdcs; ///< Niceness for processes, used in search.
+
 public:
   XnSys() : synLegit(false), liveLegit(false) {}
+
+  void niceIdxFo(uint pcIdx, uint niceIdx) {
+    niceIdcs[pcIdx] = niceIdx;
+  }
+  uint niceIdxOf(uint pcIdx) const {
+    const uint* niceIdx = MapLookup(niceIdcs, pcIdx);
+    if (!niceIdx) {
+      return topology.pcs.size() + pcIdx;
+    }
+    return *niceIdx;
+  }
 };
 
 ostream&

@@ -7,9 +7,9 @@
 
 static std::ostream& DBogOF = std::cerr;
 
-static const bool DBog_PruneCycles = false;
-static const bool DBog_RankDeadlocksMRV = false;
-static const bool DBog_PickActionMRV = false;
+//static const bool DBog_PruneCycles = false;
+static const bool DBog_RankDeadlocksMCV = false;
+static const bool DBog_PickActionMCV = false;
 
 class DeadlockConstraint {
 public:
@@ -40,7 +40,7 @@ public:
   {}
 
   /// Deadlocks ranked by how many candidate actions can resolve them.
-  vector<DeadlockConstraint> mrvDeadlocks;
+  vector<DeadlockConstraint> mcvDeadlocks;
 
   void reviseActions(const XnSys& sys, Set<uint> adds, Set<uint> dels,
                      bool forcePrune=false);
@@ -48,7 +48,7 @@ public:
 
 /** Rank the deadlocks by how many actions can resolve them.*/
   void
-RankDeadlocksMRV(vector<DeadlockConstraint>& dlsets,
+RankDeadlocksMCV(vector<DeadlockConstraint>& dlsets,
                  const XnNet& topo,
                  const vector<uint>& actions,
                  const PF& deadlockPF)
@@ -83,7 +83,7 @@ RankDeadlocksMRV(vector<DeadlockConstraint>& dlsets,
     }
   }
 
-  if (DBog_RankDeadlocksMRV) {
+  if (DBog_RankDeadlocksMCV) {
     for (uint i = 0; i < dlsets.size(); ++i) {
       if (!dlsets[i].deadlockPF.tautologyCk(false)) {
         DBog2( "Rank %u has %u actions.", i, (uint) dlsets[i].candidates.size() );
@@ -99,7 +99,7 @@ RankDeadlocksMRV(vector<DeadlockConstraint>& dlsets,
  * \param dels  Actions which were pruned from the list of candidates.
  */
   void
-ReviseDeadlocksMRV(vector<DeadlockConstraint>& dlsets,
+ReviseDeadlocksMCV(vector<DeadlockConstraint>& dlsets,
                    const XnNet& topo,
                    const Set<uint>& adds,
                    const Set<uint>& dels)
@@ -120,18 +120,19 @@ ReviseDeadlocksMRV(vector<DeadlockConstraint>& dlsets,
     Set<uint> addCandidates( candidates1 & adds );
     Set<uint> delCandidates( candidates1 & dels );
 
-    uint prevSize = candidates1.size();
-    candidates1 -= addCandidates;
-    bool changed = (prevSize != candidates1.size());
-    if (changed) {
-      PF diffDeadlockPF = deadlockPF1 & addGuardPF;
-      deadlockPF1 -= diffDeadlockPF;
-      Set<uint> diffCandidates1; // To remove from this rank.
+    Set<uint> diffCandidates1; // To remove from this rank.
+
+    diffCandidates1 = (candidates1 & addCandidates);
+    if (!diffCandidates1.empty()) {
+      candidates1 -= diffCandidates1;
+      diffCandidates1.clear();
+
+      deadlockPF1 -= addGuardPF;
       Set<uint>::iterator it;
       for (it = candidates1.begin(); it != candidates1.end(); ++it) {
         uint actId = *it;
-        PF candidateGuardPF = topo.actionPF(actId);
-        if ((deadlockPF1 & candidateGuardPF).tautologyCk(false)) {
+        const PF& candidateGuardPF = topo.actionPF(actId);
+        if (!deadlockPF1.overlapCk(candidateGuardPF)) {
           // Action no longer resolves any deadlocks in this rank.
           diffCandidates1 |= actId;
         }
@@ -139,40 +140,65 @@ ReviseDeadlocksMRV(vector<DeadlockConstraint>& dlsets,
       candidates1 -= diffCandidates1;
     }
 
-    prevSize = candidates1.size();
-    candidates1 -= delCandidates;
-    changed = (prevSize != candidates1.size());
-    if (changed) {
-      Set<uint>& candidates0 = dlsets[i-1].candidates;
-      PF& deadlockPF0 = dlsets[i-1].deadlockPF;
-      PF diffDeadlockPF = deadlockPF1 & delGuardPF;
-      deadlockPF1 -= diffDeadlockPF;
-      deadlockPF0 |= diffDeadlockPF;
+    diffCandidates1 = (candidates1 & delCandidates);
+    if (!diffCandidates1.empty()) {
+      const PF& diffDeadlockPF1 = (deadlockPF1 & delGuardPF);
+      deadlockPF1 -= diffDeadlockPF1;
 
-      Set<uint> diffCandidates0; // To add to previous rank.
-      Set<uint> diffCandidates1; // To remove from this rank.
+      vector<DeadlockConstraint>
+        diffDeadlockSets( i+1, DeadlockConstraint(PF(false)) );
+      diffDeadlockSets[i].deadlockPF = diffDeadlockPF1;
+
       Set<uint>::iterator it;
-      for (it = candidates1.begin(); it != candidates1.end(); ++it) {
-        uint actId = *it;
-        PF candidateGuardPF = topo.actionPF(actId);
-        if (!(diffDeadlockPF & candidateGuardPF).tautologyCk(false)) {
-          // Action resolves deadlocks in previous rank.
-          diffCandidates0 |= actId;
-          if ((deadlockPF1 & candidateGuardPF).tautologyCk(false)) {
-            // Action no longer resolves any deadlocks in this rank.
-            diffCandidates1 |= actId;
+
+      uint minIdx = i;
+      for (it = diffCandidates1.begin(); it != diffCandidates1.end(); ++it) {
+        const uint actId = *it;
+        const PF& candidateGuardPF = topo.preimage(topo.actionPF(actId));
+        for (uint j = minIdx; j < diffDeadlockSets.size(); ++j) {
+          const PF& diffPF =
+            (candidateGuardPF & diffDeadlockSets[j].deadlockPF);
+          if (!diffPF.tautologyCk(false)) {
+            diffDeadlockSets[j-1].deadlockPF |= diffPF;
+            diffDeadlockSets[j].deadlockPF -= diffPF;
+            if (j == minIdx) {
+              -- minIdx;
+            }
           }
         }
       }
-      candidates0 |= diffCandidates0;
+
       candidates1 -= diffCandidates1;
+      diffCandidates1.clear();
+      diffDeadlockSets[i].deadlockPF = deadlockPF1;
+
+      for (it = candidates1.begin(); it != candidates1.end(); ++it) {
+        const uint actId = *it;
+        const PF& candidateGuardPF = topo.preimage(topo.actionPF(actId));
+        if (!candidateGuardPF.overlapCk(diffDeadlockPF1)) {
+          // This candidate is not affected.
+          diffDeadlockSets[i].candidates |= actId;
+          continue;
+        }
+        for (uint j = minIdx; j < diffDeadlockSets.size(); ++j) {
+          if (candidateGuardPF.overlapCk(diffDeadlockSets[j].deadlockPF)) {
+            diffDeadlockSets[j].candidates |= actId;
+          }
+        }
+      }
+
+      for (uint j = minIdx; j < i; ++j) {
+        dlsets[j].deadlockPF |= diffDeadlockSets[j].deadlockPF;
+        dlsets[j].candidates |= diffDeadlockSets[j].candidates;
+      }
+      candidates1 &= diffDeadlockSets[i].candidates;
     }
   }
 }
 
 /**
  * Pick the next candidate action to use.
- * The minimum remaining values (MRV) heuristic may be used.
+ * The most constrained variable (MCV) heuristic may be used.
  *
  * \param ret_actId  Return value. Action to use.
  * \param dlsets  Deadlock sets ordered by number of
@@ -182,29 +208,105 @@ ReviseDeadlocksMRV(vector<DeadlockConstraint>& dlsets,
  *   true unless you're doing it wrong).
  */
   bool
-PickActionMRV(uint& ret_actId,
-              const vector<DeadlockConstraint>& dlsets,
-              const XnNet& topo,
-              const PF& backReachPF,
-              const map<uint,uint>& conflicts)
+PickActionMCV(uint& ret_actId,
+              const XnSys& sys,
+              const FMem_AddConvergence& tape)
 {
-  if (false) {
-    //(void) conflicts;
-    // This block picks the action which resolves the most deadlocks.
-    // The number of resolved deadlocks is computed by the deadlock sets.
+  enum PickActionHeuristic {
+    GreedyPick,
+    GreedySlowPick,
+    LCVLitePick,
+    LCVHeavyPick,
+    LCVJankPick,
+    QuickPick,
+    NPickMethods
+  } pickMethod = GreedyPick;
+  enum NicePolicy {
+    NilNice,
+    BegNice,
+    EndNice,
+    NNicePolicies
+  } nicePolicy = EndNice;
+
+  const XnNet& topo = sys.topology;
+  const vector<DeadlockConstraint>& dlsets = tape.mcvDeadlocks;
+  uint dlsetIdx = 0;
+
+  // Do most constrained variable (MCV).
+  // That is, find an action which resolves a deadlock for which
+  // can only be resolved by some small number of actions.
+  // Try to choose an action which adds a new path to the invariant.
+  for (uint i = 0; i < dlsets.size(); ++i) {
+    if (!dlsets[i].candidates.empty()) {
+      dlsetIdx = i;
+      break;
+    }
+  }
+
+  Set<uint> candidates( dlsets[dlsetIdx].candidates );
+  Set<uint>::const_iterator it;
+
+  DBogOF
+    <<" (lvl " << tape.bt_level
+    << ") (mcv " << dlsetIdx
+    << ") (mcv-sz " << candidates.size()
+    << ")\n";
+
+  map< uint, Set<uint> > biasMap;
+  bool biasToMax = true;
+
+  if (nicePolicy == BegNice) {
+    // Only consider actions of highest priority process.
+    bool have = false;
+    uint niceIdxMin = 0;
+    Set<uint> candidates_1;
+    for (it = candidates.begin(); it != candidates.end(); ++it) {
+      const uint actId = *it;
+      const uint pcId = topo.actionPcIdx(actId);
+      const uint niceIdx = sys.niceIdxOf(pcId);
+      if (!have || (niceIdx < niceIdxMin)) {
+        have = true;
+        candidates_1.clear();
+        candidates_1 |= actId;
+        niceIdxMin = niceIdx;
+      }
+    }
+    candidates = candidates_1;
+  }
+
+  if (pickMethod == GreedyPick || pickMethod == GreedySlowPick) {
+    biasToMax = true;
+
     map< uint, uint > resolveMap;
-    for (uint i = 1; i < dlsets.size(); ++i) {
-      const Set<uint>& candidates = dlsets[i].candidates;
-      Set<uint>::const_iterator it;
-      for (it = candidates.begin(); it != candidates.end(); ++it) {
-        uint* n = MapLookup(resolveMap, *it);
-        uint w = i-1;
-        if (i == 1) {
-          // We shall assert this action.
-          w = dlsets.size() * dlsets.size() * dlsets.size();
+    for (uint j = dlsetIdx; j < dlsets.size(); ++j) {
+      const Set<uint>& resolveSet = (candidates & dlsets[j].candidates);
+      for (it = resolveSet.begin(); it != resolveSet.end(); ++it) {
+        const uint actId = *it;
+
+        uint w = 0; // Weight.
+        if (pickMethod != GreedySlowPick) {
+          w = j;
         }
+        else {
+          Set<uint>::const_iterator jt;
+          const PF& actPF = topo.actionPF(*it);
+          for (jt = dlsets[j].candidates.begin();
+               jt != dlsets[j].candidates.end();
+               ++jt) {
+            const uint actId2 = *jt;
+            if (actId == actId2) {
+              continue;
+            }
+            const PF& preAct2 = topo.preimage(topo.actionPF(actId2));
+            if (dlsets[j].deadlockPF.overlapCk(actPF & preAct2)) {
+              ++ w;
+            }
+          }
+        }
+
+        uint* n = MapLookup(resolveMap, actId);
         if (!n) {
-          resolveMap[*it] = w;
+          resolveMap[actId] = w;
         }
         else {
           *n += w;
@@ -212,96 +314,158 @@ PickActionMRV(uint& ret_actId,
       }
     }
 
-    if (!resolveMap.empty()) {
-      uint actId = 0;
-      uint nMax = 0;
-      map<uint,uint>::const_iterator it;
-      for (it = resolveMap.begin(); it != resolveMap.end(); ++it) {
-        uint n = it->second;
-        if (backReachPF.overlapCk(topo.image(topo.actionPF(it->first)))) {
-          if (!(topo.preimage(topo.actionPF(it->first)) <= backReachPF)) {
-            n += dlsets.size() * dlsets.size();
-          }
-        }
-        if (n > nMax) {
-          actId = it->first;
-          nMax = n;
+    for (it = candidates.begin(); it != candidates.end(); ++it) {
+      const uint actId = *it;
+      uint n = *MapLookup(resolveMap, actId);
+#if 0
+      const PF& backReachPF = tape.backReachPF;
+      if (backReachPF.overlapCk(topo.image(topo.actionPF(actId)))) {
+        if (!(topo.preimage(topo.actionPF(actId)) <= backReachPF)) {
+          n += dlsets.size() * dlsets.size();
         }
       }
-      ret_actId = actId;
-      return true;
+#endif
+      biasMap[n] |= actId;
     }
   }
-  else if (true) {
-    //(void) conflicts;
-    // Do minimum remaining values (MRV).
-    // That is, find an action which resolves a deadlock for which
-    // can only be resolved by some small number of actions.
-    // Try to choose an action which adds a new path to the invariant.
-    for (uint i = 0; i < dlsets.size(); ++i) {
-      const Set<uint>& candidates = dlsets[i].candidates;
-      Set<uint>::const_iterator it;
-      for (it = candidates.begin(); it != candidates.end(); ++it) {
-        uint actId = *it;
-        const PF actPF( topo.actionPF(actId) );
-        if (backReachPF.overlapCk(topo.image(actPF))) {
-          if (!(topo.preimage(actPF) <= backReachPF)) {
-            ret_actId = actId;
-            if (false && candidates.begin() != it) {
-              DBog0("Oh, this actually makes a difference!");
-            }
-            return true;
-          }
-        }
+  else if (pickMethod == LCVLitePick) {
+    biasToMax = false;
+
+    for (it = candidates.begin(); it != candidates.end(); ++it) {
+      const uint actId = *it;
+      uint n = 0;
+      vector<DeadlockConstraint> tmpDeadlocks( dlsets );
+      ReviseDeadlocksMCV(tmpDeadlocks, topo, Set<uint>(actId), Set<uint>());
+      for (uint j = 1; j < tmpDeadlocks.size(); ++j) {
+        n += tmpDeadlocks[j].candidates.size();
       }
 
-      if (!candidates.empty()) {
-        uint actId = candidates.elem();
-        if (DBog_PickActionMRV) {
-          DBog1( "Picked at rank %u", i );
+      biasMap[n] |= actId;
+    }
+  }
+  else if (pickMethod == LCVHeavyPick) {
+    biasToMax = false;
+
+    for (it = candidates.begin(); it != candidates.end(); ++it) {
+      const uint actId = *it;
+      FMem_AddConvergence next( tape );
+      next.bt_dbog = false;
+      next.reviseActions(sys, Set<uint>(actId), Set<uint>());
+      //uint n = next.candidates.size();
+      uint n = next.candidates.size() + next.actions.size();
+      //uint n = 0;
+      //for (uint j = 1; j < next.mcvDeadlocks.size(); ++j) {
+      //  n += next.mcvDeadlocks[j].candidates.size() / j;
+      //}
+
+      biasMap[n] |= actId;
+    }
+  }
+  else if (pickMethod == LCVJankPick) {
+    biasToMax = true;
+    map< uint, Set<uint> > overlapSets;
+
+    for (it = candidates.begin(); it != candidates.end(); ++it) {
+      overlapSets[*it] = Set<uint>(*it);
+    }
+
+    const PF& deadlockPF = dlsets[dlsetIdx].deadlockPF;
+    for (it = candidates.begin(); it != candidates.end(); ++it) {
+      uint actId = *it;
+      const PF& actPF = topo.actionPF(actId);
+      const PF actPrePF = topo.preimage(actPF);
+
+      Set<uint>& overlapSet = *MapLookup(overlapSets, actId);
+
+      Set<uint>::const_iterator jt = it;
+      for (++jt; jt != candidates.end(); ++jt) {
+        const uint actId2 = *jt;
+        const PF& actPF2 = topo.actionPF(actId2);
+        if (deadlockPF.overlapCk(actPrePF & topo.preimage(actPF2))) {
+          overlapSet |= actId2;
+          *MapLookup(overlapSets, actId2) |= actId;
         }
-        ret_actId = actId;
-        return true;
+      }
+    }
+
+    bool have = false;
+    Set<uint> minOverlapSet;
+
+    map< uint,Set<uint> >::const_iterator mit;
+    for (mit = overlapSets.begin(); mit != overlapSets.end(); ++mit) {
+      const Set<uint>& overlapSet = mit->second;
+      if (!have || overlapSet.size() < minOverlapSet.size()) {
+        have = true;
+        minOverlapSet = overlapSet;
+      }
+    }
+
+    DBog2("(lvl %u) (size %u)", tape.bt_level, minOverlapSet.size());
+
+    for (it = minOverlapSet.begin(); it != minOverlapSet.end(); ++it) {
+      const uint actId = *it;
+      FMem_AddConvergence next( tape );
+      next.bt_dbog = false;
+      next.reviseActions(sys, Set<uint>(actId), Set<uint>());
+
+      uint n = next.candidates.size();
+      //uint n = next.candidates.size() + next.actions.size();
+      //uint n = 0;
+      //for (uint j = 1; j < next.mcvDeadlocks.size(); ++j) {
+      //  n += next.mcvDeadlocks[j].candidates.size() / j;
+      //}
+      biasMap[n] |= actId;
+    }
+  }
+  else if (pickMethod == QuickPick) {
+    biasToMax = false;
+    const PF& backReachPF = tape.backReachPF;
+    for (it = candidates.begin(); it != candidates.end(); ++it) {
+      uint actId = *it;
+      const PF& actPF = topo.actionPF(actId);
+      if (backReachPF.overlapCk(topo.image(actPF))) {
+        biasMap[1] |= actId;
+        if (!(topo.preimage(actPF) <= backReachPF)) {
+          biasMap[0] |= actId;
+        }
+      }
+      else {
+        biasMap[2] |= actId;
       }
     }
   }
-  else if (false) {
-    //(void) backReachPF;
-    // Do minimum remaining values (MRV) with least constraining value (LCV).
-    for (uint i = 0; i < dlsets.size(); ++i) {
-      const Set<uint>& candidates = dlsets[i].candidates;
-      Set<uint>::const_iterator it;
-      if (!candidates.empty()) {
-        it = candidates.begin();
-        uint actId = *it;
 
-        bool maximize = false;
-        bool have = false;
-        uint nConflictsExtremum = 0;
+  if (!biasMap.empty()) {
+    const std::pair< uint, Set<uint> >& entry =
+      (biasToMax ? *biasMap.rbegin() : *biasMap.begin());
+    candidates = entry.second;
+  }
+  else {
+    DBog0( "Bad News: biasMap is empty!!!" );
+    return false;
+  }
 
-        for (++it; it != candidates.end(); ++it) {
-          uint nConflicts = *MapLookup(conflicts, *it);
-          if (!have) {
-            have = true;
-            nConflictsExtremum = nConflicts;
-            actId = *it;
-          }
-          else if (maximize && nConflicts > nConflictsExtremum) {
-            nConflictsExtremum = nConflicts;
-            actId = *it;
-          }
-          else if (!maximize && nConflicts < nConflictsExtremum) {
-            nConflictsExtremum = nConflicts;
-            actId = *it;
-          }
-        }
-
-        ret_actId = actId;
-        return true;
+  if (nicePolicy == EndNice) {
+    bool have = false;
+    uint niceIdxMin = 0;
+    uint extremeActId = 0;
+    Set<uint>::const_iterator it;
+    for (it = candidates.begin(); it != candidates.end(); ++it) {
+      const uint actId = *it;
+      const uint pcId = topo.actionPcIdx(actId);
+      const uint niceIdx = sys.niceIdxOf(pcId);
+      if (!have || (niceIdx < niceIdxMin)) {
+        have = true;
+        niceIdxMin = niceIdx;
+        extremeActId = actId;
       }
     }
+    ret_actId = extremeActId;
   }
-  return false;
+  else {
+    ret_actId = candidates.elem();
+  }
+  return true;
 }
 
 /**
@@ -346,42 +510,6 @@ QuickTrim(Set<uint>& delSet,
   }
 }
 
-/** Perform forward checking.*/
-  void
-PruneCycles(const XnSys& sys, FMem_AddConvergence& tape)
-{
-  vector<uint> candidates = tape.candidates;
-  tape.candidates.clear();
-  Set<uint> pruned;
-
-  const XnNet& topo = sys.topology;
-  for (uint i = 0; i < candidates.size(); ++i) {
-    uint actId = candidates[i];
-    PF actPF( topo.actionPF(actId) );
-    bool add = true;
-    if (add && !tape.deadlockPF.overlapCk(topo.preimage(actPF))) {
-      add = false;
-    }
-    if (add && CycleCk(sys, tape.loXnRel | actPF)) {
-      add = false;
-    }
-    if (add) {
-      tape.candidates.push_back(actId);
-    }
-    else {
-      pruned |= actId;
-      tape.hiXnRel -= actPF;
-      //OPut( DBogOF << "Pruned: ", topo.action(actId), topo) << '\n';
-    }
-  }
-  ReviseDeadlocksMRV(tape.mrvDeadlocks, topo, Set<uint>(), pruned);
-  if (DBog_PruneCycles) {
-    if (pruned.size() > 0) {
-      DBog1("Pruned: %u", (uint) pruned.size());
-    }
-  }
-}
-
 /** Add actions to protocol and delete actions from candidate list.**/
   void
 FMem_AddConvergence::reviseActions(const XnSys& sys,
@@ -392,7 +520,7 @@ FMem_AddConvergence::reviseActions(const XnSys& sys,
   const XnNet& topo = sys.topology;
   Set<uint>::const_iterator it;
 
-  adds |= this->mrvDeadlocks[1].candidates;
+  adds |= this->mcvDeadlocks[1].candidates;
 
   PF addActPF( false );
   for (it = adds.begin(); it != adds.end(); ++it) {
@@ -408,13 +536,13 @@ FMem_AddConvergence::reviseActions(const XnSys& sys,
   this->backReachPF =
     BackwardReachability(this->loXnRel, this->backReachPF, topo);
 
-#if 1
+  Set<uint> reqAdds;
   if (!adds.empty() || forcePrune) {
     for (uint i = 0; i < this->candidates.size(); ++i) {
       uint actId = this->candidates[i];
       if (dels.elemCk(actId))  continue;
 
-      PF actPF = topo.actionPF(actId);
+      const PF& actPF = topo.actionPF(actId);
       if (!this->deadlockPF.overlapCk(topo.preimage(actPF))) {
         dels |= actId;
         continue;
@@ -423,45 +551,13 @@ FMem_AddConvergence::reviseActions(const XnSys& sys,
         dels |= actId;
         continue;
       }
-    }
-  }
-#else
-  if (!adds.empty() || forcePrune) {
-    bool changed = true;
-    while (changed) {
-      changed = false;
 
-      for (uint i = 0; i < this->candidates.size(); ++i) {
-        uint actId = this->candidates[i];
-        if (dels.elemCk(actId))  continue;
-
-        PF actPF = topo.actionPF(actId);
-        if (!this->deadlockPF.overlapCk(topo.preimage(actPF))) {
-          dels |= actId;
-          changed = true;
-          continue;
-        }
-
-        vector<DeadlockConstraint> tmpDeadlocks(this->mrvDeadlocks.begin(),
-                                                this->mrvDeadlocks.begin() + 3);
-
-        ReviseDeadlocksMRV(tmpDeadlocks, topo, adds | Set<uint>(actId), dels);
-        for (it = tmpDeadlocks[1].candidates.begin();
-             it != tmpDeadlocks[1].candidates.end();
-             ++it) {
-          actPF |= topo.actionPF(*it);
-          DBog0("wat");
-        }
-
-        if (CycleCk(sys, this->loXnRel | actPF)) {
-          dels |= actId;
-          changed = true;
-          continue;
-        }
+      if (false && !WeakConvergenceCk(sys, this->hiXnRel - actPF)) {
+        reqAdds |= actId;
+        continue;
       }
     }
   }
-#endif
 
   PF delActPF( false );
   for (it = dels.begin(); it != dels.end(); ++it) {
@@ -471,7 +567,7 @@ FMem_AddConvergence::reviseActions(const XnSys& sys,
   }
   this->hiXnRel -= delActPF;
 
-  ReviseDeadlocksMRV(this->mrvDeadlocks, topo, adds, dels);
+  ReviseDeadlocksMCV(this->mcvDeadlocks, topo, adds, dels);
 
   for (it = adds.begin(); it != adds.end(); ++it) {
     uint actId = *it;
@@ -485,65 +581,13 @@ FMem_AddConvergence::reviseActions(const XnSys& sys,
     }
   }
 
-  if (!this->mrvDeadlocks[1].candidates.empty()) {
-    adds = this->mrvDeadlocks[1].candidates;
-    this->reviseActions(sys, adds, Set<uint>());
+  reqAdds |= this->mcvDeadlocks[1].candidates;
+  if (reqAdds.size() > this->mcvDeadlocks[1].candidates.size()) {
+    DBog1( "did something: %u", (uint) (reqAdds.size() - this->mcvDeadlocks[1].candidates.size()));
   }
-}
-
-/**
- * For each action, check to see if its inclusion will make the
- * solution impossible after one step of pruning.
- */
-  map<uint,uint>
-PruneCandidatesAC3(const XnSys& sys, FMem_AddConvergence& tape)
-{
-  const XnNet& topo = sys.topology;
-  vector<uint>& candidates = tape.candidates;
-  bool changed = true;
-  map<uint,uint> conflicts;
-  // Does this help when enforcing liveness in the invariant?
-  //if (!(tape.deadlockPF <= sys.invariant)) {
-  //  return conflicts;
-  //}
-  while (changed) {
-    changed = false;
-    conflicts.clear();
-    for (uint i = 0; i < candidates.size();) {
-      uint actId = candidates[i];
-
-      FMem_AddConvergence tmptape(tape);
-      PF actPF = topo.actionPF(actId);
-      tmptape.loXnRel |= actPF;
-      PruneCycles(sys, tmptape);
-      {
-        Set<uint> delSet;
-        QuickTrim(delSet, tmptape.candidates, sys.topology, actId);
-        Set<uint>::const_iterator delit;
-        for (delit = delSet.begin(); delit != delSet.end(); ++delit) {
-          tmptape.hiXnRel -= topo.actionPF(*delit);
-          Remove1(tmptape.candidates, *delit);
-        }
-      }
-      conflicts[actId] = candidates.size() - tmptape.candidates.size();
-      bool prune = !WeakConvergenceCk(sys, tmptape.hiXnRel);
-
-      if (!prune) {
-        ++i;
-      }
-      else {
-        DBog0("AC3 pruned something!");
-        changed = true;
-        tape.hiXnRel -= actPF;
-        if (!WeakConvergenceCk(sys, tape.hiXnRel)) {
-          return map<uint,uint>();
-        }
-        candidates.erase(candidates.begin() + i);
-        ReviseDeadlocksMRV(tape.mrvDeadlocks, topo, Set<uint>(), Set<uint>(actId));
-      }
-    }
+  if (!reqAdds.empty()) {
+    this->reviseActions(sys, reqAdds, Set<uint>());
   }
-  return conflicts;
 }
 
 /**
@@ -559,58 +603,19 @@ AddConvergence(vector<uint>& retActions,
                const XnSys& sys,
                FMem_AddConvergence& tape)
 {
-  const XnNet& topo = sys.topology;
   while (!tape.candidates.empty()) {
-    map<uint,uint> conflicts;
-    if (false) {
-      // AC3 is slooooww and doesn't help as implemented!
-      // We already have forward checking, which does well.
-      conflicts = PruneCandidatesAC3(sys, tape);
-    }
-
     if (!WeakConvergenceCk(sys, tape.hiXnRel)) {
       return false;
     }
 
     // Pick the action.
-    uint actId;
-    if (true) {
-      actId = 0;
-      if (!PickActionMRV(actId, tape.mrvDeadlocks, topo, tape.backReachPF, conflicts)) {
-        return false;
-      }
-    }
-    else if (false) {
-      actId = tape.candidates.back();
-    }
-    else if (false) {
-      actId = tape.candidates[0];
-      bool maximize = false;
-      bool have = false;
-      uint nConflictsExtremum = 0;
-      for (uint i = 0; i < tape.candidates.size(); ++i) {
-        uint nConflicts = *MapLookup(conflicts, tape.candidates[i]);
-        if (!tape.backReachPF.overlapCk(topo.image(topo.actionPF(tape.candidates[i])))) {
-          // Don't use
-        }
-        else if (!have) {
-          have = true;
-          nConflictsExtremum = nConflicts;
-          actId = tape.candidates[i];
-        }
-        else if (maximize && nConflicts > nConflictsExtremum) {
-          nConflictsExtremum = nConflicts;
-          actId = tape.candidates[i];
-        }
-        else if (!maximize && nConflicts < nConflictsExtremum) {
-          nConflictsExtremum = nConflicts;
-          actId = tape.candidates[i];
-        }
-      }
+    uint actId = 0;
+    if (!PickActionMCV(actId, sys, tape)) {
+      return false;
     }
 
     FMem_AddConvergence next( tape );
-    next.bt_dbog = (true || tape.bt_level < 18);
+    next.bt_dbog = (tape.bt_dbog && (true || tape.bt_level < 18));
     next.bt_level = tape.bt_level + 1;
     next.reviseActions(sys, Set<uint>(actId), Set<uint>());
 
@@ -667,7 +672,7 @@ AddConvergence(XnSys& sys)
     bool add = true;
 
     XnAct act( topo.action(i) );
-    PF actPF( topo.actionPF(i) );
+    const PF& actPF = topo.actionPF(i);
 
     // Check for self-loops.
     if (add) {
@@ -710,7 +715,7 @@ AddConvergence(XnSys& sys)
   }
   tape.backReachPF = sys.invariant;
 
-  RankDeadlocksMRV(tape.mrvDeadlocks,
+  RankDeadlocksMCV(tape.mcvDeadlocks,
                    sys.topology,
                    tape.candidates,
                    tape.deadlockPF);
@@ -734,8 +739,10 @@ AddConvergence(XnSys& sys)
 int main(int argc, char** argv)
 {
   enum ProblemInstance {
-    ThreeColoringInstance,
+    ThreeColoringRingInstance,
+    TwoColoringRingInstance,
     MaximalMatchingInstance,
+    SumNotTwoInstance,
     DijkstraTokenRingInstance,
     ThreeBitTokenRingInstance,
     TwoBitTokenSpingInstance,
@@ -751,23 +758,31 @@ int main(int argc, char** argv)
       DBog0( "Done." );
       return 0;
     }
-    else if(string(argv[argi])=="color"){
-      DBog0("Problem: 3 Color Ring");
-      problem = ThreeColoringInstance;
+    else if (string(argv[argi]) == "3-coloring") {
+      DBog0("Problem: 3-Coloring on Bidirectional Ring");
+      problem = ThreeColoringRingInstance;
     }
-    else if(string(argv[argi])=="matching"){
+    else if (string(argv[argi]) == "2-coloring") {
+      DBog0("Problem: 2-Coloring on Unidirectional Ring");
+      problem = TwoColoringRingInstance;
+    }
+    else if (string(argv[argi]) == "matching") {
       DBog0("Problem: Maximal Matching");
       problem = MaximalMatchingInstance;
     }
-    else if(string(argv[argi])=="dijkstra-tr"){
+    else if (string(argv[argi]) == "sum-not-2") {
+      DBog0("Problem: Sum-Not-2");
+      problem = SumNotTwoInstance;
+    }
+    else if (string(argv[argi]) == "dijkstra-tr") {
       DBog0("Problem: Dijkstra's Token Ring");
       problem = DijkstraTokenRingInstance;
     }
-    else if(string(argv[argi])=="3-bit-tr"){
+    else if (string(argv[argi]) == "3-bit-tr") {
       DBog0("Problem: Gouda's Three Bit Token Ring");
       problem = ThreeBitTokenRingInstance;
     }
-    else if(string(argv[argi])=="2-bit-tr"){
+    else if (string(argv[argi]) == "2-bit-tr") {
       DBog0("Problem: Dijkstra's Two Bit Token Spring");
       problem = TwoBitTokenSpingInstance;
     }
@@ -797,10 +812,14 @@ int main(int argc, char** argv)
   // Set up the chosen problem.
   XnSys sys;
   switch(problem){
-    case ThreeColoringInstance:
-      ColorRing(sys, npcs);  break;
+    case ThreeColoringRingInstance:
+      InstThreeColoringRing(sys, npcs);  break;
+    case TwoColoringRingInstance:
+      InstTwoColoringRing(sys, npcs);  break;
     case MaximalMatchingInstance:
       InstMatching(sys, npcs);  break;
+    case SumNotTwoInstance:
+      InstSumNot(sys, npcs, 3, 2);  break;
     case DijkstraTokenRingInstance:
       InstDijkstraTokenRing(sys, npcs);  break;
     case ThreeBitTokenRingInstance:
@@ -825,6 +844,7 @@ int main(int argc, char** argv)
   else {
     DBog0("No solution found...");
   }
+  std::flush(DBogOF);
 
   return 0;
 }

@@ -6,9 +6,13 @@
 class XnSys;
 
 void
-ColorRing(XnSys& sys, uint npcs);
+InstThreeColoringRing(XnSys& sys, uint npcs);
+void
+InstTwoColoringRing(XnSys& sys, uint npcs);
 void
 InstMatching(XnSys& sys, uint npcs);
+void
+InstSumNot(XnSys& sys, uint npcs, uint domsz, uint target);
 void
 InstDijkstraTokenRing(XnSys& sys, uint npcs);
 void

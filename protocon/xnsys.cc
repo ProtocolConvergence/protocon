@@ -56,6 +56,11 @@ XnNet::commitInitialization()
   }
 
   initUnchanged();
+
+  actionPFs.resize(nTotalActs);
+  for (uint actId = 0; actId < nTotalActs; ++actId) {
+    this->makeActionPF(actId);
+  }
 }
 
 /**
@@ -82,16 +87,22 @@ XnNet::initUnchanged()
   }
 }
 
-const XnAct XnNet::action(uint actIdx) const
+  uint
+XnNet::actionPcIdx(uint actIdx) const
 {
-  XnAct act;
-  act.pcIdx = pcs.size() - 1;
   for (uint i = 0; i < pcs.size()-1; ++i) {
     if (actIdx < pcs[i+1].actIdxOffset) {
-      act.pcIdx = i;
-      break;
+      return i;
     }
   }
+  return pcs.size() - 1;
+}
+
+  const XnAct
+XnNet::action(uint actIdx) const
+{
+  XnAct act;
+  act.pcIdx = this->actionPcIdx(actIdx);
 
   const XnPc& pc = pcs[act.pcIdx];
   uint nPossibleActs = pc.nPossibleActs;
@@ -133,23 +144,6 @@ uint XnNet::actionIndex(const XnAct& act) const
   }
   return actIdx + pc.actIdxOffset;
 }
-
-const PF XnNet::actionPF(uint actIdx) const
-{
-  const XnAct act = action(actIdx);
-  const XnPc& pc = pcs[act.pcIdx];
-  PF pf(true);
-  for (uint i = 0; i < pc.wvbls.size(); ++i) {
-    pf &= (pfVbl      (act.pcIdx, i) == act.w0[i]);
-    pf &= (pfVblPrimed(act.pcIdx, i) == act.w1[i]);
-  }
-  for (uint i = 0; i < pc.rvbls.size(); ++i) {
-    pf &= (pfVblR(act.pcIdx, i) == act.r0[i]);
-  }
-  pf &= pc.actUnchanged;
-  return pf;
-}
-
 
 /**
  * Output an action in a valid Promela format.
@@ -229,5 +223,27 @@ BackwardReachability(const PF& xnRel, const PF& pf, const XnNet& topo)
     layerPF = topo.preimage(xnRel, layerPF) - visitPF;
   }
   return visitPF;
+}
+
+/**
+ * Create a persistent PF for this action.
+ * \sa commitInitialization()
+ **/
+  void
+XnNet::makeActionPF(uint actIdx)
+{
+  const XnAct act = action(actIdx);
+  const XnPc& pc = pcs[act.pcIdx];
+  PF pf(true);
+  for (uint i = 0; i < pc.wvbls.size(); ++i) {
+    pf &= (pfVbl      (act.pcIdx, i) == act.w0[i]);
+    pf &= (pfVblPrimed(act.pcIdx, i) == act.w1[i]);
+  }
+  for (uint i = 0; i < pc.rvbls.size(); ++i) {
+    pf &= (pfVblR(act.pcIdx, i) == act.r0[i]);
+  }
+  pf &= pc.actUnchanged;
+
+  actionPFs[actIdx] = pf;
 }
 

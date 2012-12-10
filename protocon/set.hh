@@ -67,7 +67,7 @@ public:
     return c;
   }
 
-  Set<T>& operator&=(const Set<T>& b) const
+  Set<T>& operator&=(const Set<T>& b)
   {
     return (*this -= (*this - b));
   }

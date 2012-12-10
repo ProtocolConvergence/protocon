@@ -101,7 +101,7 @@ SingleTokenPF(const vector<PF>& tokenPFs)
  * \param npcs The number of processes
  */
   void
-ColorRing(XnSys& sys, uint npcs)
+InstThreeColoringRing(XnSys& sys, uint npcs)
 {
   // Initializes the system as a bidirectional ring with a 3 value domain
   // and the topology defined in sys
@@ -126,6 +126,33 @@ ColorRing(XnSys& sys, uint npcs)
   }
 }
 
+/**
+ * Performs the 2 coloring on a ring problem.
+ *
+ * \param sys  Return value. The system context.
+ * \param npcs The number of processes.
+ */
+  void
+InstTwoColoringRing(XnSys& sys, uint npcs)
+{
+  if (npcs % 2 == 1) {
+    DBog1( "Number of processes is even (%u), this should fail!", npcs );
+  }
+  XnNet& topo = sys.topology;
+  BidirectionalRing(topo, npcs, 2, "c");
+
+  // Commit to using this topology.
+  // MDD stuff is initialized.
+  topo.commitInitialization();
+  sys.invariant = true;
+
+  for (uint pcidx = 0; pcidx < npcs; ++pcidx) {
+    const PFVbl c_lo = topo.pfVblR(pcidx, 0);
+    const PFVbl c_me = topo.pfVbl (pcidx, 0);
+    sys.invariant &= (c_me != c_lo);
+  }
+}
+
   void
 InstMatching(XnSys& sys, uint npcs)
 {
@@ -136,6 +163,13 @@ InstMatching(XnSys& sys, uint npcs)
   // MDD stuff is initialized.
   topo.commitInitialization();
   sys.invariant = true;
+  // Set priorities.
+  for (uint pcIdx = 0; pcIdx < npcs; ++pcIdx) {
+    uint niceIdx0 = 2 * pcIdx;
+    uint niceIdx1 = 2 * (npcs - pcIdx - 1) + 1;
+    uint niceIdx = (niceIdx0 < niceIdx1) ? niceIdx0 : niceIdx1;
+    sys.niceIdxFo(pcIdx, niceIdx);
+  }
 
   for (uint pcidx = 0; pcidx < npcs; ++pcidx) {
     const PFVbl mp = topo.pfVblR(pcidx, 0);
@@ -147,6 +181,31 @@ InstMatching(XnSys& sys, uint npcs)
       (mp == 1 && mq == 0 && mr == 2) || // ( left,  self, right)
       (mp == 2 && mq == 1           ) || // (right,  left,     X)
       (           mq == 2 && mr == 1);   // (    X, right,  left)
+  }
+}
+
+/**
+ * Set up a sum-not-(l-1) instance.
+ * You are free to choose the domain size and the target (to miss).
+ **/
+  void
+InstSumNot(XnSys& sys, uint npcs, uint domsz, uint target)
+{
+  XnNet& topo = sys.topology;
+  UnidirectionalRing(topo, npcs, domsz, "x");
+
+  // Commit to using this topology.
+  // MDD stuff is initialized.
+  topo.commitInitialization();
+  sys.invariant = true;
+
+  for (uint pcidx = 0; pcidx < npcs; ++pcidx) {
+    const PFVbl x_lo = topo.pfVblR(pcidx, 0);
+    const PFVbl x_me = topo.pfVbl (pcidx, 0);
+
+    for (uint i = 0; i < domsz; ++i) {
+      sys.invariant &= (~ (x_lo == i) | (x_me != decmod(target, i, domsz)));
+    }
   }
 }
 
@@ -163,6 +222,11 @@ InstDijkstraTokenRing(XnSys& sys, uint npcs)
   topo.commitInitialization();
   sys.synLegit = true;
   sys.liveLegit = true;
+
+  // Set priorities.
+  for (uint pcIdx = 0; pcIdx < npcs; ++pcIdx) {
+    sys.niceIdxFo(pcIdx, npcs-pcIdx-1);
+  }
 
   // Formulas for each process having a token.
   vector<PF> tokenPFs(npcs);
@@ -201,6 +265,11 @@ InstThreeBitTokenRing(XnSys& sys, uint npcs)
   topo.commitInitialization();
   sys.synLegit = true;
   sys.liveLegit = true;
+
+  // Set priorities.
+  for (uint pcIdx = 0; pcIdx < npcs; ++pcIdx) {
+    sys.niceIdxFo(pcIdx, pcIdx);
+  }
 
   // Formulas for each process having a token.
   vector<PF> tokenPFs(npcs);
