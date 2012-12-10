@@ -390,7 +390,7 @@ FMem_AddConvergence::reviseActions(const XnSys& sys,
                                    bool forcePrune)
 {
   const XnNet& topo = sys.topology;
-  typename Set<uint>::const_iterator it;
+  Set<uint>::const_iterator it;
 
   adds |= this->mrvDeadlocks[1].candidates;
 
