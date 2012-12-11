@@ -139,16 +139,20 @@ InstTwoColoringRing(XnSys& sys, uint npcs)
     DBog1( "Number of processes is even (%u), this should fail!", npcs );
   }
   XnNet& topo = sys.topology;
-  BidirectionalRing(topo, npcs, 2, "c");
+  UnidirectionalRing(topo, npcs, 2, "c");
 
   // Commit to using this topology.
   // MDD stuff is initialized.
   topo.commitInitialization();
-  sys.invariant = true;
 
+  sys.invariant = true;
+  // For each process P[i],
   for (uint pcidx = 0; pcidx < npcs; ++pcidx) {
+    // c[i-1]
     const PFVbl c_lo = topo.pfVblR(pcidx, 0);
+    // c[i]
     const PFVbl c_me = topo.pfVbl (pcidx, 0);
+    // c[i] != c[i-1]
     sys.invariant &= (c_me != c_lo);
   }
 }
@@ -197,14 +201,19 @@ InstSumNot(XnSys& sys, uint npcs, uint domsz, uint target)
   // Commit to using this topology.
   // MDD stuff is initialized.
   topo.commitInitialization();
+
   sys.invariant = true;
+  // For each process P[r],
+  for (uint r = 0; r < npcs; ++r) {
+    const PFVbl x_lo = topo.pfVblR(r, 0);
+    const PFVbl x_me = topo.pfVbl (r, 0);
 
-  for (uint pcidx = 0; pcidx < npcs; ++pcidx) {
-    const PFVbl x_lo = topo.pfVblR(pcidx, 0);
-    const PFVbl x_me = topo.pfVbl (pcidx, 0);
-
+    // (x[r-1] + x[r]) % domsz != target
+    // Equivalently:
+    // For all i,
     for (uint i = 0; i < domsz; ++i) {
-      sys.invariant &= (~ (x_lo == i) | (x_me != decmod(target, i, domsz)));
+      // (x[r-1] == i) implies (x[r] != ((target - i) % domsz))
+      sys.invariant &= ((x_lo != i) | (x_me != decmod(target, i, domsz)));
     }
   }
 }
