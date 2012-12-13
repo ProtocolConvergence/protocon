@@ -8,6 +8,8 @@
 #include "synhax.hh"
 #include "mdd.h"
 
+#include "mdd.h"
+
 class PF;
 class PFVbl;
 class PFCtx;
@@ -306,20 +308,7 @@ public:
     array_insert_last(uint, vVblLists[setIdx], vblIdx);
   }
 
-  void commitInitialization()
-  {
-    array_t* doms = array_alloc(uint, 0);
-    array_t* names = array_alloc(char*, 0);
-    for (uint i = 0; i < vVbls.size(); ++i) {
-      const PFVbl& vbl = vVbls[i];
-      array_insert_last(uint, doms, vbl.domsz);
-      array_insert_last(const char*, names, vbl.name.c_str());
-    }
-    vCtx = mdd_init_empty();
-    mdd_create_variables(vCtx, doms, names, 0);
-    array_free(doms);
-    array_free(names);
-  }
+  void commitInitialization();
 
   PF nil() const
   {
@@ -366,6 +355,12 @@ public:
   //bool subseteq(const PF& a, const PF& b, uint setIdx);
 
   mdd_manager* mdd_ctx() { return vCtx; }
+
+  ostream& oput(ostream& of,
+                const PF& a,
+                uint setIdx,
+                const string& pfx = "",
+                const string& sfx = "") const;
 };
 
 inline PF PFVbl::operator==(uint x) const

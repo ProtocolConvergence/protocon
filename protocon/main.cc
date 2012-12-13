@@ -1,9 +1,11 @@
 
 #include "pf.hh"
 #include "inst.hh"
+#include "promela.hh"
 #include "set.hh"
 #include "test.hh"
 #include "xnsys.hh"
+#include <fstream>
 
 static std::ostream& DBogOF = std::cerr;
 
@@ -840,6 +842,13 @@ int main(int argc, char** argv)
       const XnNet& topo = sys.topology;
       OPut(DBogOF, topo.action(sys.actions[i]), topo) << '\n';
     }
+    std::fstream of("model.pml",
+                    std::ios::binary |
+                    std::ios::out |
+                    std::ios::trunc);
+    OPutPromelaModel(of, sys);
+    of.close();
+    DBog0("Model written to \"model.pml\".");
   }
   else {
     DBog0("No solution found...");

@@ -145,6 +145,15 @@ uint XnNet::actionIndex(const XnAct& act) const
   return actIdx + pc.actIdxOffset;
 }
 
+  ostream&
+XnNet::oput(ostream& of,
+            const PF& pf,
+            const string& pfx,
+            const string& sfx) const
+{
+  return this->pfCtx.oput(of, pf, this->vVblList, pfx, sfx);
+}
+
 /**
  * Output an action in a valid Promela format.
  */

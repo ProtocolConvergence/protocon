@@ -155,6 +155,11 @@ public:
     return image(xnRel & preimage);
   }
 
+  ostream& oput(ostream& of,
+                const PF& pf,
+                const string& pfx = "",
+                const string& sfx = "") const;
+
 private:
   void initUnchanged();
   void makeActionPF(uint actIdx);

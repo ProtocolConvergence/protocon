@@ -38,7 +38,7 @@ CXXFLAGS += -Wall -Wextra -Wstrict-aliasing
 
 all: $(BinPath)/protocon
 
-$(BinPath)/protocon: main.o inst.o synhax.o test.o xnsys.o
+$(BinPath)/protocon: main.o inst.o pf.o promela.o synhax.o test.o xnsys.o
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(LXXFLAGS)
 
 %.o: %.cc %.hh
