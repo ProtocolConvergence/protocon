@@ -8,7 +8,7 @@
 \usepackage{listings}
 
 \usepackage{tikz}
-\usetikzlibrary{automata,arrows}
+\usetikzlibrary{arrows}
 
 \setbeamertemplate{navigation symbols}{}
 \setbeamertemplate{bibliography item}[text]
@@ -23,10 +23,149 @@
 \setlength{\abovedisplayshortskip}{0.5em}
 \setlength{\belowdisplayskip}{0.5em}
 \setlength{\belowdisplayshortskip}{0.5em}
+\setlength{\abovecaptionskip}{0.0em}
+\setlength{\belowcaptionskip}{0.0em}
 
 \begin{frame}
 \titlepage
 \end{frame}
+
+\begin{frame}
+\frametitle{Self-Stabilization}
+\begin{itemize}
+\item The $\vbl{invariant}$ is the set of states in which the system is expected to operate.
+\item The protocol is considered to be converging if it can eventually transition to an invariant state
+ \begin{itemize}
+ \item A protocol is $\vbl{weakly}$ $\vbl{converging}$ if and only if, from every state outside the
+    invariant, the invariant can be reached\cite{wssGouda01}.
+ \item A protocol is $\vbl{strongly}$ $\vbl{converging}$ if and only if, from every state outside the
+    invariant, the invariant must be reached.  This implies the protocol is livelock and deadlock
+    free\cite{wssGouda01}.
+ \end{itemize}
+\item The goal of Self-Stabilization is to find an algorithm that can reach a legitimate state from
+    any illegitimate state on its own.
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Sum-Not-2 Problem}
+\begin{figure}
+\begin{tikzpicture}[x=1.5cm,y=1.5cm]
+\tikzstyle{every node}=[draw,circle]
+\draw
+ (0,0)      node (0) {$P_0$}
+ ++(   0:1) node (1) {$P_1$}
+ ++( -60:1) node (2) {$P_2$}
+ ++(-120:1) node (3) {$P_3$}
+ ++(-180:1) node (4) {$P_4$}
+ ++(-240:1) node (5) {$P_5$}
+ ;
+\path[->,draw,thick]
+(0) edge (1)
+(1) edge (2)
+(2) edge (3)
+(3) edge (4)
+(4) edge (5)
+(5) edge (0)
+;
+\end{tikzpicture}
+
+\begin{flushleft}
+For all $i\in\Nat_6$,
+\begin{eqnarray*}
+P_i & : &
+ \mbox{
+  $\begin{cases}
+  x_i\in\Nat_2 & \mbox{(read-write)} \\
+  x_{i-1}\in\Nat_2 & \mbox{(read-only)} \\
+  \end{cases}$
+ }
+\end{eqnarray*}
+Invariant:
+\[ I \equiv (\forall i\in\Nat_6: x_i + x_{i-1} \ne 2) \]
+\end{flushleft}
+\end{figure}
+\end{frame}
+
+\begin{frame}
+\frametitle{Stabilizing Sum-Not-2 Transition Graph}
+Stabilizing protocol for each process $P_i$:
+\begin{eqnarray*}
+   (x_i = 0) \wedge (x_{i-1} = 2) & \to & x_i \defeq 1;
+\\ (x_i = 1) \wedge (x_{i-1} = 1) & \to & x_i \defeq 0;
+\\ (x_i = 2) \wedge (x_{i-1} = 0) & \to & x_i \defeq 0;
+\end{eqnarray*}
+\begin{figure}
+\centering
+\begin{tikzpicture}[x=1.0cm,y=1.0cm]
+\tikzstyle{every node}=[]
+\tikzstyle{legit}=[draw]
+\def \dx {3.5}
+\draw
+  (  0, 0) node [legit] (000) {000}
+++(\dx, 0) node [legit] (100) {100}
+++(\dx, 0) node         (200) {200}
+  (  0,-1) node [legit] (010) {010}
+++(\dx, 0) node         (110) {110}
+++(\dx, 0) node         (210) {210}
+  (  0,-2) node         (020) {020}
+++(\dx, 0) node         (120) {120}
+++(\dx, 0) node         (220) {220}
+  (  1, 0) node [legit] (001) {001}
+++(\dx, 0) node         (101) {101}
+++(\dx, 0) node         (201) {201}
+  (  1,-1) node         (011) {011}
+++(\dx, 0) node         (111) {111}
+++(\dx, 0) node         (211) {211}
+  (  1,-2) node         (021) {021}
+++(\dx, 0) node         (121) {121}
+++(\dx, 0) node [legit] (221) {221}
+  (  2, 0) node         (002) {002}
+++(\dx, 0) node         (102) {102}
+++(\dx, 0) node         (202) {202}
+  (  2,-1) node         (012) {012}
+++(\dx, 0) node         (112) {112}
+++(\dx, 0) node [legit] (212) {212}
+  (  2,-2) node         (022) {022}
+++(\dx, 0) node [legit] (122) {122}
+++(\dx, 0) node [legit] (222) {222}
+;
+\path[->,draw,thick]
+(002) edge [color=red!40,out=- 20,in= 200,looseness=.7] (102)
+(012) edge [color=red!40,out=- 20,in= 200,looseness=.7] (112)
+(022) edge [color=red!40,out=- 20,in= 200,looseness=.7] (122)
+(101) edge [color=red!40,out= 140,in=  30,looseness=.6] (001)
+(111) edge [color=red!40,out= 140,in=  30,looseness=.6] (011)
+(121) edge [color=red!40,out= 140,in=  30,looseness=.6] (021)
+(200) edge [color=red!40,out= 160,in=  70,looseness=.3] (000)
+(210) edge [color=red!40,out= 160,in=  70,looseness=.3] (010)
+(220) edge [color=red!40,out= 160,in=  70,looseness=.3] (020)
+
+(200) edge [color=green!50!black!75,out=-120,in= 120] (210)
+(201) edge [color=green!50!black!75,out=-120,in= 120] (211)
+(202) edge [color=green!50!black!75,out=-120,in= 120] (212)
+(110) edge [color=green!50!black!75,out=  50,in=- 50] (100)
+(111) edge [color=green!50!black!75,out=  50,in=- 50] (101)
+(112) edge [color=green!50!black!75,out=  50,in=- 50] (102)
+(020) edge [color=green!50!black!75,out= 140,in=-140,looseness=.5] (000)
+(021) edge [color=green!50!black!75,out= 130,in=-130,looseness=.5] (001)
+(022) edge [color=green!50!black!75,out= 130,in=-130,looseness=.5] (002)
+
+(002) edge [color=blue,out= 120,in=  40,looseness=.5] (000)
+(102) edge [color=blue,out= 120,in=  40,looseness=.5] (100)
+(202) edge [color=blue,out= 120,in=  40,looseness=.5] (200)
+(011) edge [color=blue,out= 130,in=  60] (010)
+(111) edge [color=blue,out= 130,in=  60] (110)
+(211) edge [color=blue,out= 130,in=  60] (210)
+(020) edge [color=blue,out=- 60,in= 230] (021)
+(120) edge [color=blue,out=- 60,in= 230] (121)
+(220) edge [color=blue,out=- 60,in= 230] (221)
+;
+\end{tikzpicture}
+\caption{Transitions of {\color{red!40} $P_0$}, {\color{green!50!black!75} $P_1$}, {\color{blue} $P_2$}. Legitimate states $x_0x_1x_2$ are boxed.}
+\end{figure}
+\end{frame}
+
 
 \begin{frame}
 \frametitle{Representing State Sets}
@@ -35,16 +174,16 @@
  \begin{itemize}
  \item In PDDL, these are predicates and functions on objects.
  \end{itemize}
-\pause \item Can represent a set of states with a predicate formula.
+\item Can represent a set of states with a predicate formula.
  \begin{itemize}
  \item Ex: $x=1\vee y=0$ represents $3$ states of $2$ bits $x$ and $y$.
  \item Equivalently: $(x=0\wedge y=0) \vee (x=1\wedge y=0) \vee (x=1\wedge y=1)$.
  \end{itemize}
 \item A predicate formula can be represented by...
  \begin{itemize}
- \pause \item Binary decision diagram (BDD) if all variables are Boolean.
- \pause \item Multi-valued decision diagram (MDD) if all variables are finite.
- \pause \item But what about infinite domains like $\Int$?
+ \item Binary decision diagram (BDD) if all variables are Boolean.
+ \item Multi-valued decision diagram (MDD) if all variables are finite.
+ \item But what about infinite domains like $\Int$?
  \end{itemize}
 \end{itemize}
 \end{frame}
@@ -64,6 +203,7 @@
  \end{itemize}
 \end{itemize}
 \end{frame}
+
 
 \begin{frame}
 \frametitle{State Set Operations}
@@ -130,28 +270,11 @@
 \end{frame}
 
 \begin{frame}
-\frametitle{Self-Stabilization}
-\begin{itemize}
-\item The $\vbl{invariant}$ is the set of states which are solutions to the problem.
-\item The protocol is considered to be converging if it can transition to the invariant state
- \begin{itemize}
- \item A protocol is $\vbl{weakly}$ $\vbl{converging}$ if and only if, from every state outside the
-    invariant, the invariant can be reached\cite{wssGouda01}.
- \item A protocol is $\vbl{strongly}$ $\vbl{converging}$ if and only if, from every state outside the
-    invariant, the invariant must be reached.  This implies the protocol is livelock and deadlock
-    free\cite{wssGouda01}.
- \end{itemize}
-\item The goal of Self-Stabilization is to find an algorithm that can reach a legitimate state from
-    any illegitimate state on it's own.
-\end{itemize}
-\end{frame}
-
-\begin{frame}
 \frametitle{Example Protocol: 3-Coloring on a Ring}
 \begin{itemize}
 \item The goal of the protocol is the same as that of the traditional 3-Coloring problem: find a 
     coloring scheme in which no two consecutive processes have the same color.
-\item Each process can see it's color, and the color of it's two neighbors.  It can only change it's
+\item Each process can see its color, and the color of its two neighbors.  It can only change its
     own color.
 \item For our representation, we use \{0,1,2\} to represent the three colors.
 \item Invariant
@@ -168,7 +291,7 @@
 \begin{itemize}
 \item The goal of this protocol is to have every process be pointed to by either itself only, or it
     is pointing to a neighbor who is also pointing to it.
-\item Again, each process can see where it is pointing, and where both of it's neighbors are
+\item Again, each process can see where it is pointing, and where both of its neighbors are
     pointing.
 \item We use 0 to denote a process pointing to itself, 1 to denote pointing to its left neighbor
     and 2 to denote pointing to its right neighbor.
