@@ -369,16 +369,13 @@ $B$ is pruned if either:
 \begin{frame}
 \frametitle{Example Protocol: 2-Coloring on a Ring}
 \begin{itemize}
-\item The goal of the protocol is the same as that of the traditional 3-Coloring problem: find a 
-    coloring scheme in which no two consecutive processes have the same color.
-\item Each process can see its color, and the color of its two neighbors.  It can only change its
-    own color.
-\item For our representation, we use \{0,1,2\} to represent the three colors.
+\item The goal of the protocol is: find a coloring scheme in which no two consecutive processes have the same color in a unidirectional ring.
+\item Each process can see its color, and the color of its two neighbors.  It can only change its own color.
+\item For our representation, we use \{0,1\} to represent the two colors.
 \item Invariant
  \begin{itemize}
- \item Given $c_i$ as the acting process, $c_{i-1}$ as the left neighbor, $c_{i+1}$ as the right
-    neighbor, and I is the invariant state: 
-    \[ I \equiv (\forall i\in\Nat_n: c_{i-1}\ne c_i \wedge c_i \ne c_{i+1}) \]
+ \item Given $c_i$ as the acting process, $c_{i-1}$ as the left neighbor, and I is the invariant state: 
+    \[ I \equiv (\forall i\in\Nat_n: c_{i-1}\ne c_i) \]
  \end{itemize}
 \end{itemize}
 \end{frame}
@@ -396,6 +393,46 @@ $B$ is pruned if either:
  \item Given $c_i$ as the acting process, $c_{i-1}$ as the left neighbor, $c_{i+1}$ as the right
     neighbor, and I is the invariant state: 
     \[ I \equiv (\forall i\in\Nat_n: c_{i-1}\ne c_i \wedge c_i \ne c_{i+1}) \]
+ \end{itemize}
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Example Protocol: Dijkstra's Token Ring}
+A token ring is used to give one process out of many an exclusive right, also   known as distributed mutual exclusion.
+\begin{tikzpicture}[x=1.5cm,y=1.5cm]
+  \tikzstyle{every node}=[draw,circle]
+  \draw
+  (0,0)      node (0) {$P_0$}
+  ++(   0:1) node (1) {$P_1$}
+  ++( -60:1) node (2) {$P_2$}
+  ++(-120:1) node (3) {$P_3$}
+  ++(-180:1) node (4) {$P_4$}
+  ++(-240:1) node (5) {$P_5$}
+  ;
+  \draw (0) -- (1);
+  \draw (1) -- (2);
+  \draw (2) -- (3);
+  \draw (3) -- (4);
+  \draw (4) -- (5);
+  \draw (5) -- (0);
+\end{tikzpicture}
+\end{frame}
+
+\begin{frame}
+\begin{itemize}
+\item Each process $P_i$ holds a variable $x_i$ which ranges from $0$ to $n$ ($x_i\in\Nat_{n+1}$). 
+\item Each $P_i$ can read and write $x_i$ and can read $x_{i-1}$ (where subtraction   is modulo $n$). 
+\item $P_0$ is said to have a token when it sees $x_{n-1} = x_0$. Any other $P_i$ has a token when $x_{i-1} \neq x_i$. 
+\item Invariant
+ \begin{itemize}
+ \item A state is legitimate when exactly one process has the token, and I is the invariant state: 
+\[ 
+      \begin{array}{rrcl} 
+         P_0: & x_{5} = x_0 & \to & x_0 \defeq x_0 + 1 \mod (n+1) 
+  \\ P_{i>0}: & x_{i-1} \neq x_i & \to & x_i \defeq x_{i-1} 
+      \end{array} 
+\] 
  \end{itemize}
 \end{itemize}
 \end{frame}
