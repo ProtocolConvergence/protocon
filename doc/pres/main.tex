@@ -6,10 +6,10 @@
 
 \input{predef}
 
-\usepackage{algorithm}
-\usepackage{algorithmicx}
-\usepackage{algorithm}% http://ctan.org/pkg/algorithms
-\usepackage{algpseudocode}% http://ctan.org/pkg/algorithmicx
+%\usepackage{algorithm}
+%\usepackage{algorithmicx}
+%\usepackage{algorithm}% http://ctan.org/pkg/algorithms
+%\usepackage{algpseudocode}% http://ctan.org/pkg/algorithmicx
 
 \usepackage{tikz}
 \usetikzlibrary{arrows}
@@ -172,19 +172,6 @@ Stabilizing protocol for each process $P_i$:
 
 \begin{frame}
 \frametitle{Representing State Sets}
-In the $3$ process example of Sum-Not-2, the actions of $P_1$ could be represented by the following formula:
-\[\begin{array}{rl}
-   ( & ((x_1 = 0) \wedge (x_0 = 2) \wedge (x_1' = 1))
-\\ \vee & ((x_1 = 1) \wedge (x_0 = 1) \wedge (x_1' = 0))
-\\ \vee & ((x_1 = 2) \wedge (x_0 = 0) \wedge (x_1' = 0))
-\\ ) &
-\\ \wedge & (x_0 = x_0')
-\\ \wedge & (x_2 = x_2')
-\end{array}\]
-\end{frame}
-
-\begin{frame}
-\frametitle{Representing State Sets}
 \begin{itemize}
 \item A state is a valuation of variables.
  \begin{itemize}
@@ -199,7 +186,6 @@ In the $3$ process example of Sum-Not-2, the actions of $P_1$ could be represent
  \begin{itemize}
  \item Binary decision diagram (BDD) if all variables are Boolean.
  \item Multi-valued decision diagram (MDD) if all variables are finite.
- \item But what about infinite domains like $\Int$?
  \end{itemize}
 \end{itemize}
 \end{frame}
@@ -220,21 +206,17 @@ In the $3$ process example of Sum-Not-2, the actions of $P_1$ could be represent
 \end{itemize}
 \end{frame}
 
-
 \begin{frame}
-\frametitle{State Set Operations}
-\begin{itemize}
-\item Formula conjunction.
-\item Formula disjunction.
-\item Formula negation.
-\item Variable substitution by reordering bits of transition symbols.
- \begin{itemize}
- \item Change unprimed variables to primed.
- \item Change primed variables to unprimed.
- \end{itemize}
-\item Existential quantification by MDD ``smoothing''.
-\item Unique representation by MDD.
-\end{itemize}
+\frametitle{Representing State Sets by MDD}
+In the $3$ process example of Sum-Not-2, the actions of $P_1$ could be represented by the following formula:
+\[\begin{array}{rl}
+   ( & ((x_1 = 0) \wedge (x_0 = 2) \wedge (x_1' = 1))
+\\ \vee & ((x_1 = 1) \wedge (x_0 = 1) \wedge (x_1' = 0))
+\\ \vee & ((x_1 = 2) \wedge (x_0 = 0) \wedge (x_1' = 0))
+\\ ) &
+\\ \wedge & (x_0 = x_0')
+\\ \wedge & (x_2 = x_2')
+\end{array}\]
 \end{frame}
 
 \begin{frame}
@@ -281,45 +263,6 @@ In the $3$ process example of Sum-Not-2, the actions of $P_1$ could be represent
  \\$= \exists x',y' : \vbl{prime}((y > 3)\wedge (x = 2)) \wedge A$
  \\$= \exists x',y' : (y' > 3)\wedge (x' = 2) \wedge A$
  \\$= (y > 3) \wedge (y < 20) \wedge (x = y + 2)$
- \end{itemize}
-\end{itemize}
-\end{frame}
-
-\begin{frame}
-\frametitle{Example Protocol: 3-Coloring on a Ring}
-\begin{itemize}
-\item The goal of the protocol is the same as that of the traditional 3-Coloring problem: find a 
-    coloring scheme in which no two consecutive processes have the same color.
-\item Each process can see its color, and the color of its two neighbors.  It can only change its
-    own color.
-\item For our representation, we use \{0,1,2\} to represent the three colors.
-\item Invariant
- \begin{itemize}
- \item Given $c_i$ as the acting process, $c_{i-1}$ as the left neighbor, $c_{i+1}$ as the right
-    neighbor, and I is the invariant state: 
-    \[ I \equiv (\forall i\in\Nat_n: c_{i-1}\ne c_i \wedge c_i \ne c_{i+1}) \]
- \end{itemize}
-\end{itemize}
-\end{frame}
-
-\begin{frame}
-\frametitle{Example Protocol: Maximal Matching}
-\begin{itemize}
-\item The goal of this protocol is to have every process be pointed to by either itself only, or it
-    is pointing to a neighbor who is also pointing to it.
-\item Again, each process can see where it is pointing, and where both of its neighbors are
-    pointing.
-\item We use 0 to denote a process pointing to itself, 1 to denote pointing to its left neighbor
-    and 2 to denote pointing to its right neighbor.
-\item Invariant
- \begin{itemize}
- \item Given $m_i$ as the acting process, $m_{i-1}$ as the left neighbor, $m_{i+1}$ as the right
-    neighbor, and I as the invariant:
-  \begin{eqnarray*}
-   I \equiv \forall i\in\Nat_n: & & (m_{i-1} = 2 \wedge m_i = 1)
-                    \\ & \vee  & (m_{i-1} = 1 \wedge m_i = 0 \wedge m_{i+1} = 2)
-                    \\ & \vee  & (m_i = 2 \wedge m_{i+1} = 1)
-  \end{eqnarray*}
  \end{itemize}
 \end{itemize}
 \end{frame}
@@ -399,8 +342,64 @@ $B$ is pruned if either:
 %\EndIf
 %\end{algorithmic}
 %\end{frame}
+%
 
-% Objective: do planning problem with infinite variable domains.
+\begin{frame}
+\frametitle{Example Protocol: Maximal Matching}
+\begin{itemize}
+\item The goal of this protocol is to have every process be pointed to by either itself only, or it
+    is pointing to a neighbor who is also pointing to it.
+\item Again, each process can see where it is pointing, and where both of its neighbors are
+    pointing.
+\item We use 0 to denote a process pointing to itself, 1 to denote pointing to its left neighbor
+    and 2 to denote pointing to its right neighbor.
+\item Invariant
+ \begin{itemize}
+ \item Given $m_i$ as the acting process, $m_{i-1}$ as the left neighbor, $m_{i+1}$ as the right
+    neighbor, and I as the invariant:
+  \begin{eqnarray*}
+   I \equiv \forall i\in\Nat_n: & & (m_{i-1} = 2 \wedge m_i = 1)
+                    \\ & \vee  & (m_{i-1} = 1 \wedge m_i = 0 \wedge m_{i+1} = 2)
+                    \\ & \vee  & (m_i = 2 \wedge m_{i+1} = 1)
+  \end{eqnarray*}
+ \end{itemize}
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Example Protocol: 2-Coloring on a Ring}
+\begin{itemize}
+\item The goal of the protocol is the same as that of the traditional 3-Coloring problem: find a 
+    coloring scheme in which no two consecutive processes have the same color.
+\item Each process can see its color, and the color of its two neighbors.  It can only change its
+    own color.
+\item For our representation, we use \{0,1,2\} to represent the three colors.
+\item Invariant
+ \begin{itemize}
+ \item Given $c_i$ as the acting process, $c_{i-1}$ as the left neighbor, $c_{i+1}$ as the right
+    neighbor, and I is the invariant state: 
+    \[ I \equiv (\forall i\in\Nat_n: c_{i-1}\ne c_i \wedge c_i \ne c_{i+1}) \]
+ \end{itemize}
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Example Protocol: 3-Coloring on a Ring}
+\begin{itemize}
+\item The goal of the protocol is the same as that of the traditional 3-Coloring problem: find a 
+    coloring scheme in which no two consecutive processes have the same color.
+\item Each process can see its color, and the color of its two neighbors.  It can only change its
+    own color.
+\item For our representation, we use \{0,1,2\} to represent the three colors.
+\item Invariant
+ \begin{itemize}
+ \item Given $c_i$ as the acting process, $c_{i-1}$ as the left neighbor, $c_{i+1}$ as the right
+    neighbor, and I is the invariant state: 
+    \[ I \equiv (\forall i\in\Nat_n: c_{i-1}\ne c_i \wedge c_i \ne c_{i+1}) \]
+ \end{itemize}
+\end{itemize}
+\end{frame}
+
 \begin{frame}[allowframebreaks]
 \frametitle{References}
 \bibliographystyle{abbrv}
