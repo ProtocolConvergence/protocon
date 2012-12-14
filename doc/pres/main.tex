@@ -174,9 +174,6 @@ Stabilizing protocol for each process $P_i$:
 \frametitle{Representing State Sets}
 \begin{itemize}
 \item A state is a valuation of variables.
- \begin{itemize}
- \item In PDDL, these are predicates and functions on objects.
- \end{itemize}
 \item Can represent a set of states with a predicate formula.
  \begin{itemize}
  \item Ex: $x=1\vee y=0$ represents $3$ states of $2$ bits $x$ and $y$.
@@ -220,49 +217,22 @@ In the $3$ process example of Sum-Not-2, the actions of $P_1$ could be represent
 \end{frame}
 
 \begin{frame}
-\frametitle{Image}
+\frametitle{Image and Preimage}
 \begin{itemize}
 \item The $\vbl{image}$ function finds all states which transitions $T$ map from $S$.
  \begin{itemize}
  \item $\vbl{image}(T,S) = \aset{s_1 \in \mathcal{S} \pipe\exists s_0\in S : (s_0,s_1)\in T}$
  \end{itemize}
-\item Compute using standard operations.
- \begin{itemize}
- \item Conjunct the formulas of $S$ and $T$.
- \item Project out unprimed variables with existential quantification.
- \item Change primed variables to unprimed.
- \end{itemize}
-\item Example:
- \begin{itemize}
- \item Let action $A = (y < 20) \wedge (x' = x - y) \wedge (y' = y)$.
- \item $\vbl{image}(A, (y > 3) \wedge (x = 2))$
- \\$= \vbl{unprime}(\exists x,y : (y > 3)\wedge (x = 2) \wedge A)$
- \\$= \vbl{unprime}((y' > 3) \wedge (y' < 20) \wedge (x' = 2 - y'))$
- \\$= (y > 3) \wedge (y < 20) \wedge (x = 2 - y)$
- \end{itemize}
-\end{itemize}
-\end{frame}
-
-\begin{frame}
-\frametitle{Preimage}
-\begin{itemize}
 \item The $\vbl{preimage}$ function finds all states which are mapped to states in $S$ by transitions $T$.
  \begin{itemize}
  \item $\vbl{preimage}(T,S) = \aset{s_0 \in \mathcal{S} \pipe\exists s_1\in S : (s_0,s_1)\in T}$
  \end{itemize}
-\item Compute using standard operations.
+\item Compute with MDD operations.
+\item Allows the following fixed point algorithms:
  \begin{itemize}
- \item Prime all variables in formula of $S$.
- \item Conjunct with formula of $T$.
- \item Project out primed variables with existential quantification.
- \end{itemize}
-\item Example:
- \begin{itemize}
- \item Let action $A = (y < 20) \wedge (x' = x - y) \wedge (y' = y)$.
- \item $\vbl{preimage}(A, (y > 3) \wedge (x = 2))$
- \\$= \exists x',y' : \vbl{prime}((y > 3)\wedge (x = 2)) \wedge A$
- \\$= \exists x',y' : (y' > 3)\wedge (x' = 2) \wedge A$
- \\$= (y > 3) \wedge (y < 20) \wedge (x = y + 2)$
+ \item Weak convergence check.
+ \item Cycle detection in set of illegitimate states.
+ \item Backward reachability from invariant.
  \end{itemize}
 \end{itemize}
 \end{frame}
@@ -327,6 +297,21 @@ $B$ is pruned if either:
 \begin{itemize}
 \item Order the sets of deadlocks by number of candidate actions which can resolve them.
 \item When picking the next candidate action, pick one which resolves one of the most constrained deadlocks!
+\item Use greedy approach to choose the candidate action from those which can resolve the most-constrained deadlocks.
+ \begin{itemize}
+ \item Pick action which has the ``most influence''.
+  \begin{itemize}
+  \item Loosely related to resolving most deadlocks.
+  \item Measured by least number of conflicting candidate actions.
+  \end{itemize}
+ \item Performs better than any Least-Constraining Value (LCV) heuristic that we could figure out.
+ \item Never perfect though.
+ \end{itemize}
+\item To further help picking, define a priorities to processes.
+ \begin{itemize}
+ \item Choose actions of high-priority processes first.
+ \item Sometimes a {\it backwards} ordering ($P_{N-1},\dots,P_0$) is preferred on a unidirectional ring.
+ \end{itemize}
 \end{itemize}
 \end{frame}
 
@@ -398,25 +383,28 @@ $B$ is pruned if either:
 \end{frame}
 
 \begin{frame}
-\frametitle{Example Protocol: Dijkstra's Token Ring}
+\frametitle{Example Protocol: Dijkstra's Token Ring \cite{dij}}
 A token ring is used to give one process out of many an exclusive right, also   known as distributed mutual exclusion.
+\begin{figure}
 \begin{tikzpicture}[x=1.5cm,y=1.5cm]
   \tikzstyle{every node}=[draw,circle]
   \draw
   (0,0)      node (0) {$P_0$}
-  ++(   0:1) node (1) {$P_1$}
-  ++( -60:1) node (2) {$P_2$}
-  ++(-120:1) node (3) {$P_3$}
-  ++(-180:1) node (4) {$P_4$}
-  ++(-240:1) node (5) {$P_5$}
+  ++( -30:1) node (1) {$P_1$}
+  ++( -90:1) node (2) {$P_2$}
+  ++(-150:1) node (3) {$P_3$}
+  ++(-210:1) node (4) {$P_4$}
+  ++(-270:1) node (5) {$P_5$}
   ;
-  \draw (0) -- (1);
-  \draw (1) -- (2);
-  \draw (2) -- (3);
-  \draw (3) -- (4);
-  \draw (4) -- (5);
-  \draw (5) -- (0);
+  \path[->,draw,thick]
+  (0) edge (1)
+  (1) edge (2)
+  (2) edge (3)
+  (3) edge (4)
+  (4) edge (5)
+  (5) edge (0);
 \end{tikzpicture}
+\end{figure}
 \end{frame}
 
 \begin{frame}
@@ -424,15 +412,57 @@ A token ring is used to give one process out of many an exclusive right, also   
 \item Each process $P_i$ holds a variable $x_i$ which ranges from $0$ to $n$ ($x_i\in\Nat_{n+1}$). 
 \item Each $P_i$ can read and write $x_i$ and can read $x_{i-1}$ (where subtraction   is modulo $n$). 
 \item $P_0$ is said to have a token when it sees $x_{n-1} = x_0$. Any other $P_i$ has a token when $x_{i-1} \neq x_i$. 
-\item Invariant
- \begin{itemize}
- \item A state is legitimate when exactly one process has the token, and I is the invariant state: 
+\item Invariant: All states where exactly one process has the token.
+\end{itemize}
+A stabilizing protocol:
 \[ 
       \begin{array}{rrcl} 
          P_0: & x_{5} = x_0 & \to & x_0 \defeq x_0 + 1 \mod (n+1) 
   \\ P_{i>0}: & x_{i-1} \neq x_i & \to & x_i \defeq x_{i-1} 
       \end{array} 
 \] 
+\end{frame}
+
+\begin{frame}
+\frametitle{Example Protocol: 2-Bit Token ``Spring'' \cite{dij}}
+\begin{itemize}
+\item Same purpose as token ring, but not a ring.
+\item Different criteria for having a token.
+\item $2$ bits per process.
+\item Each $P_i$ has variables $x_i$ and $\vbl{up}_i$.
+\item For $i<N-1$, $P_i$ reads $x_{i+1}$ and $\vbl{up}_{i+1}$.
+\item For $i>0$, $P_i$ reads $x_{i-1}$.
+\end{itemize}
+\begin{figure}
+\begin{tikzpicture}[x=1.5cm,y=1.5cm]
+  \tikzstyle{every node}=[draw,circle]
+  \draw
+  (0,0)      node (0) {$P_0$}
+  ++( -30:1) node (1) {$P_1$}
+  ++( -90:1) node (2) {$P_2$}
+  ++(-150:1) node (3) {$P_3$}
+  ++(-210:1) node (4) {$P_4$}
+  ++(-270:1) node (5) {$P_5$}
+  ;
+  \path[draw,thick]
+  (0) edge (1)
+  (1) edge (2)
+  (2) edge (3)
+  (3) edge (4)
+  (4) edge (5);
+\end{tikzpicture}
+\end{figure}
+\end{frame}
+
+\begin{frame}
+\frametitle{Example Protocol: 3-Bit Token Ring \cite{Gouda:3bitTR}}
+\begin{itemize}
+\item Unidirectional token ring, three bits per process.
+\item Different criteria for having a token.
+\item Each $P_i$ has variables $e_i$, $t_i$, and $\vbl{ready}_i$.
+\item For MCV tie breaking, prefer actions of the {\it lowest} process number.
+ \begin{itemize}
+ \item Dijkstra's token ring solves faster when preferring actions of the {\it highest} process number.
  \end{itemize}
 \end{itemize}
 \end{frame}
