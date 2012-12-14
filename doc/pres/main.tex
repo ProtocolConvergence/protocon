@@ -5,7 +5,11 @@
 \usetheme{Warsaw}
 
 \input{predef}
-\usepackage{listings}
+
+\usepackage{algorithm}
+\usepackage{algorithmicx}
+\usepackage{algorithm}% http://ctan.org/pkg/algorithms
+\usepackage{algpseudocode}% http://ctan.org/pkg/algorithmicx
 
 \usepackage{tikz}
 \usetikzlibrary{arrows}
@@ -166,6 +170,18 @@ Stabilizing protocol for each process $P_i$:
 \end{figure}
 \end{frame}
 
+\begin{frame}
+\frametitle{Representing State Sets}
+In the $3$ process example of Sum-Not-2, the actions of $P_1$ could be represented by the following formula:
+\[\begin{array}{rl}
+   ( & ((x_1 = 0) \wedge (x_0 = 2) \wedge (x_1' = 1))
+\\ \vee & ((x_1 = 1) \wedge (x_0 = 1) \wedge (x_1' = 0))
+\\ \vee & ((x_1 = 2) \wedge (x_0 = 0) \wedge (x_1' = 0))
+\\ ) &
+\\ \wedge & (x_0 = x_0')
+\\ \wedge & (x_2 = x_2')
+\end{array}\]
+\end{frame}
 
 \begin{frame}
 \frametitle{Representing State Sets}
@@ -309,9 +325,80 @@ Stabilizing protocol for each process $P_i$:
 \end{frame}
 
 \begin{frame}
-\frametitle{A citation}
-This is cool: \cite{sycraft2008}
+\frametitle{Search Algorithm Initialization}
+\begin{enumerate}
+\item Let $\vbl{candidates}$ be a list of all actions.
+\item Prune all actions which are self-loops from $\vbl{candidates}$.
+ \begin{enumerate}
+ \item[] Example self-loop: $x_1 = 1 \wedge x_0 = 0 \to x_1\defeq 1$.
+ \end{enumerate}
+\item Prune all actions which break closure from $\vbl{candidates}$.
+\item Let $\vbl{actions}$ be an empty list actions.
+\item Call backtracking algorithm.
+\end{enumerate}
 \end{frame}
+
+\begin{frame}
+\frametitle{Backtracking Algorithm}
+\begin{enumerate}
+\item If all deadlocks in illegitimate states are resolved by $\vbl{actions}$, return success!
+\item While $\vbl{actions}\cup\vbl{candidates}$ weakly converge to the invariant,
+ \begin{enumerate}
+ \item Pick an action $B\in\vbl{candidates}$ using most-constrained deadlock heuristic.
+ \item Let $\vbl{actions'} \defeq \vbl{actions} \cup \aset{B}$.
+ \item Let $\vbl{candidates'} \defeq \vbl{candidates} \setminus \aset{B}$.
+ \item Perform forward checking on $\vbl{actions'}$ and $\vbl{candidates'}$ to shrink $\vbl{candidates'}$.
+ \item {\bf Recurse} with $\vbl{actions'}$ and $\vbl{candidates'}$.
+ \item If solution was found, return success!
+ \item Assign $\vbl{candidates}\defeq\vbl{candidates}\setminus\aset{B}$.
+ \item Add any actions to $\vbl{actions}$ from $\vbl{candidates}$ which now required to resolve deadlocks.
+ \item If any were added, perform forward checking on $\vbl{actions}$ and $\vbl{candidates}$ to shrink $\vbl{candidates}$.
+ \end{enumerate}
+\end{enumerate}
+\end{frame}
+
+\begin{frame}
+\frametitle{Forward Checking}
+Having added an action $A$ of process $P_i$, test each remaining candidate action $B$.
+$B$ is pruned if either:
+\begin{itemize}
+\item $B$ is an action of $P_i$ and enables $A$. For example,
+ \begin{itemize}
+ \item[] Action $B$ is $x_1 = 0 \wedge x_0 = 0 \to x_1\defeq 1$.
+ \item[] Action $A$ is $x_1 = 1 \wedge x_0 = 0 \to x_1\defeq 2$.
+ \item Action $x_1 = 0 \wedge x_0 = 0 \to x_1\defeq 2$ could be used instead of $B$ if we want this behavior. $B$ is useless!
+ \end{itemize}
+\item $B$ is an action of $P_i$ and is enabled by $A$, for example,
+ \begin{itemize}
+ \item[] Action $A$ is $x_1 = 1 \wedge x_1 = 0 \to x_1\defeq 2$.
+ \item[] Action $B$ is $x_1 = 2 \wedge x_1 = 0 \to x_1\defeq 0$.
+ \item Action $x_1 = 1 \wedge x_0 = 0 \to x_1\defeq 0$ would have been used instead of $A$ if we wanted this behavior. $B$ is useless!
+ \end{itemize}
+\item $B$ does not resolve any new deadlocks.
+\item $B$ would create a cycle outside of the invariant.
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Most-Constrained Deadlocks}
+\begin{itemize}
+\item Order the sets of deadlocks by number of candidate actions which can resolve them.
+\item When picking the next candidate action, pick one which resolves one of the most constrained deadlocks!
+\end{itemize}
+\end{frame}
+
+%\begin{frame}
+%\frametitle{MCV Deadlocks}
+%\begin{algorithmic}
+%\If {$i\geq maxval$}
+% \State $i\gets 0$
+%\Else
+% \If {$i+k\leq maxval$}
+%  \State $i\gets i+k$
+% \EndIf
+%\EndIf
+%\end{algorithmic}
+%\end{frame}
 
 % Objective: do planning problem with infinite variable domains.
 \begin{frame}[allowframebreaks]
