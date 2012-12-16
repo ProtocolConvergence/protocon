@@ -23,6 +23,33 @@ public:
   {}
 };
 
+class AddConvergenceOpt {
+public:
+  enum PickActionHeuristic {
+    GreedyPick,
+    GreedySlowPick,
+    LCVLitePick,
+    LCVHeavyPick,
+    LCVJankPick,
+    QuickPick,
+    NPickMethods
+  };
+  enum NicePolicy {
+    NilNice,
+    BegNice,
+    EndNice,
+    NNicePolicies
+  };
+
+  PickActionHeuristic pickMethod;
+  NicePolicy nicePolicy;
+
+  AddConvergenceOpt() :
+    pickMethod( GreedyPick )
+    , nicePolicy( EndNice )
+  {}
+};
+
 class FMem_AddConvergence {
 public:
   bool bt_dbog;
@@ -212,23 +239,12 @@ ReviseDeadlocksMCV(vector<DeadlockConstraint>& dlsets,
   bool
 PickActionMCV(uint& ret_actId,
               const XnSys& sys,
-              const FMem_AddConvergence& tape)
+              const FMem_AddConvergence& tape,
+              const AddConvergenceOpt& opt)
 {
-  enum PickActionHeuristic {
-    GreedyPick,
-    GreedySlowPick,
-    LCVLitePick,
-    LCVHeavyPick,
-    LCVJankPick,
-    QuickPick,
-    NPickMethods
-  } pickMethod = GreedyPick;
-  enum NicePolicy {
-    NilNice,
-    BegNice,
-    EndNice,
-    NNicePolicies
-  } nicePolicy = EndNice;
+  typedef AddConvergenceOpt Opt;
+  const Opt::PickActionHeuristic& pickMethod = opt.pickMethod;
+  const Opt::NicePolicy& nicePolicy = opt.nicePolicy;
 
   const XnNet& topo = sys.topology;
   const vector<DeadlockConstraint>& dlsets = tape.mcvDeadlocks;
@@ -257,7 +273,7 @@ PickActionMCV(uint& ret_actId,
   map< uint, Set<uint> > biasMap;
   bool biasToMax = true;
 
-  if (nicePolicy == BegNice) {
+  if (nicePolicy == Opt::BegNice) {
     // Only consider actions of highest priority process.
     bool have = false;
     uint niceIdxMin = 0;
@@ -276,7 +292,7 @@ PickActionMCV(uint& ret_actId,
     candidates = candidates_1;
   }
 
-  if (pickMethod == GreedyPick || pickMethod == GreedySlowPick) {
+  if (pickMethod == Opt::GreedyPick || pickMethod == Opt::GreedySlowPick) {
     biasToMax = true;
 
     map< uint, uint > resolveMap;
@@ -286,7 +302,7 @@ PickActionMCV(uint& ret_actId,
         const uint actId = *it;
 
         uint w = 0; // Weight.
-        if (pickMethod != GreedySlowPick) {
+        if (pickMethod != Opt::GreedySlowPick) {
           w = j;
         }
         else {
@@ -330,7 +346,7 @@ PickActionMCV(uint& ret_actId,
       biasMap[n] |= actId;
     }
   }
-  else if (pickMethod == LCVLitePick) {
+  else if (pickMethod == Opt::LCVLitePick) {
     biasToMax = false;
 
     for (it = candidates.begin(); it != candidates.end(); ++it) {
@@ -345,7 +361,7 @@ PickActionMCV(uint& ret_actId,
       biasMap[n] |= actId;
     }
   }
-  else if (pickMethod == LCVHeavyPick) {
+  else if (pickMethod == Opt::LCVHeavyPick) {
     biasToMax = false;
 
     for (it = candidates.begin(); it != candidates.end(); ++it) {
@@ -363,7 +379,7 @@ PickActionMCV(uint& ret_actId,
       biasMap[n] |= actId;
     }
   }
-  else if (pickMethod == LCVJankPick) {
+  else if (pickMethod == Opt::LCVJankPick) {
     biasToMax = true;
     map< uint, Set<uint> > overlapSets;
 
@@ -419,7 +435,7 @@ PickActionMCV(uint& ret_actId,
       biasMap[n] |= actId;
     }
   }
-  else if (pickMethod == QuickPick) {
+  else if (pickMethod == Opt::QuickPick) {
     biasToMax = false;
     const PF& backReachPF = tape.backReachPF;
     for (it = candidates.begin(); it != candidates.end(); ++it) {
@@ -447,7 +463,7 @@ PickActionMCV(uint& ret_actId,
     return false;
   }
 
-  if (nicePolicy == EndNice) {
+  if (nicePolicy == Opt::EndNice) {
     bool have = false;
     uint niceIdxMin = 0;
     uint extremeActId = 0;
@@ -603,7 +619,8 @@ FMem_AddConvergence::reviseActions(const XnSys& sys,
   bool
 AddConvergence(vector<uint>& retActions,
                const XnSys& sys,
-               FMem_AddConvergence& tape)
+               FMem_AddConvergence& tape,
+               const AddConvergenceOpt& opt)
 {
   while (!tape.candidates.empty()) {
     if (!WeakConvergenceCk(sys, tape.hiXnRel)) {
@@ -612,7 +629,7 @@ AddConvergence(vector<uint>& retActions,
 
     // Pick the action.
     uint actId = 0;
-    if (!PickActionMCV(actId, sys, tape)) {
+    if (!PickActionMCV(actId, sys, tape, opt)) {
       return false;
     }
 
@@ -621,7 +638,7 @@ AddConvergence(vector<uint>& retActions,
     next.bt_level = tape.bt_level + 1;
     next.reviseActions(sys, Set<uint>(actId), Set<uint>());
 
-    bool found = AddConvergence(retActions, sys, next);
+    bool found = AddConvergence(retActions, sys, next, opt);
     if (found) {
       return true;
     }
@@ -646,7 +663,7 @@ AddConvergence(vector<uint>& retActions,
  * \return  True iff convergence could be added.
  */
   bool
-AddConvergence(XnSys& sys)
+AddConvergence(XnSys& sys, const AddConvergenceOpt& opt)
 {
   XnNet& topo = sys.topology;
   const uint nPossibleActs = topo.nPossibleActs();
@@ -691,7 +708,8 @@ AddConvergence(XnSys& sys)
       }
     }
 
-    if (add && sys.invariant.overlapCk(topo.preimage(actPF))) {
+    if (add && sys.closure &&
+        sys.invariant.overlapCk(topo.preimage(actPF))) {
       // This action does starts in the invariant.
       // If /!sys.synLegit/, we shouldn't add any actions
       // within the legitimate states, even if closure isn't broken.
@@ -722,15 +740,19 @@ AddConvergence(XnSys& sys)
                    tape.candidates,
                    tape.deadlockPF);
 
+  if (tape.mcvDeadlocks.size() < 2) {
+    DBog0("Cannot resolve all deadlocks with known actions!");
+    return false;
+  }
 
   {
     const bool forcePrune = true;
     tape.bt_dbog = true;
-    tape.reviseActions(sys, Set<uint>(), Set<uint>(), forcePrune);
+    tape.reviseActions(sys, Set<uint>(sys.actions), Set<uint>(), forcePrune);
   }
 
   vector<uint> retActions;
-  bool found = AddConvergence(retActions, sys, tape);
+  bool found = AddConvergence(retActions, sys, tape, opt);
   if (!found)  return false;
 
   sys.actions = retActions;
@@ -748,10 +770,12 @@ int main(int argc, char** argv)
     DijkstraTokenRingInstance,
     ThreeBitTokenRingInstance,
     TwoBitTokenSpingInstance,
+    TestTokenRingInstance,
     NProblemInstances
   } problem = NProblemInstances;
   int argi = 1;
   uint npcs = 4;
+  AddConvergenceOpt opt;
 
   if (argi < argc) {
     if (string(argv[argi]) == "test") {
@@ -787,6 +811,10 @@ int main(int argc, char** argv)
     else if (string(argv[argi]) == "2-bit-tr") {
       DBog0("Problem: Dijkstra's Two Bit Token Spring");
       problem = TwoBitTokenSpingInstance;
+    }
+    else if (string(argv[argi]) == "test-tr") {
+      DBog0("Problem: Testing Token Ring");
+      problem = TestTokenRingInstance;
     }
     else{
       //printf("%s: Only supported argument is \"test\".\n", argv[0]);
@@ -828,6 +856,8 @@ int main(int argc, char** argv)
       InstThreeBitTokenRing(sys, npcs);  break;
     case TwoBitTokenSpingInstance:
       InstTwoBitTokenSpring(sys, npcs);  break;
+    case TestTokenRingInstance:
+      InstTestTokenRing(sys, npcs);  break;
     case NProblemInstances:
     default:
       DBog0("No case for this problem instance!");
@@ -835,7 +865,7 @@ int main(int argc, char** argv)
   }
 
   // Run the algorithm.
-  bool found = AddConvergence(sys);
+  bool found = AddConvergence(sys, opt);
   if (found) {
     DBog0("Solution found!");
     for (uint i = 0; i < sys.actions.size(); ++i) {

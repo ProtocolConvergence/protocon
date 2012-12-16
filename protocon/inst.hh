@@ -19,6 +19,8 @@ void
 InstThreeBitTokenRing(XnSys& sys, uint npcs);
 void
 InstTwoBitTokenSpring(XnSys& sys, uint npcs);
+void
+InstTestTokenRing(XnSys& sys, uint npcs);
 
 #endif
 

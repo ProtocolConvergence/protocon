@@ -10,6 +10,9 @@ class Set : public std::set<T>
 public:
   Set() {}
   explicit Set(const T& e) { *this |= e; }
+  explicit Set(const vector<T>& a) :
+    std::set<T>(a.begin(), a.end())
+  {}
 
   bool elemCk(const T& e) const
   {

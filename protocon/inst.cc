@@ -362,3 +362,90 @@ InstTwoBitTokenSpring(XnSys& sys, uint npcs)
                    (topo.pfVbl(npcs-1, 1) == 0));
 }
 
+/** Testing token ring.
+ * Don't care about closure.
+ * Just /somehow/ enforce the original protocol.
+ **/
+  void
+InstTestTokenRing(XnSys& sys, uint npcs)
+{
+  const uint domsz = 4;
+  XnNet& topo = sys.topology;
+  // Build a unidirectional ring where each process P_i.
+  for (uint i = 0; i < npcs; ++i) {
+    char name[10];
+    XnPc& pc = Grow1(topo.pcs);
+
+    sprintf(name, "x%u", i);
+    pc.addVbl(XnVbl(name, 2));
+
+    sprintf(name, "e%u", i);
+    pc.addVbl(XnVbl(name, domsz));
+
+    pc.addPriv(decmod(i, 1, npcs), 0);
+    pc.addPriv(decmod(i, 1, npcs), 1);
+  }
+
+  // Commit to using this topology, and initilize MDD stuff
+  topo.commitInitialization();
+  sys.closure = false;
+
+  for (uint i = 0; i < npcs; ++i) {
+    XnAct act;
+    act.pcIdx = i;
+    act.r0[1] = 0;
+    act.w0[1] = 0;
+    act.w1[1] = 0;
+
+    if (i == 0) {
+      act.r0[0] = 1;
+      act.w0[0] = 1;
+      act.w1[0] = 0;
+    }
+    else {
+      act.r0[0] = 0;
+      act.w0[0] = 1;
+      act.w1[0] = 0;
+    }
+    sys.actions.push_back(topo.actionIndex(act));
+
+    if (i == 0) {
+      act.r0[0] = 0;
+      act.w0[0] = 0;
+      act.w1[0] = 1;
+    }
+    else {
+      act.r0[0] = 1;
+      act.w0[0] = 0;
+      act.w1[0] = 1;
+    }
+    sys.actions.push_back(topo.actionIndex(act));
+  }
+
+  // Set priorities.
+  for (uint pcIdx = 0; pcIdx < npcs; ++pcIdx) {
+    sys.niceIdxFo(pcIdx, npcs-pcIdx-1);
+  }
+
+  // Formulas for each process having a token.
+  vector<PF> tokenPFs(npcs);
+  PF extraNil( true );
+
+  // x[0] == x[N-1]
+  tokenPFs[0] = (topo.pfVbl(0, 0) == topo.pfVblR(0, 0));
+  //tokenPFs[0] &= (topo.pfVbl(0, 1) != topo.pfVblR(0, 1));
+  extraNil &= (topo.pfVbl(0, 1) == 0);
+
+  for (uint pcIdx = 1; pcIdx < npcs; ++pcIdx) {
+    // x[i] != x[i-1]
+    tokenPFs[pcIdx] = (topo.pfVbl(pcIdx, 0) != topo.pfVblR(pcIdx, 0));
+    //tokenPFs[pcIdx] &= (topo.pfVbl(pcIdx, 1) != topo.pfVblR(pcIdx, 1));
+    // e[i] == 0
+    extraNil &= (topo.pfVbl(pcIdx, 1) == 0);
+  }
+
+  sys.invariant = (SingleTokenPF(tokenPFs) & extraNil);
+  //sys.invariant = (SingleTokenPF(tokenPFs));
+}
+
+

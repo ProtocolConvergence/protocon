@@ -174,12 +174,13 @@ public:
   PF invariant;
   bool synLegit; ///< Allow synthesized actions to be in legitimate states.
   bool liveLegit; ///< Ensure no deadlocks in the invariant.
+  bool closure; ///< Ensure closure
 
 private:
   map<uint,uint> niceIdcs; ///< Niceness for processes, used in search.
 
 public:
-  XnSys() : synLegit(false), liveLegit(false) {}
+  XnSys() : synLegit(false), liveLegit(false), closure(true) {}
 
   void niceIdxFo(uint pcIdx, uint niceIdx) {
     niceIdcs[pcIdx] = niceIdx;
