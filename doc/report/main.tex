@@ -3,23 +3,220 @@
 
 \usepackage{tikz}
 \usetikzlibrary{arrows}
-\usepackage{listings}
 
+\usepackage{float}
+\floatstyle{boxed}
+\restylefloat{figure}
+
+\setlength{\abovedisplayskip}{0.5em}
+\setlength{\abovedisplayshortskip}{0.5em}
+\setlength{\belowdisplayskip}{0.5em}
+\setlength{\belowdisplayshortskip}{0.5em}
+\setlength{\abovecaptionskip}{0.0em}
+\setlength{\belowcaptionskip}{0.0em}
 
 \begin{document}
 \title{
- CS5811 In-Progress Report:\\
+ CS5811 Report:\\
  Search for Self-Stabilizing Protocols
 }
 
-\author{~Brandon~Crowley,~Alex~Klinkhamer, and~Mandy~Wang}
+\author{~Brandon~Crowley\and~Alex~Klinkhamer\and~Man~Wang}
 \maketitle
 
+\tableofcontents
 
+\section{Project Description}
 
-%{\it Formulate the search problem: states, actions, goals.}
+\subsection{Problem}
 
-\section{Tasks}
+Given a network of processes (finite-state machines) and an invariant $I$ over their variables, find a set of actions for the processes which guarantees every computation from any initial global state will eventually reach the invariant.
+
+%The problem of finding a self-stabilizing protocol is a search
+
+For each process $P_i$, network topology defines the variables which $P_i$ owns and which other variables $P_i$ can read.
+A process can read and write its own variables and may only read the variables of other processes.
+The purpose of a process is to act.
+A process can have actions of the form $\mathit{guard} \to \mathit{assignment}$ where $\mathit{guard}$ is a predicate over the readable variables of $P_i$ and $\mathit{assignment}$ is a variable assignment.
+\begin{enumerate}
+\item If $P_i$ sees a guard is satisfied, it performs the appropriate variable assignment.
+ \begin{enumerate}
+ \item Note that another process may reassign its variable before $P_i$ can act!
+ \end{enumerate}
+\item The read/write cycle of an action happens atomically. This is interleaving semantics and we can assume that at most one read/write cycle of an action is happening at any given time.
+\item If a process does not have a guard which is satisfied, it does not act.
+\item If no two guards can be satisfied at the same time, the process is deterministic.
+\end{enumerate}
+
+We can represent actions in the finest possible granularity by considering only local transitions.
+For example, if process $P_1$ can read $x_0$ and $x_1$, each spanning $\aset{0,1,2}$, and write $x_1$, then an action 
+\[ x_1 = 0 \wedge x_0 = 2 \to x_1 \defeq 1; \]
+is a local transition from $(x_1 = 0 \wedge x_0 = 2)$ to $(x_1 = 1 \wedge x_0 = 2)$.
+We would not consider an action such as
+\[ x_1 = 0 \to x_1 \defeq 1; \]
+for $P_1$ because it represents $3$ local transitions:
+from $(x_1 = 0 \wedge x_0 = 0)$ to $(x_1 = 1 \wedge x_0 = 0)$,
+from $(x_1 = 0 \wedge x_0 = 1)$ to $(x_1 = 1 \wedge x_0 = 1)$,
+and from $(x_1 = 0 \wedge x_0 = 2)$ to $(x_1 = 1 \wedge x_0 = 2)$.
+
+\subsection{Problem as a Graph}
+
+We can think of a graph where each vertex corresponds with a global state in the system.
+An action is represented by several arcs, each with the same label.
+Next mark all global states which satisfy the invariant.
+
+The problem of adding convergence to a system (finding a self-stabilizing protocol) is the same as finding a set of labels for which the set of all arcs with those labels:
+\begin{enumerate}
+\item Does not include arcs from a vertex marked as invariant to a vertex not marked as invariant.
+ \begin{enumerate}
+ \item Closure.
+ \end{enumerate}
+\item Form a path from each vertex not marked as invariant to a vertex marked as invariant.
+ \begin{enumerate}
+ \item Weak-convergence.
+ \end{enumerate}
+\item Does not form cycles among the vertices not marked as invariant.
+ \begin{enumerate}
+ \item Livelock freedom.
+ \end{enumerate}
+\end{enumerate}
+
+Sometimes no arcs are allowed from any invariant states.
+
+\subsection{Example: Sum-Not-2}
+
+Consider the Sum-Not-2 problem on $3$ processes.
+Each process $P_i$ owns a variable $x_i\in\Nat_3$ (where $\Nat_3 = \aset{0,1,2}$).
+Processes are in a unidirectional ring meaning each $P_i$ can read its anticlockwise neighbor $P_{i-1}$ (subtraction is modulo $3$).
+The invariant is all states where no $x_i + x_{i-1} = 2$, so $I \equiv (\forall i\in\Nat_3: x_i + x_{i-1} \ne 2)$.
+
+Illustrated in the three figures are the problem instance, a stabilizing protocol, and how that protocol appears as a transition graph over the global state space.
+\begin{figure}[h]
+\begin{tabular}{lc}
+\begin{tabular}[b]{@{}l@{}}
+For all $i\in\Nat_3$, $P_i$ has privileges:
+\\
+\begin{centering}
+$P_i :
+\begin{cases}
+ x_i\in\Nat_3 & \mbox{(read-write)} \\
+ x_{i-1}\in\Nat_3 & \mbox{(read-only)} \\
+\end{cases}$
+\end{centering}
+\\
+Invariant:
+$I \equiv (\forall i\in\Nat_3: x_i + x_{i-1} \ne 2)$
+\end{tabular}
+&
+\begin{tikzpicture}[x=1.5cm,y=1.5cm]
+\tikzstyle{every node}=[draw,circle]
+\draw
+ (0,0)      node (0) {$P_0$}
+ ++( -60:1) node (1) {$P_1$}
+ ++(-180:1) node (2) {$P_2$}
+ ;
+\path[->,draw,thick]
+(0) edge (1)
+(1) edge (2)
+(2) edge (0)
+;
+\end{tikzpicture}
+\\
+\end{tabular}
+\caption{Sum-Not-2 problem instance.}
+\end{figure}
+
+\begin{figure}[h]
+\begin{eqnarray*}
+   (x_i = 0) \wedge (x_{i-1} = 2) & \to & x_i \defeq 1;
+\\ (x_i = 1) \wedge (x_{i-1} = 1) & \to & x_i \defeq 0;
+\\ (x_i = 2) \wedge (x_{i-1} = 0) & \to & x_i \defeq 0;
+\end{eqnarray*}
+\caption{Actions of each $P_i$ in a stabilizing protocol for Sum-Not-2.}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[x=1.0cm,y=1.0cm]
+\tikzstyle{every node}=[]
+\tikzstyle{legit}=[draw]
+\def \dx {3.5}
+\draw
+  (  0, 0) node [legit] (000) {000}
+++(\dx, 0) node [legit] (100) {100}
+++(\dx, 0) node         (200) {200}
+  (  0,-1) node [legit] (010) {010}
+++(\dx, 0) node         (110) {110}
+++(\dx, 0) node         (210) {210}
+  (  0,-2) node         (020) {020}
+++(\dx, 0) node         (120) {120}
+++(\dx, 0) node         (220) {220}
+  (  1, 0) node [legit] (001) {001}
+++(\dx, 0) node         (101) {101}
+++(\dx, 0) node         (201) {201}
+  (  1,-1) node         (011) {011}
+++(\dx, 0) node         (111) {111}
+++(\dx, 0) node         (211) {211}
+  (  1,-2) node         (021) {021}
+++(\dx, 0) node         (121) {121}
+++(\dx, 0) node [legit] (221) {221}
+  (  2, 0) node         (002) {002}
+++(\dx, 0) node         (102) {102}
+++(\dx, 0) node         (202) {202}
+  (  2,-1) node         (012) {012}
+++(\dx, 0) node         (112) {112}
+++(\dx, 0) node [legit] (212) {212}
+  (  2,-2) node         (022) {022}
+++(\dx, 0) node [legit] (122) {122}
+++(\dx, 0) node [legit] (222) {222}
+;
+\path[->,draw,thick]
+(002) edge [color=red!40,out=- 20,in= 200,looseness=.7] (102)
+(012) edge [color=red!40,out=- 20,in= 200,looseness=.7] (112)
+(022) edge [color=red!40,out=- 20,in= 200,looseness=.7] (122)
+(101) edge [color=red!40,out= 140,in=  30,looseness=.6] (001)
+(111) edge [color=red!40,out= 140,in=  30,looseness=.6] (011)
+(121) edge [color=red!40,out= 140,in=  30,looseness=.6] (021)
+(200) edge [color=red!40,out= 160,in=  70,looseness=.3] (000)
+(210) edge [color=red!40,out= 160,in=  70,looseness=.3] (010)
+(220) edge [color=red!40,out= 160,in=  70,looseness=.3] (020)
+
+(200) edge [color=green!50!black!75,out=-120,in= 120] (210)
+(201) edge [color=green!50!black!75,out=-120,in= 120] (211)
+(202) edge [color=green!50!black!75,out=-120,in= 120] (212)
+(110) edge [color=green!50!black!75,out=  50,in=- 50] (100)
+(111) edge [color=green!50!black!75,out=  50,in=- 50] (101)
+(112) edge [color=green!50!black!75,out=  50,in=- 50] (102)
+(020) edge [color=green!50!black!75,out= 140,in=-140,looseness=.5] (000)
+(021) edge [color=green!50!black!75,out= 130,in=-130,looseness=.5] (001)
+(022) edge [color=green!50!black!75,out= 130,in=-130,looseness=.5] (002)
+
+(002) edge [color=blue,out= 120,in=  40,looseness=.5] (000)
+(102) edge [color=blue,out= 120,in=  40,looseness=.5] (100)
+(202) edge [color=blue,out= 120,in=  40,looseness=.5] (200)
+(011) edge [color=blue,out= 130,in=  60] (010)
+(111) edge [color=blue,out= 130,in=  60] (110)
+(211) edge [color=blue,out= 130,in=  60] (210)
+(020) edge [color=blue,out=- 60,in= 230] (021)
+(120) edge [color=blue,out=- 60,in= 230] (121)
+(220) edge [color=blue,out=- 60,in= 230] (221)
+;
+\end{tikzpicture}
+\caption{Transitions of {\color{red!40} $P_0$}, {\color{green!50!black!75} $P_1$}, {\color{blue} $P_2$}. Legitimate states $x_0x_1x_2$ are boxed.}
+\end{figure}
+
+%* A description of the project and its goals. How does it relate to Artificial Intelligence.
+
+\section{Background}
+%* Background: related literature and software and algorithms that you imported into your project. Clearly describe, work that you directly used, work you used after modification, and your own contribution.
+
+%* Comparison to similar projects
+
+\section{Experiments}
+%* Experiments: Clearly and in detail describe the experimental setup. Use a "storyboard" like approach if possible. Give all the information so that someone who reads the report can replicate your experiments. Explain and discuss the experimental results. How were the problems selected? Did you use problems with varying complexity and test the boundaries of the system?
+
+\section{Task Distribution}
+%* How were the tasks distributed among the group members? How long did it take for tasks to complete?
 
 \begin{center}
 \begin{tabular}{|c||c|c|c|}
@@ -32,34 +229,41 @@
  Weak Stabilization Check & 2 days, 1 person & Mandy & done \\
  Cycle Check & 1 week, 1 person & Alex & done \\
  Backtracking Algorithm & 4 days, 2 people & Brandon \& Mandy & done \\
- Output File & 1 day, 1 person &  Brandon & 75\% \\
- Output Model & 1 day, 1 person & Alex & \\
+ Output File & 1 day, 1 person &  Brandon & N/A \\
+ Output Model & 1 day, 1 person & Alex & done \\
  Forward Checking & 2 days, 3 people & all & done \\
- Most-Constrained Variable & 1 week, 3 people & all & 50\% \\
- AC-3 & 1 week, 3 people & all & \\
- Examples and Comparison & 2 weeks, 3 people & all & \\
+ Most-Constrained Variable & 1 week, 3 people & all & done \\
+ AC-3 & 1 week, 3 people & all & done, removed \\
+ Examples and Comparison & 2 weeks, 3 people & all & done \\
 \hline
 \end{tabular}
 \end{center}
 
-\section{Progress}
+\section{Contributions and Accomplishments}
+%* Contributions and accomplishments. Were you able to accomplish the minimal set of goals identified in your proposal? What else was accomplished? Make sure to define accomplishments specifically, supplementing phrases such as "better" or "improved" by numeric data.
 
-\begin{itemize}
- \item We investigated how to represent state predicates and actions with MDDs.
-  This is explained below and we have prototype code for it.
- \item We have also figured out how to perform forward and backwards reachability using MDDs, though this is not explained in the report yet.
-  As a corollary, this means we know how to check for weak stabilization using MDDs.
- \item At the end of this report (in the last example), we show the input file format we may use.
-  In that example, we also show how a generated protocol would look.
-\end{itemize}
+This work gives some insight on why polynomial-time heuristic methods such as \cite{ipdpsEbnenasir11} succeed.
+We were able to avoid backtracking in many cases by simply choosing actions in the proper order, combined with forward-checking.
+
+\section{Lessons Learned}
+
+We learned that it is simple to collaborate on code and documentation in version control.
 
 \section{Future Work}
 
-Our current to-do list consists primarily of constructing a detailed list of activities required to finish this project, with a rough timeline 
-and initial task assignments for each member, all of which will be taken care of early in the next week, and then we will begin with whichever tasks top
-the new list.  After that, our broader to-do list consists of the items laid out in section 2 of the proposal, less items already completed:
-cycle checking, weak stabilization checking, the backtracking algorithm, implementing the most-constrained variable and AC-3 heuristics, and performing
-tests to measure the effectiveness of our implementation.
+This work gives some insight on why polynomial-time heuristic methods such as \cite{ipdpsEbnenasir11} succeed.
+We were able to avoid backtracking in many cases by simply choosing actions in the proper order, combined with forward-checking.
+
+\section{Instructions to Run Code}
+%* Full commented code with instructions to run it as is and with different parameters.
+
+\section{Project Comments and Suggestions}
+%* Any comments and suggestions of the project component of CS5811 will be appreciated.
+
+
+
+%{\it Formulate the search problem: states, actions, goals.}
+
 
 \section{BDD Algorithms}
 As in regular software or any search algorithm, the states could be of large amount and rather complex. Simply listing the states is inefficient and complicates analysis. Here we resort to Multiple-Valued Logic for describing the state of a system, represented by a multiple-valued decision diagram (MDD), which is general version of BDD. This allows countermeasures to be formated that address states that share common features. 
@@ -152,12 +356,6 @@ $P_i$ can also read and write its own variable $c_i$.
 The system is in a legitimate state when no two neighboring processes have the same color.
 Formally, the invariant is defined as (with arithmetic modulo $n$):
 \[ I \equiv (\forall i\in\Nat_n: c_{i-1}\ne c_i \wedge c_i \ne c_{i+1}) \]
-
-The following file expresses this system and invariant using input format of Sycraft \cite{sycraft2008}.
-
-\fbox{
- \lstinputlisting{ThreeColoring.fin}
-}
 
 The following action for each $P_i$ can be used for a stabilizing protocol:
 \[
