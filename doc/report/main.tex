@@ -256,6 +256,31 @@ We were able to avoid backtracking in many cases by simply choosing actions in t
 
 \section{Instructions to Run Code}
 %* Full commented code with instructions to run it as is and with different parameters.
+\subsection{Running the code}
+The program could be executed in terminal using the following command:
+
+\[
+  ./bin/protocon <problem> <numprocs>
+\]
+
+where
+
+$\bf{<problem>}$ is one of:
+
+"3-coloring", "2-coloring", "matching", "sum-not-2", "dijkstra-tr", "3-bit-tr", "2-bit-tr"
+
+$\bf{<numprocs>}$ is number of processes
+
+\subsection{Outputs}
+In the output, 
+
+$\bf{(lvl\ n)}$ means that the output is generated at the level $n$ of recursion. At least $n$ actions will be chosen at this point.
+
+$\bf{(sz\ n)}$ means that there are actually $n$ actions chosen. It can be larger than the recursion level if the actions are included based on forward-checking.
+
+$\bf{(rem\ n)}$ means that there are $n$ remaining candidate actions at this point. The part printed after is the action being chosen, which is indicated in $\bf{(sz\ m)}$ before. 
+
+$\bf{(lvl\ x) (mcv\ y) (mcv-sz\ z)}$ is printed when making the decision to pick the next action (applying the MCV heuristic). This one is at level $x$, where the most constrained deadlock(s) have only $y$ different candidate actions that resolve them, but there are many sets of deadlocks which may only be resolved by $y$ different candidate actions. In total, $z$ candidate actions can resolve one of these most-constrained deadlocks.
 
 \section{Project Comments and Suggestions}
 %* Any comments and suggestions of the project component of CS5811 will be appreciated.
