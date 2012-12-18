@@ -8,12 +8,28 @@
 \floatstyle{boxed}
 \restylefloat{figure}
 
+\usepackage{algorithm}
+\usepackage{algorithmic}
+
 \setlength{\abovedisplayskip}{0.5em}
 \setlength{\abovedisplayshortskip}{0.5em}
 \setlength{\belowdisplayskip}{0.5em}
 \setlength{\belowdisplayshortskip}{0.5em}
 \setlength{\abovecaptionskip}{0.0em}
 \setlength{\belowcaptionskip}{0.0em}
+
+\def\imagetop#1{\vtop{\null\hbox{#1}}}
+
+\newcommand{\xnsysinst}[3]{%
+\begin{figure}[H]
+\begin{tabular}[c]{l|l}
+ \imagetop{#2} &
+ \imagetop{\begin{tabular}[c]{@{}l@{}}#3\end{tabular}} \\
+\end{tabular}
+\caption{Problem instance: \texttt{#1}}
+\end{figure}}
+
+\newcommand{\unique}{\exists!}
 
 \begin{document}
 \title{
@@ -28,11 +44,10 @@
 
 \section{Project Description}
 
-\subsection{Problem}
+\subsection{AddConvergence Problem}
 
-Given a network of processes (finite-state machines) and an invariant $I$ over their variables, find a set of actions for the processes which guarantees every computation from any initial global state will eventually reach the invariant.
-
-%The problem of finding a self-stabilizing protocol is a search
+Given a network of processes (finite-state machines) and an invariant $I$ over their variables, find a set of actions for the processes which guarantees every computation from any initial global state will eventually reach the invariant (i.e., {\it convergence}).
+Additionally, once the system is in an invariant state, it must never leave (i.e., {\it closure}).
 
 For each process $P_i$, network topology defines the variables which $P_i$ owns and which other variables $P_i$ can read.
 A process can read and write its own variables and may only read the variables of other processes.
@@ -59,7 +74,7 @@ from $(x_1 = 0 \wedge x_0 = 0)$ to $(x_1 = 1 \wedge x_0 = 0)$,
 from $(x_1 = 0 \wedge x_0 = 1)$ to $(x_1 = 1 \wedge x_0 = 1)$,
 and from $(x_1 = 0 \wedge x_0 = 2)$ to $(x_1 = 1 \wedge x_0 = 2)$.
 
-\subsection{Problem as a Graph}
+\subsection{AddConvergence as a Graph Problem}
 
 We can think of a graph where each vertex corresponds with a global state in the system.
 An action is represented by several arcs, each with the same label.
@@ -85,14 +100,28 @@ Sometimes no arcs are allowed from any invariant states.
 
 \subsection{Example: Sum-Not-2}
 
-Consider the Sum-Not-2 problem on $3$ processes.
+Consider the Sum-Not-2 instance on $3$ processes.
 Each process $P_i$ owns a variable $x_i\in\Nat_3$ (where $\Nat_3 = \aset{0,1,2}$).
 Processes are in a unidirectional ring meaning each $P_i$ can read its anticlockwise neighbor $P_{i-1}$ (subtraction is modulo $3$).
 The invariant is all states where no $x_i + x_{i-1} = 2$, so $I \equiv (\forall i\in\Nat_3: x_i + x_{i-1} \ne 2)$.
 
 Illustrated in the three figures are the problem instance, a stabilizing protocol, and how that protocol appears as a transition graph over the global state space.
-\begin{figure}[h]
-\begin{tabular}{lc}
+\begin{figure}[H]
+\begin{tabular}{l|l}
+\begin{tikzpicture}[x=1.5cm,y=1.5cm]
+\tikzstyle{every node}=[]
+\draw
+ (0,0)      node (0) {$P_0$}
+ ++( -60:1) node (1) {$P_1$}
+ ++(-180:1) node (2) {$P_2$}
+ ;
+\path[->,draw,thick]
+(0) edge (1)
+(1) edge (2)
+(2) edge (0)
+;
+\end{tikzpicture}
+&
 \begin{tabular}[b]{@{}l@{}}
 For all $i\in\Nat_3$, $P_i$ has privileges:
 \\
@@ -107,26 +136,12 @@ $P_i :
 Invariant:
 $I \equiv (\forall i\in\Nat_3: x_i + x_{i-1} \ne 2)$
 \end{tabular}
-&
-\begin{tikzpicture}[x=1.5cm,y=1.5cm]
-\tikzstyle{every node}=[draw,circle]
-\draw
- (0,0)      node (0) {$P_0$}
- ++( -60:1) node (1) {$P_1$}
- ++(-180:1) node (2) {$P_2$}
- ;
-\path[->,draw,thick]
-(0) edge (1)
-(1) edge (2)
-(2) edge (0)
-;
-\end{tikzpicture}
 \\
 \end{tabular}
 \caption{Sum-Not-2 problem instance.}
 \end{figure}
 
-\begin{figure}[h]
+\begin{figure}[H]
 \begin{eqnarray*}
    (x_i = 0) \wedge (x_{i-1} = 2) & \to & x_i \defeq 1;
 \\ (x_i = 1) \wedge (x_{i-1} = 1) & \to & x_i \defeq 0;
@@ -135,7 +150,7 @@ $I \equiv (\forall i\in\Nat_3: x_i + x_{i-1} \ne 2)$
 \caption{Actions of each $P_i$ in a stabilizing protocol for Sum-Not-2.}
 \end{figure}
 
-\begin{figure}[h]
+\begin{figure}[H]
 \centering
 \begin{tikzpicture}[x=1.0cm,y=1.0cm]
 \tikzstyle{every node}=[]
@@ -205,12 +220,514 @@ $I \equiv (\forall i\in\Nat_3: x_i + x_{i-1} \ne 2)$
 \caption{Transitions of {\color{red!40} $P_0$}, {\color{green!50!black!75} $P_1$}, {\color{blue} $P_2$}. Legitimate states $x_0x_1x_2$ are boxed.}
 \end{figure}
 
+\subsection{Relation to Artificial Intelligence}
+
+The problem of adding convergence is NP-complete in the number of candidate actions (which can be polynomially related to the number of states).
+
+We used techniques from constraint satisfaction problems to get a complete algorithm for AddConvergence.
+
 %* A description of the project and its goals. How does it relate to Artificial Intelligence.
 
 \section{Background}
+
+\subsection{Symbolic Algorithms}
+
+\subsection{Multi-Value Decision Diagram}
+As in regular software or any search algorithm, the states could be of large amount and rather complex. Simply listing the states is inefficient and complicates analysis. Here we resort to Multiple-Valued Logic for describing the state of a system, represented by a multi-valued decision diagram (MDD), which is a multi-valued version of the binary decision diagram (BDD).
+This allows countermeasures to be formated that address states that share common features. 
+
+MDDs provide a uniform way to represent formulas which evaluate to {\it true} or {\it false} based on variable values (i.e., predicate functions).
+We use them because they can also use {\em much less} space than a truth-table.
+BDDs and MDDs differ only by the domains of variables. BDDs only allows boolean variables, so they can express the input formulas of the satisfiability problem.
+MDDs, on the other hand, allow variables to have finite domains (conventionally represented by natural numbers starting at $0$).
+As any integer can be represented by string of bits, MDDs can be implemented using BDDs.
+
+Consider a predicate over three variables $x, y, z$, each with values ranging from $0$ to $4$ (domain size 3). Initially, there are $5^3 = 125$ states in the system. If we specify the state predicate as $x=3$, the number of states for which the predicate returns {\it true} is $25$, since the value of $x$ is totally fixed. We could use an MDD to symbolically represent this set of $25$ states.
+
+Now we have a rough format close to the format representing the protocol states later on. Say there are 3 processes arranged in the bidirectional ring, and each node could read from its two neighbors and write to itself. Actually, with three processes in a bidirectional ring, each process can read all variables, but the small state-space is convenient for this example. We use $m_0$ as the variable of $P_0$. $m'_0$ means the same except the value is the one in the next time step. Similarly, this rule applies to processes $P_1$ and $P_2$. The following predicate represents a transition function for this system:
+\begin{eqnarray*}
+ & & m_0 = 0 \wedge m'_0 = 0 \wedge m_1 = 0 \wedge m'_1 = 1 \wedge m_2 = 1 \wedge m'_2 = 1 \\
+ & \vee & m_0 = 0 \wedge m'_0 = 0 \wedge m_1 = 2 \wedge m'_1 = 1 \wedge m_2 = 1 \wedge m'_2 = 1
+\end{eqnarray*}
+After checking the values of each process, it is obvious that there are some variables which will change their values as time goes on. The value of $m_1$ can change to $1$ from $0$ when $m_0 = 0 \wedge m_1 = 0 \wedge m_2 = 1$. The value of $m_1$ can also change to $1$ from $2$ when $m_0 = 0 \wedge m_1 = 2 \wedge m_2$. This shows how to represent a transition function with satisfying valuations of unprimed and primed variables.
+
+The following algorithms use set notation, which directly translates to MDD operations.
+For example: complement translates to negation, intersection translates to conjunction, and union translates to disjunction.
+
+\subsubsection{Image and Preimage}
+
+The $\vbl{image}(T,S)$ function finds all states which transitions $T$ map from $S$.
+\[ \vbl{image}(T,S) = \aset{s_1 \pipe\exists s_0\in S : (s_0,s_1)\in T} \]
+
+The $\vbl{preimage}$ function is the reverse.
+It finds all states which are mapped to states in $S$ by transitions $T$.
+\[ \vbl{preimage}(T,S) = \aset{s_0 \pipe\exists s_1\in S : (s_0,s_1)\in T} \]
+
+Both $\vbl{image}$ and $\vbl{preimage}$ can be written in terms of MDD operations.
+
+\subsubsection{Weak Convergence}
+
+When checking for weak convergence, we are looking that a path exists from every state outside of the invariant to a state in the invariant.
+This algorithm performs backwards reachability from the invariant and returns success if and only if all states can be reached.
+
+\begin{algorithm}[H]{WeakConvergenceCk($T$, $I$)} 
+\caption{WeakConvergenceCk} 
+\begin{algorithmic}
+\STATE $S_0 \defeq I$
+\WHILE{$\overline{S_0} \neq \emptyset$}
+ \STATE $S_1 \defeq S_0 \cup \vbl{preimage}(T, S_0)$
+ \IF{$S_1 = S_0$}
+  \RETURN \FALSE
+ \ENDIF
+ \STATE $S_0 \defeq S_1$
+\ENDWHILE
+\RETURN \TRUE
+\end{algorithmic}
+\end{algorithm}
+
+\subsubsection{Cycle Detection}
+
+Check for cycles outside of the invariant by computing the fixed point of the $\vbl{preimage}$ function.
+This is the Emerson-Lei algorithm as written in \cite{Fisler:2001:BSC:646485.694446}, but originally from \cite{DBLP:conf/lics/EmersonL86}.
+We assume the protocol is closed in the invariant, so we do not need to worry about invariant states being in the preimage.
+
+\begin{algorithm}[H]{CycleCk($T$, $I$)} 
+\caption{CycleCk} 
+\begin{algorithmic}
+\STATE $S_0 \defeq \overline{I}$
+\STATE $S_1 \defeq \emptyset$
+\REPEAT
+ \STATE $S_1 \defeq S_0$
+ \STATE $S_0 \defeq S_0 \cap \vbl{preimage}(T,S)$
+\UNTIL{$S_0 = S_1$}
+
+\IF{$S_0 = \emptyset$}
+ \RETURN \TRUE
+\ELSE
+ \RETURN \FALSE
+\ENDIF
+\end{algorithmic}
+\end{algorithm}
+
+%\begin{algorithm}{BackwardReachability($T$, $S_1$)}
+%\caption{BackwardReachability} 
+%\begin{algorithmic}
+%\STATE $S_0 \defeq S_1$
+%\STATE $L \defeq \vbl{preimage}(T, S_0) - S_0$
+%\WHILE{$L \ne \emptyset$}
+% \STATE $S_0 \defeq S_0 \cup L$
+% \STATE $L \defeq \vbl{preimage}(T, L) - S_0$
+%\ENDWHILE
+%\RETURN $S_0$
+%\end{algorithmic}
+%\end{algorithm}
+
 %* Background: related literature and software and algorithms that you imported into your project. Clearly describe, work that you directly used, work you used after modification, and your own contribution.
 
 %* Comparison to similar projects
+
+\section{Examples}
+Some examples of stabilizing protocols follow.
+We plan to use these (and more) in our experimentation.
+
+We should also try to use reduction to SAT on these problems, but encoding cycle detection in a CNF formula blows up quickly in size.
+In the worst case, we require $O(\abs{S_p}^3)$ where $S_p$ is set of all states.
+Our tool should outperform the reduction to SAT purely due to its exploding size.
+
+\subsection{Sum-Not-2}
+
+\xnsysinst{sum-not-2}{
+\begin{tikzpicture}[x=1.5cm,y=1.5cm]
+\tikzstyle{every node}=[]
+ \draw
+ (0,0)      node (0) {$P_0$}
+ ++(   0:1) node (1) {$P_1$}
+ ++( -60:1) node (2) {$P_2$}
+ ++(-120:1) node (3) {$P_3$}
+ ++(-180:1) node (4) {$P_4$}
+ ++(-240:1) node (5) {$P_{n-1}$}
+ ;
+ \path[->,draw,thick]
+ (0) edge (1)
+ (1) edge (2)
+ (2) edge (3)
+ (3) edge (4)
+ (5) edge (0)
+ ;
+ \path[->,draw,thick,dotted]
+ (4) edge (5)
+ ;
+\end{tikzpicture}
+}{
+For all $i\in\Nat_n$, $P_i$ has privileges:
+\\
+\begin{centering}
+$P_i :
+\begin{cases}
+ x_i\in\Nat_3 & \mbox{(read-write)} \\
+ x_{i-1}\in\Nat_3 & \mbox{(read-only)} \\
+\end{cases}$
+\end{centering}
+\\
+Invariant:
+$I \equiv (\forall i\in\Nat_n: x_i + x_{i-1} \ne 2)$
+}
+
+\subsection{2-Coloring}
+
+\xnsysinst{2-coloring}{
+\begin{tikzpicture}[x=1.5cm,y=1.5cm]
+\tikzstyle{every node}=[]
+ \draw
+ (0,0)      node (0) {$P_0$}
+ ++(   0:1) node (1) {$P_1$}
+ ++( -60:1) node (2) {$P_2$}
+ ++(-120:1) node (3) {$P_3$}
+ ++(-180:1) node (4) {$P_4$}
+ ++(-240:1) node (5) {$P_{n-1}$}
+ ;
+ \path[->,draw,thick]
+ (0) edge (1)
+ (1) edge (2)
+ (2) edge (3)
+ (3) edge (4)
+ (5) edge (0)
+ ;
+ \path[->,draw,thick,dotted]
+ (4) edge (5)
+ ;
+\end{tikzpicture}
+}{
+For all $i\in\Nat_n$, $P_i$ has privileges:
+\\
+\begin{centering}
+$P_i :
+\begin{cases}
+ c_i\in\Nat_2 & \mbox{(read-write)} \\
+ c_{i-1}\in\Nat_2 & \mbox{(read-only)} \\
+\end{cases}$
+\end{centering}
+\\
+Invariant:
+\begin{centering}
+$I \equiv (\forall i\in\Nat_n: c_{i-1}\ne c_i)$
+\end{centering}
+}
+
+\subsection{3-Coloring}
+
+\xnsysinst{3-coloring}{
+\begin{tikzpicture}[x=1.5cm,y=1.5cm]
+\tikzstyle{every node}=[]
+ \draw
+ (0,0)      node (0) {$P_0$}
+ ++(   0:1) node (1) {$P_1$}
+ ++( -60:1) node (2) {$P_2$}
+ ++(-120:1) node (3) {$P_3$}
+ ++(-180:1) node (4) {$P_4$}
+ ++(-240:1) node (5) {$P_{n-1}$}
+ ;
+ \path[draw,thick]
+ (0) edge (1)
+ (1) edge (2)
+ (2) edge (3)
+ (3) edge (4)
+ (5) edge (0)
+ ;
+ \path[draw,thick,dotted]
+ (4) edge (5)
+ ;
+\end{tikzpicture}
+}{
+For all $i\in\Nat_n$, $P_i$ has privileges:
+\\
+\begin{centering}
+$P_i :
+\begin{cases}
+ c_i\in\Nat_3 & \mbox{(read-write)} \\
+ c_{i-1}\in\Nat_3 & \mbox{(read-only)} \\
+ c_{i+1}\in\Nat_3 & \mbox{(read-only)} \\
+\end{cases}$
+\end{centering}
+\\
+Invariant:
+\begin{centering}
+$I \equiv (\forall i\in\Nat_n: c_i\ne c_{i-1} \wedge c_i\ne c_{i+1})$
+\end{centering}
+}
+
+Let each process $P_i$ in a bidirectional ring of $n$ processes have a variable $c_i\in \Nat_3$ (i.e., $c_i\in \{0,1,2\}$) where each of the three values represents a different color, like {\it red}, {\it green}, and {\it blue}.
+Since this is a bidirectional ring, any $P_i$ can read its left and right neighbors' variables $c_{i-1}$ and $c_{i+1}$.
+$P_i$ can also read and write its own variable $c_i$.
+
+The system is in a legitimate state when no two neighboring processes have the same color.
+Formally, the invariant is defined as (with arithmetic modulo $n$):
+\[ I \equiv (\forall i\in\Nat_n: c_{i-1}\ne c_i \wedge c_i \ne c_{i+1}) \]
+
+The following action for each $P_i$ can be used for a stabilizing protocol:
+\[
+ (c_{i-1} = c_i) \vee (c_i = c_{i+1}) \to c_i \defeq \textsc{Other}(c_{i-1}, c_{i+1})
+\]
+where the \textsc{Other} function returns a color (deterministically, say the minimal-valued one) which is not equal to either of its inputs.
+
+We expect our tool to synthesize actions in their most basic form, as local state transitions.
+The above action can be expressed by the following $15$ local state transitions for $P_i$:
+\begin{eqnarray*}
+ c_{i-1} = 0 \wedge c_i = 0 \wedge c_{i+1} = 0 & \to & c_i \defeq 1 \\
+ c_{i-1} = 0 \wedge c_i = 0 \wedge c_{i+1} = 1 & \to & c_i \defeq 2 \\
+ c_{i-1} = 1 \wedge c_i = 0 \wedge c_{i+1} = 0 & \to & c_i \defeq 2 \\
+ c_{i-1} = 2 \wedge c_i = 0 \wedge c_{i+1} = 0 & \to & c_i \defeq 1 \\
+ c_{i-1} = 0 \wedge c_i = 0 \wedge c_{i+1} = 2 & \to & c_i \defeq 1 \\
+ c_{i-1} = 1 \wedge c_i = 1 \wedge c_{i+1} = 1 & \to & c_i \defeq 0 \\
+ c_{i-1} = 1 \wedge c_i = 1 \wedge c_{i+1} = 0 & \to & c_i \defeq 2 \\
+ c_{i-1} = 0 \wedge c_i = 1 \wedge c_{i+1} = 1 & \to & c_i \defeq 2 \\
+ c_{i-1} = 1 \wedge c_i = 1 \wedge c_{i+1} = 2 & \to & c_i \defeq 0 \\
+ c_{i-1} = 2 \wedge c_i = 1 \wedge c_{i+1} = 1 & \to & c_i \defeq 0 \\
+ c_{i-1} = 2 \wedge c_i = 2 \wedge c_{i+1} = 2 & \to & c_i \defeq 0 \\
+ c_{i-1} = 2 \wedge c_i = 2 \wedge c_{i+1} = 0 & \to & c_i \defeq 1 \\
+ c_{i-1} = 0 \wedge c_i = 2 \wedge c_{i+1} = 2 & \to & c_i \defeq 1 \\
+ c_{i-1} = 2 \wedge c_i = 2 \wedge c_{i+1} = 1 & \to & c_i \defeq 0 \\
+ c_{i-1} = 1 \wedge c_i = 2 \wedge c_{i+1} = 2 & \to & c_i \defeq 0
+\end{eqnarray*}
+
+\subsection{Maximal Matching}
+
+\xnsysinst{matching}{
+\begin{tikzpicture}[x=1.5cm,y=1.5cm]
+ \tikzstyle{every node}=[]
+ \draw
+ (0,0)      node (0) {$P_0$}
+ ++(   0:1) node (1) {$P_1$}
+ ++( -60:1) node (2) {$P_2$}
+ ++(-120:1) node (3) {$P_3$}
+ ++(-180:1) node (4) {$P_4$}
+ ++(-240:1) node (5) {$P_{n-1}$}
+ ;
+ \path[draw,thick]
+ (0) edge (1)
+ (1) edge (2)
+ (2) edge (3)
+ (3) edge (4)
+ (5) edge (0)
+ ;
+ \path[draw,thick,dotted]
+ (4) edge (5)
+ ;
+\end{tikzpicture}
+}{
+For all $i\in\Nat_n$, $P_i$ has privileges:
+\\
+\begin{centering}
+$P_i :
+\begin{cases}
+ m_i\in\Nat_3 & \mbox{(read-write)} \\
+ m_{i-1}\in\Nat_3 & \mbox{(read-only)} \\
+ m_{i+1}\in\Nat_3 & \mbox{(read-only)} \\
+\end{cases}$
+\end{centering}
+\\
+Invariant:
+\\
+\begin{centering}
+$\begin{array}{rcl}
+ I \equiv \forall i\in\Nat_n: & & (m_{i-1} = 2 \wedge m_i = 1)
+\\ & \vee  & (m_{i-1} = 1 \wedge m_i = 0 \wedge m_{i+1} = 2)
+\\ & \vee  & (m_i = 2 \wedge m_{i+1} = 1)
+\end{array}$
+\end{centering}
+}
+
+Let each process $P_i$ in a bidirectional ring of $n$ processes have a variable $m_i\in \Nat_3$ (i.e., $m_i\in \{0,1,2\}$) where each of the three values represents a different direction, like {\it self} ($m_i=0$), {\it left} ($m_i=1$), and {\it right} ($m_i=2$).
+Since this is a bidirectional ring, any $P_i$ can read its left and right neighbors' variables $m_{i-1}$ and $m_{i+1}$.
+$P_i$ can also read and write its own variable $m_i$.
+
+The system is in a legitimate state when neighbors pair up by pointing at each other.
+If both neighbors are pointing away, a process can point at itself.
+Formally, the invariant is defined as (with arithmetic modulo $n$):
+\begin{eqnarray*}
+ I \equiv \forall i\in\Nat_n: & & (m_{i-1} = 2 \wedge m_i = 1)
+                    \\ & \vee  & (m_{i-1} = 1 \wedge m_i = 0 \wedge m_{i+1} = 2)
+                    \\ & \vee  & (m_i = 2 \wedge m_{i+1} = 1)
+\end{eqnarray*}
+
+
+\subsection{Dijkstra's Token Ring \cite{dij}}
+
+\xnsysinst{dijkstra-tr}{
+\begin{tikzpicture}[x=1.5cm,y=1.5cm]
+ \tikzstyle{every node}=[]
+ \draw
+ (0,0)      node (0) {$P_0$}
+ ++(   0:1) node (1) {$P_1$}
+ ++( -60:1) node (2) {$P_2$}
+ ++(-120:1) node (3) {$P_3$}
+ ++(-180:1) node (4) {$P_4$}
+ ++(-240:1) node (5) {$P_{n-1}$}
+ ;
+ \path[->,draw,thick]
+ (0) edge (1)
+ (1) edge (2)
+ (2) edge (3)
+ (3) edge (4)
+ (5) edge (0)
+ ;
+ \path[->,draw,thick,dotted]
+ (4) edge (5)
+ ;
+\end{tikzpicture}
+}{
+For all $i\in\Nat_n$, $P_i$ has privileges:
+\\
+\begin{centering}
+$P_i :
+\begin{cases}
+ x_i\in\Nat_{n+1} & \mbox{(read-write)} \\
+ x_{i-1}\in\Nat_{n+1} & \mbox{(read-only)} \\
+\end{cases}$
+\end{centering}
+\\
+Invariant:
+\\
+\begin{centering}
+$I\equiv (\mbox{$\unique i\in\Nat_n$: $\mathtt{token?}(i)$})$
+\end{centering}
+\\
+\begin{centering}
+$\mathtt{token?}(i) = \begin{cases}
+   x_i = x_{i-1} & i = 0
+\\ x_i \ne x_{i-1} & i \ne 0
+\end{cases}$
+\end{centering}
+}
+
+Let us consider the original token ring protocol Dijkstra used when introducing the concept of self-stabilization \cite{dij}.
+A token ring is used to give one process out of many an exclusive right, also known as distributed mutual exclusion.
+Below is a ring of $n=6$ finite-state machines (processes).
+
+Each process $P_i$ holds a variable $x_i$ which ranges from $0$ to $n$ ($x_i\in\Nat_{n+1}$).
+Each $P_i$ can read and write $x_i$ and can read $x_{i-1}$ (where subtraction is modulo $n$).
+Note that each process can only read its left neighbor, so we call this ring {\em unidirectional}.
+
+$P_0$ is said to have a token when it sees $x_{n-1} = x_0$.
+Any other $P_i$ has a token when $x_{i-1} \neq x_i$.
+
+A state is legitimate when exactly one process has the token.
+
+\[
+\begin{array}{rrcl}
+ P_0: & x_{5} = x_0 & \to & x_0 \defeq x_0 + 1 \mod (n+1)
+\\ P_{i>0}: & x_{i-1} \neq x_i & \to & x_i \defeq x_{i-1}
+\end{array}
+\]
+
+\subsection{2-Bit Token ``Spring'' \cite{dij}}
+
+\xnsysinst{2-bit-tr}{
+\begin{tikzpicture}[x=1.5cm,y=1.5cm]
+  \tikzstyle{every node}=[]
+  \draw
+  (0,0)      node (0) {$P_0$}
+  ++( -30:1) node (1) {$P_1$}
+  ++( -90:1) node (2) {$P_2$}
+  ++(-150:1) node (3) {$P_3$}
+  ++(-210:1) node (4) {$P_4$}
+  ++(-270:1) node (5) {$P_{n-1}$}
+  ;
+  \path[draw,thick]
+  (0) edge (1)
+  (1) edge (2)
+  (2) edge (3)
+  (3) edge (4);
+  \path[draw,thick,dotted]
+  (4) edge (5);
+\end{tikzpicture}
+}{
+For all $i\in\Nat_n$, $P_i$ has privileges:
+\\
+\begin{centering}
+$P_i :
+\begin{cases}
+   x_i\in\Nat_2 & \mbox{(read-write)}
+\\ \vbl{up}_i\in\Nat_2 & \mbox{(read-write)}
+\\ x_{i-1}\in\Nat_2 & \mbox{(read-only) when $i>0$}
+\\ x_{i+1}\in\Nat_2 & \mbox{(read-only) when $i<n-1$}
+\\ \vbl{up}_{i+1}\in\Nat_2 & \mbox{(read-only) when $i<n-1$}
+\end{cases}$
+\end{centering}
+\\
+Invariant:
+\\
+\begin{centering}
+$I\equiv (\mbox{$\unique i\in\Nat_n$: $\mathtt{token?}(i)$}) \wedge \vbl{up}_0 = 1 \wedge \vbl{up_1} = 0$
+\end{centering}
+\\
+\begin{centering}
+$\mathtt{token?}(i) = \begin{cases}
+   x_i = x_{i+1} \wedge \vbl{up}_{i+1} = 0 & i = 0
+\\ x_i = x_{i+1} \wedge \vbl{up}_i = 1 \wedge \vbl{up}_{i+1} = 0 & 0<i<n-1
+\\ x_i \ne x_{i-1} & 0 < i
+\end{cases}$
+\end{centering}
+}
+
+\subsection{3-Bit Token Rring \cite{Gouda:3bitTR}}
+
+\xnsysinst{3-bit-tr}{
+\begin{tikzpicture}[x=1.5cm,y=1.5cm]
+ \tikzstyle{every node}=[]
+ \draw
+ (0,0)      node (0) {$P_0$}
+ ++(   0:1) node (1) {$P_1$}
+ ++( -60:1) node (2) {$P_2$}
+ ++(-120:1) node (3) {$P_3$}
+ ++(-180:1) node (4) {$P_4$}
+ ++(-240:1) node (5) {$P_{n-1}$}
+ ;
+ \path[->,draw,thick]
+ (0) edge (1)
+ (1) edge (2)
+ (2) edge (3)
+ (3) edge (4)
+ (5) edge (0)
+ ;
+ \path[->,draw,thick,dotted]
+ (4) edge (5)
+ ;
+\end{tikzpicture}
+}{
+For all $i\in\Nat_n$, $P_i$ has privileges:
+\\
+\begin{centering}
+$P_i :
+\begin{cases}
+ e_i\in\Nat_2 & \mbox{(read-write)}
+\\ t_i\in\Nat_2 & \mbox{(read-write)}
+\\ \vbl{ready}_i\in\Nat_2 & \mbox{(read-write)}
+\\ e_{i-1}\in\Nat_2 & \mbox{(read-only)}
+\\ t_{i-1}\in\Nat_2 & \mbox{(read-only)}
+\end{cases}$
+\end{centering}
+\\
+Invariant:
+\\
+\begin{centering}
+$I\equiv (\mbox{$\unique i\in\Nat_n$: $\mathtt{t\_token?}(i)$})\wedge(\exists i\in\Nat_n: \mathtt{e\_token?}(i))$
+\end{centering}
+\\
+\begin{centering}
+$\mathtt{e\_token?}(i) = \begin{cases}
+   e_i = e_{i-1} & i = 0
+\\ e_i \ne e_{i-1} & i \ne 0
+\end{cases}$
+\end{centering}
+\\
+\begin{centering}
+$\mathtt{t\_token?}(i) = \begin{cases}
+   t_i = t_{i-1} & i = 0
+\\ t_i \ne t_{i-1} & i \ne 0
+\end{cases}$
+\end{centering}
+}
 
 \section{Experiments}
 %* Experiments: Clearly and in detail describe the experimental setup. Use a "storyboard" like approach if possible. Give all the information so that someone who reads the report can replicate your experiments. Explain and discuss the experimental results. How were the problems selected? Did you use problems with varying complexity and test the boundaries of the system?
@@ -288,125 +805,6 @@ $\bf{(lvl\ x) (mcv\ y) (mcv-sz\ z)}$ is printed when making the decision to pick
 
 
 %{\it Formulate the search problem: states, actions, goals.}
-
-
-\section{BDD Algorithms}
-As in regular software or any search algorithm, the states could be of large amount and rather complex. Simply listing the states is inefficient and complicates analysis. Here we resort to Multiple-Valued Logic for describing the state of a system, represented by a multiple-valued decision diagram (MDD), which is general version of BDD. This allows countermeasures to be formated that address states that share common features. 
-
-Both BDDs and MDDs provide a uniform way to represent formulas which evaluate to {\it true} or {\it false} based on variable values (i.e., predicate functions).
-We use them because they can also use {\em much less} space than a truth-table.
-BDDs and MDDs differ only by the domains of variables. BDDs only allows boolean variables, so they can express the input formulas of the satisfiability problem.
-MDDs, on the other hand, allow variables to have finite domains (conventionally represented by natural numbers starting at $0$).
-As any integer can be represented by string of bits, MDDs can be implemented using BDDs.
-
-Consider a predicate over three variables $x, y, z$, each with values ranging from $0$ to $4$ (domain size 3). Initially, there are $5^3 = 125$ states in the system. If we specify the state predicate as $x=3$, the number of states for which the predicate returns {\it true} is $25$, since the value of $x$ is totally fixed. We could use an MDD to symbolically represent this set of $25$ states.
-
-Now we have a rough format close to the format representing the protocol states later on. Say there are 3 processes arranged in the bidirectional ring, and each node could read from its two neighbors and write to itself. Actually, with three processes in a bidirectional ring, each process can read all variables, but the small state-space is convenient for this example. We use $m_0$ as the variable of $P_0$. $m'_0$ means the same except the value is the one in the next time step. Similarly, this rule applies to processes $P_1$ and $P_2$. The following predicate represents a transition function for this system:
-\begin{eqnarray*}
- & & m_0 = 0 \wedge m'_0 = 0 \wedge m_1 = 0 \wedge m'_1 = 1 \wedge m_2 = 1 \wedge m'_2 = 1 \\
- & \vee & m_0 = 0 \wedge m'_0 = 0 \wedge m_1 = 2 \wedge m'_1 = 1 \wedge m_2 = 1 \wedge m'_2 = 1
-\end{eqnarray*}
-After checking the values of each process, it is obvious that there are some variables which will change their values as time goes on. The value of $m_1$ can change to $1$ from $0$ when $m_0 = 0 \wedge m_1 = 0 \wedge m_2 = 1$. The value of $m_1$ can also change to $1$ from $2$ when $m_0 = 0 \wedge m_1 = 2 \wedge m_2$. This shows how to represent a transition function with satisfying valuations of unprimed and primed variables.
-
-%In another aspect, a formula could be created as the evaluation standard for judging whether a state is a legitimate state or not. Still in the above instance, if $(m_0={m'}_0)\cap (m_2={m'}_2)\cap (m_0=0)\cap (m_2=1)\cap (m_1=0\cup m_1=2)\cap ({m'}_1=1)$ is the standard for telling whether the questioned state is an illegitimate state, then the two states above are illegitimate states since the output from the standard is true. Therefore, an action is required, which could be ${m'}_1=1$, to transfer the state into legitimate state region, and therefore stabilize the system.
-
-\section{Examples}
-Some examples of stabilizing protocols follow.
-We plan to use these (and more) in our experimentation.
-
-We should also try to use reduction to SAT on these problems, but encoding cycle detection in a CNF formula blows up quickly in size.
-In the worst case, we require $O(\abs{S_p}^3)$ where $S_p$ is set of all states.
-Our tool should outperform the reduction to SAT purely due to its exploding size.
-
-\subsection{Dijkstra's Token Ring}
-Let us consider the original token ring protocol Dijkstra used when introducing the concept of self-stabilization \cite{dij}.
-A token ring is used to give one process out of many an exclusive right, also known as distributed mutual exclusion.
-Below is a ring of $n=6$ finite-state machines (processes).
-
-\begin{tikzpicture}[x=1.5cm,y=1.5cm]
- \tikzstyle{every node}=[draw,circle]
- \draw
- (0,0)      node (0) {$P_0$}
- ++(   0:1) node (1) {$P_1$}
- ++( -60:1) node (2) {$P_2$}
- ++(-120:1) node (3) {$P_3$}
- ++(-180:1) node (4) {$P_4$}
- ++(-240:1) node (5) {$P_5$}
- ;
- \draw (0) -- (1);
- \draw (1) -- (2);
- \draw (2) -- (3);
- \draw (3) -- (4);
- \draw (4) -- (5);
- \draw (5) -- (0);
-\end{tikzpicture}
-
-Each process $P_i$ holds a variable $x_i$ which ranges from $0$ to $n$ ($x_i\in\Nat_{n+1}$).
-Each $P_i$ can read and write $x_i$ and can read $x_{i-1}$ (where subtraction is modulo $n$).
-Note that each process can only read its left neighbor, so we call this ring {\em unidirectional}.
-
-$P_0$ is said to have a token when it sees $x_{n-1} = x_0$.
-Any other $P_i$ has a token when $x_{i-1} \neq x_i$.
-
-A state is legitimate when exactly one process has the token.
-
-\[
-\begin{array}{rrcl}
- P_0: & x_{5} = x_0 & \to & x_0 \defeq x_0 + 1 \mod (n+1)
-\\ P_{i>0}: & x_{i-1} \neq x_i & \to & x_i \defeq x_{i-1}
-\end{array}
-\]
-
-\subsection{Maximal Matching}
-
-Let each process $P_i$ in a bidirectional ring of $n$ processes have a variable $m_i\in \Nat_3$ (i.e., $m_i\in \{0,1,2\}$) where each of the three values represents a different direction, like {\it self} ($m_i=0$), {\it left} ($m_i=1$), and {\it right} ($m_i=2$).
-Since this is a bidirectional ring, any $P_i$ can read its left and right neighbors' variables $m_{i-1}$ and $m_{i+1}$.
-$P_i$ can also read and write its own variable $m_i$.
-
-The system is in a legitimate state when neighbors pair up by pointing at each other.
-If both neighbors are pointing away, a process can point at itself.
-Formally, the invariant is defined as (with arithmetic modulo $n$):
-\begin{eqnarray*}
- I \equiv \forall i\in\Nat_n: & & (m_{i-1} = 2 \wedge m_i = 1)
-                    \\ & \vee  & (m_{i-1} = 1 \wedge m_i = 0 \wedge m_{i+1} = 2)
-                    \\ & \vee  & (m_i = 2 \wedge m_{i+1} = 1)
-\end{eqnarray*}
-
-\subsection{3-Coloring on a Ring}
-
-Let each process $P_i$ in a bidirectional ring of $n$ processes have a variable $c_i\in \Nat_3$ (i.e., $c_i\in \{0,1,2\}$) where each of the three values represents a different color, like {\it red}, {\it green}, and {\it blue}.
-Since this is a bidirectional ring, any $P_i$ can read its left and right neighbors' variables $c_{i-1}$ and $c_{i+1}$.
-$P_i$ can also read and write its own variable $c_i$.
-
-The system is in a legitimate state when no two neighboring processes have the same color.
-Formally, the invariant is defined as (with arithmetic modulo $n$):
-\[ I \equiv (\forall i\in\Nat_n: c_{i-1}\ne c_i \wedge c_i \ne c_{i+1}) \]
-
-The following action for each $P_i$ can be used for a stabilizing protocol:
-\[
- (c_{i-1} = c_i) \vee (c_i = c_{i+1}) \to c_i \defeq \textsc{Other}(c_{i-1}, c_{i+1})
-\]
-where the \textsc{Other} function returns a color (deterministically, say the minimal-valued one) which is not equal to either of its inputs.
-
-We expect our tool to synthesize actions in their most basic form, as local state transitions.
-The above action can be expressed by the following $15$ local state transitions for $P_i$:
-\begin{eqnarray*}
- c_{i-1} = 0 \wedge c_i = 0 \wedge c_{i+1} = 0 & \to & c_i \defeq 1 \\
- c_{i-1} = 0 \wedge c_i = 0 \wedge c_{i+1} = 1 & \to & c_i \defeq 2 \\
- c_{i-1} = 1 \wedge c_i = 0 \wedge c_{i+1} = 0 & \to & c_i \defeq 2 \\
- c_{i-1} = 2 \wedge c_i = 0 \wedge c_{i+1} = 0 & \to & c_i \defeq 1 \\
- c_{i-1} = 0 \wedge c_i = 0 \wedge c_{i+1} = 2 & \to & c_i \defeq 1 \\
- c_{i-1} = 1 \wedge c_i = 1 \wedge c_{i+1} = 1 & \to & c_i \defeq 0 \\
- c_{i-1} = 1 \wedge c_i = 1 \wedge c_{i+1} = 0 & \to & c_i \defeq 2 \\
- c_{i-1} = 0 \wedge c_i = 1 \wedge c_{i+1} = 1 & \to & c_i \defeq 2 \\
- c_{i-1} = 1 \wedge c_i = 1 \wedge c_{i+1} = 2 & \to & c_i \defeq 0 \\
- c_{i-1} = 2 \wedge c_i = 1 \wedge c_{i+1} = 1 & \to & c_i \defeq 0 \\
- c_{i-1} = 2 \wedge c_i = 2 \wedge c_{i+1} = 2 & \to & c_i \defeq 0 \\
- c_{i-1} = 2 \wedge c_i = 2 \wedge c_{i+1} = 0 & \to & c_i \defeq 1 \\
- c_{i-1} = 0 \wedge c_i = 2 \wedge c_{i+1} = 2 & \to & c_i \defeq 1 \\
- c_{i-1} = 2 \wedge c_i = 2 \wedge c_{i+1} = 1 & \to & c_i \defeq 0 \\
- c_{i-1} = 1 \wedge c_i = 2 \wedge c_{i+1} = 2 & \to & c_i \defeq 0
-\end{eqnarray*}
 
 
 \bibliographystyle{plain}
