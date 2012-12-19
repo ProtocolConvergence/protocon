@@ -776,8 +776,17 @@ int main(int argc, char** argv)
   int argi = 1;
   uint npcs = 4;
   AddConvergenceOpt opt;
+  const char* modelFilePath = 0;
 
   if (argi < argc) {
+    if (string(argv[argi]) == "-model") {
+      ++argi;
+      modelFilePath = argv[argi++];
+      if (!modelFilePath){
+        DBog0("No path given!!!!");
+      }
+    }
+
     if (string(argv[argi]) == "test") {
       DBog0( "Running tests..." );
       Test();
@@ -872,13 +881,15 @@ int main(int argc, char** argv)
       const XnNet& topo = sys.topology;
       OPut(DBogOF, topo.action(sys.actions[i]), topo) << '\n';
     }
-    std::fstream of("model.pml",
-                    std::ios::binary |
-                    std::ios::out |
-                    std::ios::trunc);
-    OPutPromelaModel(of, sys);
-    of.close();
-    DBog0("Model written to \"model.pml\".");
+    if (modelFilePath)  {
+      std::fstream of("model.pml",
+                      std::ios::binary |
+                      std::ios::out |
+                      std::ios::trunc);
+      OPutPromelaModel(of, sys);
+      of.close();
+      DBog1("Model written to \"%s\".", modelFilePath);
+    }
   }
   else {
     DBog0("No solution found...");
