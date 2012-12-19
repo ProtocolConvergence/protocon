@@ -735,36 +735,132 @@ $\mathtt{t\_token?}(i) = \begin{cases}
 2-coloring \\
 \begin{tabular}{|c|c|c|c|c|}
 \hline
- Processes & Time & Solution Size & Backtrack Depth & States \\
+ Processes & Time (sec) & Solution Size & Backtrack Depth & States \\
 \hline
- 2 & .009 sec & 2 & 2 & $4^{2}$             \\
- 4 & .01 sec & 6 & 6 & $4^{4}$              \\
- 6 & .015 sec & 10 & 10 & $4^{6}$           \\
- 8 & .047 sec & 14 & 14 & $4^{8}$           \\
- 10 & .15 sec & 18 & 18 & $4^{10}$          \\
- 12 & .486 sec & 22 & 22 & $4^{12}$         \\
- 14 & 1.346 sec & 26 & 26 & $4^{14}$        \\
- 16 & 3.595 sec & 30 & 30 & $4^{16}$        \\
- 18 & 10.547 sec & 34 & 34 & $4^{18}$       \\
- 20 & 34.282 sec & 38 & 38 & $4^{20}$       \\
+ 2 & .009 & 2 & 2 & $2^{2}$             \\
+ 4 & .01 & 6 & 6 & $2^{4}$              \\
+ 6 & .015 & 10 & 10 & $2^{6}$           \\
+ 8 & .047 & 14 & 14 & $2^{8}$           \\
+ 10 & .15 & 18 & 18 & $2^{10}$          \\
+ 12 & .486 & 22 & 22 & $2^{12}$         \\
+ 14 & 1.346 & 26 & 26 & $2^{14}$        \\
+ 16 & 3.595 & 30 & 30 & $2^{16}$        \\
+ 18 & 10.547 & 34 & 34 & $2^{18}$       \\
+ 20 & 34.282 & 38 & 38 & $2^{20}$       \\
 \hline
 \end{tabular}
 
 3-coloring \\
 \begin{tabular}{|c|c|c|c|c|}
 \hline
- Processes & Time & Solution Size & Backtrack Depth & States \\
+ Processes & Time (sec) & Solution Size & Backtrack Depth & States \\
 \hline
- 2 & .003 sec & 3 & 3 & $8^{2}$           \\
- 3 & .039 sec & 21 & 21 & $8^{3}$         \\
- 4 & .105 sec& 30 & 30 & $8^{4}$          \\
- 5 & .63 sec & 33 & 32 & $8^{5}$          \\
- 6 & 1.728 sec & 39 & 38 & $8^{6}$        \\
- 7 & 7.726 sec & 45 & 44 & $8^{7}$        \\
- 8 & 15.887 sec & 51 & 50 & $8^{8}$       \\
- 9 & 74.22 sec & 59 & 58 & $8^{9}$        \\
+ 2 & .003 & 3 & 3 & $3^{2}$           \\
+ 3 & .039 & 21 & 21 & $3^{3}$         \\
+ 4 & .105 & 30 & 30 & $3^{4}$          \\
+ 5 & .63 & 33 & 32 & $3^{5}$          \\
+ 6 & 1.728 & 39 & 38 & $3^{6}$        \\
+ 7 & 7.726 & 45 & 44 & $3^{7}$        \\
+ 8 & 15.887 & 51 & 50 & $3^{8}$       \\
+ 9 & 74.22 & 59 & 58 & $3^{9}$        \\
+ 10 & 134.946 & 65 & 64 & $3^{10}$    \\
 \hline
 \end{tabular}
+
+Sum Not 2 \\
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+ Processes & Time (sec) & Solution Size & Backtrack Depth & States \\
+\hline
+ 2 & .002 & 3 & 3 & $3^{2}$               \\
+ 3 & .006 & 9 & 9 & $3^{3}$               \\
+ 4 & .014 & 12 & 12 & $3^{4}$             \\
+ 5 & .047 & 15 & 15 & $3^{5}$             \\
+ 6 & .15 & 18 & 18 & $3^{6}$              \\
+ 7 & .361 & 21 & 21 & $3^{7}$              \\
+ 8 & .743 & 24 & 24 & $3^{8}$             \\
+ 9 & 1.381 & 27 & 27 & $3^{9}$            \\
+ 10 & 2.463 & 30 & 30 & $3^{10}$          \\
+ 11 & 4.292 & 33 & 33 & $3^{11}$          \\
+ 12 & 7.098 & 36 & 36 & $3^{12}$          \\
+ 13 & 11.79 & 39 & 39 & $3^{13}$          \\
+ 14 & 19.002 & 42 & 42 & $3^{14}$         \\
+ 15 & 30.676 & 45 & 45 & $3^{15}$         \\
+ 16 & 49.034 & 48 & 48 & $3^{16}$         \\
+ 17 & 72.74 & 51 & 51 & $3^{17}$          \\
+ 18 & 106.68 & 54 & 54 & $3^{18}$          \\
+ 19 & 152.64 & 57 & 57 & $3^{19}$         \\
+ 20 & 210.548 & 60 & 60 & $3^{20}$        \\
+\hline
+\end{tabular}
+ 
+Dijsktra's Token Ring \\
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+ Processes & Time (sec) & Solution Size & Backtrack Depth & States \\
+\hline
+ 3 & .023 & 28 & 8 & $4^{3}$         \\
+ 4 & 7.165 & 65 & 13 & $5^{4}$          \\
+\hline
+\end{tabular}
+
+2-bit Token Spring \\
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+ Processes & Time (sec) & Solution Size & Backtrack Depth & States \\
+\hline         
+ 2 & .01 & 14 & 9 & $4^{2}$         \\
+ 3 & .055 & 21 & 13 & $4^{3}$       \\
+ 4 & 1.019 & 26 & 13 & $4^{4}$      \\
+ 5 & 5.402 & 31 & 13 & $4^{5}$      \\
+ 6 & 17.789 & 37 & 14 & $4^{6}$     \\
+ 7 & 48.017 & 43 & 15 & $4^{7}$     \\
+ 8 & 113.130 & 49 & 16 & $4^{8}$    \\
+ 9 & 250.614 & 55 & 17 & $4^{9}$    \\
+\hline
+\end{tabular}
+
+3-bit Token Ring \\
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+ Processes & Time (sec) & Solution Size & Backtrack Depth & States \\
+\hline         
+ 3 & .631 & 53 & 52 & $8^{3}$       \\
+ 4 & 5.862 & 70 & 68 & $8^{4}$      \\
+ 5 & 64.304 & 97 & 95 & $8^{5}$      \\
+\hline
+\end{tabular}
+
+Matching-Heavy Greedy Heuristic \\
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+ Processes & Time (sec) & Solution Size & Backtrack Depth & States \\
+\hline         
+ 2 & .047 & 7 & 6 & $3^{2}$        \\
+ 3 & .062 & 24 & 24 & $3^{3}$       \\
+ 4 & .594 & 38 & 35 & $3^{4}$      \\
+ 5 & 1.167 & 45 & 41 & $3^{5}$      \\
+ 6 & 6.811 & 61 & 52 & $3^{6}$     \\
+ 7 & 16.042 & 69 & 60 & $3^{7}$    \\
+ 8 & 53.214 & 75 & 66 & $3^{8}$    \\
+\hline
+\end{tabular}
+
+Matching-Light Greedy Heuristic \\
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+ Processes & Time (sec) & Solution Size & Backtrack Depth & States \\
+\hline         
+ 2 & .006 & 7 & 6 & $3^{2}$        \\
+ 3 & .105 & 24 & 24 & $3^{3}$       \\
+ 4 & .69 & 36 & 34 & $3^{4}$      \\
+ 5 & 2.291 & 46 & 40 & $3^{5}$      \\
+ 6 & 6.444 & 60 & 52 & $3^{6}$     \\
+ 7 & 17.944 & 61 & 59 & $3^{7}$    \\
+ 8 & 64.787 & 73 & 65 & $3^{8}$    \\
+\hline
+\end{tabular}
+
 \end{center}
 
 \section{Task Distribution}
