@@ -728,9 +728,44 @@ $\mathtt{t\_token?}(i) = \begin{cases}
 \end{cases}$
 \end{centering}
 }
-
+\newpage
 \section{Experiments}
 %* Experiments: Clearly and in detail describe the experimental setup. Use a "storyboard" like approach if possible. Give all the information so that someone who reads the report can replicate your experiments. Explain and discuss the experimental results. How were the problems selected? Did you use problems with varying complexity and test the boundaries of the system?
+\begin{center}
+2-coloring \\
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+ Processes & Time & Solution Size & Backtrack Depth & States \\
+\hline
+ 2 & .009 sec & 2 & 2 & $4^{2}$             \\
+ 4 & .01 sec & 6 & 6 & $4^{4}$              \\
+ 6 & .015 sec & 10 & 10 & $4^{6}$           \\
+ 8 & .047 sec & 14 & 14 & $4^{8}$           \\
+ 10 & .15 sec & 18 & 18 & $4^{10}$          \\
+ 12 & .486 sec & 22 & 22 & $4^{12}$         \\
+ 14 & 1.346 sec & 26 & 26 & $4^{14}$        \\
+ 16 & 3.595 sec & 30 & 30 & $4^{16}$        \\
+ 18 & 10.547 sec & 34 & 34 & $4^{18}$       \\
+ 20 & 34.282 sec & 38 & 38 & $4^{20}$       \\
+\hline
+\end{tabular}
+
+3-coloring \\
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+ Processes & Time & Solution Size & Backtrack Depth & States \\
+\hline
+ 2 & .003 sec & 3 & 3 & $8^{2}$           \\
+ 3 & .039 sec & 21 & 21 & $8^{3}$         \\
+ 4 & .105 sec& 30 & 30 & $8^{4}$          \\
+ 5 & .63 sec & 33 & 32 & $8^{5}$          \\
+ 6 & 1.728 sec & 39 & 38 & $8^{6}$        \\
+ 7 & 7.726 sec & 45 & 44 & $8^{7}$        \\
+ 8 & 15.887 sec & 51 & 50 & $8^{8}$       \\
+ 9 & 74.22 sec & 59 & 58 & $8^{9}$        \\
+\hline
+\end{tabular}
+\end{center}
 
 \section{Task Distribution}
 %* How were the tasks distributed among the group members? How long did it take for tasks to complete?

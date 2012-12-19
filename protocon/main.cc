@@ -45,7 +45,7 @@ public:
   NicePolicy nicePolicy;
 
   AddConvergenceOpt() :
-    pickMethod( GreedyPick )
+    pickMethod( GreedySlowPick )
     , nicePolicy( EndNice )
   {}
 };
@@ -245,6 +245,7 @@ PickActionMCV(uint& ret_actId,
   typedef AddConvergenceOpt Opt;
   const Opt::PickActionHeuristic& pickMethod = opt.pickMethod;
   const Opt::NicePolicy& nicePolicy = opt.nicePolicy;
+  //const Opt::NicePolicy& nicePolicy = opt.NilNice;
 
   const XnNet& topo = sys.topology;
   const vector<DeadlockConstraint>& dlsets = tape.mcvDeadlocks;
