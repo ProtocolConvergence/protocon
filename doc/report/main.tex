@@ -40,7 +40,9 @@
 \author{~Brandon~Crowley\and~Alex~Klinkhamer\and~Man~Wang}
 \maketitle
 
+\newpage
 \tableofcontents
+\newpage
 
 \section{Project Description}
 
@@ -893,6 +895,42 @@ Matching-Light Greedy Heuristic \\
 \end{tabular}
 \end{center}
 
+\section{Instructions to Run Code}
+%* Full commented code with instructions to run it as is and with different parameters.
+\subsection{Running the code}
+The program could be executed in terminal using the following command:
+
+\[
+  ./bin/protocon <problem> <numprocs>
+\]
+
+where
+
+$\textbf{\emph{<problem>}}$ is one of:
+
+"3-coloring", "2-coloring", "matching", "sum-not-2", "dijkstra-tr", "3-bit-tr", "2-bit-tr"
+
+$\textbf{\emph{<numprocs>}}$ is number of processes
+
+\subsection{Outputs}
+In the output, there are two sections. The first section shows the type of ring and the steps the program took. And the second section is a summery of the actions each process has taken.
+
+In the first secion,
+
+$\textbf{\emph{(lvl\ n)}}$ means that the output is generated at the level $n$ of recursion. At least $n$ actions will be chosen at this point.
+
+$\textbf{\emph{(sz\ n)}}$ means that there are actually $n$ actions chosen. It can be larger than the recursion level if the actions are included based on forward-checking.
+
+$\textbf{\emph{(rem\ n)}}$ means that there are $n$ remaining candidate actions at this point. The part printed after is the action being chosen, which is indicated in $\textbf{\emph{(sz\ m)}}$ before. 
+
+$\textbf{\emph{(lvl\ x) (mcv\ y) (mcv-sz\ z)}}$ is printed when making the decision to pick the next action (applying the MCV heuristic). This one is at level $x$, where the most constrained deadlock(s) have only $y$ different candidate actions that resolve them, but there are many sets of deadlocks which may only be resolved by $y$ different candidate actions. In total, $z$ candidate actions can resolve one of these most-constrained deadlocks.
+
+In the second section, the success or failure of finding a solution will be shown first. If the solution is successfully found. It is going to be represented in a series of actions listed in the order of process indices. The actions are presented in the form: 
+\[
+process:\ state\ before\ action\ ->\ action\ executed
+\]
+where $"state\ before\ action"$ are only the states that trigger the following action. 
+
 \section{Task Distribution}
 %* How were the tasks distributed among the group members? How long did it take for tasks to complete?
 
@@ -931,34 +969,6 @@ We learned that it is simple to collaborate on code and documentation in version
 
 This work gives some insight on why polynomial-time heuristic methods such as \cite{ipdpsEbnenasir11} succeed.
 We were able to avoid backtracking in many cases by simply choosing actions in the proper order, combined with forward-checking.
-
-\section{Instructions to Run Code}
-%* Full commented code with instructions to run it as is and with different parameters.
-\subsection{Running the code}
-The program could be executed in terminal using the following command:
-
-\[
-  ./bin/protocon <problem> <numprocs>
-\]
-
-where
-
-$\bf{<problem>}$ is one of:
-
-"3-coloring", "2-coloring", "matching", "sum-not-2", "dijkstra-tr", "3-bit-tr", "2-bit-tr"
-
-$\bf{<numprocs>}$ is number of processes
-
-\subsection{Outputs}
-In the output, 
-
-$\bf{(lvl\ n)}$ means that the output is generated at the level $n$ of recursion. At least $n$ actions will be chosen at this point.
-
-$\bf{(sz\ n)}$ means that there are actually $n$ actions chosen. It can be larger than the recursion level if the actions are included based on forward-checking.
-
-$\bf{(rem\ n)}$ means that there are $n$ remaining candidate actions at this point. The part printed after is the action being chosen, which is indicated in $\bf{(sz\ m)}$ before. 
-
-$\bf{(lvl\ x) (mcv\ y) (mcv-sz\ z)}$ is printed when making the decision to pick the next action (applying the MCV heuristic). This one is at level $x$, where the most constrained deadlock(s) have only $y$ different candidate actions that resolve them, but there are many sets of deadlocks which may only be resolved by $y$ different candidate actions. In total, $z$ candidate actions can resolve one of these most-constrained deadlocks.
 
 \section{Project Comments and Suggestions}
 %* Any comments and suggestions of the project component of CS5811 will be appreciated.
