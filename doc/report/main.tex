@@ -730,7 +730,12 @@ $\mathtt{t\_token?}(i) = \begin{cases}
 }
 \newpage
 \section{Experiments}
-%* Experiments: Clearly and in detail describe the experimental setup. Use a "storyboard" like approach if possible. Give all the information so that someone who reads the report can replicate your experiments. Explain and discuss the experimental results. How were the problems selected? Did you use problems with varying complexity and test the boundaries of the system?
+%* Experiments: Clearly and in detail describe the experimental setup. Use a "storyboard" like approach if possible. Give all the information so that
+% someone who reads the report can replicate your experiments. Explain and discuss the experimental results. How were the problems selected? Did you
+% use problems with varying complexity and test the boundaries of the system?
+For all of the following experiments, results were gather for an increasing number of processors until the runtime crossed a threshhold of 5 minutes.
+Timing was gathered using the "time" command in bash.  The number of states is given as a reference from knowledge of the problem, not as an
+experimental result.
 \begin{center}
 2-coloring \\
 \begin{tabular}{|c|c|c|c|c|}
@@ -749,7 +754,14 @@ $\mathtt{t\_token?}(i) = \begin{cases}
  20 & 34.282 & 38 & 38 & $2^{20}$       \\
 \hline
 \end{tabular}
+\end{center}
 
+The 2-coloring experiment was run for even numbered processes on the range of [2..20].  This domain was chosen because an even number of processes
+cannot stabilize in a 2-coloring problem.  This is a fairly uncomplicated problem, so the results aren't all that unusual.  The solution size and depth
+increase linearly at a rate of 4.  The timing increases roughly linearly at a rate of 3 when the number of processors is 6 and greater.  This serves
+mostly as a baseline problem for the stabilizer.
+
+\begin{center}
 3-coloring \\
 \begin{tabular}{|c|c|c|c|c|}
 \hline
@@ -766,7 +778,18 @@ $\mathtt{t\_token?}(i) = \begin{cases}
  10 & 134.946 & 65 & 64 & $3^{10}$    \\
 \hline
 \end{tabular}
+\end{center}
 
+The 3-coloring problem turned out to be a bit more interesting.  It was run for processors numbering [2..10].  The rates of increase area all variable
+for this experiment.  For the lower processor numbers, timing saw increases of up to 10 times, and the solution size and backtrack depths saw increases
+of up to 7 times.  You can also see that the solution size and backtrack depth differ in this problem.  This means that the algorithm was able to infer
+an action during forward checking, without actually exploring it.  This prevents the program from having to explore more paths, reducing the overall
+runtime.  The increases in runtime also correlate roughly with the increases in solution size and backtrack depth.  Since there is not a whole lot
+of backtracking that needs to be done for a 3-coloring problem, this makes sense.  If there is the increase in runtime is disproportionate to the
+increases in solution size and backtrack depth, it most likely means that backtracking had to occur, causing more work for a smaller or less deep
+solution.
+
+\begin{center}
 Sum Not 2 \\
 \begin{tabular}{|c|c|c|c|c|}
 \hline
@@ -793,7 +816,9 @@ Sum Not 2 \\
  20 & 210.548 & 60 & 60 & $3^{20}$        \\
 \hline
 \end{tabular}
+\end{center}
  
+\begin{center}
 Dijsktra's Token Ring \\
 \begin{tabular}{|c|c|c|c|c|}
 \hline
@@ -803,7 +828,9 @@ Dijsktra's Token Ring \\
  4 & 7.165 & 65 & 13 & $5^{4}$          \\
 \hline
 \end{tabular}
+\end{center}
 
+\begin{center}
 2-bit Token Spring \\
 \begin{tabular}{|c|c|c|c|c|}
 \hline
@@ -819,7 +846,9 @@ Dijsktra's Token Ring \\
  9 & 250.614 & 55 & 17 & $4^{9}$    \\
 \hline
 \end{tabular}
+\end{center}
 
+\begin{center}
 3-bit Token Ring \\
 \begin{tabular}{|c|c|c|c|c|}
 \hline
@@ -830,7 +859,9 @@ Dijsktra's Token Ring \\
  5 & 64.304 & 97 & 95 & $8^{5}$      \\
 \hline
 \end{tabular}
+\end{center}
 
+\begin{center}
 Matching-Heavy Greedy Heuristic \\
 \begin{tabular}{|c|c|c|c|c|}
 \hline
@@ -860,7 +891,6 @@ Matching-Light Greedy Heuristic \\
  8 & 64.787 & 73 & 65 & $3^{8}$    \\
 \hline
 \end{tabular}
-
 \end{center}
 
 \section{Task Distribution}
