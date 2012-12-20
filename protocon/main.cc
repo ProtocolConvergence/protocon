@@ -850,6 +850,7 @@ int main(int argc, char** argv)
 
   // Set up the chosen problem.
   XnSys sys;
+  opt.nicePolicy=opt.NilNice;
   switch(problem){
     case ThreeColoringRingInstance:
       InstThreeColoringRing(sys, npcs);  break;

@@ -79,12 +79,12 @@ and from $(x_1 = 0 \wedge x_0 = 2)$ to $(x_1 = 1 \wedge x_0 = 2)$.
 \subsection{AddConvergence as a Graph Problem}
 
 We can think of a graph where each vertex corresponds with a global state in the system.
-An action is represented by several arcs, each with the same label.
+An action is represented by several directed edges, each with the same label.
 Next mark all global states which satisfy the invariant.
 
-The problem of adding convergence to a system (finding a self-stabilizing protocol) is the same as finding a set of labels for which the set of all arcs with those labels:
+The problem of adding convergence to a system (finding a self-stabilizing protocol) is the same as finding a set of labels for which the set of all edges with those labels:
 \begin{enumerate}
-\item Does not include arcs from a vertex marked as invariant to a vertex not marked as invariant.
+\item Does not include edges from a vertex marked as invariant to a vertex not marked as invariant.
  \begin{enumerate}
  \item Closure.
  \end{enumerate}
@@ -98,7 +98,7 @@ The problem of adding convergence to a system (finding a self-stabilizing protoc
  \end{enumerate}
 \end{enumerate}
 
-Sometimes no arcs are allowed from any invariant states.
+Sometimes no edges are allowed from any invariant states.
 
 \subsection{Example: Sum-Not-2}
 
@@ -793,7 +793,7 @@ Note: $\unique i\in\Nat_n: \phi(i)$ means that there exists exactly one $i$ for 
 %* Experiments: Clearly and in detail describe the experimental setup. Use a "storyboard" like approach if possible. Give all the information so that
 % someone who reads the report can replicate your experiments. Explain and discuss the experimental results. How were the problems selected? Did you
 % use problems with varying complexity and test the boundaries of the system?
-For all of the following experiments, results were gather for an increasing number of processors until the runtime crossed a threshold of 5 minutes.
+For all of the following experiments, results were gather for an increasing number of processes until the runtime crossed a threshold of 5 minutes.
 Timing was gathered using the "time" command in bash.  The number of states is given as a reference from knowledge of the problem, not as an
 experimental result.
 \begin{center}
@@ -818,7 +818,7 @@ experimental result.
 
 The 2-coloring experiment was run for even numbered processes on the range of [2..20].  This domain was chosen because an even number of processes
 cannot stabilize in a 2-coloring problem.  This is a fairly uncomplicated problem, so the results aren't all that unusual.  The solution size and depth
-increase linearly at a rate of 4.  The timing increases roughly linearly at a rate of 3 when the number of processors is 6 and greater.  This serves
+increase linearly at a rate of 4.  The timing increases roughly linearly at a rate of 3 when the number of processes is 6 and greater.  This serves
 mostly as a baseline problem for the stabilizer.
 
 \begin{center}
@@ -840,7 +840,7 @@ mostly as a baseline problem for the stabilizer.
 \end{tabular}
 \end{center}
 
-The 3-coloring problem turned out to be a bit more interesting.  It was run for processors numbering [2..10].  The rates of increase area all variable
+The 3-coloring problem turned out to be a bit more interesting.  It was run for processes numbering [2..10].  The rates of increase area all variable
 for this experiment.  For the lower processor numbers, timing saw increases of up to 10 times, and the solution size and backtrack depths saw increases
 of up to 7 times.  You can also see that the solution size and backtrack depth differ in this problem.  This means that the algorithm was able to infer
 an action during forward checking, without actually exploring it.  This prevents the program from having to explore more paths, reducing the overall
@@ -848,6 +848,8 @@ runtime.  The increases in runtime also correlate roughly with the increases in 
 of backtracking that needs to be done for a 3-coloring problem, this makes sense.  If there is the increase in runtime is disproportionate to the
 increases in solution size and backtrack depth, it most likely means that backtracking had to occur, causing more work for a smaller or less deep
 solution.
+
+\newpage
 
 \begin{center}
 Sum Not 2 \\
@@ -877,18 +879,66 @@ Sum Not 2 \\
 \hline
 \end{tabular}
 \end{center}
+
+The Sum Not 2 problem was able to complete in under 5 minutes for up to 20 processes.  It shows 2 linear
+increases in the solution size and backtrack depth: 6 for less than 4 processes, and 3 for greater than
+4.  This probably happens because the pruning algorithm, together with forward checking, does a great job
+of choosing the correct path and pruning the incorrect ones.  The change rate for runtimes exhibits a 
+decreasing trend as the processes increase.  For example, from 2 to 3 the rate is 2, from 19 to 20 the
+rate is .379.  The explanation for this is most likely pretty mundane, such as the effects of some
+computational overhead diminishing as more work is being done, but it shows that our algorithm is
+executing in better than exponential time.   
  
 \begin{center}
-Dijsktra's Token Ring \\
+Dijsktra's Token Ring-Highest Processor Number Heuristic \\
 \begin{tabular}{|c|c|c|c|c|}
 \hline
  Processes & Time (sec) & Solution Size & Backtrack Depth & States \\
 \hline
  3 & .023 & 28 & 8 & $4^{3}$         \\
  4 & 7.165 & 65 & 13 & $5^{4}$          \\
+ 5 & 1390.109 & 126 & 20 & $6^{5}$    \\
 \hline
 \end{tabular}
 \end{center}
+
+The heuristic used for this experiment is to have the algorithm choose actions from the processes with
+the highest number first, essentially forcing a counter-clockwise movement around the ring.  The first
+thing to notice about the Dijkstra's Ring experiments is that the final results are more than 5 minutes.
+We included these results to allow us to draw some limited conclusions about the data, which couldn't
+really be done with the this version of the token ring under the 5 minute restriction.  It should also be
+noted that Dijkstra's Ring is the only problem for which the algorithm actually backtracks and when the
+ordering is imposed, it backtracks more than one level.  It's impossible to assume the complexity with
+which the algorith runs this experiment with any kind of certainty, but it is easy to see that the rates
+of change from one step to the next is huge.  The runtime for 3 processes is only .3\% of the runtime
+for 4 processes, which in turn is only .5\% of the runtime for 5.  This is probably due to the
+backtracking, which can cause the algorithm to take a very long time, and can be very wasteful because
+of all the prior work backtracking has to discard.
+
+\newpage
+
+\begin{center}
+Dijsktra's Token Ring-No Ordering Imposed \\
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+ Processes & Time (sec) & Solution Size & Backtrack Depth & States \\
+\hline
+ 3 & .02 & 28 & 8 & $4^{3}$         \\
+ 4 & .595 & 65 & 14 & $5^{4}$          \\
+ 5 & 10.249 & 126 & 22 & $6^{5}$        \\
+ 6 & 194.014 & 217 & 32 & $7^{6}$      \\
+ 7 & 2450.748 & 344 & 44 & $8^{7}$    \\
+\hline
+\end{tabular}
+\end{center}
+
+This experiment is the same problem as the last one, but without imposing the counter-clockwise ordering.
+The solution sizes and backtrack depths are similar to what they were in the previous experiment, but 
+the runtimes are noticeably smaller.  At 3 processes it stays about the same, but for 4 processes these
+results are 8.3\% of the old results, and for 5 processes these are .7\% of the old results.  For each
+number of processes, the runtime is roughly 20 times as large as the runtime using 1 less processor.
+Over the observed intervals, the algorithm clearly handles Dijkstra's Token Ring better without a 
+counter clockwise ordering.
 
 \begin{center}
 2-bit Token Spring \\
@@ -908,6 +958,12 @@ Dijsktra's Token Ring \\
 \end{tabular}
 \end{center}
 
+The interesting thing about the 2-bit Token Spring results is that there aren't many really good patterns
+in the data.  The rate of change for the runtimes trends downwards again as the processes increase, but
+the increases for the solution size stick around a 5-7 range, but jump around a lot in that range, and
+the increases for the backtrack depth change from 4 to 0 then back to 1.  We can conclude that the
+algorithm isn't increasing exponentially, but we can't really conclude much more than that.
+
 \begin{center}
 3-bit Token Ring \\
 \begin{tabular}{|c|c|c|c|c|}
@@ -921,8 +977,14 @@ Dijsktra's Token Ring \\
 \end{tabular}
 \end{center}
 
+The 3-bit Token Ring was another problem that we couldn't run with very many processes.  The the runtime
+for 3 processes is about 10\% of the rate for processor for, and the rate for 4 processor is about 9\%
+of the rate for 5 processes.  If we extrapolate, which can't be done with much confidence, 6 processes
+would stabilize in roughly 13.5 minutes.  So the rate appears to decrease, but only by a little, and
+the rate starts so high that it doesn't make much of a difference.
+
 \begin{center}
-Matching-Heavy Greedy Heuristic \\
+Matching-Light Greedy Heuristic \\
 \begin{tabular}{|c|c|c|c|c|}
 \hline
  Processes & Time (sec) & Solution Size & Backtrack Depth & States \\
@@ -936,8 +998,10 @@ Matching-Heavy Greedy Heuristic \\
  8 & 53.214 & 75 & 66 & $3^{8}$    \\
 \hline
 \end{tabular}
+\end{center}
 
-Matching-Light Greedy Heuristic \\
+\begin{center}
+Matching-Heavy Greedy Heuristic \\
 \begin{tabular}{|c|c|c|c|c|}
 \hline
  Processes & Time (sec) & Solution Size & Backtrack Depth & States \\
@@ -952,6 +1016,17 @@ Matching-Light Greedy Heuristic \\
 \hline
 \end{tabular}
 \end{center}
+
+The final problem we examined was the maximal matching problem.  We compared 2 forms of greedy heuristic:
+one which uses a more precise method for determining how much influence each action has, and one that
+accepts a little innaccuracy in finding the most influential action.  Note that a clockwise ordering is
+imposed, because the algorithm begins backtracking with 6 or more processes otherwise.  The effect of the
+heuristics is that the first heuristic should be faster, but the second one should choose better
+actions, reducing the solution size and backtrack depth.  The first heuristic appears to shave some time
+off of the running time for more than 2 processes, but the decrease is not much in the range we were able
+to collect.  You do begin to see the first heuristic gaining noticeable improvement with 8 process, but
+the second heuristic should, in theory, improve later on as the effects of it's better action choices
+become more apparent.
 
 \section{Instructions to Run Code}
 %* Full commented code with instructions to run it as is and with different parameters.
