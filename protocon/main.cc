@@ -778,6 +778,9 @@ int main(int argc, char** argv)
   AddConvergenceOpt opt;
   const char* modelFilePath = 0;
 
+  // Use to disable process ordering.
+  //opt.nicePolicy=opt.NilNice;
+
   if (argi < argc) {
     if (string(argv[argi]) == "-model") {
       ++argi;
@@ -850,7 +853,6 @@ int main(int argc, char** argv)
 
   // Set up the chosen problem.
   XnSys sys;
-  opt.nicePolicy=opt.NilNice;
   switch(problem){
     case ThreeColoringRingInstance:
       InstThreeColoringRing(sys, npcs);  break;
