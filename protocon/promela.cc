@@ -52,10 +52,7 @@ OPutPromelaPc(ostream& of, const XnSys& sys, uint pcIdx)
   void
 OPutPromelaModel(ostream& of, const XnSys& sys)
 {
-  of <<  "/*** Use acceptance cycle check with the LTL claim for a full verification!"
-    << "\n *** Assertions, end states, and progress conditions are present to help debugging."
-    << "\n *** A safety check and liveness check (BOTH WITH LTL CLAIM DISABLED) should be"
-    << "\n *** equivalent to verifying the LTL claim holds via the acceptance cycle check."
+  of <<  "/*** Use a check for assertion violations and invalid end states!"
     << "\n ***/"
     << "\nbool Legit = false;"
     << "\n";
@@ -95,7 +92,7 @@ OPutPromelaModel(ostream& of, const XnSys& sys)
   of << "fi;\n";
 
   of << "Legit = true;\n";
-  of << "progress: skip;\n";
+  //of << "progress: skip;\n";
 
   of << "end:\n";
   of << "if\n";
@@ -106,8 +103,8 @@ OPutPromelaModel(ostream& of, const XnSys& sys)
   of << "assert(0);\n";
   of << "}\n";
 
-  of << "ltl {\n";
-  of << "<> Legit && [] (Legit -> [] Legit)\n";
-  of << "}\n";
+  //of << "ltl {\n";
+  //of << "<> Legit && [] (Legit -> [] Legit)\n";
+  //of << "}\n";
 }
 

@@ -48,7 +48,7 @@
 
 \subsection{AddConvergence Problem}
 
-Given a network of processes (finite-state machines) and an invariant $I$ over their variables, find a set of actions for the processes which guarantees every computation from any initial global state will eventually reach the invariant (i.e., {\it convergence}).
+Given a network of processes (finite-state machines) and an invariant $I$ (i.e., legitimate states) over their variables, find a set of actions for the processes which guarantees every computation from any initial global state will eventually reach the invariant (i.e., {\it convergence}).
 Additionally, once the system is in an invariant state, it must never leave (i.e., {\it closure}).
 
 For each process $P_i$, network topology defines the variables which $P_i$ owns and which other variables $P_i$ can read.
@@ -228,11 +228,78 @@ The problem of adding convergence is NP-complete in the number of candidate acti
 
 We used techniques from constraint satisfaction problems to get a complete algorithm for AddConvergence.
 
-%* A description of the project and its goals. How does it relate to Artificial Intelligence.
+\subsection{Algorithm}
+\subsubsection{Search Initialization}
+\begin{enumerate}
+\item Let $\vbl{candidates}$ be a list of all actions.
+\item Prune all actions which are self-loops from $\vbl{candidates}$.
+ \begin{enumerate}
+ \item[] Example self-loop: $x_1 = 1 \wedge x_0 = 0 \to x_1\defeq 1$.
+ \end{enumerate}
+\item Prune all actions which break closure from $\vbl{candidates}$.
+\item Let $\vbl{actions}$ be an empty list actions.
+\item Call backtracking algorithm.
+\end{enumerate}
+
+\subsubsection{Backtracking}
+\begin{enumerate}
+\item If all deadlocks in illegitimate states are resolved by $\vbl{actions}$, return success!
+\item While $\vbl{actions}\cup\vbl{candidates}$ weakly converge to the invariant,
+ \begin{enumerate}
+ \item Pick an action $B\in\vbl{candidates}$ using most-constrained deadlock heuristic.
+ \item Let $\vbl{actions'} \defeq \vbl{actions} \cup \aset{B}$.
+ \item Let $\vbl{candidates'} \defeq \vbl{candidates} \setminus \aset{B}$.
+ \item Perform forward checking on $\vbl{actions'}$ and $\vbl{candidates'}$ to shrink $\vbl{candidates'}$.
+ \item {\bf Recurse} with $\vbl{actions'}$ and $\vbl{candidates'}$.
+ \item If solution was found, return success!
+ \item Assign $\vbl{candidates}\defeq\vbl{candidates}\setminus\aset{B}$.
+ \item Add any actions to $\vbl{actions}$ from $\vbl{candidates}$ which now required to resolve deadlocks.
+ \item If any were added, perform forward checking on $\vbl{actions}$ and $\vbl{candidates}$ to shrink $\vbl{candidates}$.
+ \end{enumerate}
+\end{enumerate}
+
+\subsubsection{Forward Checking}
+
+Having added an action $A$ of process $P_i$, test each remaining candidate action $B$.
+$B$ is pruned if either:
+\begin{enumerate}
+\item $B$ is an action of $P_i$ and enables $A$. For example,
+ \begin{itemize}
+ \item[] Action $B$ is $x_1 = 0 \wedge x_0 = 0 \to x_1\defeq 1$.
+ \item[] Action $A$ is $x_1 = 1 \wedge x_0 = 0 \to x_1\defeq 2$.
+ \item Action $x_1 = 0 \wedge x_0 = 0 \to x_1\defeq 2$ could be used instead of $B$ if we want this behavior. $B$ is useless!
+ \end{itemize}
+\item $B$ is an action of $P_i$ and is enabled by $A$, for example,
+ \begin{itemize}
+ \item[] Action $A$ is $x_1 = 1 \wedge x_1 = 0 \to x_1\defeq 2$.
+ \item[] Action $B$ is $x_1 = 2 \wedge x_1 = 0 \to x_1\defeq 0$.
+ \item Action $x_1 = 1 \wedge x_0 = 0 \to x_1\defeq 0$ would have been used instead of $A$ if we wanted this behavior. $B$ is useless!
+ \end{itemize}
+\item $B$ does not resolve any new deadlocks.
+\item $B$ would create a cycle (livelock) outside of the invariant.
+\end{enumerate}
+
+\subsubsection{Most-Constrained Deadlocks}
+
+\begin{enumerate}
+\item Order the sets of deadlocks by number of candidate actions which can resolve them.
+\item When picking the next candidate action, pick one which resolves one of the most constrained deadlocks!
+ \begin{itemize}
+ \item Use greedy approach to choose the candidate action from those which can resolve the most-constrained deadlocks. That is, pick the action which has the ``most influence''.
+  \begin{itemize}
+  \item Loosely related to resolving most deadlocks.
+  \item Measured by least number of conflicting candidate actions.
+  \item Performs better than any Least-Constraining Value (LCV) heuristic that we could figure out.
+  \end{itemize}
+ \end{itemize}
+\item To further help picking, define an order to processes.
+ \begin{itemize}
+ \item Prefer actions of processes which appear earliest in this order.
+ \item Sometimes a {\it backwards} ordering ($P_{N-1},\dots,P_0$) is preferred on a unidirectional ring.
+ \end{itemize}
+\end{enumerate}
 
 \section{Background}
-
-\subsection{Symbolic Algorithms}
 
 \subsection{Multi-Value Decision Diagram}
 As in regular software or any search algorithm, the states could be of large amount and rather complex. Simply listing the states is inefficient and complicates analysis. Here we resort to Multiple-Valued Logic for describing the state of a system, represented by a multi-valued decision diagram (MDD), which is a multi-valued version of the binary decision diagram (BDD).
@@ -323,6 +390,12 @@ We assume the protocol is closed in the invariant, so we do not need to worry ab
 %\RETURN $S_0$
 %\end{algorithmic}
 %\end{algorithm}
+
+\subsection{Process Ordering}
+
+We used the idea from \cite{ipdpsEbnenasir11} to impose an ordering on the actions we choose for each recursion level in the backtracking algorithm.
+For the Dijkstra's token ring experiment, this made a big difference.
+We imposed a preference to pick candidate actions of the highest numbered process available.
 
 %* Background: related literature and software and algorithms that you imported into your project. Clearly describe, work that you directly used, work you used after modification, and your own contribution.
 
@@ -463,8 +536,6 @@ Since this is a bidirectional ring, any $P_i$ can read its left and right neighb
 $P_i$ can also read and write its own variable $c_i$.
 
 The system is in a legitimate state when no two neighboring processes have the same color.
-Formally, the invariant is defined as (with arithmetic modulo $n$):
-\[ I \equiv (\forall i\in\Nat_n: c_{i-1}\ne c_i \wedge c_i \ne c_{i+1}) \]
 
 The following action for each $P_i$ can be used for a stabilizing protocol:
 \[
@@ -545,12 +616,6 @@ $P_i$ can also read and write its own variable $m_i$.
 
 The system is in a legitimate state when neighbors pair up by pointing at each other.
 If both neighbors are pointing away, a process can point at itself.
-Formally, the invariant is defined as (with arithmetic modulo $n$):
-\begin{eqnarray*}
- I \equiv \forall i\in\Nat_n: & & (m_{i-1} = 2 \wedge m_i = 1)
-                    \\ & \vee  & (m_{i-1} = 1 \wedge m_i = 0 \wedge m_{i+1} = 2)
-                    \\ & \vee  & (m_i = 2 \wedge m_{i+1} = 1)
-\end{eqnarray*}
 
 
 \subsection{Dijkstra's Token Ring \cite{dij}}
@@ -601,11 +666,9 @@ $\mathtt{token?}(i) = \begin{cases}
 \end{cases}$
 \end{centering}
 }
+Note: $\unique i\in\Nat_n: \phi(i)$ means that there exists exactly one $i$ for which the predicate $\phi(i)$ is satisfied.
 
-Let us consider the original token ring protocol Dijkstra used when introducing the concept of self-stabilization \cite{dij}.
 A token ring is used to give one process out of many an exclusive right, also known as distributed mutual exclusion.
-Below is a ring of $n=6$ finite-state machines (processes).
-
 Each process $P_i$ holds a variable $x_i$ which ranges from $0$ to $n$ ($x_i\in\Nat_{n+1}$).
 Each $P_i$ can read and write $x_i$ and can read $x_{i-1}$ (where subtraction is modulo $n$).
 Note that each process can only read its left neighbor, so we call this ring {\em unidirectional}.
@@ -614,13 +677,6 @@ $P_0$ is said to have a token when it sees $x_{n-1} = x_0$.
 Any other $P_i$ has a token when $x_{i-1} \neq x_i$.
 
 A state is legitimate when exactly one process has the token.
-
-\[
-\begin{array}{rrcl}
- P_0: & x_{5} = x_0 & \to & x_0 \defeq x_0 + 1 \mod (n+1)
-\\ P_{i>0}: & x_{i-1} \neq x_i & \to & x_i \defeq x_{i-1}
-\end{array}
-\]
 
 \subsection{2-Bit Token ``Spring'' \cite{dij}}
 
@@ -671,6 +727,7 @@ $\mathtt{token?}(i) = \begin{cases}
 \end{cases}$
 \end{centering}
 }
+Note: $\unique i\in\Nat_n: \phi(i)$ means that there exists exactly one $i$ for which the predicate $\phi(i)$ is satisfied.
 
 \subsection{3-Bit Token Rring \cite{Gouda:3bitTR}}
 
@@ -730,12 +787,13 @@ $\mathtt{t\_token?}(i) = \begin{cases}
 \end{cases}$
 \end{centering}
 }
+Note: $\unique i\in\Nat_n: \phi(i)$ means that there exists exactly one $i$ for which the predicate $\phi(i)$ is satisfied.
 \newpage
 \section{Experiments}
 %* Experiments: Clearly and in detail describe the experimental setup. Use a "storyboard" like approach if possible. Give all the information so that
 % someone who reads the report can replicate your experiments. Explain and discuss the experimental results. How were the problems selected? Did you
 % use problems with varying complexity and test the boundaries of the system?
-For all of the following experiments, results were gather for an increasing number of processors until the runtime crossed a threshhold of 5 minutes.
+For all of the following experiments, results were gather for an increasing number of processors until the runtime crossed a threshold of 5 minutes.
 Timing was gathered using the "time" command in bash.  The number of states is given as a reference from knowledge of the problem, not as an
 experimental result.
 \begin{center}
@@ -900,36 +958,36 @@ Matching-Light Greedy Heuristic \\
 \subsection{Running the code}
 The program could be executed in terminal using the following command:
 
-\[
-  ./bin/protocon <problem> <numprocs>
-\]
+\begin{center}
+\texttt{./bin/protocon [-model file.pml] <problem> <numprocs>}
+\end{center}
 
-where
-
-$\textbf{\emph{<problem>}}$ is one of:
-
+\texttt{<problem>} is the problem instance, it can be one of:
 "3-coloring", "2-coloring", "matching", "sum-not-2", "dijkstra-tr", "3-bit-tr", "2-bit-tr"
 
-$\textbf{\emph{<numprocs>}}$ is number of processes
+\texttt{<numprocs>} is number of processes.
+
+Use the \texttt{-model} flag if a Promela model of the synthesized protocol is desired.
+This model can be checked by the SPIN model checker.
 
 \subsection{Outputs}
 In the output, there are two sections. The first section shows the type of ring and the steps the program took. And the second section is a summery of the actions each process has taken.
 
 In the first secion,
 
-$\textbf{\emph{(lvl\ n)}}$ means that the output is generated at the level $n$ of recursion. At least $n$ actions will be chosen at this point.
+\texttt{(lvl n)} means that the output is generated at the level $n$ of recursion. At least $n$ actions will be chosen at this point.
 
-$\textbf{\emph{(sz\ n)}}$ means that there are actually $n$ actions chosen. It can be larger than the recursion level if the actions are included based on forward-checking.
+\texttt{(sz n)} means that there are actually $n$ actions chosen. It can be larger than the recursion level if the actions are included based on forward-checking.
 
-$\textbf{\emph{(rem\ n)}}$ means that there are $n$ remaining candidate actions at this point. The part printed after is the action being chosen, which is indicated in $\textbf{\emph{(sz\ m)}}$ before. 
+\texttt{(rem n)} means that there are $n$ remaining candidate actions at this point. The part printed after is the action being chosen, which is indicated in $\textbf{\emph{(sz\ m)}}$ before. 
 
-$\textbf{\emph{(lvl\ x) (mcv\ y) (mcv-sz\ z)}}$ is printed when making the decision to pick the next action (applying the MCV heuristic). This one is at level $x$, where the most constrained deadlock(s) have only $y$ different candidate actions that resolve them, but there are many sets of deadlocks which may only be resolved by $y$ different candidate actions. In total, $z$ candidate actions can resolve one of these most-constrained deadlocks.
+\texttt{(lvl x) (mcv y) (mcv-sz z)} is printed when making the decision to pick the next action (applying the MCV heuristic). This one is at level $x$, where the most constrained deadlock(s) have only $y$ different candidate actions that resolve them, but there are many sets of deadlocks which may only be resolved by $y$ different candidate actions. In total, $z$ candidate actions can resolve one of these most-constrained deadlocks.
 
 In the second section, the success or failure of finding a solution will be shown first. If the solution is successfully found. It is going to be represented in a series of actions listed in the order of process indices. The actions are presented in the form: 
-\[
-process:\ state\ before\ action\ ->\ action\ executed
-\]
-where $"state\ before\ action"$ are only the states that trigger the following action. 
+\begin{center}
+\texttt{process: state before action -> action executed}
+\end{center}
+where ``state before action'' are only the states that trigger the following action. 
 
 \section{Task Distribution}
 %* How were the tasks distributed among the group members? How long did it take for tasks to complete?
@@ -958,17 +1016,23 @@ where $"state\ before\ action"$ are only the states that trigger the following a
 \section{Contributions and Accomplishments}
 %* Contributions and accomplishments. Were you able to accomplish the minimal set of goals identified in your proposal? What else was accomplished? Make sure to define accomplishments specifically, supplementing phrases such as "better" or "improved" by numeric data.
 
-This work gives some insight on why polynomial-time heuristic methods such as \cite{ipdpsEbnenasir11} succeed.
+This work gives some insight on why polynomial-time heuristic methods such as \cite{ipdpsEbnenasir11} succeed for the examples we showed.
 We were able to avoid backtracking in many cases by simply choosing actions in the proper order, combined with forward-checking.
+
+Our approach is especially useful because it is a complete search.
+In the case our search algorithm fails, we know there is no solution.
 
 \section{Lessons Learned}
 
 We learned that it is simple to collaborate on code and documentation in version control.
 
+We also learned that this problem does not lend itself well to the AC-3 heuristic.
+Actions are far too interrelated, so we could not find an effective scheme resembling AC-3 which pruned more candidate actions than our forward checking.
+
 \section{Future Work}
 
-This work gives some insight on why polynomial-time heuristic methods such as \cite{ipdpsEbnenasir11} succeed.
-We were able to avoid backtracking in many cases by simply choosing actions in the proper order, combined with forward-checking.
+An interesting addition to this would be to impose symmetry between certain processes, meaning they all have the same actions (modulo variable names).
+This is practically interesting and would lower the worst-case backtracking depth since adding more symmetric processes would not increase the solution size.
 
 \section{Project Comments and Suggestions}
 %* Any comments and suggestions of the project component of CS5811 will be appreciated.
