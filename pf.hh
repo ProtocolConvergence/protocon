@@ -6,9 +6,9 @@
 #define PF_HH_
 
 #include "synhax.hh"
+#define HAVE_ASSERT_H 1
 #include "mdd.h"
 
-#include "mdd.h"
 
 class PF;
 class PFVbl;

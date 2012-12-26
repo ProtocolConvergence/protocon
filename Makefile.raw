@@ -1,0 +1,48 @@
+
+default: all
+
+CXX = g++
+#CC = gcc
+CC = $(CXX)
+
+CONFIG += ansi
+#CONFIG += errwarn
+CONFIG += debug
+#CONFIG += ultradebug
+#CONFIG += fast
+#CONFIG += noassert
+
+CxPath = ../cx
+BinPath = ../bin
+BldPath = protocon
+
+ExeList = protocon
+ExeList := $(addprefix $(BinPath)/,$(ExeList))
+
+include $(CxPath)/include.mk
+
+GluPath = ../glu-2.4
+GluIncludePath = $(GluPath)/include
+
+CXXFLAGS += $(CFLAGS)
+IXXFLAGS += -I$(GluPath)/include
+LXXFLAGS += -L$(GluPath) -lcmu -lglu -lcu -lcal -lm
+
+
+all: $(BinPath)/protocon
+
+$(BinPath)/protocon: main.o inst.o pf.o promela.o test.o xnsys.o \
+	$(addprefix $(CxBldPath)/,fileb.o syscx.o)
+	$(CXX) $(CXXFLAGS) $^ -o $@ $(LXXFLAGS)
+
+%.o: %.cc %.hh $(CxHFiles)
+	$(CXX) -c $(CXXFLAGS) $(IXXFLAGS) $< -o $@
+
+main.o: pf.hh set.hh xnsys.hh
+
+.PHONY: clean
+clean:
+	rm -fr $(PfxBldPath)
+	rm -f $(ExeList)
+	rm -f *.o
+

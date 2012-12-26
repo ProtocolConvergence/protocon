@@ -1,4 +1,5 @@
 
+#include "cx/syscx.h"
 #include "pf.hh"
 #include "inst.hh"
 #include "promela.hh"
@@ -773,7 +774,7 @@ int main(int argc, char** argv)
     TestTokenRingInstance,
     NProblemInstances
   } problem = NProblemInstances;
-  int argi = 1;
+  int argi = (init_sysCx (&argc, &argv), 1);
   uint npcs = 4;
   AddConvergenceOpt opt;
   const char* modelFilePath = 0;
@@ -830,14 +831,12 @@ int main(int argc, char** argv)
     }
     else{
       //printf("%s: Only supported argument is \"test\".\n", argv[0]);
-      printf("No valid problem given.\n");
-      return 1;
+      failout_sysCx("No valid problem given.\n");
     }
     ++argi;
   }
   else {
-    DBog0("No valid problem given.");
-    return 1;
+    failout_sysCx("No valid problem given.\n");
   }
 
   if (argi < argc) {
@@ -847,8 +846,7 @@ int main(int argc, char** argv)
     DBog1("Using default process count: %u", npcs);
   }
   if (argi < argc) {
-    DBog0("Too many arguments!");
-    return 1;
+    failout_sysCx("Too many arguments!");
   }
 
   // Set up the chosen problem.
@@ -899,6 +897,7 @@ int main(int argc, char** argv)
   }
   std::flush(DBogOF);
 
+  lose_sysCx ();
   return 0;
 }
 
