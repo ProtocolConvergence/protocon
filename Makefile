@@ -1,43 +1,57 @@
 
-BinPath = bin
-GluPath = glu-2.4
+CXX = g++
 
-.PHONY: all
-all: $(GluPath)/libglu.a $(BinPath)/protocon
+CONFIG += ansi
+#CONFIG += errwarn
+CONFIG += debug
+#CONFIG += ultradebug
+#CONFIG += fast
+#CONFIG += noassert
 
-.PHONY: $(BinPath)/protocon
-$(BinPath)/protocon:
-	$(MAKE) -C protocon all
+BinPath = ../bin
+GluPath = ../glu-2.4
+GluIncludePath = $(GluPath)/include
 
+IXXFLAGS += -I$(GluPath)/include
+LXXFLAGS += -L$(GluPath) -lcmu -lglu -lcu -lcal -lm
 
-$(GluPath)/configure:
-	git submodule init $(GluPath)
-	git submodule update $(GluPath)
+ifneq (,$(filter debug,$(CONFIG)))
+	CXXFLAGS += -g
+endif
+ifneq (,$(filter ultradebug,$(CONFIG)))
+	CXXFLAGS += -g3
+endif
+ifneq (,$(filter fast,$(CONFIG)))
+	CXXFLAGS += -O3
+endif
+ifneq (,$(filter noassert,$(CONFIG)))
+	CXXFLAGS += -DNDEBUG
+endif
+ifneq (,$(filter ansi,$(CONFIG)))
+	CXXFLAGS += -ansi -pedantic
+endif
+ifneq (,$(filter errwarn,$(CONFIG)))
+	CXXFLAGS += -Werror
+endif
 
-$(GluPath)/Makefile: $(GluPath)/configure
-	cd $(GluPath) && ./configure --enable-gcc
+CXXFLAGS += -Wall -Wextra -Wstrict-aliasing
 
-$(GluPath)/libglu.a: $(GluPath)/Makefile
-	cd $(GluPath) && make
+all: $(BinPath)/protocon
+
+$(BinPath)/protocon: main.o inst.o pf.o promela.o synhax.o test.o xnsys.o
+	$(CXX) $(CXXFLAGS) $^ -o $@ $(LXXFLAGS)
+
+%.o: %.cc %.hh
+	$(CXX) $(CXXFLAGS) $(IXXFLAGS) -c $< -o $@
+
+main.o: pf.hh set.hh xnsys.hh
+
+$(BinPath)/protocon: | $(BinPath)
+
+$(BinPath):
+	mkdir -p $@
 
 .PHONY: clean
 clean:
-	$(MAKE) -C protocon clean
-
-.PHONY: tags
-tags:
-	find -type f \
-		-not -path '*/.*' \
-		-not -path '*/html/*' -not -path '*/bld/*' \
-		-not -path './bin/*' \
-		-not -path './doc/*' \
-		-not -path './$(GluPath)/src/*' \
-		'(' -name '*.h' -or -name '*.c' -or -name '*.cc' -or -name '*.hh' ')' \
-		-prune \
-		| \
-		ctags -L -
-
-.PHONY: update
-update:
-	git pull origin master
+	rm -f *.o $(BinPath)/protocon
 
