@@ -1,6 +1,8 @@
 
+extern "C" {
 #include "cx/syscx.h"
-#include "pf.hh"
+}
+#include "pfmla.hh"
 #include "inst.hh"
 #include "promela.hh"
 #include "set.hh"

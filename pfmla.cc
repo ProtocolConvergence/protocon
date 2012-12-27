@@ -1,9 +1,9 @@
 /**
- * \file pf.cc
+ * \file pfmla.cc
  * This file has functions for the propositional formula data structure.
  */
 
-#include "pf.hh"
+#include "pfmla.hh"
 
 /**
  * Commit to using the variables added to this context.

@@ -14,7 +14,9 @@ using std::vector;
 using std::string;
 using std::ostream;
 
+extern "C" {
 #include "cx/def.h"
+}
 
 template <class K, class V>
   const V*

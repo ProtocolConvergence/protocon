@@ -1,14 +1,15 @@
 /**
- * \file pf.hh
+ * \file pfmla.hh
  * This file has the propositional formula data structure.
  */
 #ifndef PF_HH_
 #define PF_HH_
 
 #include "synhax.hh"
+//#include "fmla-glu.h"
+
 #define HAVE_ASSERT_H 1
 #include "mdd.h"
-
 
 class PF;
 class PFVbl;

@@ -2,8 +2,8 @@
 default: all
 
 CXX = g++
-#CC = gcc
-CC = $(CXX)
+CC = gcc
+#CC = $(CXX)
 
 CONFIG += ansi
 #CONFIG += errwarn
@@ -21,28 +21,45 @@ ExeList := $(addprefix $(BinPath)/,$(ExeList))
 
 include $(CxPath)/include.mk
 
+CXXBldPath = $(PfxBldPath)/protocon-cxx
+
 GluPath = ../glu-2.4
 GluIncludePath = $(GluPath)/include
 
+CFLAGS += -I$(GluIncludePath)
 CXXFLAGS += $(CFLAGS)
-IXXFLAGS += -I$(GluPath)/include
 LXXFLAGS += -L$(GluPath) -lcmu -lglu -lcu -lcal -lm
 
+-include deps.mk
 
 all: $(BinPath)/protocon
 
-$(BinPath)/protocon: main.o inst.o pf.o promela.o test.o xnsys.o \
-	$(addprefix $(CxBldPath)/,fileb.o syscx.o)
+$(BinPath)/protocon: \
+	$(addprefix $(BldPath)/, pfmla.o pfmla-glu.o pfmla-bittable.o) \
+	$(addprefix $(BldPathCXX)/, main.o inst.o pfmla.o promela.o test.o xnsys.o) \
+	$(addprefix $(CxBldPath)/,fileb.o syscx.o bstree.o rbtree.o)
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(LXXFLAGS)
 
-%.o: %.cc %.hh $(CxHFiles)
-	$(CXX) -c $(CXXFLAGS) $(IXXFLAGS) $< -o $@
 
-main.o: pf.hh set.hh xnsys.hh
+#$(BldPath)/pfmla-glu.o: $(BldPath)/pfmla-glu.c
+#	$(CXX) -c $(CFLAGS) -I$(GluIncludePath) $< -o $@
+
+.PHONY: depend
+depend: deps.mk
+
+deps.mk:
+	grep '^#include *"' *.cc *.hh *.c *.h \
+		| grep -v -e 'mdd\.h' -e 'cx/' \
+		| sed -e 's/\(.*\):#include.*"\(.*\)".*/\1: \2/' \
+		-e 's:\(.*\.\)\(cc\|hh\)\::$(BldPathCXX)\/\1\2\::' \
+		-e 's:\(.*\.\)\(c\|h\)\::$(BldPath)\/\1\2\::' \
+		-e 's:\: \(.*\.\)\(cc\|hh\)$$:\: $(BldPathCXX)/\1\2:' \
+		-e 's:\: \(.*\.\)\(c\|h\)$$:\: $(BldPath)/\1\2:' \
+		> deps.mk
 
 .PHONY: clean
 clean:
 	rm -fr $(PfxBldPath)
 	rm -f $(ExeList)
-	rm -f *.o
+	rm -f deps.mk
 
