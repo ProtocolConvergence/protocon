@@ -358,8 +358,8 @@ detect_livelock (FMem_detect_livelock* tape,
     if (xns.sz == 0)  return false;
     testing.sz = 0;
 
-    op_BitTable (cycle, *tape->legit, BitOp_IDEN);
-    op_BitTable (tested, *tape->legit, BitOp_IDEN);
+    op_BitTable (cycle, BitOp_IDEN1, *tape->legit);
+    op_BitTable (tested, BitOp_IDEN1, *tape->legit);
 
     while (true)
     {
@@ -471,7 +471,7 @@ detect_convergence (FMem_detect_convergence* tape,
     }
     reach.sz = 0;
 
-    op_BitTable (tested, *tape->legit, BitOp_IDEN);
+    op_BitTable (tested, BitOp_IDEN1, *tape->legit);
 
     {:for (i ; xns.sz)
         if (test_BitTable (tested, i))
@@ -1407,9 +1407,9 @@ synsearch_sat (FMem_synsearch* tape)
     DeclTableT( XnInfo, struct { ujint idx; CnfDisj impl; } );
     DeclTableT( State, struct { TableT(XnSz) tx; TableT(XnSz) to; } );
 
-    DeclAssocia( XnSz, TableT(ujint), lstate_map, (SwappedFn) swapped_XnSz );
-    DeclAssocia( XnSz2, ujint, xnmap, (SwappedFn) swapped_XnSz2 );
-    DeclAssocia( XnSz2, ujint, pathmap, (SwappedFn) swapped_XnSz2 );
+    Associa lstate_map[1];
+    Associa xnmap[1];
+    Associa pathmap[1];
 
     DeclTable( State, states );
     DecloStack1( CnfFmla, fmla, dflt_CnfFmla () );
@@ -1421,6 +1421,9 @@ synsearch_sat (FMem_synsearch* tape)
     TableT(XnSz)* may_rules;
     Assoc* assoc;
 
+    InitAssocia( XnSz, TableT(ujint), *lstate_map, swapped_XnSz );
+    InitAssocia( XnSz2, ujint, *xnmap, swapped_XnSz2 );
+    InitAssocia( XnSz2, ujint, *pathmap, swapped_XnSz2 );
 
     g = grow1_rules_synsearch (tape);
     may_rules = grow1_may_rules_synsearch (tape);

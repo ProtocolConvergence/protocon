@@ -40,7 +40,7 @@ sat3_legit_XnSys (FMem_do_XnSys* fix,
             set0_BitTable (fix->fixed, x_idcs[lo]);
             set0_BitTable (fix->fixed, x_idcs[hi]);
 
-            op_BitTable (bt, bt, BitOp_NOT);
+            op_BitTable (bt, BitOp_NOT1, bt);
 
             set1_BitTable (fix->fixed, y_idcs[lo]);
             set1_BitTable (fix->fixed, y_idcs[hi]);
@@ -52,7 +52,7 @@ sat3_legit_XnSys (FMem_do_XnSys* fix,
             set0_BitTable (fix->fixed, y_idcs[lo]);
             set0_BitTable (fix->fixed, y_idcs[hi]);
 
-            op_BitTable (sys->legit, bt, BitOp_AND);
+            op_BitTable (sys->legit, BitOp_AND, bt);
         }
     }
 #endif
@@ -93,7 +93,7 @@ sat3_legit_XnSys (FMem_do_XnSys* fix,
                 }
 
                 do_XnSys (fix, bt);
-                op_BitTable (bt, bt, BitOp_NOT);
+                op_BitTable (bt, BitOp_NOT1, bt);
 
                 {:for (i ; 3)
                     const uint pcidx = y_idcs[(lo + i) % npcs];
@@ -104,7 +104,7 @@ sat3_legit_XnSys (FMem_do_XnSys* fix,
                     set0_BitTable (fix->fixed, pcidx);
                 }
 
-                op_BitTable (sys->legit, bt, BitOp_AND);
+                op_BitTable (sys->legit, BitOp_AND, bt);
 
                 wipe_BitTable (fix->fixed, 0);
             }
@@ -209,7 +209,7 @@ inst_sat3_XnSys (const CnfFmla* fmla)
         fix->vals[sat_idx] = 1;
         set1_BitTable (fix->fixed, sat_idx);
         do_XnSys (fix, bt);
-        op_BitTable (sys->legit, bt, BitOp_AND);
+        op_BitTable (sys->legit, BitOp_AND, bt);
 
         sat3_legit_XnSys (fix, bt, sys, clauses, 3, x_idcs, y_idcs);
 
@@ -331,7 +331,7 @@ inst_sat3_ring_XnSys (const CnfFmla* fmla, const bool use_sat)
                 set1_BitTable (fix->fixed, sat_idcs[i]);
             }
             do_XnSys (fix, bt);
-            op_BitTable (sys->legit, bt, BitOp_AND);
+            op_BitTable (sys->legit, BitOp_AND, bt);
         }
         else
         {
@@ -340,8 +340,8 @@ inst_sat3_ring_XnSys (const CnfFmla* fmla, const bool use_sat)
                 fix->vals[y_idcs[i]] = 2;
                 wipe_BitTable (bt, 0);
                 do_XnSys (fix, bt);
-                op_BitTable (bt, bt, BitOp_NOT);
-                op_BitTable (sys->legit, bt, BitOp_AND);
+                op_BitTable (bt, BitOp_NOT1, bt);
+                op_BitTable (sys->legit, BitOp_AND, bt);
                 set0_BitTable (fix->fixed, y_idcs[i]);
             }
         }
