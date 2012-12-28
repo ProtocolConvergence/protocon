@@ -797,6 +797,7 @@ int main(int argc, char** argv)
       DBog0( "Running tests..." );
       Test();
       DBog0( "Done." );
+      lose_sysCx ();
       return 0;
     }
     else if (string(argv[argi]) == "3-coloring") {

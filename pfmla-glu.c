@@ -23,9 +23,6 @@ op2_GluPFmla (PFmlaCtx* ctx, mdd_t** c, BitOp op, mdd_t* a, mdd_t* b)
 
   switch (op)
   {
-  case BitOp_AND:
-    tmp = mdd_and (a, b, 1, 1);
-    break;
   case BitOp_NOT1:
     tmp = mdd_not (b);
     break;
@@ -35,8 +32,14 @@ op2_GluPFmla (PFmlaCtx* ctx, mdd_t** c, BitOp op, mdd_t* a, mdd_t* b)
   case BitOp_NOT0:
     tmp = mdd_not (a);
     break;
-  case BitOp_IMP:
-    tmp = mdd_or (a, b, 1, 1);
+  case BitOp_AND:
+    tmp = mdd_and (a, b, 1, 1);
+    break;
+  case BitOp_IDEN1:
+    tmp = mdd_dup (b);
+    break;
+  case BitOp_IDEN0:
+    tmp = mdd_dup (a);
     break;
   case BitOp_OR:
     tmp = mdd_or (a, b, 1, 1);
@@ -52,7 +55,7 @@ op2_GluPFmla (PFmlaCtx* ctx, mdd_t** c, BitOp op, mdd_t* a, mdd_t* b)
 
 static
   void
-exist_set_GluPFmla (PFmlaCtx* fmlactx, mdd_t** dst, mdd_t* src, uint set_id)
+smooth_vbls_GluPFmla (PFmlaCtx* fmlactx, mdd_t** dst, mdd_t* src, uint set_id)
 {
   GluPFmlaCtx* ctx = CastUp( GluPFmlaCtx, fmlactx, fmlactx );
   mdd_t* tmp = *dst;
@@ -62,8 +65,8 @@ exist_set_GluPFmla (PFmlaCtx* fmlactx, mdd_t** dst, mdd_t* src, uint set_id)
 
 static
   void
-subst_set_GluPFmla (PFmlaCtx* fmlactx, mdd_t** dst, mdd_t* src,
-                   uint set_id_new, uint set_id_old)
+subst_vbls_GluPFmla (PFmlaCtx* fmlactx, mdd_t** dst, mdd_t* src,
+                     uint set_id_new, uint set_id_old)
 {
   GluPFmlaCtx* ctx = CastUp( GluPFmlaCtx, fmlactx, fmlactx );
   mdd_t* tmp = *dst;
@@ -149,7 +152,7 @@ commit_initialization_GluPFmlaCtx (PFmlaCtx* fmlactx)
 }
 
 static
-  void
+  void*
 lose_GluPFmlaCtx (PFmlaCtx* fmlactx)
 {
   GluPFmlaCtx* ctx = CastUp( GluPFmlaCtx, fmlactx, fmlactx );
@@ -159,6 +162,9 @@ lose_GluPFmlaCtx (PFmlaCtx* fmlactx)
       array_free(ctx->vbl_lists[i]);
     free (ctx->vbl_lists);
   }
+  if (ctx->ctx)
+    mdd_quit (ctx->ctx);
+  return ctx;
 }
 
   PFmlaCtx*
@@ -172,8 +178,8 @@ make_GluPFmlaCtx ()
     vt_initialized = true;
     memset (&vt, 0, sizeof (vt));
     vt.op2_fn = (void (*) (PFmlaCtx*, void**, BitOp, const void*, const void*))        op2_GluPFmla;
-    vt.exist_set_fn    = (void (*) (PFmlaCtx*, void**, const void*, uint))          exist_set_GluPFmla;
-    vt.subst_set_fn    = (void (*) (PFmlaCtx*, void**, const void*, uint, uint))    subst_set_GluPFmla;
+    vt.smooth_vbls_fn  = (void (*) (PFmlaCtx*, void**, const void*, uint))        smooth_vbls_GluPFmla;
+    vt.subst_vbls_fn   = (void (*) (PFmlaCtx*, void**, const void*, uint, uint))   subst_vbls_GluPFmla;
     vt.tautology_ck_fn = (bool (*) (PFmlaCtx*, const void*))                     tautology_ck_GluPFmla;
     vt.unsat_ck_fn     = (bool (*) (PFmlaCtx*, const void*))                         unsat_ck_GluPFmla;
     vt.equiv_ck_fn     = (bool (*) (PFmlaCtx*, const void*, const void*))            equiv_ck_GluPFmla;

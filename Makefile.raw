@@ -26,7 +26,7 @@ CXXBldPath = $(PfxBldPath)/protocon-cxx
 GluPath = ../glu-2.4
 GluIncludePath = $(GluPath)/include
 
-CFLAGS += -I$(GluIncludePath)
+#CFLAGS += -I$(GluIncludePath)
 CXXFLAGS += $(CFLAGS)
 LXXFLAGS += -L$(GluPath) -lcmu -lglu -lcu -lcal -lm
 
@@ -44,8 +44,8 @@ $(call binexe,satsyn): $(BldPath)/satsyn.o $(BldPath)/xnsys.o \
 	$(addprefix $(CxBldPath)/, bstree.o fileb.o ospc.o rbtree.o syscx.o)
 	$(CC) $(CFLAGS) -o $@ $^
 
-#$(BldPath)/pfmla-glu.o: $(BldPath)/pfmla-glu.c
-#	$(CXX) -c $(CFLAGS) -I$(GluIncludePath) $< -o $@
+$(BldPath)/pfmla-glu.o: $(BldPath)/pfmla-glu.c
+	$(CC) -c $(CFLAGS) -I$(GluIncludePath) $< -o $@
 
 .PHONY: depend
 depend: deps.mk

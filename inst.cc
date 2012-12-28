@@ -6,6 +6,7 @@
 
 #include "inst.hh"
 #include "xnsys.hh"
+#include <stdio.h>
 
 /** Increment followed by modulo.**/
 static

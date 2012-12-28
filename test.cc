@@ -17,6 +17,7 @@ void Test()
   Claim( topo.pcs[1].actUnchanged <= (topo.pfVbl(0, 0) == topo.pfVblPrimed(0, 0)) );
   Claim( topo.pcs[1].actUnchanged <= (topo.pfVbl(2, 0) == topo.pfVblPrimed(2, 0)) );
 
+
   XnAct act;
   act.pcIdx = 1;
   act.r0[0] = 1; // Left.
@@ -51,6 +52,7 @@ void Test()
      (topo.pfVblPrimed(1, 0) == 0));
   Claim( actPF.equivCk(topo.actionPF(actId)) );
 
+
   PF srcPF =
     ((topo.pfVblR(1, 0) == 1) &
      (topo.pfVblR(1, 1) == 2) &
@@ -63,6 +65,9 @@ void Test()
 
   Claim( (dstPF & srcPF).tautologyCk(false) );
 
+  Claim( srcPF <= (topo.preimage(actPF) & srcPF) );
+  Claim( (topo.preimage(actPF) & srcPF).equivCk(srcPF) );
+  Claim( srcPF.equivCk(topo.preimage(actPF, dstPF)) );
   {
     Claim( dstPF.equivCk(topo.image(actPF, srcPF)) );
     // The rest of this block is actually implied by the first check.
@@ -73,7 +78,6 @@ void Test()
     Claim( topo.image(actPF, srcPF) <= (topo.pfVbl (1, 0) == 0) );
   }
   Claim( dstPF.equivCk(topo.image(actPF & srcPF)) );
-  Claim( srcPF.equivCk(topo.preimage(actPF, dstPF)) );
 
   Claim( (sys.invariant - sys.invariant).tautologyCk(false) );
   Claim( (sys.invariant | ~sys.invariant).tautologyCk(true) );
@@ -85,14 +89,25 @@ void Test()
   {
     PF cyclePF =
       ((topo.pfVbl(0, 0) == 1) &
-       (topo.pfVblR(0, 0) == 1) &
-       (topo.pfVblR(0, 1) == 2) &
+       (topo.pfVblR(0, 0) == 2) &
+       (topo.pfVblR(0, 1) == 1) &
        (topo.pfVblPrimed(0, 0) == 0))
       |
       ((topo.pfVbl(0, 0) == 2) &
-       (topo.pfVblR(0, 0) == 1) &
-       (topo.pfVblR(0, 1) == 2) &
+       (topo.pfVblR(0, 0) == 2) &
+       (topo.pfVblR(0, 1) == 1) &
        (topo.pfVblPrimed(0, 0) == 1));
+    cyclePF &= topo.pcs[0].actUnchanged;
+    Claim( !CycleCk(sys, cyclePF) );
+
+    cyclePF |= 
+      ((topo.pfVbl(0, 0) == 0) &
+       (topo.pfVblR(0, 0) == 2) &
+       (topo.pfVblR(0, 1) == 1) &
+       (topo.pfVblPrimed(0, 0) == 2))
+      & topo.pcs[0].actUnchanged;
+    // All states in the cycle are illegitimate,
+    // it should be found.
     Claim( CycleCk(sys, cyclePF) );
   }
 }

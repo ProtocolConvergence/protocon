@@ -14,17 +14,7 @@
   void
 PFCtx::commitInitialization()
 {
-  array_t* doms = array_alloc(uint, 0);
-  array_t* names = array_alloc(char*, 0);
-  for (uint i = 0; i < vVbls.size(); ++i) {
-    const PFVbl& vbl = vVbls[i];
-    array_insert_last(uint, doms, vbl.domsz);
-    array_insert_last(const char*, names, vbl.name.c_str());
-  }
-  vCtx = mdd_init_empty();
-  mdd_create_variables(vCtx, doms, names, 0);
-  array_free(doms);
-  array_free(names);
+  commit_initialization_PFmlaCtx (this->ctx);
 }
 
 /**
@@ -40,6 +30,10 @@ PFCtx::commitInitialization()
 PFCtx::oput(ostream& of, const PF& a, uint setIdx,
             const string& pfx, const string& sfx) const
 {
+  (void) a;
+  (void) setIdx;
+  of << pfx << "/*(NOT IMPLEMENTED)*/" << sfx;
+#if 0
   mdd_gen* gen;
   array_t* minterm;
   array_t* vars = vVblLists[setIdx];
@@ -57,7 +51,7 @@ PFCtx::oput(ostream& of, const PF& a, uint setIdx,
     of << sfx;
     array_free(minterm);
   }
-
+#endif
   return of;
 }
 

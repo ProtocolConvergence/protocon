@@ -135,19 +135,19 @@ public:
 
   const PF preimage(const PF& xnRel) const
   {
-    return pfCtx.smooth(xnRel, vVblListPrimed);
+    return xnRel.smooth(vVblListPrimed);
   }
 
   const PF preimage(const PF& xnRel, const PF& image) const
   {
     return preimage(xnRel &
-                    pfCtx.substituteNewOld(image, vVblListPrimed, vVblList));
+                    image.substituteNewOld(vVblListPrimed, vVblList));
   }
 
   const PF image(const PF& xnRel) const
   {
-    PF pf( pfCtx.smooth(xnRel, vVblList) );
-    return pfCtx.substituteNewOld(pf, vVblList, vVblListPrimed);
+    PF pf( xnRel.smooth(vVblList) );
+    return pf.substituteNewOld(vVblList, vVblListPrimed);
   }
 
   const PF image(const PF& xnRel, const PF& preimage) const

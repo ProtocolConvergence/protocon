@@ -11,7 +11,38 @@ init1_PFmlaCtx (PFmlaCtx* ctx, const PFmlaOpVT* vt)
   ctx->vt = vt;
 }
 
-qual_inline
+  void
+commit_initialization_PFmlaCtx (PFmlaCtx* ctx)
+{
+  ctx->vt->ctx_commit_initialization_fn (ctx);
+}
+
+  void
+free_PFmlaCtx (PFmlaCtx* ctx)
+{
+  void* mem = 0;
+  if (ctx->vt->ctx_lose_fn)
+    mem = ctx->vt->ctx_lose_fn (ctx);
+
+  for (ujint i = begidx_LgTable (&ctx->vbls);
+       i != Max_ujint;
+       i = nextidx_LgTable (&ctx->vbls, i))
+  {
+    PFmlaVbl* x = (PFmlaVbl*) elt_LgTable (&ctx->vbls, i);
+    lose_PFmlaVbl (x);
+  }
+  lose_LgTable (&ctx->vbls);
+
+  lose_Associa (&ctx->vbl_map);
+
+  for (i ; ctx->vbl_lists.sz)
+    LoseTable( ctx->vbl_lists.s[i] );
+  LoseTable( ctx->vbl_lists );
+  if (mem)
+    free (mem);
+}
+
+static
   void
 pre_op2_PFmla (PFmla* c, const PFmla* a, const PFmla* b)
 {
@@ -29,13 +60,13 @@ iden_PFmla (PFmla* b, const PFmla* a)
   pre_op2_PFmla (b, a, 0);
 
   if (!a->ctx)
+  {
     *b = *a;
+  }
   else
   {
-    if (b->ctx != a->ctx)
-      wipe_PFmla (b);
     b->ctx = a->ctx;
-    a->ctx->vt->op2_fn (a->ctx, &b->mem, BitOp_NOT0, a->mem, 0);
+    a->ctx->vt->op2_fn (a->ctx, &b->mem, BitOp_IDEN0, a->mem, 0);
   }
 }
 
@@ -47,12 +78,10 @@ not_PFmla (PFmla* b, const PFmla* a)
   if (!a->ctx)
   {
     b->ctx = a->ctx;
-    phase_fo_PFmla (b, phase_of_PFmla (a));
+    phase_fo_PFmla (b, !phase_of_PFmla (a));
   }
   else
   {
-    if (b->ctx != a->ctx)
-      wipe_PFmla (b);
     b->ctx = a->ctx;
     a->ctx->vt->op2_fn (a->ctx, &b->mem, BitOp_NOT0, a->mem, 0);
   }
@@ -67,19 +96,17 @@ and_PFmla (PFmla* c, const PFmla* a, const PFmla* b)
     if (phase_of_PFmla (a))
       iden_PFmla (c, b);
     else
-      iden_PFmla (c, a);
+      wipe1_PFmla (c, false);
   }
   else if (!b->ctx)
   {
-    if (!phase_of_PFmla (b))
-      iden_PFmla (c, b);
-    else
+    if (phase_of_PFmla (b))
       iden_PFmla (c, a);
+    else
+      wipe1_PFmla (c, false);
   }
   else
   {
-    if (c->ctx != a->ctx)
-      wipe_PFmla (c);
     c->ctx = a->ctx;
     a->ctx->vt->op2_fn (a->ctx, &c->mem, BitOp_AND, a->mem, b->mem);
   }
@@ -91,22 +118,20 @@ or_PFmla (PFmla* c, const PFmla* a, const PFmla* b)
   pre_op2_PFmla (c, a, b);
   if (!a->ctx)
   {
-    if (!phase_of_PFmla (a))
-      iden_PFmla (c, b);
+    if (phase_of_PFmla (a))
+      wipe1_PFmla (c, true);
     else
-      iden_PFmla (c, a);
+      iden_PFmla (c, b);
   }
   else if (!b->ctx)
   {
     if (phase_of_PFmla (b))
-      iden_PFmla (c, b);
+      wipe1_PFmla (c, true);
     else
       iden_PFmla (c, a);
   }
   else
   {
-    if (c->ctx != a->ctx)
-      wipe_PFmla (c);
     c->ctx = a->ctx;
     a->ctx->vt->op2_fn (a->ctx, &c->mem, BitOp_OR, a->mem, b->mem);
   }
@@ -122,7 +147,7 @@ nimp_PFmla (PFmla* c, const PFmla* a, const PFmla* b)
     if (phase_of_PFmla (a))
       not_PFmla (c, b);
     else
-      iden_PFmla (c, a);
+      wipe1_PFmla (c, false);
   }
   else if (!b->ctx)
   {
@@ -133,8 +158,6 @@ nimp_PFmla (PFmla* c, const PFmla* a, const PFmla* b)
   }
   else
   {
-    if (c->ctx != a->ctx)
-      wipe_PFmla (c);
     c->ctx = a->ctx;
     a->ctx->vt->op2_fn (a->ctx, &c->mem, BitOp_NIMP, a->mem, b->mem);
   }
@@ -253,7 +276,7 @@ subseteq_ck_PFmla (const PFmla* a, const PFmla* b)
 }
 
   void
-exist_set_PFmla (PFmla* dst, const PFmla* a, uint set_id)
+smooth_vbls_PFmla (PFmla* dst, const PFmla* a, uint list_id)
 {
   if (!a->ctx)
   {
@@ -264,12 +287,12 @@ exist_set_PFmla (PFmla* dst, const PFmla* a, uint set_id)
     if (dst->ctx != a->ctx)
       wipe_PFmla (dst);
     dst->ctx = a->ctx;
-    a->ctx->vt->exist_set_fn (a->ctx, &dst->mem, a->mem, set_id);
+    a->ctx->vt->smooth_vbls_fn (a->ctx, &dst->mem, a->mem, list_id);
   }
 }
 
   void
-subst_set_PFmla (PFmla* dst, const PFmla* a, uint set_id_new, uint set_id_old)
+subst_vbls_PFmla (PFmla* dst, const PFmla* a, uint list_id_new, uint list_id_old)
 {
   if (!a->ctx)
   {
@@ -280,8 +303,8 @@ subst_set_PFmla (PFmla* dst, const PFmla* a, uint set_id_new, uint set_id_old)
     if (dst->ctx != a->ctx)
       wipe_PFmla (dst);
     dst->ctx = a->ctx;
-    a->ctx->vt->subst_set_fn (a->ctx, &dst->mem, a->mem,
-                              set_id_new, set_id_old);
+    a->ctx->vt->subst_vbls_fn (a->ctx, &dst->mem, a->mem,
+                               list_id_new, list_id_old);
   }
 }
 
@@ -304,5 +327,47 @@ eqlc_PFmlaVbl (PFmla* dst, const PFmlaVbl* a, uint x)
 
   dst->ctx = a->ctx;
   a->ctx->vt->vbl_eqlc_fn (a->ctx, &dst->mem, a->id, x);
+}
+
+
+  uint
+add_vbl_PFmlaCtx (PFmlaCtx* ctx, const char* name, uint domsz)
+{
+  bool added = false;
+  PFmlaVbl* x;
+  uint id;
+  Assoc* assoc;
+
+  id = takeidx_LgTable (&ctx->vbls);
+  x = elt_LgTable (&ctx->vbls, id);
+  x->ctx = ctx;
+  x->name = cons1_AlphaTab (name);
+  x->id = id;
+  x->domsz = domsz;
+
+  assoc = ensure1_Associa (&ctx->vbl_map, &x->name, &added);
+  if (!added) {
+    DBog1( "There already exists a variable with name: %s", name );
+    lose_PFmlaVbl (x);
+    giveidx_LgTable (&ctx->vbls, id);
+    return 0;
+  }
+  *(PFmlaVbl**) val_of_Assoc (assoc) = x;
+  return id;
+}
+
+  uint
+add_vbl_list_PFmlaCtx (PFmlaCtx* ctx)
+{
+  TableT(uint) t;
+  InitTable( t );
+  PushTable( ctx->vbl_lists, t );
+  return ctx->vbl_lists.sz - 1;
+}
+
+  void
+add_to_vbl_list_PFmlaCtx (PFmlaCtx* ctx, uint listid, uint vblid)
+{
+  PushTable( ctx->vbl_lists.s[listid], vblid );
 }
 

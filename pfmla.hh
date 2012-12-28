@@ -6,10 +6,17 @@
 #define PF_HH_
 
 #include "synhax.hh"
-//#include "fmla-glu.h"
 
-#define HAVE_ASSERT_H 1
-#include "mdd.h"
+extern "C" {
+#include "pfmla-glu.h"
+#include "pfmla.h"
+}
+
+namespace C {
+  using ::PFmla;
+  using ::PFmlaVbl;
+  using ::PFmlaCtx;
+}
 
 class PF;
 class PFVbl;
@@ -18,10 +25,10 @@ class PFCtx;
 class PF
 {
   friend class PFCtx;
+  friend class PFVbl;
 
 private:
-  bool vPhase;
-  mdd_t* vMdd;
+  C::PFmla g;
 
 public:
   /** One should never call the default constructor.
@@ -29,79 +36,66 @@ public:
    * A propositional formula should be initialized to true, false,
    * or anything else before it is used in operations.
    */
-  PF() :
-    // This comment is intensional.
-    //vPhase( false )
-     vMdd( 0 )
-  {}
-
-  PF(const PF& pf) :
-    vPhase( pf.vPhase )
+  PF()
   {
-    vMdd = pf.dup_mdd();
+    // Phase is uninitialized.
+    init_PFmla (&g);
   }
 
-  explicit PF(bool phase) :
-    vPhase( phase )
-    , vMdd( 0 )
-  {}
+  PF(const PF& pf)
+  {
+    init_PFmla (&g);
+    iden_PFmla (&g, &pf.g);
+  }
 
-  explicit PF(mdd_t* a) : vPhase( true ), vMdd( a ) {}
+  explicit PF(bool phase)
+  {
+    init_PFmla (&g);
+    wipe1_PFmla (&g, phase);
+  }
 
   ~PF()
   {
-    clear();
-  }
-
-  PF& defeq(mdd_t* a)
-  {
-    vPhase = true;
-    if (vMdd)  mdd_free(vMdd);
-    vMdd = a;
-    return *this;
+    lose_PFmla (&g);
   }
 
   PF& operator=(const PF& pf)
   {
-    if (!pf.vMdd) {
-      clear(pf.vPhase);
-      return *this;
-    }
-    return defeq(pf.dup_mdd());
+    iden_PFmla (&g, &pf.g);
+    return *this;
   }
   PF& operator=(bool b)
   {
-    clear(b);
+    wipe1_PFmla (&g, b);
     return *this;
   }
 
   /// Check if this is a tautology.
   bool tautologyCk(bool t = true) const {
-    if (!vMdd)  return (vPhase == t);
-    return mdd_is_tautology(vMdd, t);
+    if (t)  return tautology_ck_PFmla (&g);
+    return unsat_ck_PFmla (&g);
   }
 
   bool equivCk(const PF& pf) const
   {
-    if (!vMdd)  return pf.tautologyCk(vPhase);
-    if (!pf.vMdd)  return tautologyCk(pf.vPhase);
-    return mdd_equal(vMdd, pf.vMdd);
+    return equiv_ck_PFmla (&g, &pf.g);
   }
 
   bool overlapCk(const PF& pf) const
   {
-    return !(*this & pf).tautologyCk(false);
+    return overlap_ck_PFmla (&g, &pf.g);
   }
 
   bool operator<=(const PF& pf) const
   {
-    return pf.equivCk(pf | *this);
+    return subseteq_ck_PFmla (&g, &pf.g);
   }
 
   PF operator~() const
   {
-    if (!vMdd)  return PF( !vPhase );
-    return PF( mdd_not(vMdd) );
+    PF pf;
+    not_PFmla (&pf.g, &g);
+    return pf;
   }
 
   PF operator-() const
@@ -112,28 +106,15 @@ public:
 
   PF& operator&=(const PF& pf)
   {
-    if (!vMdd) {
-      if (vPhase)  *this = pf;
-      return *this;
-    }
-    if (!pf.vMdd) {
-      if (!pf.vPhase)  *this = pf;
-      return *this;
-    }
-    return defeq(mdd_and(vMdd, pf.vMdd, 1, 1));
+    and_PFmla (&g, &g, &pf.g);
+    return *this;
   }
 
-  PF operator&(const PF& pf) const
+  PF operator&(const PF& b) const
   {
-    if (!vMdd) {
-      if (vPhase)  return pf;
-      return *this;
-    }
-    if (!pf.vMdd) {
-      if (!pf.vPhase)  return pf;
-      return *this;
-    }
-    return PF( mdd_and(vMdd, pf.vMdd, 1, 1) );
+    PF c;
+    and_PFmla (&c.g, &g, &b.g);
+    return c;
   }
 
   PF& operator*=(const PF& pf)
@@ -146,31 +127,17 @@ public:
   { return (*this & pf); }
 
 
-  PF& operator|=(const PF& pf)
+  PF& operator|=(const PF& b)
   {
-    if (!vMdd) {
-      if (!vPhase)  *this = pf; 
-      return *this;
-    }
-    if (!pf.vMdd) {
-      if (pf.vPhase)  *this = pf;
-      return *this;
-    }
-    defeq(mdd_or(vMdd, pf.vMdd, 1, 1));
+    or_PFmla (&g, &g, &b.g);
     return *this;
   }
 
-  PF operator|(const PF& pf) const
+  PF operator|(const PF& b) const
   {
-    if (!vMdd) {
-      if (!vPhase)  return pf; 
-      return *this;
-    }
-    if (!pf.vMdd) {
-      if (pf.vPhase)  return pf;
-      return *this;
-    }
-    return PF( mdd_or(vMdd, pf.vMdd, 1, 1) );
+    PF c;
+    or_PFmla (&c.g, &g, &b.g);
+    return c;
   }
 
   PF& operator+=(const PF& pf)
@@ -183,179 +150,136 @@ public:
   { return (*this | pf); }
 
 
-  PF& operator-=(const PF& pf)
+  PF& operator-=(const PF& b)
   {
-    if (!vMdd) {
-      if (vPhase)  *this = ~pf;
-      return *this;
-    }
-    if (!pf.vMdd) {
-      if (pf.vPhase)  clear(false);
-      return *this;
-    }
-    defeq(mdd_and(vMdd, pf.vMdd, 1, 0));
+    nimp_PFmla (&g, &g, &b.g);
     return *this;
   }
 
-  PF operator-(const PF& pf) const
+  PF operator-(const PF& b) const
   {
-    if (!vMdd) {
-      if (vPhase)  return ~pf;
-      return *this;
-    }
-    if (!pf.vMdd) {
-      if (pf.vPhase)  return PF( false );
-      return *this;
-    }
-    return PF( mdd_and(vMdd, pf.vMdd, 1, 0) );
+    PF c;
+    nimp_PFmla (&c.g, &g, &b.g);
+    return c;
   }
 
-
-  mdd_t* dup_mdd() const
+  PF smooth(uint setIdx) const
   {
-    if (!vMdd)  return 0;
-    return mdd_dup(vMdd);
+    PF b;
+    smooth_vbls_PFmla (&b.g, &g, setIdx);
+    return b;
   }
 
-private:
-  void clear() {
-    if (vMdd) {
-      mdd_free(vMdd);
-      vMdd = 0;
-    }
+  PF substituteNewOld(uint newSetIdx, uint oldSetIdx) const
+  {
+    PF b;
+    subst_vbls_PFmla (&b.g, &g, newSetIdx, oldSetIdx);
+    return b;
   }
-  void clear(bool phase) {
-    clear();
-    vPhase = phase;
-  }
+
 };
 
 class PFVbl
 {
 private:
-  PFCtx* vCtx;
-public:
-  uint idx;
-  string name;
-  uint domsz;
+  C::PFmlaVbl vbl;
 
 public:
-  PFVbl(PFCtx* ctx, uint _idx, const string& _name, uint _domsz) :
-    vCtx(ctx)
-    , idx(_idx)
-    , name(_name)
-    , domsz(_domsz)
-  {}
-
-  PFVbl(const string& _name, uint _domsz) :
-    vCtx(0)
-    , idx(0)
-    , name(_name)
-    , domsz(_domsz)
-  {}
+  PFVbl(const string& _name, uint _domsz)
+  {
+    this->vbl.ctx = 0;
+    this->vbl.id = 0;
+    this->vbl.name = cons1_AlphaTab (_name.c_str());
+    this->vbl.domsz = _domsz;
+  }
 
 
-  PF operator==(uint x) const;
-  PF operator==(const PFVbl& x) const;
-  PF operator!=(uint x) const;
-  PF operator!=(const PFVbl& x) const;
+  PFVbl(const C::PFmlaVbl& x)
+  {
+    this->vbl.ctx = x.ctx;
+    this->vbl.id = x.id;
+    this->vbl.name = dflt_AlphaTab ();
+    copy_AlphaTab (&this->vbl.name, &x.name);
+    this->vbl.domsz = x.domsz;
+  }
+
+  ~PFVbl()
+  {
+    lose_PFmlaVbl (&vbl);
+  }
+
+  PF operator==(uint x) const
+  {
+    PF pf;
+    eqlc_PFmlaVbl (&pf.g,
+                   vbl_of_PFmlaCtx (vbl.ctx, vbl.id),
+                   x);
+    return pf;
+  }
+
+  PF operator==(const PFVbl& x) const
+  {
+    PF pf;
+    eql_PFmlaVbl (&pf.g,
+                  vbl_of_PFmlaCtx (vbl.ctx, vbl.id),
+                  vbl_of_PFmlaCtx (vbl.ctx, x.vbl.id));
+    return pf;
+  }
+
+  PF operator!=(uint x) const
+  {
+    return ~((*this) == x);
+  }
+
+  PF operator!=(const PFVbl& x) const
+  {
+    return ~((*this) == x);
+  }
 };
+
 
 class PFCtx
 {
 private:
-  mdd_manager* vCtx;
-  vector<PFVbl> vVbls;
-  map<string,uint> vVblMap;
-  vector<array_t*> vVblLists;
+  C::PFmlaCtx* ctx;
 
 public:
-  PFCtx() : vCtx(0)
+  PFCtx()
   {
+    ctx = make_GluPFmlaCtx ();
   }
 
   ~PFCtx()
   {
-    for (uint i = 0; i < vVblLists.size(); ++i) {
-      array_free(vVblLists[i]);
-    }
-    if (vCtx) {
-      mdd_quit(vCtx);
-    }
+    free_PFmlaCtx (ctx);
   }
 
-  const PFVbl* add(const PFVbl& vbl)
+  uint addVbl(const string& name, uint domsz)
   {
-    if (MapLookup(vVblMap, vbl.name)) {
-      DBog1( "There already exists a variable with name: %s", vbl.name.c_str() );
-      return NULL;
-    }
-
-    uint idx = (uint) vVbls.size();
-    vVblMap[vbl.name] = idx;
-    vVbls.push_back(PFVbl(this, idx, vbl.name, vbl.domsz));
-    return &vVbls[idx];
+    return add_vbl_PFmlaCtx (ctx, name.c_str(), domsz);
   }
 
   uint addVblList()
   {
-    array_t*& a = Grow1(vVblLists);
-    a = array_alloc(uint, 0);
-    return vVblLists.size() - 1;
+    return add_vbl_list_PFmlaCtx (ctx);
   }
 
   void addToVblList(uint setIdx, uint vblIdx)
   {
-    array_insert_last(uint, vVblLists[setIdx], vblIdx);
+    add_to_vbl_list_PFmlaCtx (ctx, setIdx, vblIdx);
   }
 
   void commitInitialization();
 
-  PF nil() const
+  const PFVbl vbl(uint id) const
   {
-    PF pf;
-    pf.defeq(mdd_zero(vCtx));
-    return pf;
-  }
-
-  const PFVbl vbl(uint idx) const
-  {
-    return vVbls[idx];
+    return PFVbl( *vbl_of_PFmlaCtx (ctx, id) );
   }
 
   const PFVbl vbl(const string& s) const
   {
-    const uint* idx = MapLookup(vVblMap, s);
-    // Live on the edge!
-    //if (!idx)  return NULL;
-    return vVbls[*idx];
+    return PFVbl( *vbl_lookup_PFmlaCtx (ctx, s.c_str()) );
   }
-
-  PF vbleqc(uint idx, uint val) const
-  {
-    return PF( mdd_eq_c(vCtx, idx, val) );
-  }
-
-  PF vbleq(uint idx1, uint idx2) const
-  {
-    return PF( mdd_eq(vCtx, idx1, idx2) );
-  }
-
-  PF smooth(const PF& a, uint setIdx) const
-  {
-    if (!a.vMdd)  return a;
-    return PF( mdd_smooth(vCtx, a.vMdd, vVblLists[setIdx]) );
-  }
-
-  PF substituteNewOld(const PF& a, uint newSetIdx, uint oldSetIdx) const
-  {
-    if (!a.vMdd)  return a;
-    return PF( mdd_substitute(vCtx, a.vMdd, vVblLists[oldSetIdx], vVblLists[newSetIdx]) );
-  }
-
-  //bool subseteq(const PF& a, const PF& b, uint setIdx);
-
-  mdd_manager* mdd_ctx() { return vCtx; }
 
   ostream& oput(ostream& of,
                 const PF& a,
@@ -363,26 +287,6 @@ public:
                 const string& pfx = "",
                 const string& sfx = "") const;
 };
-
-inline PF PFVbl::operator==(uint x) const
-{
-  return vCtx->vbleqc(idx, x);
-}
-
-inline PF PFVbl::operator==(const PFVbl& x) const
-{
-  return vCtx->vbleq(idx, x.idx);
-}
-
-inline PF PFVbl::operator!=(uint x) const
-{
-  return ~((*this) == x);
-}
-
-inline PF PFVbl::operator!=(const PFVbl& x) const
-{
-  return ~((*this) == x);
-}
 
 #endif
 

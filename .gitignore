@@ -15,4 +15,7 @@ doc/*/*.out
 doc/*/*.snm
 doc/*/*.toc
 doc/*/*.vrb
+doc/*.pdf
+doc/*.aux
+doc/*.log
 

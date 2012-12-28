@@ -60,10 +60,11 @@ commit_initialization_BitTablePFmlaCtx (PFmlaCtx* fmlactx)
 }
 
 static
-  void
+  void*
 lose_BitTablePFmlaCtx (PFmlaCtx* fmlactx)
 {
-  (void) fmlactx;
+  BitTablePFmlaCtx* ctx = CastUp( BitTablePFmlaCtx, fmlactx, fmlactx );
+  return ctx;
 }
 
   PFmlaCtx*

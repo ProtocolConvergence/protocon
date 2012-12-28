@@ -21,15 +21,12 @@ XnNet::commitInitialization()
     XnPc& pc = pcs[i];
     for (uint j = 0; j < pc.wvbls.size(); ++j) {
       XnVbl& xnVbl = pc.wvbls[j];
-      const PFVbl* pfVbl;
 
-      pfVbl = pfCtx.add(PFVbl(xnVbl.name, xnVbl.domsz));
-      xnVbl.pfIdx = pfVbl->idx;
-      pfCtx.addToVblList(vVblList, pfVbl->idx);
+      xnVbl.pfIdx = pfCtx.addVbl (xnVbl.name, xnVbl.domsz);
+      pfCtx.addToVblList (vVblList, xnVbl.pfIdx);
 
-      pfVbl = pfCtx.add(PFVbl(xnVbl.name + "p", xnVbl.domsz));
-      xnVbl.pfIdxPrimed = pfVbl->idx;
-      pfCtx.addToVblList(vVblListPrimed, pfVbl->idx);
+      xnVbl.pfIdxPrimed = pfCtx.addVbl (xnVbl.name + "p", xnVbl.domsz);
+      pfCtx.addToVblList(vVblListPrimed, xnVbl.pfIdxPrimed);
     }
   }
 
