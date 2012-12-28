@@ -16,7 +16,7 @@ CxPath = ../cx
 BinPath = ../bin
 BldPath = protocon
 
-ExeList = protocon
+ExeList = protocon satsyn
 ExeList := $(addprefix $(BinPath)/,$(ExeList))
 
 include $(CxPath)/include.mk
@@ -32,7 +32,7 @@ LXXFLAGS += -L$(GluPath) -lcmu -lglu -lcu -lcal -lm
 
 -include deps.mk
 
-all: $(BinPath)/protocon
+all: $(ExeList)
 
 $(BinPath)/protocon: \
 	$(addprefix $(BldPath)/, pfmla.o pfmla-glu.o pfmla-bittable.o) \
@@ -40,6 +40,9 @@ $(BinPath)/protocon: \
 	$(addprefix $(CxBldPath)/,fileb.o syscx.o bstree.o rbtree.o)
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(LXXFLAGS)
 
+$(call binexe,satsyn): $(BldPath)/satsyn.o $(BldPath)/xnsys.o \
+	$(addprefix $(CxBldPath)/, bstree.o fileb.o ospc.o rbtree.o syscx.o)
+	$(CC) $(CFLAGS) -o $@ $^
 
 #$(BldPath)/pfmla-glu.o: $(BldPath)/pfmla-glu.c
 #	$(CXX) -c $(CFLAGS) -I$(GluIncludePath) $< -o $@

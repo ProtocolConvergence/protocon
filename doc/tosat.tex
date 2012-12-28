@@ -1,0 +1,54 @@
+
+\input{preamble}
+
+\begin{document}
+\title{Reduce AddConvergence to SAT}
+\author{Alex Klinkhamer}
+\maketitle
+
+\section{Notation}
+States will be called $s_i$.
+Local states of process $r$ be called $s_i^r$.
+A transition from $s_i$ to $s_j$ is called $t_{ij}$.
+An action (or rule) from $s_i^r$ to $s_j^r$ is called $g_{ij}^r$.
+For brevity, actions can be called $g_i$, with $i$ enumerating all potential actions.
+The reachability from $s_i$ to $s_j$ shall be $p_{ij}$.
+
+When used in a boolean formula, assume these symbols evaluate to their corresponding propositional variables.
+
+\section{Reduction}
+Transition from every illegitimate state.
+$$\forall i:\exists j: t_{ij}$$
+
+Preserve protocol in legitimate states.
+Assure each $t_{ij}$ in the original protocol ($s_i$ and $s_j$ are legitimate) exists. That is, $$\forall t_{ij}: t_{ij}$$
+
+Actions and transitions correspond.
+$$\forall g_{ij}^r:\forall t_{kl}\in g_{ij}^r: \neg g_{ij}^r \vee t_{kl}$$
+$$\forall t_{ij}:\exists g_{kl}^r: \left(t_{ij}\in g_{kl}^r\right) \wedge\left(\neg t_{ij}\vee g_{kl}^r\right)$$
+
+At most $1$ action can be used for each local state.
+$$\forall g_{ij}^r, g_{ik}^r: \neg g_{ij}^r \vee \neg g_{ik}^r$$
+
+No cycles outside the illegitimate states.
+This one is a pain.
+$$\forall p_{ik},t_{kj}: q_{ikj}\iff p_{ik} \wedge t_{kj}$$
+$$\forall p_{ij}: p_{ij}\iff t_{ij}\vee\exists k: q_{ikj}$$
+$$\forall s_i\notin \overline{I}: \neg p_{ii}$$
+
+\section{Without Cycle Resolution}
+If we were to use a SAT solver without worrying about cycles, we only need to have variables represent actions!
+
+Transition from every illegitimate state.
+$$\forall i:\exists k: g_k \mbox{ where } g_j\implies t_{ij}$$.
+
+Preserve protocol (each $t_{ij}$ in original protocol).
+Or we can simply keep the original program actions.
+$$\forall t_{ij}: \exists g: g\wedge (g\implies t_{ij})$$
+
+At most $1$ action can be used for each local state.
+$$\forall g_{ij}^r, g_{ik}^r: \neg g_{ij}^r \vee \neg g_{ik}^r$$
+
+It may also help to hint that some action which maps an illegitimate state to a legitimate one exists.
+\end{document}
+
