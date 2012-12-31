@@ -4,7 +4,14 @@
 #define HAVE_ASSERT_H 1
 #include "mdd.h"
 
+typedef struct GluPFmla GluPFmla;
 typedef struct GluPFmlaCtx GluPFmlaCtx;
+
+struct GluPFmla
+{
+  PFmlaBase base;
+  mdd_t* mdd;
+};
 
 struct GluPFmlaCtx
 {
@@ -13,11 +20,35 @@ struct GluPFmlaCtx
   array_t** vbl_lists;
 };
 
+static
+  const GluPFmla*
+ccastup_as_GluPFmla (const PFmla g)
+{
+  return CastUp( const GluPFmla, base, g );
+}
+
+static
+  GluPFmla*
+castup_as_GluPFmla (PFmla g)
+{
+  return CastUp( GluPFmla, base, g );
+}
+
+static
+  GluPFmlaCtx*
+castup_as_GluPFmlaCtx (PFmlaCtx* fmlactx)
+{
+  return CastUp( GluPFmlaCtx, fmlactx, fmlactx );
+}
 
 static
   void
-op2_GluPFmla (PFmlaCtx* ctx, mdd_t** c, BitOp op, mdd_t* a, mdd_t* b)
+op2_GluPFmla (PFmlaCtx* ctx, PFmla* base_c, BitOp op,
+              const PFmla base_a, const PFmla base_b)
 {
+  mdd_t* a = ccastup_as_GluPFmla (base_a) -> mdd;
+  mdd_t* b = ccastup_as_GluPFmla (base_b) -> mdd;
+  mdd_t** c = & castup_as_GluPFmla (*base_c) -> mdd;
   mdd_t* tmp = 0;
   (void) ctx;
 
@@ -55,82 +86,108 @@ op2_GluPFmla (PFmlaCtx* ctx, mdd_t** c, BitOp op, mdd_t* a, mdd_t* b)
 
 static
   void
-smooth_vbls_GluPFmla (PFmlaCtx* fmlactx, mdd_t** dst, mdd_t* src, uint set_id)
+smooth_vbls_GluPFmla (PFmlaCtx* fmlactx, PFmla* base_b, const PFmla base_a, uint set_id)
 {
-  GluPFmlaCtx* ctx = CastUp( GluPFmlaCtx, fmlactx, fmlactx );
-  mdd_t* tmp = *dst;
-  *dst = mdd_smooth (ctx->ctx, src, ctx->vbl_lists[set_id]);
+  GluPFmlaCtx* ctx = castup_as_GluPFmlaCtx (fmlactx);
+  const GluPFmla* a = ccastup_as_GluPFmla (base_a);
+  GluPFmla* b = castup_as_GluPFmla (*base_b);
+  mdd_t* tmp = b->mdd;
+
+  b->mdd = mdd_smooth (ctx->ctx, a->mdd, ctx->vbl_lists[set_id]);
   if (tmp)  mdd_free (tmp);
 }
 
 static
   void
-subst_vbls_GluPFmla (PFmlaCtx* fmlactx, mdd_t** dst, mdd_t* src,
+subst_vbls_GluPFmla (PFmlaCtx* fmlactx, PFmla* base_b, const PFmla base_a,
                      uint set_id_new, uint set_id_old)
 {
-  GluPFmlaCtx* ctx = CastUp( GluPFmlaCtx, fmlactx, fmlactx );
-  mdd_t* tmp = *dst;
-  *dst = mdd_substitute (ctx->ctx, src,
-                         ctx->vbl_lists[set_id_old],
-                         ctx->vbl_lists[set_id_new]);
+  GluPFmlaCtx* ctx = castup_as_GluPFmlaCtx (fmlactx);
+  const GluPFmla* a = ccastup_as_GluPFmla (base_a);
+  GluPFmla* b = castup_as_GluPFmla (*base_b);
+  mdd_t* tmp = b->mdd;
+
+  b->mdd = mdd_substitute (ctx->ctx, a->mdd,
+                           ctx->vbl_lists[set_id_old],
+                           ctx->vbl_lists[set_id_new]);
   if (tmp)  mdd_free (tmp);
 }
 
 static
   bool
-tautology_ck_GluPFmla (PFmlaCtx* ctx, mdd_t* a)
+tautology_ck_GluPFmla (PFmlaCtx* ctx, const PFmla base_a)
 {
+  const GluPFmla* a = ccastup_as_GluPFmla (base_a);
   (void) ctx;
-  return mdd_is_tautology (a, 1) ? true : false;
+  return mdd_is_tautology (a->mdd, 1) ? true : false;
 }
 
 static
   bool
-unsat_ck_GluPFmla (PFmlaCtx* ctx, mdd_t* a)
+unsat_ck_GluPFmla (PFmlaCtx* ctx, const PFmla base_a)
 {
+  const GluPFmla* a = ccastup_as_GluPFmla (base_a);
   (void) ctx;
-  return mdd_is_tautology (a, 0) ? true : false;
+  return mdd_is_tautology (a->mdd, 0) ? true : false;
 }
 
 static
   bool
-equiv_ck_GluPFmla (PFmlaCtx* ctx, mdd_t* a, mdd_t* b)
+equiv_ck_GluPFmla (PFmlaCtx* ctx, const PFmla base_a, const PFmla base_b)
 {
+  const GluPFmla* a = ccastup_as_GluPFmla (base_a);
+  const GluPFmla* b = ccastup_as_GluPFmla (base_b);
   (void) ctx;
-  return mdd_equal (a, b) ? true : false;
+  return mdd_equal (a->mdd, b->mdd) ? true : false;
 }
 
 static
-  void
-lose_GluPFmla (PFmlaCtx* ctx, mdd_t* a)
+  PFmla
+make_GluPFmla (PFmlaCtx* ctx)
 {
+  GluPFmla* a = AllocT( GluPFmla, 1 );
   (void) ctx;
-  mdd_free (a);
+  a->mdd = 0;
+  return &a->base;
 }
 
 static
   void
-vbl_eql_GluPFmla (PFmlaCtx* fmlactx , mdd_t** dst, uint vbl_id_0, uint vbl_id_1)
+free_GluPFmla (PFmlaCtx* ctx, PFmla base_a)
 {
-  GluPFmlaCtx* ctx = CastUp( GluPFmlaCtx, fmlactx, fmlactx );
-  if (*dst)  mdd_free (*dst);
-  *dst = mdd_eq (ctx->ctx, vbl_id_0, vbl_id_1);
+  GluPFmla* a = castup_as_GluPFmla (base_a);
+  (void) ctx;
+  if (a->mdd)
+    mdd_free (a->mdd);
+  free (a);
 }
 
 static
   void
-vbl_eqlc_GluPFmla (PFmlaCtx* fmlactx, mdd_t** dst, uint vbl_id, uint x)
+vbl_eql_GluPFmla (PFmlaCtx* fmlactx, PFmla* base_dst,
+                  uint vbl_id_0, uint vbl_id_1)
 {
-  GluPFmlaCtx* ctx = CastUp( GluPFmlaCtx, fmlactx, fmlactx );
-  if (*dst)  mdd_free (*dst);
-  *dst = mdd_eq_c (ctx->ctx, vbl_id, x);
+  GluPFmlaCtx* ctx = castup_as_GluPFmlaCtx (fmlactx);
+  GluPFmla* dst = castup_as_GluPFmla (*base_dst);
+  if (dst->mdd)  mdd_free (dst->mdd);
+  dst->mdd = mdd_eq (ctx->ctx, vbl_id_0, vbl_id_1);
+}
+
+static
+  void
+vbl_eqlc_GluPFmla (PFmlaCtx* fmlactx, PFmla* base_dst, uint vbl_id, uint x)
+{
+  GluPFmlaCtx* ctx = castup_as_GluPFmlaCtx (fmlactx);
+  GluPFmla* dst = castup_as_GluPFmla (*base_dst);
+  if (dst->mdd)  mdd_free (dst->mdd);
+  dst->mdd = mdd_eq_c (ctx->ctx, vbl_id, x);
 }
 
 static
   void
 commit_initialization_GluPFmlaCtx (PFmlaCtx* fmlactx)
 {
-  GluPFmlaCtx* ctx = CastUp( GluPFmlaCtx, fmlactx, fmlactx );
+  GluPFmlaCtx* ctx = castup_as_GluPFmlaCtx (fmlactx);
   array_t* doms = array_alloc(uint, 0);
   array_t* names = array_alloc(char*, 0);
   {:for (i ; fmlactx->vbls.sz)
@@ -155,7 +212,7 @@ static
   void*
 lose_GluPFmlaCtx (PFmlaCtx* fmlactx)
 {
-  GluPFmlaCtx* ctx = CastUp( GluPFmlaCtx, fmlactx, fmlactx );
+  GluPFmlaCtx* ctx = castup_as_GluPFmlaCtx (fmlactx);
   if (ctx->vbl_lists)
   {
     for (i ; fmlactx->vbl_lists.sz)
@@ -177,15 +234,16 @@ make_GluPFmlaCtx ()
   {
     vt_initialized = true;
     memset (&vt, 0, sizeof (vt));
-    vt.op2_fn = (void (*) (PFmlaCtx*, void**, BitOp, const void*, const void*))        op2_GluPFmla;
-    vt.smooth_vbls_fn  = (void (*) (PFmlaCtx*, void**, const void*, uint))        smooth_vbls_GluPFmla;
-    vt.subst_vbls_fn   = (void (*) (PFmlaCtx*, void**, const void*, uint, uint))   subst_vbls_GluPFmla;
-    vt.tautology_ck_fn = (bool (*) (PFmlaCtx*, const void*))                     tautology_ck_GluPFmla;
-    vt.unsat_ck_fn     = (bool (*) (PFmlaCtx*, const void*))                         unsat_ck_GluPFmla;
-    vt.equiv_ck_fn     = (bool (*) (PFmlaCtx*, const void*, const void*))            equiv_ck_GluPFmla;
-    vt.lose_fn         = (void (*) (PFmlaCtx*, void*))                                   lose_GluPFmla;
-    vt.vbl_eql_fn      = (void (*) (PFmlaCtx*, void**, uint, uint))                   vbl_eql_GluPFmla;
-    vt.vbl_eqlc_fn     = (void (*) (PFmlaCtx*, void**, uint, uint))                  vbl_eqlc_GluPFmla;
+    vt.op2_fn          =          op2_GluPFmla;
+    vt.smooth_vbls_fn  =  smooth_vbls_GluPFmla;
+    vt.subst_vbls_fn   =   subst_vbls_GluPFmla;
+    vt.tautology_ck_fn = tautology_ck_GluPFmla;
+    vt.unsat_ck_fn     =     unsat_ck_GluPFmla;
+    vt.equiv_ck_fn     =     equiv_ck_GluPFmla;
+    vt.make_fn         =         make_GluPFmla;
+    vt.free_fn         =         free_GluPFmla;
+    vt.vbl_eql_fn      =      vbl_eql_GluPFmla;
+    vt.vbl_eqlc_fn     =     vbl_eqlc_GluPFmla;
     vt.ctx_commit_initialization_fn = commit_initialization_GluPFmlaCtx;
     vt.ctx_lose_fn = lose_GluPFmlaCtx;
   }

@@ -6,15 +6,16 @@
 #include "cx/associa.h"
 #include "cx/bittable.h"
 
-typedef struct PFmla PFmla;
+typedef struct PFmlaBase PFmlaBase;
+typedef PFmlaBase* PFmla;
+typedef struct XnPFmla XnPFmla;
 typedef struct PFmlaVbl PFmlaVbl;
 typedef struct PFmlaCtx PFmlaCtx;
 typedef struct PFmlaOpVT PFmlaOpVT;
 
-struct PFmla
+struct PFmlaBase
 {
   PFmlaCtx* ctx;
-  void* mem;
 };
 
 struct PFmlaVbl
@@ -35,19 +36,30 @@ struct PFmlaCtx
 
 struct PFmlaOpVT
 {
-  void (*op2_fn) (PFmlaCtx*, void**, BitOp, const void*, const void*);
+  void (*op2_fn) (PFmlaCtx*, PFmla*, BitOp, const PFmla, const PFmla);
 
-  void (*smooth_vbls_fn) (PFmlaCtx*, void**, const void*, uint);
-  void (*subst_vbls_fn) (PFmlaCtx*, void**, const void*, uint, uint);
-  bool (*tautology_ck_fn) (PFmlaCtx*, const void*);
-  bool (*unsat_ck_fn) (PFmlaCtx*, const void*);
-  bool (*equiv_ck_fn) (PFmlaCtx*, const void*, const void*);
-  bool (*overlap_ck_fn) (PFmlaCtx*, const void*, const void*);
-  bool (*subseteq_ck_fn) (PFmlaCtx*, const void*, const void*);
-  void (*lose_fn) (PFmlaCtx*, void*);
+  void (*smooth_vbls_fn) (PFmlaCtx*, PFmla*, const PFmla, uint);
+  void (*subst_vbls_fn) (PFmlaCtx*, PFmla*, const PFmla, uint, uint);
+  bool (*tautology_ck_fn) (PFmlaCtx*, const PFmla);
+  bool (*unsat_ck_fn) (PFmlaCtx*, const PFmla);
+  bool (*equiv_ck_fn) (PFmlaCtx*, const PFmla, const PFmla);
+  bool (*overlap_ck_fn) (PFmlaCtx*, const PFmla, const PFmla);
+  bool (*subseteq_ck_fn) (PFmlaCtx*, const PFmla, const PFmla);
 
-  void (*vbl_eql_fn) (PFmlaCtx*, void**, uint, uint);
-  void (*vbl_eqlc_fn) (PFmlaCtx*, void**, uint, uint);
+  PFmla (*make_fn) (PFmlaCtx*);
+  void (*free_fn) (PFmlaCtx*, PFmla);
+
+#if 0
+  void (*prime_fn) (PFmlaCtx*, PFmla*, const PFmla);
+  void (*unprime_fn) (PFmlaCtx*, PFmla*, const PFmla);
+  /// image(context, &S_1, T, S_0)
+  void (*image_fn) (PFmlaCtx*, PFmla*, const PFmla, const PFmla);
+  /// preimage(context, &S_0, T, S_1)
+  void (*preimage_fn) (PFmlaCtx*, PFmla*, const PFmla, const PFmla);
+#endif
+
+  void (*vbl_eql_fn) (PFmlaCtx*, PFmla*, uint, uint);
+  void (*vbl_eqlc_fn) (PFmlaCtx*, PFmla*, uint, uint);
 
   void (*ctx_commit_initialization_fn) (PFmlaCtx*);
   void* (*ctx_lose_fn) (PFmlaCtx*);
@@ -61,31 +73,35 @@ commit_initialization_PFmlaCtx (PFmlaCtx* ctx);
 void
 free_PFmlaCtx (PFmlaCtx* ctx);
 
+
 void
-iden_PFmla (PFmla* b, const PFmla* a);
+wipe1_PFmla (PFmla* g, bool phase);
+
 void
-not_PFmla (PFmla* b, const PFmla* a);
+iden_PFmla (PFmla* b, const PFmla a);
 void
-and_PFmla (PFmla* c, const PFmla* a, const PFmla* b);
+not_PFmla (PFmla* b, const PFmla a);
 void
-or_PFmla (PFmla* c, const PFmla* a, const PFmla* b);
+and_PFmla (PFmla* c, const PFmla a, const PFmla b);
 void
-nimp_PFmla (PFmla* c, const PFmla* a, const PFmla* b);
+or_PFmla (PFmla* c, const PFmla a, const PFmla b);
+void
+nimp_PFmla (PFmla* c, const PFmla a, const PFmla b);
 
 bool
-tautology_ck_PFmla (const PFmla* g);
+tautology_ck_PFmla (const PFmla g);
 bool
-unsat_ck_PFmla (const PFmla* g);
+unsat_ck_PFmla (const PFmla g);
 bool
-equiv_ck_PFmla (const PFmla* a, const PFmla* b);
+equiv_ck_PFmla (const PFmla a, const PFmla b);
 bool
-overlap_ck_PFmla (const PFmla* a, const PFmla* b);
+overlap_ck_PFmla (const PFmla a, const PFmla b);
 bool
-subseteq_ck_PFmla (const PFmla* a, const PFmla* b);
+subseteq_ck_PFmla (const PFmla a, const PFmla b);
 void
-smooth_vbls_PFmla (PFmla* dst, const PFmla* a, uint list_id);
+smooth_vbls_PFmla (PFmla* dst, const PFmla a, uint list_id);
 void
-subst_vbls_PFmla (PFmla* dst, const PFmla* a, uint list_id_new, uint list_id_old);
+subst_vbls_PFmla (PFmla* dst, const PFmla a, uint list_id_new, uint list_id_old);
 void
 eql_PFmlaVbl (PFmla* dst, const PFmlaVbl* a, const PFmlaVbl* b);
 void
@@ -98,20 +114,60 @@ add_vbl_list_PFmlaCtx (PFmlaCtx* ctx);
 void
 add_to_vbl_list_PFmlaCtx (PFmlaCtx* ctx, uint listid, uint vblid);
 
+qual_inline
+  PFmla
+dflt_PFmla ()
+{
+  return NULL;
+}
+
+qual_inline
+  PFmla
+dflt1_PFmla (bool phase)
+{
+  PFmla g = dflt_PFmla ();
+  wipe1_PFmla (&g, phase);
+  return g;
+}
 
 qual_inline
   void
 init_PFmla (PFmla* g)
 {
-  g->ctx = 0;
+  *g = dflt_PFmla ();
+}
+
+qual_inline
+  void
+init1_PFmla (PFmla* g, bool phase)
+{
+  *g = dflt1_PFmla (phase);
+}
+
+qual_inline
+  PFmla
+cons_PFmla (PFmlaCtx* ctx)
+{
+  PFmla g = ctx->vt->make_fn (ctx);
+  g->ctx = ctx;
+  return g;
+}
+
+qual_inline
+  Trit
+phase_of_PFmla (const PFmla g)
+{
+  if (!g)  return Nil;
+  if (!g->ctx)  return Yes;
+  return May;
 }
 
 qual_inline
   void
 lose_PFmla (PFmla* g)
 {
-  if (!g->ctx)  return;
-  g->ctx->vt->lose_fn (g->ctx, g->mem);
+  if (phase_of_PFmla (*g) == May)
+    (*g)->ctx->vt->free_fn ((*g)->ctx, *g);
 }
 
 qual_inline
@@ -123,36 +179,10 @@ lose_PFmlaVbl (PFmlaVbl* x)
 
 qual_inline
   void
-phase_fo_PFmla (PFmla* g, bool phase)
-{
-  static void* const MemYes = ((void*)Max_ujint);
-  static void* const MemNil = ((void*)0);
-  g->mem = (phase ? MemYes : MemNil);
-}
-
-qual_inline
-  bool
-phase_of_PFmla (const PFmla* g)
-{
-  return !!g->mem;
-}
-
-qual_inline
-  void
 wipe_PFmla (PFmla* g)
 {
   lose_PFmla (g);
-  g->ctx = 0;
-  g->mem = 0;
-}
-
-qual_inline
-  void
-wipe1_PFmla (PFmla* g, bool phase)
-{
-  lose_PFmla (g);
-  g->ctx = 0;
-  phase_fo_PFmla (g, phase);
+  *g = 0;
 }
 
 qual_inline

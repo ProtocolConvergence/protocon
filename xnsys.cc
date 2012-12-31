@@ -174,17 +174,24 @@ OPut(ostream& of, const XnAct& act, const XnNet& topo)
   return of;
 }
 
+  PF
+ClosedSubset(const PF& xnRel, const PF& invariant, const XnNet& topo)
+{
+  return invariant - BackwardReachability(xnRel, ~invariant, topo);
+}
+
 /**
  * Check for weak convergence to the invariant.
  */
   bool
-WeakConvergenceCk(const XnSys& sys, const PF& xnRel)
+WeakConvergenceCk(const XnSys& sys, const PF& xnRel, const PF& invariant)
 {
   const XnNet& topo = sys.topology;
-  if (sys.liveLegit && !(sys.invariant <= topo.preimage(xnRel))) {
+  if (sys.liveLegit && !topo.preimage(xnRel).tautologyCk()) {
     return false;
   }
-  PF span0( sys.invariant );
+
+  PF span0( invariant );
   while (!span0.tautologyCk(true)) {
     PF span1( span0 | topo.preimage(xnRel, span0) );
     if (span1.equivCk(span0))  return false;
@@ -193,24 +200,31 @@ WeakConvergenceCk(const XnSys& sys, const PF& xnRel)
   return true;
 }
 
+  bool
+WeakConvergenceCk(const XnSys& sys, const PF& xnRel)
+{
+  return WeakConvergenceCk(sys, xnRel, sys.invariant);
+}
+
 /**
  * Check for cycles outside of the invariant.
  */
   bool
 CycleCk(const XnSys& sys, const PF& xnRel)
 {
-  PF span0( ~sys.invariant );
+  PF span0( true );
 
   const XnNet& topo = sys.topology;
   while (true) {
-    PF span1( span0 );
-    //span0 -= span0 - sys.image(xnRel, span0);
-    span0 &= topo.preimage(xnRel, span0);
+    PF span1 = topo.image(xnRel, span0);
 
-    if (span0.equivCk(span1))  break;
+    if (span1 <= sys.invariant)  return false;
+    if (span0.equivCk(span1))  return true;
+
+    span0 = span1;
   }
 
-  return !span0.tautologyCk(false);
+  return true;
 }
 
 /**

@@ -39,13 +39,14 @@ public:
   PF()
   {
     // Phase is uninitialized.
+    // Actually, it's false.
     init_PFmla (&g);
   }
 
   PF(const PF& pf)
   {
     init_PFmla (&g);
-    iden_PFmla (&g, &pf.g);
+    iden_PFmla (&g, pf.g);
   }
 
   explicit PF(bool phase)
@@ -61,7 +62,7 @@ public:
 
   PF& operator=(const PF& pf)
   {
-    iden_PFmla (&g, &pf.g);
+    iden_PFmla (&g, pf.g);
     return *this;
   }
   PF& operator=(bool b)
@@ -72,29 +73,29 @@ public:
 
   /// Check if this is a tautology.
   bool tautologyCk(bool t = true) const {
-    if (t)  return tautology_ck_PFmla (&g);
-    return unsat_ck_PFmla (&g);
+    if (t)  return tautology_ck_PFmla (g);
+    return unsat_ck_PFmla (g);
   }
 
   bool equivCk(const PF& pf) const
   {
-    return equiv_ck_PFmla (&g, &pf.g);
+    return equiv_ck_PFmla (g, pf.g);
   }
 
   bool overlapCk(const PF& pf) const
   {
-    return overlap_ck_PFmla (&g, &pf.g);
+    return overlap_ck_PFmla (g, pf.g);
   }
 
   bool operator<=(const PF& pf) const
   {
-    return subseteq_ck_PFmla (&g, &pf.g);
+    return subseteq_ck_PFmla (g, pf.g);
   }
 
   PF operator~() const
   {
     PF pf;
-    not_PFmla (&pf.g, &g);
+    not_PFmla (&pf.g, g);
     return pf;
   }
 
@@ -106,14 +107,14 @@ public:
 
   PF& operator&=(const PF& pf)
   {
-    and_PFmla (&g, &g, &pf.g);
+    and_PFmla (&g, g, pf.g);
     return *this;
   }
 
   PF operator&(const PF& b) const
   {
     PF c;
-    and_PFmla (&c.g, &g, &b.g);
+    and_PFmla (&c.g, g, b.g);
     return c;
   }
 
@@ -129,14 +130,14 @@ public:
 
   PF& operator|=(const PF& b)
   {
-    or_PFmla (&g, &g, &b.g);
+    or_PFmla (&g, g, b.g);
     return *this;
   }
 
   PF operator|(const PF& b) const
   {
     PF c;
-    or_PFmla (&c.g, &g, &b.g);
+    or_PFmla (&c.g, g, b.g);
     return c;
   }
 
@@ -152,28 +153,28 @@ public:
 
   PF& operator-=(const PF& b)
   {
-    nimp_PFmla (&g, &g, &b.g);
+    nimp_PFmla (&g, g, b.g);
     return *this;
   }
 
   PF operator-(const PF& b) const
   {
     PF c;
-    nimp_PFmla (&c.g, &g, &b.g);
+    nimp_PFmla (&c.g, g, b.g);
     return c;
   }
 
   PF smooth(uint setIdx) const
   {
     PF b;
-    smooth_vbls_PFmla (&b.g, &g, setIdx);
+    smooth_vbls_PFmla (&b.g, g, setIdx);
     return b;
   }
 
   PF substituteNewOld(uint newSetIdx, uint oldSetIdx) const
   {
     PF b;
-    subst_vbls_PFmla (&b.g, &g, newSetIdx, oldSetIdx);
+    subst_vbls_PFmla (&b.g, g, newSetIdx, oldSetIdx);
     return b;
   }
 

@@ -552,10 +552,16 @@ FMem_AddConvergence::reviseActions(const XnSys& sys,
     addActPF |= topo.actionPF(actId);
   }
 
+
+  PF invariant( sys.invariant );
+  if (!sys.closure) {
+    invariant = ClosedSubset(this->loXnRel, invariant, topo);
+  }
+
   this->deadlockPF -= topo.preimage(addActPF);
   this->loXnRel |= addActPF;
   this->backReachPF =
-    BackwardReachability(this->loXnRel, this->backReachPF, topo);
+    BackwardReachability(this->loXnRel, invariant, topo);
 
   Set<uint> reqAdds;
   if (!adds.empty() || forcePrune) {
@@ -573,9 +579,11 @@ FMem_AddConvergence::reviseActions(const XnSys& sys,
         continue;
       }
 
-      if (false && !WeakConvergenceCk(sys, this->hiXnRel - actPF)) {
-        reqAdds |= actId;
-        continue;
+      if (false && !sys.closure) {
+        if (!WeakConvergenceCk(sys, this->hiXnRel - actPF, this->backReachPF)) {
+          reqAdds |= actId;
+          continue;
+        }
       }
     }
   }
@@ -626,8 +634,17 @@ AddConvergence(vector<uint>& retActions,
                const AddConvergenceOpt& opt)
 {
   while (!tape.candidates.empty()) {
-    if (!WeakConvergenceCk(sys, tape.hiXnRel)) {
-      return false;
+    if (sys.closure) {
+      if (!WeakConvergenceCk(sys, tape.hiXnRel, sys.invariant)) {
+        return false;
+      }
+    }
+    else {
+      const PF& invariant =
+        ClosedSubset(tape.loXnRel, sys.invariant, sys.topology);
+      if (!WeakConvergenceCk(sys, tape.hiXnRel, invariant)) {
+        return false;
+      }
     }
 
     // Pick the action.

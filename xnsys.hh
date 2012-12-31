@@ -196,6 +196,10 @@ public:
 
 ostream&
 OPut(ostream& of, const XnAct& act, const XnNet& topo);
+PF
+ClosedSubset(const PF& xnRel, const PF& invariant, const XnNet& topo);
+bool
+WeakConvergenceCk(const XnSys& sys, const PF& xnRel, const PF& invariant);
 bool
 WeakConvergenceCk(const XnSys& sys, const PF& xnRel);
 bool

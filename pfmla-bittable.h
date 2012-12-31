@@ -5,7 +5,7 @@
 #include "pfmla.h"
 
 PFmlaCtx*
-make_BitTableCtx ();
+make_BitTablePFmlaCtx ();
 
 #endif
 

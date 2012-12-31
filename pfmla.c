@@ -44,267 +44,318 @@ free_PFmlaCtx (PFmlaCtx* ctx)
 
 static
   void
-pre_op2_PFmla (PFmla* c, const PFmla* a, const PFmla* b)
+phase_fo_PFmla (PFmla* g, bool phase)
 {
-  Claim( a );
-  if (a->ctx && b && b->ctx)
-    Claim2( a->ctx ,==, b->ctx );
+  static PFmlaBase base = { 0 };
+  if (phase)  *g = &base;
+  else        *g = 0;
+}
 
-  if (c->ctx != a->ctx)
+  void
+wipe1_PFmla (PFmla* g, bool phase)
+{
+  lose_PFmla (g);
+  phase_fo_PFmla (g, phase);
+}
+
+static
+  void
+pre_op2_PFmla (PFmla* c, const PFmla a, const PFmla b)
+{
+  Claim2( a->ctx ,==, b->ctx );
+  if (*c && (*c)->ctx != a->ctx)
     wipe_PFmla (c);
+  if (phase_of_PFmla (*c) != May)
+    *c = cons_PFmla (a->ctx);
+}
+
+static
+  void
+pre_op1_PFmla (PFmla* b, const PFmla a)
+{
+  pre_op2_PFmla (b, a, a);
+}
+
+static
+  void
+pre_op_ctx_PFmla (PFmla* dst, PFmlaCtx* ctx)
+{
+  PFmlaBase base;
+  base.ctx = ctx;
+  pre_op1_PFmla (dst, &base);
 }
 
   void
-iden_PFmla (PFmla* b, const PFmla* a)
+iden_PFmla (PFmla* b, const PFmla a)
 {
-  pre_op2_PFmla (b, a, 0);
-
-  if (!a->ctx)
+  Trit phase = phase_of_PFmla (a);
+  if (phase != May)
   {
-    *b = *a;
+    wipe1_PFmla (b, phase == Yes);
   }
   else
   {
-    b->ctx = a->ctx;
-    a->ctx->vt->op2_fn (a->ctx, &b->mem, BitOp_IDEN0, a->mem, 0);
+    pre_op2_PFmla (b, a, a);
+    a->ctx->vt->op2_fn (a->ctx, b, BitOp_IDEN0, a, a);
   }
 }
 
   void
-not_PFmla (PFmla* b, const PFmla* a)
+not_PFmla (PFmla* b, const PFmla a)
 {
-  pre_op2_PFmla (b, a, 0);
-
-  if (!a->ctx)
+  Trit phase = phase_of_PFmla (a);
+  if (phase != May)
   {
-    b->ctx = a->ctx;
-    phase_fo_PFmla (b, !phase_of_PFmla (a));
+    wipe1_PFmla (b, phase != Yes);
   }
   else
   {
-    b->ctx = a->ctx;
-    a->ctx->vt->op2_fn (a->ctx, &b->mem, BitOp_NOT0, a->mem, 0);
+    pre_op2_PFmla (b, a, a);
+    a->ctx->vt->op2_fn (a->ctx, b, BitOp_NOT0, a, a);
   }
 }
 
   void
-and_PFmla (PFmla* c, const PFmla* a, const PFmla* b)
+and_PFmla (PFmla* c, const PFmla a, const PFmla b)
 {
-  pre_op2_PFmla (c, a, b);
-  if (!a->ctx)
+  Trit phase_a = phase_of_PFmla (a);
+  Trit phase_b = phase_of_PFmla (b);
+
+  if (phase_a != May)
   {
-    if (phase_of_PFmla (a))
+    if (phase_a == Yes)
       iden_PFmla (c, b);
     else
       wipe1_PFmla (c, false);
   }
-  else if (!b->ctx)
+  else if (phase_b != May)
   {
-    if (phase_of_PFmla (b))
+    if (phase_b == Yes)
       iden_PFmla (c, a);
     else
       wipe1_PFmla (c, false);
   }
   else
   {
-    c->ctx = a->ctx;
-    a->ctx->vt->op2_fn (a->ctx, &c->mem, BitOp_AND, a->mem, b->mem);
+    pre_op2_PFmla (c, a, b);
+    a->ctx->vt->op2_fn (a->ctx, c, BitOp_AND, a, b);
   }
 }
 
   void
-or_PFmla (PFmla* c, const PFmla* a, const PFmla* b)
+or_PFmla (PFmla* c, const PFmla a, const PFmla b)
 {
-  pre_op2_PFmla (c, a, b);
-  if (!a->ctx)
+  Trit phase_a = phase_of_PFmla (a);
+  Trit phase_b = phase_of_PFmla (b);
+
+  if (phase_a != May)
   {
-    if (phase_of_PFmla (a))
+    if (phase_a == Yes)
       wipe1_PFmla (c, true);
     else
       iden_PFmla (c, b);
   }
-  else if (!b->ctx)
+  else if (phase_b != May)
   {
-    if (phase_of_PFmla (b))
+    if (phase_b == Yes)
       wipe1_PFmla (c, true);
     else
       iden_PFmla (c, a);
   }
   else
   {
-    c->ctx = a->ctx;
-    a->ctx->vt->op2_fn (a->ctx, &c->mem, BitOp_OR, a->mem, b->mem);
+    pre_op2_PFmla (c, a, b);
+    a->ctx->vt->op2_fn (a->ctx, c, BitOp_OR, a, b);
   }
 }
 
   void
-nimp_PFmla (PFmla* c, const PFmla* a, const PFmla* b)
+nimp_PFmla (PFmla* c, const PFmla a, const PFmla b)
 {
-  pre_op2_PFmla (c, a, b);
+  Trit phase_a = phase_of_PFmla (a);
+  Trit phase_b = phase_of_PFmla (b);
 
-  if (!a->ctx)
+  if (phase_a != May)
   {
-    if (phase_of_PFmla (a))
+    if (phase_a == Yes)
       not_PFmla (c, b);
     else
       wipe1_PFmla (c, false);
   }
-  else if (!b->ctx)
+  else if (phase_b != May)
   {
-    if (phase_of_PFmla (b))
+    if (phase_b == Yes)
       wipe1_PFmla (c, false);
     else
       iden_PFmla (c, a);
   }
   else
   {
-    c->ctx = a->ctx;
-    a->ctx->vt->op2_fn (a->ctx, &c->mem, BitOp_NIMP, a->mem, b->mem);
+    pre_op2_PFmla (c, a, b);
+    a->ctx->vt->op2_fn (a->ctx, c, BitOp_NIMP, a, b);
   }
 }
 
 
   bool
-tautology_ck_PFmla (const PFmla* g)
+tautology_ck_PFmla (const PFmla g)
 {
-  if (!g->ctx)
-    return phase_of_PFmla (g);
-  return g->ctx->vt->tautology_ck_fn (g->ctx, g->mem);
+  Trit phase = phase_of_PFmla (g);
+  if (phase != May)
+    return phase == Yes;
+  return g->ctx->vt->tautology_ck_fn (g->ctx, g);
 }
 
   bool
-unsat_ck_PFmla (const PFmla* g)
+unsat_ck_PFmla (const PFmla g)
 {
-  if (!g->ctx)
-    return !phase_of_PFmla (g);
+  Trit phase = phase_of_PFmla (g);
+  if (phase != May)
+    return phase == Nil;
 
   if (g->ctx->vt->unsat_ck_fn)
-    return g->ctx->vt->unsat_ck_fn (g->ctx, g->mem);
+    return g->ctx->vt->unsat_ck_fn (g->ctx, g);
 
   Claim( g->ctx->vt->tautology_ck_fn );
   {
-    PFmla c[1];
+    PFmla c = dflt_PFmla ();
     bool ret;
-    init_PFmla (c);
-    g->ctx->vt->op2_fn (g->ctx, &c->mem, BitOp_NOT0, g->mem, 0);
-    ret = g->ctx->vt->tautology_ck_fn (g->ctx, &c->mem);
-    lose_PFmla (c);
+    g->ctx->vt->op2_fn (g->ctx, &c, BitOp_NOT0, g, g);
+    ret = g->ctx->vt->tautology_ck_fn (g->ctx, c);
+    lose_PFmla (&c);
     return ret;
   }
 }
 
   bool
-equiv_ck_PFmla (const PFmla* a, const PFmla* b)
+equiv_ck_PFmla (const PFmla a, const PFmla b)
 {
-  if (!a->ctx)
+  Trit phase_a = phase_of_PFmla (a);
+  Trit phase_b = phase_of_PFmla (b);
+
+  if (phase_a != May)
   {
-    if (phase_of_PFmla (a))
+    if (phase_a == Yes)
       return tautology_ck_PFmla (b);
     else
       return unsat_ck_PFmla (b);
   }
-  if (!b->ctx)
+  if (phase_b != May)
   {
-    if (phase_of_PFmla (b))
+    if (phase_b == Yes)
       return tautology_ck_PFmla (a);
     else
       return unsat_ck_PFmla (a);
   }
+
+  Claim2( a->ctx ,==, b->ctx );
   if (a->ctx->vt->equiv_ck_fn)
-    return a->ctx->vt->equiv_ck_fn (a->ctx, a->mem, b->mem);
+    return a->ctx->vt->equiv_ck_fn (a->ctx, a, b);
 
   Claim( a->ctx->vt->tautology_ck_fn );
   {
-    PFmla c[1];
+    PFmla c = dflt_PFmla ();
     bool ret;
-    init_PFmla (c);
-    a->ctx->vt->op2_fn (a->ctx, &c->mem, BitOp_EQL, a->mem, b->mem);
-    ret = a->ctx->vt->tautology_ck_fn (a->ctx, &c->mem);
-    lose_PFmla (c);
+    a->ctx->vt->op2_fn (a->ctx, &c, BitOp_EQL, a, b);
+    ret = a->ctx->vt->tautology_ck_fn (a->ctx, c);
+    lose_PFmla (&c);
     return ret;
   }
 }
 
   bool
-overlap_ck_PFmla (const PFmla* a, const PFmla* b)
+overlap_ck_PFmla (const PFmla a, const PFmla b)
 {
-  if (!a->ctx)
-    return phase_of_PFmla (a) && !unsat_ck_PFmla (b);
-  if (!b->ctx)
-    return phase_of_PFmla (b) && !unsat_ck_PFmla (a);
+  Trit phase_a = phase_of_PFmla (a);
+  Trit phase_b = phase_of_PFmla (b);
+
+  if (phase_a != May)
+  {
+    if (phase_a == Yes)
+      return !unsat_ck_PFmla (b);
+    return false;
+  }
+  if (phase_b != May)
+  {
+    if (phase_b == Yes)
+      return !unsat_ck_PFmla (a);
+    return false;
+  }
+
+  Claim2( a->ctx ,==, b->ctx );
   if (a->ctx->vt->overlap_ck_fn)
-    return a->ctx->vt->overlap_ck_fn (a->ctx, a->mem, b->mem);
+    return a->ctx->vt->overlap_ck_fn (a->ctx, a, b);
 
   {
-    PFmla c[1];
+    PFmla c = dflt_PFmla ();
     bool ret;
-    init_PFmla (c);
-    and_PFmla (c, a, b);
+    and_PFmla (&c, a, b);
     ret = !unsat_ck_PFmla (c);
-    lose_PFmla (c);
+    lose_PFmla (&c);
     return ret;
   }
 }
 
   bool
-subseteq_ck_PFmla (const PFmla* a, const PFmla* b)
+subseteq_ck_PFmla (const PFmla a, const PFmla b)
 {
-  if (!a->ctx)
+  Trit phase_a = phase_of_PFmla (a);
+  Trit phase_b = phase_of_PFmla (b);
+
+  if (phase_a != May)
   {
-    if (phase_of_PFmla (a))
+    if (phase_a == Yes)
       return tautology_ck_PFmla (b);
     return true;
   }
-  if (!b->ctx)
+  if (phase_b != May)
   {
-    if (phase_of_PFmla (b))
+    if (phase_b == Yes)
       return true;
     return unsat_ck_PFmla (a);
   }
+
+  Claim2( a->ctx ,==, b->ctx );
   if (a->ctx->vt->subseteq_ck_fn)
-    return a->ctx->vt->subseteq_ck_fn (a->ctx, a->mem, b->mem);
+    return a->ctx->vt->subseteq_ck_fn (a->ctx, a, b);
 
   {
-    PFmla c[1];
+    PFmla c = dflt_PFmla ();
     bool ret;
-    init_PFmla (c);
-    or_PFmla (c, a, b);
+    or_PFmla (&c, a, b);
     ret = equiv_ck_PFmla (c, b);
-    lose_PFmla (c);
+    lose_PFmla (&c);
     return ret;
   }
 }
 
   void
-smooth_vbls_PFmla (PFmla* dst, const PFmla* a, uint list_id)
+smooth_vbls_PFmla (PFmla* b, const PFmla a, uint list_id)
 {
-  if (!a->ctx)
+  Trit phase = phase_of_PFmla (a);
+  if (phase != May)
   {
-    iden_PFmla (dst, a);
+    wipe1_PFmla (b, phase == Yes);
   }
   else
   {
-    if (dst->ctx != a->ctx)
-      wipe_PFmla (dst);
-    dst->ctx = a->ctx;
-    a->ctx->vt->smooth_vbls_fn (a->ctx, &dst->mem, a->mem, list_id);
+    pre_op2_PFmla (b, a, a);
+    a->ctx->vt->smooth_vbls_fn (a->ctx, b, a, list_id);
   }
 }
 
   void
-subst_vbls_PFmla (PFmla* dst, const PFmla* a, uint list_id_new, uint list_id_old)
+subst_vbls_PFmla (PFmla* b, const PFmla a, uint list_id_new, uint list_id_old)
 {
-  if (!a->ctx)
+  Trit phase = phase_of_PFmla (a);
+  if (phase != May)
   {
-    iden_PFmla (dst, a);
+    wipe1_PFmla (b, phase == Yes);
   }
   else
   {
-    if (dst->ctx != a->ctx)
-      wipe_PFmla (dst);
-    dst->ctx = a->ctx;
-    a->ctx->vt->subst_vbls_fn (a->ctx, &dst->mem, a->mem,
-                               list_id_new, list_id_old);
+    pre_op2_PFmla (b, a, a);
+    a->ctx->vt->subst_vbls_fn (a->ctx, b, a, list_id_new, list_id_old);
   }
 }
 
@@ -312,21 +363,15 @@ subst_vbls_PFmla (PFmla* dst, const PFmla* a, uint list_id_new, uint list_id_old
 eql_PFmlaVbl (PFmla* dst, const PFmlaVbl* a, const PFmlaVbl* b)
 {
   Claim2( a->ctx ,==, b->ctx );
-  if (dst->ctx != a->ctx)
-    wipe_PFmla (dst);
-
-  dst->ctx = a->ctx;
-  a->ctx->vt->vbl_eql_fn (a->ctx, &dst->mem, a->id, b->id);
+  pre_op_ctx_PFmla (dst, a->ctx);
+  a->ctx->vt->vbl_eql_fn (a->ctx, dst, a->id, b->id);
 }
 
   void
 eqlc_PFmlaVbl (PFmla* dst, const PFmlaVbl* a, uint x)
 {
-  if (dst->ctx != a->ctx)
-    wipe_PFmla (dst);
-
-  dst->ctx = a->ctx;
-  a->ctx->vt->vbl_eqlc_fn (a->ctx, &dst->mem, a->id, x);
+  pre_op_ctx_PFmla (dst, a->ctx);
+  a->ctx->vt->vbl_eqlc_fn (a->ctx, dst, a->id, x);
 }
 
 

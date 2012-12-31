@@ -370,7 +370,7 @@ InstTwoBitTokenSpring(XnSys& sys, uint npcs)
   void
 InstTestTokenRing(XnSys& sys, uint npcs)
 {
-  const uint domsz = 4;
+  const uint domsz = 2;
   XnNet& topo = sys.topology;
   // Build a unidirectional ring where each process P_i.
   for (uint i = 0; i < npcs; ++i) {
@@ -390,7 +390,10 @@ InstTestTokenRing(XnSys& sys, uint npcs)
   // Commit to using this topology, and initilize MDD stuff
   topo.commitInitialization();
   sys.closure = false;
+  sys.synLegit = true;
+  sys.liveLegit = true;
 
+#if 0
   for (uint i = 0; i < npcs; ++i) {
     XnAct act;
     act.pcIdx = i;
@@ -422,6 +425,7 @@ InstTestTokenRing(XnSys& sys, uint npcs)
     }
     sys.actions.push_back(topo.actionIndex(act));
   }
+#endif
 
   // Set priorities.
   for (uint pcIdx = 0; pcIdx < npcs; ++pcIdx) {
@@ -445,8 +449,8 @@ InstTestTokenRing(XnSys& sys, uint npcs)
     extraNil &= (topo.pfVbl(pcIdx, 1) == 0);
   }
 
-  sys.invariant = (SingleTokenPF(tokenPFs) & extraNil);
-  //sys.invariant = (SingleTokenPF(tokenPFs));
+  //sys.invariant = (SingleTokenPF(tokenPFs) & extraNil);
+  sys.invariant = (SingleTokenPF(tokenPFs));
 }
 
 
