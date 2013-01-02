@@ -8,6 +8,8 @@ CC = gcc
 CONFIG += ansi
 #CONFIG += errwarn
 CONFIG += debug
+#CONFIG += snappy
+#CONFIG += profile
 #CONFIG += ultradebug
 #CONFIG += fast
 #CONFIG += noassert
@@ -28,7 +30,7 @@ GluIncludePath = $(GluPath)/include
 
 #CFLAGS += -I$(GluIncludePath)
 CXXFLAGS += $(CFLAGS)
-LXXFLAGS += -L$(GluPath) -lcmu -lglu -lcu -lcal -lm
+LXXFLAGS += -L$(GluPath) -lcu -lglu -lcal -lm
 
 -include deps.mk
 

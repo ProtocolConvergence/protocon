@@ -98,7 +98,7 @@ void Test()
        (topo.pfVblR(0, 1) == 1) &
        (topo.pfVblPrimed(0, 0) == 1));
     cyclePF &= topo.pcs[0].actUnchanged;
-    Claim( !CycleCk(sys, cyclePF) );
+    Claim( !CycleCk(topo, cyclePF, ~sys.invariant) );
 
     cyclePF |= 
       ((topo.pfVbl(0, 0) == 0) &
@@ -108,7 +108,7 @@ void Test()
       & topo.pcs[0].actUnchanged;
     // All states in the cycle are illegitimate,
     // it should be found.
-    Claim( CycleCk(sys, cyclePF) );
+    Claim( CycleCk(topo, cyclePF, ~sys.invariant) );
   }
 }
  

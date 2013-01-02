@@ -63,6 +63,8 @@ struct PFmlaOpVT
 
   void (*ctx_commit_initialization_fn) (PFmlaCtx*);
   void* (*ctx_lose_fn) (PFmlaCtx*);
+  uint (*ctx_add_vbl_list_fn) (PFmlaCtx*);
+  void (*ctx_add_to_vbl_list_fn) (PFmlaCtx*, uint, uint);
 };
 
 
@@ -87,6 +89,8 @@ void
 or_PFmla (PFmla* c, const PFmla a, const PFmla b);
 void
 nimp_PFmla (PFmla* c, const PFmla a, const PFmla b);
+void
+xnor_PFmla (PFmla* c, const PFmla a, const PFmla b);
 
 bool
 tautology_ck_PFmla (const PFmla g);

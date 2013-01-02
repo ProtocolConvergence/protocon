@@ -110,7 +110,7 @@ InstThreeColoringRing(XnSys& sys, uint npcs)
   BidirectionalRing(topo,npcs,3,"c");
 
   // Commit to using this topology, and initilize MDD stuff
-  topo.commitInitialization();
+  sys.commitInitialization();
   sys.invariant=true;
 
   for(uint pcidx=0; pcidx<npcs; pcidx++){
@@ -144,7 +144,7 @@ InstTwoColoringRing(XnSys& sys, uint npcs)
 
   // Commit to using this topology.
   // MDD stuff is initialized.
-  topo.commitInitialization();
+  sys.commitInitialization();
 
   sys.invariant = true;
   // For each process P[i],
@@ -166,7 +166,7 @@ InstMatching(XnSys& sys, uint npcs)
 
   // Commit to using this topology.
   // MDD stuff is initialized.
-  topo.commitInitialization();
+  sys.commitInitialization();
   sys.invariant = true;
   // Set priorities.
   for (uint pcIdx = 0; pcIdx < npcs; ++pcIdx) {
@@ -201,7 +201,7 @@ InstSumNot(XnSys& sys, uint npcs, uint domsz, uint target)
 
   // Commit to using this topology.
   // MDD stuff is initialized.
-  topo.commitInitialization();
+  sys.commitInitialization();
 
   sys.invariant = true;
   // For each process P[r],
@@ -229,7 +229,7 @@ InstDijkstraTokenRing(XnSys& sys, uint npcs)
   UnidirectionalRing(topo, npcs, npcs+1, "x");
 
   // Commit to using this topology, and initilize MDD stuff
-  topo.commitInitialization();
+  sys.commitInitialization();
   sys.synLegit = true;
   sys.liveLegit = true;
 
@@ -272,7 +272,7 @@ InstThreeBitTokenRing(XnSys& sys, uint npcs)
   }
 
   // Commit to using this topology, and initilize MDD stuff
-  topo.commitInitialization();
+  sys.commitInitialization();
   sys.synLegit = true;
   sys.liveLegit = true;
 
@@ -331,7 +331,7 @@ InstTwoBitTokenSpring(XnSys& sys, uint npcs)
     }
   }
   // Commit to using this topology, and initilize MDD stuff
-  topo.commitInitialization();
+  sys.commitInitialization();
   sys.synLegit = true;
   sys.liveLegit = true;
 
@@ -364,43 +364,39 @@ InstTwoBitTokenSpring(XnSys& sys, uint npcs)
 }
 
 /** Testing token ring.
- * Don't care about closure.
- * Just /somehow/ enforce the original protocol.
+ * Only enforce that a subset of the invariant be closed.
  **/
   void
 InstTestTokenRing(XnSys& sys, uint npcs)
 {
-  const uint domsz = 2;
+  //const uint domsz = 3;
   XnNet& topo = sys.topology;
   // Build a unidirectional ring where each process P_i.
   for (uint i = 0; i < npcs; ++i) {
     char name[10];
     XnPc& pc = Grow1(topo.pcs);
 
-    sprintf(name, "x%u", i);
+    sprintf(name, "t%u", i);
     pc.addVbl(XnVbl(name, 2));
 
     sprintf(name, "e%u", i);
-    pc.addVbl(XnVbl(name, domsz));
+    pc.addVbl(XnVbl(name, 2));
+    sys.markAuxVbl(i, pc.wvbls.size()-1);
+
+    sprintf(name, "ready%u", i);
+    pc.addVbl(XnVbl(name, 2));
+    sys.markAuxVbl(i, pc.wvbls.size()-1);
 
     pc.addPriv(decmod(i, 1, npcs), 0);
     pc.addPriv(decmod(i, 1, npcs), 1);
   }
 
   // Commit to using this topology, and initilize MDD stuff
-  topo.commitInitialization();
-  sys.closure = false;
-  sys.synLegit = true;
-  sys.liveLegit = true;
+  sys.commitInitialization();
 
-#if 0
   for (uint i = 0; i < npcs; ++i) {
     XnAct act;
     act.pcIdx = i;
-    act.r0[1] = 0;
-    act.w0[1] = 0;
-    act.w1[1] = 0;
-
     if (i == 0) {
       act.r0[0] = 1;
       act.w0[0] = 1;
@@ -411,7 +407,7 @@ InstTestTokenRing(XnSys& sys, uint npcs)
       act.w0[0] = 1;
       act.w1[0] = 0;
     }
-    sys.actions.push_back(topo.actionIndex(act));
+    sys.addLegitAct(act);
 
     if (i == 0) {
       act.r0[0] = 0;
@@ -423,34 +419,80 @@ InstTestTokenRing(XnSys& sys, uint npcs)
       act.w0[0] = 0;
       act.w1[0] = 1;
     }
-    sys.actions.push_back(topo.actionIndex(act));
+    sys.addLegitAct(act);
   }
-#endif
 
   // Set priorities.
-  for (uint pcIdx = 0; pcIdx < npcs; ++pcIdx) {
-    sys.niceIdxFo(pcIdx, npcs-pcIdx-1);
+  //for (uint pcIdx = 0; pcIdx < npcs; ++pcIdx) {
+  //  sys.niceIdxFo(pcIdx, npcs-pcIdx-1);
+  //}
+
+  for (uint actId = 0; actId < topo.nPossibleActs(); ++actId)
+  {
+    const XnAct& act = topo.action(actId);
+    bool add = false;
+    uint t_me = act.w0[0];
+    uint e_me = act.w0[1];
+    uint r_me = act.w0[2];
+    uint t_lo = act.r0[0];
+    uint e_lo = act.r0[1];
+    uint t_img = act.w1[0];
+    uint e_img = act.w1[1];
+    uint r_img = act.w1[2];
+
+    if (act.pcIdx == 0) {
+      if (e_me == e_lo && t_me != t_lo) {
+        if (e_img != e_me && r_img == 0 && t_img == t_me) {
+          //add = true;
+        }
+      }
+      else if (e_me == e_lo && t_me == t_lo && t_me == 0 && r_me == 0)
+      {
+        if (e_img != e_me && r_img == 1 && t_img == t_me) {
+          //add = true;
+        }
+      }
+      else if (e_me == e_lo && t_me == t_lo && (t_me == 1 || r_me == 1))
+      {
+        if (e_img != e_me && t_img != t_me && r_img == 0) {
+          //add = true;
+        }
+      }
+    }
+    else {
+      if (e_me != e_lo && t_me == t_lo) {
+        if (e_img != e_me && r_img == 0 && t_img == t_me) {
+          //add = true;
+        }
+      }
+      else if (e_me != e_lo && t_me != t_lo && t_me == 0 && r_me == 0)
+      {
+        if (e_img != e_me && r_img == 1 && t_img == t_me) {
+          //add = true;
+        }
+      }
+      else if (e_me != e_lo && t_me != t_lo && (t_me == 1 || r_me == 1))
+      {
+        if (e_img != e_me && t_img != t_me && r_img == 0) {
+          //add = true;
+        }
+      }
+    }
+    if (add) {
+      sys.actions.push_back(actId);
+    }
   }
 
   // Formulas for each process having a token.
   vector<PF> tokenPFs(npcs);
-  PF extraNil( true );
 
   // x[0] == x[N-1]
   tokenPFs[0] = (topo.pfVbl(0, 0) == topo.pfVblR(0, 0));
-  //tokenPFs[0] &= (topo.pfVbl(0, 1) != topo.pfVblR(0, 1));
-  extraNil &= (topo.pfVbl(0, 1) == 0);
-
   for (uint pcIdx = 1; pcIdx < npcs; ++pcIdx) {
     // x[i] != x[i-1]
     tokenPFs[pcIdx] = (topo.pfVbl(pcIdx, 0) != topo.pfVblR(pcIdx, 0));
-    //tokenPFs[pcIdx] &= (topo.pfVbl(pcIdx, 1) != topo.pfVblR(pcIdx, 1));
-    // e[i] == 0
-    extraNil &= (topo.pfVbl(pcIdx, 1) == 0);
   }
 
-  //sys.invariant = (SingleTokenPF(tokenPFs) & extraNil);
   sys.invariant = (SingleTokenPF(tokenPFs));
 }
-
 

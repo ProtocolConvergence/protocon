@@ -85,6 +85,13 @@ public:
   vector<XnPc> pcs; ///< List of the processes.
 
 public:
+
+  XnNet()
+  {
+    vVblList = pfCtx.addVblList();
+    vVblListPrimed = pfCtx.addVblList();
+  }
+
   ~XnNet() {
     // These need to be destroyed before the context goes away.
     actionPFs.clear();
@@ -170,17 +177,49 @@ private:
 class XnSys {
 public:
   XnNet topology;
-  vector<uint> actions; ///< Actions we are using.
+  vector<uint> actions; ///< Force use of these actions.
+
+  /// Invariant to which we should converge.
   PF invariant;
+  /// Variables added for convergence.
+  vector< pair<uint,uint> > aux_vbls;
+  /// Transition relation within the invariant.
+  PF legit_protocol;
+  /// Self-loops in the invariant.
+  PF legit_self;
+
   bool synLegit; ///< Allow synthesized actions to be in legitimate states.
   bool liveLegit; ///< Ensure no deadlocks in the invariant.
-  bool closure; ///< Ensure closure
 
 private:
   map<uint,uint> niceIdcs; ///< Niceness for processes, used in search.
+  uint vAuxVblListId;
 
 public:
-  XnSys() : synLegit(false), liveLegit(false), closure(true) {}
+  XnSys() :
+    synLegit(false)
+    , liveLegit(false)
+  {
+    this->vAuxVblListId = this->topology.pfCtx.addVblList();
+  }
+
+
+  void markAuxVbl(uint pcIdx, uint vblIdx) {
+    pair<uint,uint> p( pcIdx, vblIdx );
+    aux_vbls.push_back(p);
+  }
+  void commitInitialization();
+
+  void addLegitAct(const XnAct& act);
+
+  bool integrityCk() const;
+
+  bool auxVblCk() const {
+    return aux_vbls.size() > 0;
+  }
+  PF smoothAux(const PF& pf) const {
+    return pf.smooth(vAuxVblListId);
+  }
 
   void niceIdxFo(uint pcIdx, uint niceIdx) {
     niceIdcs[pcIdx] = niceIdx;
@@ -198,12 +237,14 @@ ostream&
 OPut(ostream& of, const XnAct& act, const XnNet& topo);
 PF
 ClosedSubset(const PF& xnRel, const PF& invariant, const XnNet& topo);
+PF
+LegitInvariant(const XnSys& sys, const PF& loXnRel, const PF& hiXnRel);
 bool
 WeakConvergenceCk(const XnSys& sys, const PF& xnRel, const PF& invariant);
 bool
 WeakConvergenceCk(const XnSys& sys, const PF& xnRel);
 bool
-CycleCk(const XnSys& sys, const PF& xnRel);
+CycleCk(const XnNet& topo, const PF& xnRel, const PF& pf);
 PF
 BackwardReachability(const PF& xnRel, const PF& pf, const XnNet& topo);
 

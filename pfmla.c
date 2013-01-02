@@ -196,6 +196,32 @@ nimp_PFmla (PFmla* c, const PFmla a, const PFmla b)
   }
 }
 
+  void
+xnor_PFmla (PFmla* c, const PFmla a, const PFmla b)
+{
+  Trit phase_a = phase_of_PFmla (a);
+  Trit phase_b = phase_of_PFmla (b);
+
+  if (phase_a != May)
+  {
+    if (phase_a == Yes)
+      iden_PFmla (c, b);
+    else
+      not_PFmla (c, b);
+  }
+  else if (phase_b != May)
+  {
+    if (phase_b == Yes)
+      iden_PFmla (c, a);
+    else
+      not_PFmla (c, a);
+  }
+  else
+  {
+    pre_op2_PFmla (c, a, b);
+    a->ctx->vt->op2_fn (a->ctx, c, BitOp_XNOR, a, b);
+  }
+}
 
   bool
 tautology_ck_PFmla (const PFmla g)
@@ -256,7 +282,7 @@ equiv_ck_PFmla (const PFmla a, const PFmla b)
   {
     PFmla c = dflt_PFmla ();
     bool ret;
-    a->ctx->vt->op2_fn (a->ctx, &c, BitOp_EQL, a, b);
+    a->ctx->vt->op2_fn (a->ctx, &c, BitOp_XNOR, a, b);
     ret = a->ctx->vt->tautology_ck_fn (a->ctx, c);
     lose_PFmla (&c);
     return ret;
@@ -404,15 +430,24 @@ add_vbl_PFmlaCtx (PFmlaCtx* ctx, const char* name, uint domsz)
   uint
 add_vbl_list_PFmlaCtx (PFmlaCtx* ctx)
 {
+  uint listid;
   TableT(uint) t;
   InitTable( t );
+  listid = ctx->vbl_lists.sz;
   PushTable( ctx->vbl_lists, t );
-  return ctx->vbl_lists.sz - 1;
+  if (ctx->vt->ctx_add_vbl_list_fn)
+  {
+    uint id = ctx->vt->ctx_add_vbl_list_fn (ctx);
+    Claim2( listid ,==, id );
+  }
+  return listid;
 }
 
   void
 add_to_vbl_list_PFmlaCtx (PFmlaCtx* ctx, uint listid, uint vblid)
 {
   PushTable( ctx->vbl_lists.s[listid], vblid );
+  if (ctx->vt->ctx_add_to_vbl_list_fn)
+    ctx->vt->ctx_add_to_vbl_list_fn (ctx, listid, vblid);
 }
 

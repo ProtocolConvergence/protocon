@@ -1,11 +1,12 @@
 
-#include "pfmla-glu.h"
-
 #define HAVE_ASSERT_H 1
 #include "mdd.h"
 
+#include "pfmla-glu.h"
+
 typedef struct GluPFmla GluPFmla;
 typedef struct GluPFmlaCtx GluPFmlaCtx;
+DeclTableT( array_t_memloc, array_t* );
 
 struct GluPFmla
 {
@@ -17,7 +18,7 @@ struct GluPFmlaCtx
 {
   PFmlaCtx fmlactx;
   mdd_manager* ctx;
-  array_t** vbl_lists;
+  TableT(array_t_memloc) vbl_lists;
 };
 
 static
@@ -66,6 +67,9 @@ op2_GluPFmla (PFmlaCtx* ctx, PFmla* base_c, BitOp op,
   case BitOp_AND:
     tmp = mdd_and (a, b, 1, 1);
     break;
+  case BitOp_XNOR:
+    tmp = mdd_xnor (a, b);
+    break;
   case BitOp_IDEN1:
     tmp = mdd_dup (b);
     break;
@@ -93,7 +97,7 @@ smooth_vbls_GluPFmla (PFmlaCtx* fmlactx, PFmla* base_b, const PFmla base_a, uint
   GluPFmla* b = castup_as_GluPFmla (*base_b);
   mdd_t* tmp = b->mdd;
 
-  b->mdd = mdd_smooth (ctx->ctx, a->mdd, ctx->vbl_lists[set_id]);
+  b->mdd = mdd_smooth (ctx->ctx, a->mdd, ctx->vbl_lists.s[set_id]);
   if (tmp)  mdd_free (tmp);
 }
 
@@ -108,8 +112,8 @@ subst_vbls_GluPFmla (PFmlaCtx* fmlactx, PFmla* base_b, const PFmla base_a,
   mdd_t* tmp = b->mdd;
 
   b->mdd = mdd_substitute (ctx->ctx, a->mdd,
-                           ctx->vbl_lists[set_id_old],
-                           ctx->vbl_lists[set_id_new]);
+                           ctx->vbl_lists.s[set_id_old],
+                           ctx->vbl_lists.s[set_id_new]);
   if (tmp)  mdd_free (tmp);
 }
 
@@ -139,6 +143,26 @@ equiv_ck_GluPFmla (PFmlaCtx* ctx, const PFmla base_a, const PFmla base_b)
   const GluPFmla* b = ccastup_as_GluPFmla (base_b);
   (void) ctx;
   return mdd_equal (a->mdd, b->mdd) ? true : false;
+}
+
+static
+  bool
+overlap_ck_GluPFmla (PFmlaCtx* ctx, const PFmla base_a, const PFmla base_b)
+{
+  const GluPFmla* a = ccastup_as_GluPFmla (base_a);
+  const GluPFmla* b = ccastup_as_GluPFmla (base_b);
+  (void) ctx;
+  return mdd_lequal (a->mdd, b->mdd, 1, 0) ? false : true;
+}
+
+static
+  bool
+subseteq_ck_GluPFmla (PFmlaCtx* ctx, const PFmla base_a, const PFmla base_b)
+{
+  const GluPFmla* a = ccastup_as_GluPFmla (base_a);
+  const GluPFmla* b = ccastup_as_GluPFmla (base_b);
+  (void) ctx;
+  return mdd_lequal (a->mdd, b->mdd, 1, 1) ? true : false;
 }
 
 static
@@ -199,13 +223,6 @@ commit_initialization_GluPFmlaCtx (PFmlaCtx* fmlactx)
   mdd_create_variables(ctx->ctx, doms, names, 0);
   array_free(doms);
   array_free(names);
-
-  ctx->vbl_lists = AllocT( array_t*, fmlactx->vbl_lists.sz );
-  {:for (i ; fmlactx->vbl_lists.sz)
-    ctx->vbl_lists[i] = array_alloc(uint, 0);
-    for (j ; fmlactx->vbl_lists.s[i].sz)
-      array_insert_last(uint, ctx->vbl_lists[i], fmlactx->vbl_lists.s[i].s[j]);
-  }
 }
 
 static
@@ -213,15 +230,32 @@ static
 lose_GluPFmlaCtx (PFmlaCtx* fmlactx)
 {
   GluPFmlaCtx* ctx = castup_as_GluPFmlaCtx (fmlactx);
-  if (ctx->vbl_lists)
+  if (ctx->vbl_lists.sz > 0)
   {
-    for (i ; fmlactx->vbl_lists.sz)
-      array_free(ctx->vbl_lists[i]);
-    free (ctx->vbl_lists);
+    for (i ; ctx->vbl_lists.sz)
+      array_free(ctx->vbl_lists.s[i]);
+    LoseTable( ctx->vbl_lists );
   }
   if (ctx->ctx)
     mdd_quit (ctx->ctx);
   return ctx;
+}
+
+static
+  uint
+add_vbl_list_GluPFmlaCtx (PFmlaCtx* fmlactx)
+{
+  GluPFmlaCtx* ctx = castup_as_GluPFmlaCtx (fmlactx);
+  PushTable( ctx->vbl_lists, array_alloc(uint, 0) );
+  return ctx->vbl_lists.sz - 1;
+}
+
+static
+  void
+add_to_vbl_list_GluPFmlaCtx (PFmlaCtx* fmlactx, uint listid, uint vblid)
+{
+  GluPFmlaCtx* ctx = castup_as_GluPFmlaCtx (fmlactx);
+  array_insert_last(uint, ctx->vbl_lists.s[listid], vblid);
 }
 
   PFmlaCtx*
@@ -240,15 +274,20 @@ make_GluPFmlaCtx ()
     vt.tautology_ck_fn = tautology_ck_GluPFmla;
     vt.unsat_ck_fn     =     unsat_ck_GluPFmla;
     vt.equiv_ck_fn     =     equiv_ck_GluPFmla;
+    vt.overlap_ck_fn   =   overlap_ck_GluPFmla;
+    vt.subseteq_ck_fn  =  subseteq_ck_GluPFmla;
     vt.make_fn         =         make_GluPFmla;
     vt.free_fn         =         free_GluPFmla;
     vt.vbl_eql_fn      =      vbl_eql_GluPFmla;
     vt.vbl_eqlc_fn     =     vbl_eqlc_GluPFmla;
     vt.ctx_commit_initialization_fn = commit_initialization_GluPFmlaCtx;
     vt.ctx_lose_fn = lose_GluPFmlaCtx;
+    vt.ctx_add_vbl_list_fn = add_vbl_list_GluPFmlaCtx;
+    vt.ctx_add_to_vbl_list_fn = add_to_vbl_list_GluPFmlaCtx;
   }
   init1_PFmlaCtx (&ctx->fmlactx, &vt);
   ctx->ctx = 0;
+  InitTable( ctx->vbl_lists );
   return &ctx->fmlactx;
 }
 

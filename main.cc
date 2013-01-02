@@ -64,11 +64,13 @@ public:
   PF loXnRel; ///< Under-approximation of the transition function.
   PF hiXnRel; ///< Over-approximation of the transition function.
   PF backReachPF; ///< Backwards reachable from invariant.
+  PF hi_invariant;
 
 public:
   FMem_AddConvergence() :
     bt_dbog( false )
     , bt_level( 0 )
+    , hi_invariant( false )
   {}
 
   /// Deadlocks ranked by how many candidate actions can resolve them.
@@ -372,8 +374,9 @@ PickActionMCV(uint& ret_actId,
       FMem_AddConvergence next( tape );
       next.bt_dbog = false;
       next.reviseActions(sys, Set<uint>(actId), Set<uint>());
-      //uint n = next.candidates.size();
-      uint n = next.candidates.size() + next.actions.size();
+      uint n = (tape.candidates.size() - next.candidates.size());
+      n /= (next.actions.size() - tape.actions.size());
+      //uint n = next.candidates.size() + next.actions.size();
       //uint n = 0;
       //for (uint j = 1; j < next.mcvDeadlocks.size(); ++j) {
       //  n += next.mcvDeadlocks[j].candidates.size() / j;
@@ -444,6 +447,15 @@ PickActionMCV(uint& ret_actId,
     for (it = candidates.begin(); it != candidates.end(); ++it) {
       uint actId = *it;
       const PF& actPF = topo.actionPF(actId);
+      if (sys.auxVblCk()) {
+        if (!actPF.overlapCk(tape.hi_invariant)) {
+          biasMap[0] |= actId;
+        }
+        else {
+          biasMap[1] |= actId;
+        }
+        continue;
+      }
       if (backReachPF.overlapCk(topo.image(actPF))) {
         biasMap[1] |= actId;
         if (!(topo.preimage(actPF) <= backReachPF)) {
@@ -552,14 +564,21 @@ FMem_AddConvergence::reviseActions(const XnSys& sys,
     addActPF |= topo.actionPF(actId);
   }
 
-
-  PF invariant( sys.invariant );
-  if (!sys.closure) {
-    invariant = ClosedSubset(this->loXnRel, invariant, topo);
-  }
-
   this->deadlockPF -= topo.preimage(addActPF);
   this->loXnRel |= addActPF;
+
+  PF invariant;
+  if (sys.auxVblCk()) {
+    invariant = LegitInvariant(sys, this->loXnRel, this->hiXnRel);
+    this->hi_invariant = invariant;
+    if (invariant.tautologyCk(false)) {
+      this->candidates.clear();
+      return;
+    }
+  }
+  else {
+    invariant = sys.invariant;
+  }
   this->backReachPF =
     BackwardReachability(this->loXnRel, invariant, topo);
 
@@ -574,12 +593,22 @@ FMem_AddConvergence::reviseActions(const XnSys& sys,
         dels |= actId;
         continue;
       }
-      if (CycleCk(sys, this->loXnRel | actPF)) {
-        dels |= actId;
-        continue;
+
+      if (sys.auxVblCk() && actPF.overlapCk(invariant)) {
+        const PF& pf = ~LegitInvariant(sys, this->loXnRel | actPF, this->hiXnRel);
+        if (CycleCk(topo, this->loXnRel | actPF, pf)) {
+          dels |= actId;
+          continue;
+        }
+      }
+      else {
+        if (CycleCk(topo, this->loXnRel | actPF, ~invariant)) {
+          dels |= actId;
+          continue;
+        }
       }
 
-      if (false && !sys.closure) {
+      if (false && sys.auxVblCk()) {
         if (!WeakConvergenceCk(sys, this->hiXnRel - actPF, this->backReachPF)) {
           reqAdds |= actId;
           continue;
@@ -596,7 +625,35 @@ FMem_AddConvergence::reviseActions(const XnSys& sys,
   }
   this->hiXnRel -= delActPF;
 
-  ReviseDeadlocksMCV(this->mcvDeadlocks, topo, adds, dels);
+  bool revise = true;
+  if (sys.auxVblCk()) {
+    invariant = LegitInvariant(sys, this->loXnRel, this->hiXnRel);
+    this->hi_invariant = invariant;
+    if (invariant.tautologyCk(false)) {
+      this->candidates.clear();
+      this->loXnRel = false;
+      this->hiXnRel = false;
+      this->hiXnRel = false;
+      return;
+    }
+    this->backReachPF =
+      BackwardReachability(this->loXnRel, invariant, topo);
+    PF dl = (~invariant - topo.preimage(this->loXnRel));
+    if (!dl.tautologyCk(false)) {
+      this->deadlockPF |= dl;
+      RankDeadlocksMCV(this->mcvDeadlocks,
+                       sys.topology,
+                       this->candidates,
+                       this->deadlockPF);
+      if (this->mcvDeadlocks.size() < 2) {
+        return;
+      }
+      revise = false;
+    }
+  }
+  if (revise) {
+    ReviseDeadlocksMCV(this->mcvDeadlocks, topo, adds, dels);
+  }
 
   for (it = adds.begin(); it != adds.end(); ++it) {
     uint actId = *it;
@@ -634,15 +691,13 @@ AddConvergence(vector<uint>& retActions,
                const AddConvergenceOpt& opt)
 {
   while (!tape.candidates.empty()) {
-    if (sys.closure) {
+    if (!sys.auxVblCk()) {
       if (!WeakConvergenceCk(sys, tape.hiXnRel, sys.invariant)) {
         return false;
       }
     }
     else {
-      const PF& invariant =
-        ClosedSubset(tape.loXnRel, sys.invariant, sys.topology);
-      if (!WeakConvergenceCk(sys, tape.hiXnRel, invariant)) {
+      if (!WeakConvergenceCk(sys, tape.hiXnRel, tape.hi_invariant)) {
         return false;
       }
     }
@@ -666,7 +721,13 @@ AddConvergence(vector<uint>& retActions,
   }
 
   if (tape.deadlockPF.tautologyCk(false)) {
-    if (CycleCk(sys, tape.loXnRel)) {
+    const PF& invariant = sys.auxVblCk() ? tape.hi_invariant : sys.invariant;
+    if (CycleCk(sys.topology, tape.loXnRel, ~invariant)) {
+      DBog0( "Why are there cycles?" );
+      return false;
+    }
+    if (!WeakConvergenceCk(sys, tape.loXnRel, invariant)) {
+      DBog0( "Why does weak convergence not hold?" );
       return false;
     }
     retActions = tape.actions;
@@ -704,7 +765,9 @@ AddConvergence(XnSys& sys, const AddConvergenceOpt& opt)
 
   if (sys.invariant.tautologyCk(true)) {
     DBog0( "All states are invariant!" );
-    return true;
+    if (!sys.auxVblCk()) {
+      return true;
+    }
   }
 
   for (uint i = 0; i < nPossibleActs; ++i) {
@@ -728,8 +791,7 @@ AddConvergence(XnSys& sys, const AddConvergenceOpt& opt)
       }
     }
 
-    if (add && sys.closure &&
-        sys.invariant.overlapCk(topo.preimage(actPF))) {
+    if (add && !sys.auxVblCk() && sys.invariant.overlapCk(actPF)) {
       // This action does starts in the invariant.
       // If /!sys.synLegit/, we shouldn't add any actions
       // within the legitimate states, even if closure isn't broken.
@@ -752,6 +814,9 @@ AddConvergence(XnSys& sys, const AddConvergenceOpt& opt)
   }
   else {
     tape.deadlockPF = ~sys.invariant;
+    if (sys.auxVblCk()) {
+      tape.deadlockPF |= topo.preimage(sys.legit_protocol);
+    }
   }
   tape.backReachPF = sys.invariant;
 
@@ -799,7 +864,10 @@ int main(int argc, char** argv)
   const char* modelFilePath = 0;
 
   // Use to disable process ordering.
-  //opt.nicePolicy=opt.NilNice;
+  //opt.nicePolicy = opt.NilNice;
+  // Use to change picking method.
+  //opt.pickMethod = opt.QuickPick;
+  //opt.pickMethod = opt.LCVHeavyPick;
 
   if (argi < argc) {
     if (string(argv[argi]) == "-model") {
@@ -892,6 +960,10 @@ int main(int argc, char** argv)
     default:
       DBog0("No case for this problem instance!");
       return 1;
+  }
+
+  if (!sys.integrityCk()) {
+    failout_sysCx ("Bad system definition.");
   }
 
   // Run the algorithm.

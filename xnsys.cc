@@ -1,5 +1,6 @@
 
 #include "xnsys.hh"
+#include "set.hh"
 
 /**
  * Commit to the topology represented by the vector of processes.
@@ -14,9 +15,6 @@
   void
 XnNet::commitInitialization()
 {
-  vVblList = pfCtx.addVblList();
-  vVblListPrimed = pfCtx.addVblList();
-
   for (uint i = 0; i < pcs.size(); ++i) {
     XnPc& pc = pcs[i];
     for (uint j = 0; j < pc.wvbls.size(); ++j) {
@@ -151,6 +149,71 @@ XnNet::oput(ostream& of,
   return this->pfCtx.oput(of, pf, this->vVblList, pfx, sfx);
 }
 
+
+  void
+XnSys::commitInitialization()
+{
+  XnNet& topo = this->topology;
+  topo.commitInitialization();
+
+  for (uint i = 0; i < this->aux_vbls.size(); ++i) {
+    const XnPc& pc = topo.pcs[this->aux_vbls[i].first];
+    const XnVbl& vbl = pc.wvbls[this->aux_vbls[i].second];
+    topo.pfCtx.addToVblList(this->vAuxVblListId, vbl.pfIdx);
+    topo.pfCtx.addToVblList(this->vAuxVblListId, vbl.pfIdxPrimed);
+  }
+
+  this->legit_protocol = false;
+
+  this->legit_self = true;
+  Set< pair<uint,uint> > aux( this->aux_vbls );
+  for (uint i = 0; i < topo.pcs.size(); ++i) {
+    const XnPc& pc = topo.pcs[i];
+    for (uint j = 0; j < pc.wvbls.size(); ++j) {
+      pair<uint,uint> p( i, j );
+      if (!aux.elemCk(p)) {
+        this->legit_self &= (topo.pfVbl(i, j) == topo.pfVblPrimed(i, j));
+      }
+    }
+  }
+}
+
+/** Add an action to the protocol which runs in the legitimate states.*/
+  void
+XnSys::addLegitAct(const XnAct& act)
+{
+  const XnNet& topo = this->topology;
+  uint actId = topo.actionIndex(act);
+  const PF& actPF = topo.actionPF(actId);
+  this->legit_protocol |= actPF.smooth(this->vAuxVblListId);
+}
+
+  bool
+XnSys::integrityCk() const
+{
+  const XnNet& topo = this->topology;
+  bool good = true;;
+
+  if (this->invariant.tautologyCk(false)) {
+    DBog0( "Error: Invariant is empty!" );
+    good = false;
+  }
+
+  if (this->auxVblCk()) {
+    if (!this->invariant.equivCk(this->invariant.smooth(this->vAuxVblListId))) {
+      DBog0( "Error: Invariant includes auxiliary variables." );
+      good = false;
+    }
+  }
+
+  if (!(topo.image(this->legit_protocol, this->invariant) <= this->invariant)) {
+    DBog0( "Error: Protocol is not closed in the invariant!" );
+    good = false;
+  }
+
+  return good;
+}
+
 /**
  * Output an action in a valid Promela format.
  */
@@ -180,6 +243,50 @@ ClosedSubset(const PF& xnRel, const PF& invariant, const XnNet& topo)
   return invariant - BackwardReachability(xnRel, ~invariant, topo);
 }
 
+  PF
+LegitInvariant(const XnSys& sys, const PF& loXnRel, const PF& hiXnRel)
+{
+  const XnNet& topo = sys.topology;
+  if (!sys.auxVblCk())  return sys.invariant;
+
+  const PF& smooth_self = sys.legit_self;
+
+  const PF& smooth_live = sys.invariant;
+  const PF& smooth_protocol = sys.legit_protocol;
+
+  PF aux_live = smooth_live - topo.preimage(loXnRel - smooth_protocol - smooth_self);
+  aux_live = ClosedSubset(loXnRel, aux_live, sys.topology);
+  const PF& aux_protocol = hiXnRel & (smooth_protocol | smooth_self);
+
+  if (CycleCk(topo, loXnRel & smooth_self, aux_live)) {
+    return PF(false);
+  }
+
+  const PF& smooth_beg = smooth_live - topo.image(smooth_protocol, smooth_live);
+  const PF& smooth_end = smooth_live - topo.preimage(smooth_protocol, smooth_live);
+
+  while (true)
+  {
+    const PF old_live = aux_live;
+
+    aux_live &= (smooth_beg & aux_live) | topo.image(aux_protocol, aux_live);
+    aux_live &= (smooth_end & aux_live) | topo.preimage(aux_protocol, aux_live);
+
+    if (old_live.equivCk(aux_live)) {
+      break;
+    }
+  }
+
+  if (!smooth_live.equivCk(sys.smoothAux(aux_live))) {
+    return PF(false);
+  }
+
+  if (!(smooth_live & smooth_protocol).equivCk(sys.smoothAux(aux_live & (aux_protocol - smooth_self)))) {
+    return PF(false);
+  }
+  return aux_live;
+}
+
 /**
  * Check for weak convergence to the invariant.
  */
@@ -189,6 +296,12 @@ WeakConvergenceCk(const XnSys& sys, const PF& xnRel, const PF& invariant)
   const XnNet& topo = sys.topology;
   if (sys.liveLegit && !topo.preimage(xnRel).tautologyCk()) {
     return false;
+  }
+  if (sys.auxVblCk()) {
+    const PF& legit_protocol = sys.smoothAux(xnRel & invariant);
+    if (!sys.legit_protocol <= legit_protocol) {
+      return false;
+    }
   }
 
   PF span0( invariant );
@@ -207,18 +320,17 @@ WeakConvergenceCk(const XnSys& sys, const PF& xnRel)
 }
 
 /**
- * Check for cycles outside of the invariant.
+ * Check for cycles within some state predicate.
  */
   bool
-CycleCk(const XnSys& sys, const PF& xnRel)
+CycleCk(const XnNet& topo, const PF& xnRel, const PF& pf)
 {
   PF span0( true );
 
-  const XnNet& topo = sys.topology;
   while (true) {
-    PF span1 = topo.image(xnRel, span0);
+    const PF& span1 = topo.image(xnRel, span0);
 
-    if (span1 <= sys.invariant)  return false;
+    if (!pf.overlapCk(span1))  return false;
     if (span0.equivCk(span1))  return true;
 
     span0 = span1;
@@ -226,6 +338,7 @@ CycleCk(const XnSys& sys, const PF& xnRel)
 
   return true;
 }
+
 
 /**
  * Perform backwards reachability.

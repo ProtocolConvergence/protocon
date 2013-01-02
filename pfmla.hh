@@ -164,6 +164,13 @@ public:
     return c;
   }
 
+  PF xnor(const PF& b) const
+  {
+    PF c;
+    xnor_PFmla (&c.g, g, b.g);
+    return c;
+  }
+
   PF smooth(uint setIdx) const
   {
     PF b;
