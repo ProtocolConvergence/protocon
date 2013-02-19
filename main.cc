@@ -46,10 +46,12 @@ public:
 
   PickActionHeuristic pickMethod;
   NicePolicy nicePolicy;
+  bool pickBackReach;
 
   AddConvergenceOpt() :
     pickMethod( GreedyPick )
     , nicePolicy( EndNice )
+    , pickBackReach( true )
   {}
 };
 
@@ -59,6 +61,7 @@ public:
   uint bt_level;
 
   vector<uint> actions; ///< Chosen actions.
+  Set<uint> inferredActions; ///< Inferred actions.
   vector<uint> candidates; ///< Candidate actions.
   PF deadlockPF; ///< Current deadlocks.
   PF loXnRel; ///< Under-approximation of the transition function.
@@ -255,19 +258,34 @@ PickActionMCV(uint& ret_actId,
   const vector<DeadlockConstraint>& dlsets = tape.mcvDeadlocks;
   uint dlsetIdx = 0;
 
+  Set<uint> candidates;
+  Set<uint>::const_iterator it;
+
   // Do most constrained variable (MCV).
   // That is, find an action which resolves a deadlock for which
   // can only be resolved by some small number of actions.
   // Try to choose an action which adds a new path to the invariant.
   for (uint i = 0; i < dlsets.size(); ++i) {
     if (!dlsets[i].candidates.empty()) {
+      candidates = dlsets[i].candidates;
+      if (opt.pickBackReach) {
+        Set<uint> candidates_1;
+        for (it = candidates.begin(); it != candidates.end(); ++it) {
+          const uint actId = *it;
+          const PF& resolveImg =
+            topo.image(topo.actionPF(actId), dlsets[i].deadlockPF);
+          if (tape.backReachPF.overlapCk(resolveImg)) {
+            candidates_1 |= actId;
+          }
+        }
+        candidates = candidates_1;
+        if (candidates.empty())  continue;
+      }
       dlsetIdx = i;
       break;
     }
   }
 
-  Set<uint> candidates( dlsets[dlsetIdx].candidates );
-  Set<uint>::const_iterator it;
 
   DBogOF
     <<" (lvl " << tape.bt_level
@@ -638,6 +656,19 @@ FMem_AddConvergence::reviseActions(const XnSys& sys,
     }
     this->backReachPF =
       BackwardReachability(this->loXnRel, invariant, topo);
+
+    for (uint i = 0; i < this->actions.size(); ++i) {
+      uint actId = this->actions[i];
+      if (this->inferredActions.elemCk(actId))  continue;
+      if (!this->backReachPF.overlapCk(topo.actionPF(actId))) {
+        this->candidates.clear();
+        this->loXnRel = false;
+        this->hiXnRel = false;
+        this->hiXnRel = false;
+        return;
+      }
+    }
+
     PF dl = (~invariant - topo.preimage(this->loXnRel));
     if (!dl.tautologyCk(false)) {
       this->deadlockPF |= dl;
@@ -672,6 +703,7 @@ FMem_AddConvergence::reviseActions(const XnSys& sys,
     DBog1( "did something: %u", (uint) (reqAdds.size() - this->mcvDeadlocks[1].candidates.size()));
   }
   if (!reqAdds.empty()) {
+    this->inferredActions |= reqAdds;
     this->reviseActions(sys, reqAdds, Set<uint>());
   }
 }
@@ -863,11 +895,15 @@ int main(int argc, char** argv)
   AddConvergenceOpt opt;
   const char* modelFilePath = 0;
 
+  // Use to disable picking only actions which resolve deadlocks
+  // by making them backwards reachable from the invariant.
+  //opt.pickBackReach = false;
   // Use to disable process ordering.
   //opt.nicePolicy = opt.NilNice;
   // Use to change picking method.
   //opt.pickMethod = opt.QuickPick;
   //opt.pickMethod = opt.LCVHeavyPick;
+  opt.pickMethod = opt.LCVLitePick;
 
   if (argi < argc) {
     if (string(argv[argi]) == "-model") {

@@ -323,7 +323,7 @@ WeakConvergenceCk(const XnSys& sys, const PF& xnRel)
  * Check for cycles within some state predicate.
  */
   bool
-CycleCk(const XnNet& topo, const PF& xnRel, const PF& pf)
+CycleCk(PF* scc, const XnNet& topo, const PF& xnRel, const PF& pf)
 {
   PF span0( true );
 
@@ -331,12 +331,24 @@ CycleCk(const XnNet& topo, const PF& xnRel, const PF& pf)
     const PF& span1 = topo.image(xnRel, span0);
 
     if (!pf.overlapCk(span1))  return false;
-    if (span0.equivCk(span1))  return true;
+    if (span0.equivCk(span1))  break;
 
     span0 = span1;
   }
 
+  if (scc) {
+    *scc = span0;
+  }
   return true;
+}
+
+/**
+ * Check for cycles within some state predicate.
+ */
+  bool
+CycleCk(const XnNet& topo, const PF& xnRel, const PF& pf)
+{
+  return CycleCk(0, topo, xnRel, pf);
 }
 
 

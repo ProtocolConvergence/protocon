@@ -244,6 +244,8 @@ WeakConvergenceCk(const XnSys& sys, const PF& xnRel, const PF& invariant);
 bool
 WeakConvergenceCk(const XnSys& sys, const PF& xnRel);
 bool
+CycleCk(PF* scc, const XnNet& topo, const PF& xnRel, const PF& pf);
+bool
 CycleCk(const XnNet& topo, const PF& xnRel, const PF& pf);
 PF
 BackwardReachability(const PF& xnRel, const PF& pf, const XnNet& topo);
