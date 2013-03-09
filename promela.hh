@@ -1,7 +1,7 @@
 
 #ifndef PROMELA_HH_
 #define PROMELA_HH_
-#include "synhax.hh"
+#include "cx/synhax.hh"
 class XnSys;
 
 void

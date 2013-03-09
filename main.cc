@@ -884,6 +884,7 @@ int main(int argc, char** argv)
     TwoColoringRingInstance,
     MaximalMatchingInstance,
     SumNotTwoInstance,
+    AgreementRingInstance,
     DijkstraTokenRingInstance,
     ThreeBitTokenRingInstance,
     TwoBitTokenSpingInstance,
@@ -937,6 +938,10 @@ int main(int argc, char** argv)
       DBog0("Problem: Sum-Not-2");
       problem = SumNotTwoInstance;
     }
+    else if (string(argv[argi]) == "agreement") {
+      DBog0("Problem: Agreement");
+      problem = AgreementRingInstance;
+    }
     else if (string(argv[argi]) == "dijkstra-tr") {
       DBog0("Problem: Dijkstra's Token Ring");
       problem = DijkstraTokenRingInstance;
@@ -984,6 +989,8 @@ int main(int argc, char** argv)
       InstMatching(sys, npcs);  break;
     case SumNotTwoInstance:
       InstSumNot(sys, npcs, 3, 2);  break;
+    case AgreementRingInstance:
+      InstAgreementRing(sys, npcs);  break;
     case DijkstraTokenRingInstance:
       InstDijkstraTokenRing(sys, npcs);  break;
     case ThreeBitTokenRingInstance:

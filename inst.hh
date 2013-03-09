@@ -1,7 +1,7 @@
 
 #ifndef INST_HH_
 #define INST_HH_
-#include "synhax.hh"
+#include "cx/synhax.hh"
 
 class XnSys;
 
@@ -13,6 +13,8 @@ void
 InstMatching(XnSys& sys, uint npcs);
 void
 InstSumNot(XnSys& sys, uint npcs, uint domsz, uint target);
+void
+InstAgreementRing(XnSys& sys, uint npcs);
 void
 InstDijkstraTokenRing(XnSys& sys, uint npcs);
 void

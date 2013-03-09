@@ -1,14 +1,44 @@
 
 #include "test.hh"
 
+#include "cx/table.hh"
 #include "inst.hh"
 #include "xnsys.hh"
 
 /**
  * Test dat code.
  */
+static void
+TestTable()
+{
+  Cx::Table<uint> t;
+  t.push(1);
+  t.push(2);
+  Claim2_uint( t[1] ,==, 2 );
+  Claim2_uint( t[0] ,==, 1 );
+}
+
+/**
+ * Test dat code.
+ */
+static void
+TestLgTable()
+{
+  Cx::LgTable<uint> t;
+  t.push(1);
+  t.push(2);
+  Claim2_uint( t[1] ,==, 2 );
+  Claim2_uint( t[0] ,==, 1 );
+}
+
+/**
+ * Test dat code.
+ */
 void Test()
 {
+  TestTable();
+  TestLgTable();
+
   XnSys sys;
   InstMatching(sys, 3);
 

@@ -219,14 +219,52 @@ InstSumNot(XnSys& sys, uint npcs, uint domsz, uint target)
   }
 }
 
+/** Agreement.
+ * Only enforce that a subset of the invariant be closed.
+ **/
+  void
+InstAgreementRing(XnSys& sys, uint npcs)
+{
+  XnNet& topo = sys.topology;
+  // Build a bidirectional ring.
+  for (uint i = 0; i < npcs; ++i) {
+    char name[10];
+    XnPc& pc = Grow1(topo.pcs);
+
+    sprintf(name, "a%u", i);
+    pc.addVbl(XnVbl(name, npcs));
+    sys.markAuxVbl(i, pc.wvbls.size()-1);
+
+    sprintf(name, "x%u", i);
+    pc.addVbl(XnVbl(name, npcs));
+
+    pc.addPriv(decmod(i, 1, npcs), 0);
+    pc.addPriv(incmod(i, 1, npcs), 0);
+  }
+
+  // Commit to using this topology, and initilize MDD stuff
+  sys.commitInitialization();
+
+  // Set priorities.
+  //for (uint pcIdx = 0; pcIdx < npcs; ++pcIdx) {
+  //  sys.niceIdxFo(pcIdx, npcs-pcIdx-1);
+  //}
+
+  sys.invariant = true;
+  for (uint pcIdx = 1; pcIdx < npcs; ++pcIdx) {
+    sys.invariant &= (topo.pfVbl(pcIdx, 1) == topo.pfVbl(pcIdx-1, 1));
+  }
+}
+
+
 /** Dijkstra's original token ring
- * with each process's variable with a domain of size N+1.
+ * with each process's variable with a domain of size N.
  **/
   void
 InstDijkstraTokenRing(XnSys& sys, uint npcs)
 {
   XnNet& topo = sys.topology;
-  UnidirectionalRing(topo, npcs, npcs+1, "x");
+  UnidirectionalRing(topo, npcs, npcs, "x");
 
   // Commit to using this topology, and initilize MDD stuff
   sys.commitInitialization();

@@ -5,7 +5,7 @@
 #ifndef PF_HH_
 #define PF_HH_
 
-#include "synhax.hh"
+#include "cx/synhax.hh"
 
 extern "C" {
 #include "pfmla-glu.h"

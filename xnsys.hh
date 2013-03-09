@@ -2,7 +2,7 @@
 #ifndef XnSys_HH_
 #define XnSys_HH_
 
-#include "synhax.hh"
+#include "cx/synhax.hh"
 #include "pfmla.hh"
 
 class XnVbl {
