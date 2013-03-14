@@ -4,6 +4,7 @@
 
 #include <set>
 
+namespace Cx {
 template <class T>
 class Set : public std::set<T>
 {
@@ -87,7 +88,11 @@ public:
   {
     a.assign(this->begin(), this->end());
   }
+
+  ujint sz() const { return this->size(); }
 };
+}
+using Cx::Set;
 
 #endif
 

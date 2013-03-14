@@ -2,8 +2,8 @@
  * \file pfmla.hh
  * This file has the propositional formula data structure.
  */
-#ifndef PF_HH_
-#define PF_HH_
+#ifndef PFmla_HH_
+#define PFmla_HH_
 
 #include "cx/synhax.hh"
 
@@ -12,20 +12,21 @@ extern "C" {
 #include "pfmla.h"
 }
 
+namespace Cx {
 namespace C {
   using ::PFmla;
   using ::PFmlaVbl;
   using ::PFmlaCtx;
 }
 
-class PF;
-class PFVbl;
-class PFCtx;
+class PFmla;
+class PFmlaVbl;
+class PFmlaCtx;
 
-class PF
+class PFmla
 {
-  friend class PFCtx;
-  friend class PFVbl;
+  friend class PFmlaCtx;
+  friend class PFmlaVbl;
 
 private:
   C::PFmla g;
@@ -36,36 +37,36 @@ public:
    * A propositional formula should be initialized to true, false,
    * or anything else before it is used in operations.
    */
-  PF()
+  PFmla()
   {
     // Phase is uninitialized.
     // Actually, it's false.
     init_PFmla (&g);
   }
 
-  PF(const PF& pf)
+  PFmla(const PFmla& pf)
   {
     init_PFmla (&g);
     iden_PFmla (&g, pf.g);
   }
 
-  explicit PF(bool phase)
+  explicit PFmla(bool phase)
   {
     init_PFmla (&g);
     wipe1_PFmla (&g, phase);
   }
 
-  ~PF()
+  ~PFmla()
   {
     lose_PFmla (&g);
   }
 
-  PF& operator=(const PF& pf)
+  PFmla& operator=(const PFmla& pf)
   {
     iden_PFmla (&g, pf.g);
     return *this;
   }
-  PF& operator=(bool b)
+  PFmla& operator=(bool b)
   {
     wipe1_PFmla (&g, b);
     return *this;
@@ -77,123 +78,123 @@ public:
     return unsat_ck_PFmla (g);
   }
 
-  bool equivCk(const PF& pf) const
+  bool equivCk(const PFmla& pf) const
   {
     return equiv_ck_PFmla (g, pf.g);
   }
 
-  bool overlapCk(const PF& pf) const
+  bool overlapCk(const PFmla& pf) const
   {
     return overlap_ck_PFmla (g, pf.g);
   }
 
-  bool operator<=(const PF& pf) const
+  bool operator<=(const PFmla& pf) const
   {
     return subseteq_ck_PFmla (g, pf.g);
   }
 
-  PF operator~() const
+  PFmla operator~() const
   {
-    PF pf;
+    PFmla pf;
     not_PFmla (&pf.g, g);
     return pf;
   }
 
-  PF operator-() const
+  PFmla operator-() const
   { return ~ *this; }
 
-  PF operator!() const
+  PFmla operator!() const
   { return ~ *this; }
 
-  PF& operator&=(const PF& pf)
+  PFmla& operator&=(const PFmla& pf)
   {
     and_PFmla (&g, g, pf.g);
     return *this;
   }
 
-  PF operator&(const PF& b) const
+  PFmla operator&(const PFmla& b) const
   {
-    PF c;
+    PFmla c;
     and_PFmla (&c.g, g, b.g);
     return c;
   }
 
-  PF& operator*=(const PF& pf)
+  PFmla& operator*=(const PFmla& pf)
   { return (*this &= pf); }
 
-  PF operator*(const PF& pf) const
+  PFmla operator*(const PFmla& pf) const
   { return (*this & pf); }
 
-  PF operator&&(const PF& pf) const
+  PFmla operator&&(const PFmla& pf) const
   { return (*this & pf); }
 
 
-  PF& operator|=(const PF& b)
+  PFmla& operator|=(const PFmla& b)
   {
     or_PFmla (&g, g, b.g);
     return *this;
   }
 
-  PF operator|(const PF& b) const
+  PFmla operator|(const PFmla& b) const
   {
-    PF c;
+    PFmla c;
     or_PFmla (&c.g, g, b.g);
     return c;
   }
 
-  PF& operator+=(const PF& pf)
+  PFmla& operator+=(const PFmla& pf)
   { return (*this |= pf); }
 
-  PF operator+(const PF& pf) const
+  PFmla operator+(const PFmla& pf) const
   { return (*this | pf); }
 
-  PF operator||(const PF& pf) const
+  PFmla operator||(const PFmla& pf) const
   { return (*this | pf); }
 
 
-  PF& operator-=(const PF& b)
+  PFmla& operator-=(const PFmla& b)
   {
     nimp_PFmla (&g, g, b.g);
     return *this;
   }
 
-  PF operator-(const PF& b) const
+  PFmla operator-(const PFmla& b) const
   {
-    PF c;
+    PFmla c;
     nimp_PFmla (&c.g, g, b.g);
     return c;
   }
 
-  PF xnor(const PF& b) const
+  PFmla xnor(const PFmla& b) const
   {
-    PF c;
+    PFmla c;
     xnor_PFmla (&c.g, g, b.g);
     return c;
   }
 
-  PF smooth(uint setIdx) const
+  PFmla smooth(uint setIdx) const
   {
-    PF b;
+    PFmla b;
     smooth_vbls_PFmla (&b.g, g, setIdx);
     return b;
   }
 
-  PF substituteNewOld(uint newSetIdx, uint oldSetIdx) const
+  PFmla substituteNewOld(uint newSetIdx, uint oldSetIdx) const
   {
-    PF b;
+    PFmla b;
     subst_vbls_PFmla (&b.g, g, newSetIdx, oldSetIdx);
     return b;
   }
 
 };
 
-class PFVbl
+class PFmlaVbl
 {
 private:
   C::PFmlaVbl vbl;
 
 public:
-  PFVbl(const string& _name, uint _domsz)
+  PFmlaVbl(const string& _name, uint _domsz)
   {
     this->vbl.ctx = 0;
     this->vbl.id = 0;
@@ -202,7 +203,7 @@ public:
   }
 
 
-  PFVbl(const C::PFmlaVbl& x)
+  PFmlaVbl(const C::PFmlaVbl& x)
   {
     this->vbl.ctx = x.ctx;
     this->vbl.id = x.id;
@@ -211,53 +212,53 @@ public:
     this->vbl.domsz = x.domsz;
   }
 
-  ~PFVbl()
+  ~PFmlaVbl()
   {
     lose_PFmlaVbl (&vbl);
   }
 
-  PF operator==(uint x) const
+  PFmla operator==(uint x) const
   {
-    PF pf;
+    PFmla pf;
     eqlc_PFmlaVbl (&pf.g,
                    vbl_of_PFmlaCtx (vbl.ctx, vbl.id),
                    x);
     return pf;
   }
 
-  PF operator==(const PFVbl& x) const
+  PFmla operator==(const PFmlaVbl& x) const
   {
-    PF pf;
+    PFmla pf;
     eql_PFmlaVbl (&pf.g,
                   vbl_of_PFmlaCtx (vbl.ctx, vbl.id),
                   vbl_of_PFmlaCtx (vbl.ctx, x.vbl.id));
     return pf;
   }
 
-  PF operator!=(uint x) const
+  PFmla operator!=(uint x) const
   {
     return ~((*this) == x);
   }
 
-  PF operator!=(const PFVbl& x) const
+  PFmla operator!=(const PFmlaVbl& x) const
   {
     return ~((*this) == x);
   }
 };
 
 
-class PFCtx
+class PFmlaCtx
 {
 private:
   C::PFmlaCtx* ctx;
 
 public:
-  PFCtx()
+  PFmlaCtx()
   {
     ctx = make_GluPFmlaCtx ();
   }
 
-  ~PFCtx()
+  ~PFmlaCtx()
   {
     free_PFmlaCtx (ctx);
   }
@@ -279,22 +280,27 @@ public:
 
   void commitInitialization();
 
-  const PFVbl vbl(uint id) const
+  const PFmlaVbl vbl(uint id) const
   {
-    return PFVbl( *vbl_of_PFmlaCtx (ctx, id) );
+    return PFmlaVbl( *vbl_of_PFmlaCtx (ctx, id) );
   }
 
-  const PFVbl vbl(const string& s) const
+  const PFmlaVbl vbl(const string& s) const
   {
-    return PFVbl( *vbl_lookup_PFmlaCtx (ctx, s.c_str()) );
+    return PFmlaVbl( *vbl_lookup_PFmlaCtx (ctx, s.c_str()) );
   }
 
   ostream& oput(ostream& of,
-                const PF& a,
+                const PFmla& a,
                 uint setIdx,
                 const string& pfx = "",
                 const string& sfx = "") const;
 };
+}
+
+typedef Cx::PFmla PF;
+typedef Cx::PFmlaVbl PFVbl;
+typedef Cx::PFmlaCtx PFCtx;
 
 #endif
 

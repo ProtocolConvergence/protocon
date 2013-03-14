@@ -40,8 +40,8 @@ XnNet::commitInitialization()
       n *= domsz * domsz;
     }
     for (uint j = 0; j < pc.rvbls.size(); ++j) {
-      pair<uint,uint> p = pc.rvbls[j];
-      uint domsz = pcs[p.first].wvbls[p.second].domsz;
+      Cx::Tuple<uint,2> p = pc.rvbls[j];
+      uint domsz = pcs[p[0]].wvbls[p[1]].domsz;
       n *= domsz;
     }
 
@@ -156,23 +156,23 @@ XnSys::commitInitialization()
   XnNet& topo = this->topology;
   topo.commitInitialization();
 
-  for (uint i = 0; i < this->aux_vbls.size(); ++i) {
-    const XnPc& pc = topo.pcs[this->aux_vbls[i].first];
-    const XnVbl& vbl = pc.wvbls[this->aux_vbls[i].second];
-    topo.pfCtx.addToVblList(this->vAuxVblListId, vbl.pfIdx);
-    topo.pfCtx.addToVblList(this->vAuxVblListId, vbl.pfIdxPrimed);
-  }
+  this->shadow_protocol = false;
+  this->shadow_self = true;
 
-  this->legit_protocol = false;
-
-  this->legit_self = true;
-  Set< pair<uint,uint> > aux( this->aux_vbls );
   for (uint i = 0; i < topo.pcs.size(); ++i) {
     const XnPc& pc = topo.pcs[i];
     for (uint j = 0; j < pc.wvbls.size(); ++j) {
-      pair<uint,uint> p( i, j );
-      if (!aux.elemCk(p)) {
-        this->legit_self &= (topo.pfVbl(i, j) == topo.pfVblPrimed(i, j));
+      const XnVbl& vbl = topo.pcs[i].wvbls[j];
+      Cx::Tuple<uint,2> p( i, j );
+      if (this->shadow_vbls.elemCk(p)) {
+        this->shadow_self &= (topo.pfVbl(i, j) == topo.pfVblPrimed(i, j));
+        topo.pfCtx.addToVblList(this->vShadowVblListId, vbl.pfIdx);
+        topo.pfCtx.addToVblList(this->vShadowVblListId, vbl.pfIdxPrimed);
+      }
+      else {
+        this->puppet_vbls |= p;
+        topo.pfCtx.addToVblList(this->vPuppetVblListId, vbl.pfIdx);
+        topo.pfCtx.addToVblList(this->vPuppetVblListId, vbl.pfIdxPrimed);
       }
     }
   }
@@ -180,12 +180,20 @@ XnSys::commitInitialization()
 
 /** Add an action to the protocol which runs in the legitimate states.*/
   void
-XnSys::addLegitAct(const XnAct& act)
+XnSys::addShadowAct(const Cx::PFmla& pf, const Set< Cx::Tuple<uint,2> >& vbls)
 {
   const XnNet& topo = this->topology;
-  uint actId = topo.actionIndex(act);
-  const PF& actPF = topo.actionPF(actId);
-  this->legit_protocol |= actPF.smooth(this->vAuxVblListId);
+  Set< Cx::Tuple<uint,2> > unchanged = this->shadow_vbls - vbls;
+  Cx::PFmla unchangedPF( true );
+  for (Set< Cx::Tuple<uint,2> >::const_iterator it = unchanged.begin();
+       it != unchanged.end();
+       ++it)
+  {
+    uint pcid = (*it)[0];
+    uint vblid = (*it)[1];
+    unchangedPF &= topo.pfVbl(pcid, vblid) == topo.pfVblPrimed(pcid, vblid);
+  }
+  this->shadow_protocol |= pf & unchangedPF;
 }
 
   bool
@@ -199,14 +207,14 @@ XnSys::integrityCk() const
     good = false;
   }
 
-  if (this->auxVblCk()) {
-    if (!this->invariant.equivCk(this->invariant.smooth(this->vAuxVblListId))) {
-      DBog0( "Error: Invariant includes auxiliary variables." );
+  if (this->shadowVblCk()) {
+    if (!this->invariant.equivCk(this->invariant.smooth(this->vPuppetVblListId))) {
+      DBog0( "Error: Invariant includes puppet variables." );
       good = false;
     }
   }
 
-  if (!(topo.image(this->legit_protocol, this->invariant) <= this->invariant)) {
+  if (!(topo.image(this->shadow_protocol, this->invariant) <= this->invariant)) {
     DBog0( "Error: Protocol is not closed in the invariant!" );
     good = false;
   }
@@ -247,18 +255,18 @@ ClosedSubset(const PF& xnRel, const PF& invariant, const XnNet& topo)
 LegitInvariant(const XnSys& sys, const PF& loXnRel, const PF& hiXnRel)
 {
   const XnNet& topo = sys.topology;
-  if (!sys.auxVblCk())  return sys.invariant;
+  if (!sys.shadowVblCk())  return sys.invariant;
 
-  const PF& smooth_self = sys.legit_self;
+  const PF& smooth_self = sys.shadow_self;
 
   const PF& smooth_live = sys.invariant;
-  const PF& smooth_protocol = sys.legit_protocol;
+  const PF& smooth_protocol = sys.shadow_protocol;
 
-  PF aux_live = smooth_live - topo.preimage(loXnRel - smooth_protocol - smooth_self);
-  aux_live = ClosedSubset(loXnRel, aux_live, sys.topology);
-  const PF& aux_protocol = hiXnRel & (smooth_protocol | smooth_self);
+  PF puppet_live = smooth_live - topo.preimage(loXnRel - smooth_protocol - smooth_self);
+  puppet_live = ClosedSubset(loXnRel, puppet_live, sys.topology);
+  const PF& puppet_protocol = hiXnRel & (smooth_protocol | smooth_self);
 
-  if (CycleCk(topo, loXnRel & smooth_self, aux_live)) {
+  if (CycleCk(topo, loXnRel & smooth_self, puppet_live)) {
     return PF(false);
   }
 
@@ -267,24 +275,24 @@ LegitInvariant(const XnSys& sys, const PF& loXnRel, const PF& hiXnRel)
 
   while (true)
   {
-    const PF old_live = aux_live;
+    const PF old_live = puppet_live;
 
-    aux_live &= (smooth_beg & aux_live) | topo.image(aux_protocol, aux_live);
-    aux_live &= (smooth_end & aux_live) | topo.preimage(aux_protocol, aux_live);
+    puppet_live &= (smooth_beg & puppet_live) | topo.image(puppet_protocol, puppet_live);
+    puppet_live &= (smooth_end & puppet_live) | topo.preimage(puppet_protocol, puppet_live);
 
-    if (old_live.equivCk(aux_live)) {
+    if (old_live.equivCk(puppet_live)) {
       break;
     }
   }
 
-  if (!smooth_live.equivCk(sys.smoothAux(aux_live))) {
+  if (!smooth_live.equivCk(sys.smoothPuppetVbls(puppet_live))) {
     return PF(false);
   }
 
-  if (!(smooth_live & smooth_protocol).equivCk(sys.smoothAux(aux_live & (aux_protocol - smooth_self)))) {
+  if (!(smooth_live & smooth_protocol).equivCk(sys.smoothPuppetVbls(puppet_live & (puppet_protocol - smooth_self)))) {
     return PF(false);
   }
-  return aux_live;
+  return puppet_live;
 }
 
 /**
@@ -297,9 +305,9 @@ WeakConvergenceCk(const XnSys& sys, const PF& xnRel, const PF& invariant)
   if (sys.liveLegit && !topo.preimage(xnRel).tautologyCk()) {
     return false;
   }
-  if (sys.auxVblCk()) {
-    const PF& legit_protocol = sys.smoothAux(xnRel & invariant);
-    if (!sys.legit_protocol <= legit_protocol) {
+  if (sys.shadowVblCk()) {
+    const PF& shadow_protocol = sys.smoothPuppetVbls(xnRel & invariant);
+    if (!sys.shadow_protocol <= shadow_protocol) {
       return false;
     }
   }

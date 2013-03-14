@@ -233,22 +233,22 @@ InstAgreementRing(XnSys& sys, uint npcs)
 
     sprintf(name, "a%u", i);
     pc.addVbl(XnVbl(name, npcs));
-    sys.markAuxVbl(i, pc.wvbls.size()-1);
 
     sprintf(name, "x%u", i);
     pc.addVbl(XnVbl(name, npcs));
+    sys.markShadowVbl(i, pc.wvbls.size()-1);
 
     pc.addPriv(decmod(i, 1, npcs), 0);
-    pc.addPriv(incmod(i, 1, npcs), 0);
+    //pc.addPriv(incmod(i, 1, npcs), 0);
   }
 
   // Commit to using this topology, and initilize MDD stuff
   sys.commitInitialization();
 
   // Set priorities.
-  //for (uint pcIdx = 0; pcIdx < npcs; ++pcIdx) {
-  //  sys.niceIdxFo(pcIdx, npcs-pcIdx-1);
-  //}
+  for (uint pcIdx = 0; pcIdx < npcs; ++pcIdx) {
+    sys.niceIdxFo(pcIdx, npcs-pcIdx-1);
+  }
 
   sys.invariant = true;
   for (uint pcIdx = 1; pcIdx < npcs; ++pcIdx) {
@@ -414,51 +414,24 @@ InstTestTokenRing(XnSys& sys, uint npcs)
     char name[10];
     XnPc& pc = Grow1(topo.pcs);
 
+    sprintf(name, "x%u", i);
+    pc.addVbl(XnVbl(name, 2));
+    sys.markShadowVbl(i, pc.wvbls.size()-1);
+
     sprintf(name, "t%u", i);
     pc.addVbl(XnVbl(name, 2));
+    pc.addPriv(decmod(i, 1, npcs), pc.wvbls.size()-1);
 
     sprintf(name, "e%u", i);
     pc.addVbl(XnVbl(name, 2));
-    sys.markAuxVbl(i, pc.wvbls.size()-1);
+    pc.addPriv(decmod(i, 1, npcs), pc.wvbls.size()-1);
 
     sprintf(name, "ready%u", i);
     pc.addVbl(XnVbl(name, 2));
-    sys.markAuxVbl(i, pc.wvbls.size()-1);
-
-    pc.addPriv(decmod(i, 1, npcs), 0);
-    pc.addPriv(decmod(i, 1, npcs), 1);
   }
 
   // Commit to using this topology, and initilize MDD stuff
   sys.commitInitialization();
-
-  for (uint i = 0; i < npcs; ++i) {
-    XnAct act;
-    act.pcIdx = i;
-    if (i == 0) {
-      act.r0[0] = 1;
-      act.w0[0] = 1;
-      act.w1[0] = 0;
-    }
-    else {
-      act.r0[0] = 0;
-      act.w0[0] = 1;
-      act.w1[0] = 0;
-    }
-    sys.addLegitAct(act);
-
-    if (i == 0) {
-      act.r0[0] = 0;
-      act.w0[0] = 0;
-      act.w1[0] = 1;
-    }
-    else {
-      act.r0[0] = 1;
-      act.w0[0] = 0;
-      act.w1[0] = 1;
-    }
-    sys.addLegitAct(act);
-  }
 
   // Set priorities.
   //for (uint pcIdx = 0; pcIdx < npcs; ++pcIdx) {
@@ -469,14 +442,14 @@ InstTestTokenRing(XnSys& sys, uint npcs)
   {
     const XnAct& act = topo.action(actId);
     bool add = false;
-    uint t_me = act.w0[0];
-    uint e_me = act.w0[1];
-    uint r_me = act.w0[2];
-    uint t_lo = act.r0[0];
-    uint e_lo = act.r0[1];
-    uint t_img = act.w1[0];
-    uint e_img = act.w1[1];
-    uint r_img = act.w1[2];
+    uint t_me = act.w0[1];
+    uint e_me = act.w0[2];
+    uint r_me = act.w0[3];
+    uint t_lo = act.r0[1];
+    uint e_lo = act.r0[2];
+    uint t_img = act.w1[1];
+    uint e_img = act.w1[2];
+    uint r_img = act.w1[3];
 
     if (act.pcIdx == 0) {
       if (e_me == e_lo && t_me != t_lo) {
@@ -524,11 +497,32 @@ InstTestTokenRing(XnSys& sys, uint npcs)
   // Formulas for each process having a token.
   vector<PF> tokenPFs(npcs);
 
+  for (uint pcidx = 0; pcidx < npcs; ++pcidx) {
+    const uint pcidx_p = decmod(pcidx, 1, npcs);
+    Set< Cx::Tuple<uint,2> > vbls;
+    vbls |= Cx::Tuple<uint,2>(pcidx, 0);
+    vbls |= Cx::Tuple<uint,2>(pcidx_p, 0);
+
+    if (pcidx == 0) {
+      const Cx::PFmla& pf =
+        (topo.pfVbl(pcidx, 0) == topo.pfVbl(pcidx_p, 0))
+        & (topo.pfVblPrimed(pcidx, 0) != topo.pfVblPrimed(pcidx_p, 0));
+      sys.addShadowAct(pf, vbls);
+    }
+    else {
+      const Cx::PFmla& pf =
+        (topo.pfVbl(pcidx, 0) != topo.pfVbl(pcidx_p, 0))
+        & (topo.pfVblPrimed(pcidx, 0) == topo.pfVblPrimed(pcidx_p, 0));
+      sys.addShadowAct(pf, vbls);
+    }
+  }
+
+
   // x[0] == x[N-1]
-  tokenPFs[0] = (topo.pfVbl(0, 0) == topo.pfVblR(0, 0));
+  tokenPFs[0] = (topo.pfVbl(0, 0) == topo.pfVbl(npcs-1, 0));
   for (uint pcIdx = 1; pcIdx < npcs; ++pcIdx) {
     // x[i] != x[i-1]
-    tokenPFs[pcIdx] = (topo.pfVbl(pcIdx, 0) != topo.pfVblR(pcIdx, 0));
+    tokenPFs[pcIdx] = (topo.pfVbl(pcIdx, 0) != topo.pfVbl(pcIdx-1, 0));
   }
 
   sys.invariant = (SingleTokenPF(tokenPFs));
