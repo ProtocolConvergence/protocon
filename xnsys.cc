@@ -1,6 +1,5 @@
 
 #include "xnsys.hh"
-#include "set.hh"
 
 /**
  * Commit to the topology represented by the vector of processes.

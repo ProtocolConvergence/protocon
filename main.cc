@@ -2,10 +2,11 @@
 extern "C" {
 #include "cx/syscx.h"
 }
+#include "cx/set.hh"
+
 #include "pfmla.hh"
 #include "inst.hh"
 #include "promela.hh"
-#include "set.hh"
 #include "test.hh"
 #include "xnsys.hh"
 #include <fstream>

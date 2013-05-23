@@ -2,10 +2,10 @@
 #ifndef XnSys_HH_
 #define XnSys_HH_
 
+#include "cx/set.hh"
 #include "cx/synhax.hh"
 #include "cx/table.hh"
 #include "pfmla.hh"
-#include "set.hh"
 #include "tuple.hh"
 
 class XnVbl {
