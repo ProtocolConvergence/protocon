@@ -1,0 +1,14 @@
+
+program Coloring;
+
+const N = 5;
+
+Nat(3) c(Nat(N));
+
+process i: Nat(N)
+{
+  read:  c(i-1), c(i+1);
+  write: c(i);
+  legit: (c(i) != c(i-1)) && (c(i) != c(i+1));
+}
+

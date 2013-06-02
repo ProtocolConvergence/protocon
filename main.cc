@@ -10,6 +10,7 @@ extern "C" {
 #include "test.hh"
 #include "xnsys.hh"
 #include <fstream>
+#include "infile.hh"
 
 static std::ostream& DBogOF = std::cerr;
 
@@ -912,6 +913,13 @@ int main(int argc, char** argv)
   uint npcs = 4;
   AddConvergenceOpt opt;
   const char* modelFilePath = 0;
+
+  if (0)
+  {
+    ParseMyThings("inst/SumNotTwo.protocon");
+    lose_sysCx ();
+    return 0;
+  }
 
   // Use to disable picking only actions which resolve deadlocks
   // by making them backwards reachable from the invariant.

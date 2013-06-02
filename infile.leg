@@ -1,0 +1,133 @@
+
+%{
+#include "cx/synhax.hh"
+
+extern "C" {
+#include "cx/alphatab.h"
+#include "cx/fileb.h"
+#include "cx/lsp.h"
+}
+
+#define YYSTYPE Lsp
+#define YY_CTX_LOCAL
+#define YY_CTX_MEMBERS  LspCtx* spctx;  FILE* infile;  const char* negprefix;
+#define YY_INPUT(buf, result, max_size) \
+{ \
+  int yyc = fgetc(ctx->infile); \
+  result= (EOF == yyc) ? 0 : (*(buf) = yyc, 1); \
+}
+
+%}
+
+FinFile =
+  WS? Program
+  (WS? ConstDecl)*
+  (WS? VarDecl)+
+  (WS? ProcDecl)+
+  WS?
+  { puts("parsed!"); }
+
+Program = 'program' WS name:ID WS? ';' {}
+
+ConstDecl = 'const' WS name:ID WS? '=' WS? v:NAT WS? ';' {}
+
+VarDecl =
+  dom:NatDom WS name:ID '(' len:NatDom ')' WS? ';'
+  {$$ = list4_ccstr_Lsp ("decl", dom, name, len);}
+
+ProcDecl =
+  'process' WS ID WS? ':' WS? NatDom
+  WS? '{'
+  WS? 'read:' WS? VblRef WS? ';'
+  WS? 'write:' WS?  VblRef WS? ';'
+  WS? 'legit:' WS? Expr WS? ';'
+  WS? '}'
+
+ConstExpr =
+    a:NAT {$$ = a;}
+  | b:ID {$$ = b;}
+
+Expr = a:Disjunction {$$ = a;}
+
+Disjunction =
+  a:Conjunction {$$ = a;}
+  (WS? '||' WS? b:Conjunction {$$ = list3_ccstr_Lsp ("||", $$, b);} )*
+
+Conjunction =
+  a:Comparison {$$ = a;}
+  (WS? '&&' WS? b:Comparison {$$ = list3_ccstr_Lsp ("&&", $$, b);} )*
+
+Comparison =
+  a:Sum {$$ = a;}
+  (  (WS? '==' WS? b:Sum {$$ = list3_ccstr_Lsp ("==", $$, b);} )
+   | (WS? '!=' WS? b:Sum {$$ = list3_ccstr_Lsp ("!=", $$, b);} )
+  )?
+
+Sum =
+  a:Product {$$ = a;}
+  (  (WS? '+' WS? b:Product {$$ = list3_ccstr_Lsp ("+", $$, b);} )
+   | (WS? '-' WS? b:Product {$$ = list3_ccstr_Lsp ("-", $$, b);} )
+  )*
+
+Product =
+  a:Neg { $$ = a; }
+  (  (WS? '*' WS? b:Neg {$$ = list3_ccstr_Lsp ("*", $$, b);} )
+   | (WS? '/' WS? b:Neg {$$ = list3_ccstr_Lsp ("/", $$, b);} )
+   | (WS? '%' WS? b:Neg {$$ = list3_ccstr_Lsp ("%", $$, b);} )
+  )*
+
+Neg =
+  {const char* negprefix = 0;}
+  (   '-' {ctx->negprefix = "-";}
+   | '!' {ctx->negprefix = "!";}
+  )? a:Value
+  {$$ = a;  if (ctx->negprefix)  $$ = list2_ccstr_Lsp (ctx->negprefix, $$);}
+
+Value =
+    a:VblRef {$$ = a;}
+  | a:NAT {$$ = a;}
+  | '(' a:Expr ')' {$$ = list2_ccstr_Lsp ("()", a);}
+
+VblRef =
+  a:ID {$$ = a;}
+  ('(' WS? b:Expr WS? ')'
+   {$$ = list3_ccstr_Lsp ("aref", $$, b);}
+  )?
+
+
+NatDom =
+  'Nat(' WS* a:ConstExpr WS* ')'
+  {$$ = a;}
+
+NAT = < [0-9]+ >
+  {
+    uint u;
+    xget_uint_cstr (&u, yytext);
+    $$ = make_Nat_Lsp (ctx->spctx, u);
+  }
+
+ID = < [A-Za-z][0-9A-Za-z]* >
+  {
+    $$ = make_String_Lsp (ctx->spctx, yytext);
+  }
+LINE_COMMENT = '//' [^\n]* [\n] {}
+WS = ([ \t\r\n]+ | LINE_COMMENT)+ {}
+
+%%
+
+void ParseMyThings(const char* fname)
+{
+  yycontext yyctx;
+  memset (&yyctx, 0, sizeof (yyctx));
+  yyctx.spctx = make_LspCtx ();
+  yyctx.infile = fopen(fname, "rb");
+  while (yyparse(&yyctx))
+    ;
+  free_LspCtx (yyctx.spctx);
+  fclose(yyctx.infile);
+  free(yyctx.buf);
+  free(yyctx.thunks);
+  free(yyctx.text);
+  free(yyctx.vals);
+}
+

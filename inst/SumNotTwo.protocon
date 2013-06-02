@@ -1,0 +1,14 @@
+
+program SumNotTwo;
+
+const N = 5;
+
+Nat(3) x(Nat(N));
+
+process i: Nat(N)
+{
+  read:  x(i-1);
+  write: x(i);
+  legit: x(i) + x(i-1) != 2;
+}
+

@@ -39,8 +39,9 @@ all: $(ExeList)
 
 $(BinPath)/protocon: \
 	$(addprefix $(BldPath)/, pfmla.o pfmla-glu.o pfmla-bittable.o) \
-	$(addprefix $(BldPathCXX)/, main.o inst.o pfmla.o pfmla-minisat.o promela.o test.o xnsys.o) \
-	$(addprefix $(CxBldPath)/,fileb.o syscx.o bstree.o rbtree.o)
+	$(addprefix $(BldPathCXX)/, main.o inst.o pfmla.o promela.o test.o xnsys.o) \
+	$(addprefix $(BldPathCXX)/, infile.o) \
+	$(addprefix $(CxBldPath)/,fileb.o syscx.o bstree.o lsp.o rbtree.o)
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(LXXFLAGS)
 
 $(call binexe,satsyn): $(BldPath)/satsyn.o $(BldPath)/xnsys.o \
@@ -52,6 +53,9 @@ $(BldPath)/pfmla-glu.o: $(BldPath)/pfmla-glu.c
 
 $(BldPathCXX)/pfmla-minisat.o: $(BldPathCXX)/pfmla-minisat.cc
 	$(CXX) -c $(CXXFLAGS) -isystem $(MinisatIncludePath) $< -o $@
+
+$(BldPathCXX)/infile.cc: infile.leg
+	leg -o $@ $<
 
 #$(CXX) -c $(filter-out -pedantic -Wall -Wextra,$(CXXFLAGS)) 
 

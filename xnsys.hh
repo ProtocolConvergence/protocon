@@ -8,6 +8,81 @@
 #include "pfmla.hh"
 #include "tuple.hh"
 
+#if 0
+namespace Xn {
+typedef std::string String;
+
+class VblSymm;
+class Vbl;
+class Topology;
+
+
+class NatMap {
+private:
+  Cx::Table< int > membs;
+  String param_name;
+  String expression;
+public:
+
+  uint index(uint i, uint m) const {
+    int x = membs[i];
+    uint y = 0;
+    if (x < 0) {
+      y = (m - ((uint) (- x) % m));
+    }
+    else {
+      y = (uint) x % m;
+    }
+    return y;
+  }
+};
+
+class VblSymm {
+private:
+  bool single;
+  String name;
+  Cx::Table( Vbl* ) membs;
+  uint domsz;
+public:
+};
+
+class Vbl {
+private:
+  VblSymm* symm;
+};
+
+class PcSymm {
+private:
+  String name;
+  Cx::Table< Pc* > membs;
+  Cx::Table< VblSymm* > rvbls;
+  Cx::Table< VblSymm* > wvbls;
+  Cx::Table< NatMap > rindices;
+  Cx::Table< NatMap > windices;
+public:
+};
+
+class Pc {
+private:
+  Cx::Table< Vbl* > rvbls;
+  Cx::Table< Vbl* > wvbls;
+  PcSymm* symm;
+public:
+};
+
+class Net {
+private:
+  LgTable< VblSymm > vblsymms;
+  LgTable< Vbl > vbls;
+  LgTable< Pc > pcs;
+  LgTable< PcSymm > pcsymms;
+public:
+};
+
+}
+
+#endif
+
 class XnVbl {
 public:
   string name; ///< Proper name of variable, should match the name in PFCtx.

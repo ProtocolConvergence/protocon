@@ -1,0 +1,16 @@
+
+program Matching;
+
+const N = 5;
+
+Nat(3) m(Nat(N));
+
+process i: Nat(N)
+{
+  read:  m(i-1), m(i+1);
+  write: m(i);
+  legit: (   m(i) == 0 && m(i-1) == 1 && m(i+1) == 2
+          || m(i) == 1 && m(i-1) == 2
+          || m(i) == 2 && m(i+1) == 1);
+}
+

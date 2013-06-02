@@ -1,0 +1,14 @@
+
+program Agreement;
+
+const N = 5;
+
+Nat(N) x(Nat(N));
+
+process i: Nat(N)
+{
+  read:  x(i-1), x(i+1);
+  write: x(i);
+  legit: (x(i) - x(i-1)) % N == (x(i+1) - x(i)) % N;
+}
+
