@@ -1,11 +1,11 @@
 
-program SumNotTwo;
+protocol SumNotTwo;
 
-const N = 5;
+constant N = 5;
 
-Nat(3) x(Nat(N));
+variable x(Nat(N)) : Nat(3);
 
-process i: Nat(N)
+process P(i : Nat(N))
 {
   read:  x(i-1);
   write: x(i);

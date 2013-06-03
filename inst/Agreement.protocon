@@ -1,11 +1,11 @@
 
-program Agreement;
+protocol Agreement;
 
-const N = 5;
+constant N = 5;
 
-Nat(N) x(Nat(N));
+variable x(Nat(N)) : Nat(N);
 
-process i: Nat(N)
+process P(i : Nat(N))
 {
   read:  x(i-1), x(i+1);
   write: x(i);

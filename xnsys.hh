@@ -8,24 +8,34 @@
 #include "pfmla.hh"
 #include "tuple.hh"
 
-#if 0
 namespace Xn {
 typedef std::string String;
 
 class VblSymm;
 class Vbl;
-class Topology;
-
+class PcSymm;
+class Pc;
+class Net;
 
 class NatMap {
-private:
-  Cx::Table< int > membs;
-  String param_name;
-  String expression;
 public:
+  Cx::Table< int > membs;
+  /// Between chunks is the index parameter.
+  Cx::Table< String > expression_chunks;
+
+  NatMap(uint nmembs) {
+    for (uint i = 0; i < nmembs; ++i) {
+      membs.push(i);
+    }
+    expression_chunks.push("");
+  }
+
+  int eval(uint i) const {
+    return membs[i];
+  }
 
   uint index(uint i, uint m) const {
-    int x = membs[i];
+    int x = eval(i);
     uint y = 0;
     if (x < 0) {
       y = (m - ((uint) (- x) % m));
@@ -35,53 +45,120 @@ public:
     }
     return y;
   }
-};
 
-class VblSymm {
-private:
-  bool single;
-  String name;
-  Cx::Table( Vbl* ) membs;
-  uint domsz;
-public:
+  String expression(const String& idxparam) const
+  {
+    String s = expression_chunks[0];
+    for (uint i = 1; i < expression_chunks.sz(); ++i) {
+      s += idxparam;
+      s += expression_chunks[i];;
+    }
+    return s;
+  }
 };
 
 class Vbl {
-private:
-  VblSymm* symm;
+public:
+  const VblSymm* symm;
+  uint symm_idx;
+
+  Vbl(VblSymm* symmetry, uint index)
+    : symm(symmetry)
+    , symm_idx(index)
+  {}
 };
 
-class PcSymm {
-private:
-  String name;
-  Cx::Table< Pc* > membs;
-  Cx::Table< VblSymm* > rvbls;
-  Cx::Table< VblSymm* > wvbls;
-  Cx::Table< NatMap > rindices;
-  Cx::Table< NatMap > windices;
+class VblSymm {
 public:
+  //bool single; // No such thing as a non-array variable for now.
+  Cx::Table< Vbl* > membs;
+  uint domsz;
+  String name;
 };
 
 class Pc {
-private:
-  Cx::Table< Vbl* > rvbls;
-  Cx::Table< Vbl* > wvbls;
-  PcSymm* symm;
 public:
+  const PcSymm* symm;
+  uint symm_idx;
+  /// The rvbls should include wvbls.
+  Cx::Table< const Vbl* > rvbls;
+  Cx::Table< const Vbl* > wvbls;
+
+  Pc(PcSymm* symmetry, uint index)
+    : symm(symmetry)
+    , symm_idx(index)
+  {}
+};
+
+class PcSymm {
+public:
+  String name;
+  Cx::Table< Pc* > membs;
+  /// The rvbls should include wvbls.
+  Cx::Table< const VblSymm* > rvbl_symms;
+  Cx::Table< const VblSymm* > wvbl_symms;
+  Cx::Table< NatMap > rindices;
+  Cx::Table< NatMap > windices;
+
+  String vbl_name(uint i, const String& idxparam = "i") const {
+    const String& name = rvbl_symms[i]->name;
+    return name + "(" + rindices[i].expression(idxparam) + ")";
+  }
 };
 
 class Net {
 private:
-  LgTable< VblSymm > vblsymms;
-  LgTable< Vbl > vbls;
-  LgTable< Pc > pcs;
-  LgTable< PcSymm > pcsymms;
+  Cx::LgTable< Vbl > vbls;
+  Cx::LgTable< VblSymm > vbl_symms;
+  Cx::LgTable< Pc > pcs;
+  Cx::LgTable< PcSymm > pc_symms;
 public:
+
+  VblSymm* add_variables(const String& name, uint nmembs, uint domsz)
+  {
+    VblSymm& symm = vbl_symms.grow1();
+    symm.name = name;
+    symm.domsz = domsz;
+    for (uint i = 0; i < nmembs; ++i) {
+      symm.membs.push( &vbls.push( Vbl(&symm, i) ) );
+    }
+    return &symm;
+  }
+
+  PcSymm* add_processes(const String& name, uint nmembs)
+  {
+    PcSymm& symm = pc_symms.grow1();
+    symm.name = name;
+    for (uint i = 0; i < nmembs; ++i) {
+      symm.membs.push( &pcs.push( Pc(&symm, i) ) );
+    }
+    return &symm;
+  }
+
+  void add_read_access (PcSymm* pc_symm, const VblSymm* vbl_symm,
+                        const NatMap& indices)
+  {
+    pc_symm->rvbl_symms.push(vbl_symm);
+    pc_symm->rindices.push(indices);
+    for (uint i = 0; i < pc_symm->membs.sz(); ++i) {
+      const Vbl* vbl = vbl_symm->membs[indices.index(i, vbl_symm->membs.sz())];
+      pc_symm->membs[i]->rvbls.push(vbl);
+    }
+  }
+
+  void add_write_access (PcSymm* pc_symm, const VblSymm* vbl_symm,
+                         const NatMap& indices)
+  {
+    add_read_access (pc_symm, vbl_symm, indices);
+    pc_symm->wvbl_symms.push(vbl_symm);
+    pc_symm->windices.push(indices);
+    for (uint i = 0; i < pc_symm->membs.sz(); ++i) {
+      const Vbl* vbl = vbl_symm->membs[indices.index(i, vbl_symm->membs.sz())];
+      pc_symm->membs[i]->wvbls.push(vbl);
+    }
+  }
 };
-
 }
-
-#endif
 
 class XnVbl {
 public:

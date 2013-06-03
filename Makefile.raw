@@ -41,11 +41,11 @@ $(BinPath)/protocon: \
 	$(addprefix $(BldPath)/, pfmla.o pfmla-glu.o pfmla-bittable.o) \
 	$(addprefix $(BldPathCXX)/, main.o inst.o pfmla.o promela.o test.o xnsys.o) \
 	$(addprefix $(BldPathCXX)/, infile.o) \
-	$(addprefix $(CxBldPath)/,fileb.o syscx.o bstree.o lsp.o rbtree.o)
+	$(addprefix $(CxBldPath)/, alphatab.o fileb.o syscx.o bstree.o lsp.o rbtree.o)
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(LXXFLAGS)
 
 $(call binexe,satsyn): $(BldPath)/satsyn.o $(BldPath)/xnsys.o \
-	$(addprefix $(CxBldPath)/, bstree.o fileb.o ospc.o rbtree.o syscx.o)
+	$(addprefix $(CxBldPath)/, alphatab.o bstree.o fileb.o ospc.o rbtree.o syscx.o)
 	$(CC) $(CFLAGS) -o $@ $^
 
 $(BldPath)/pfmla-glu.o: $(BldPath)/pfmla-glu.c

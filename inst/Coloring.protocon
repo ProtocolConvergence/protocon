@@ -1,11 +1,11 @@
 
-program Coloring;
+protocol Coloring;
 
-const N = 5;
+constant N = 5;
 
-Nat(3) c(Nat(N));
+variable c(Nat(N)) : Nat(3);
 
-process i: Nat(N)
+process P(i : Nat(N))
 {
   read:  c(i-1), c(i+1);
   write: c(i);

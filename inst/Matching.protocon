@@ -1,11 +1,11 @@
 
-program Matching;
+protocol Matching;
 
-const N = 5;
+constant N = 5;
 
-Nat(3) m(Nat(N));
+variable m(Nat(N)) : Nat(3);
 
-process i: Nat(N)
+process P(i : Nat(N))
 {
   read:  m(i-1), m(i+1);
   write: m(i);

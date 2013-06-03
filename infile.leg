@@ -20,26 +20,26 @@ extern "C" {
 %}
 
 FinFile =
-  WS? Program
+  WS? Protocol
   (WS? ConstDecl)*
   (WS? VarDecl)+
   (WS? ProcDecl)+
-  WS?
+  WS? END_OF_FILE
   { puts("parsed!"); }
 
-Program = 'program' WS name:ID WS? ';' {}
+Protocol = 'protocol' WS name:ID WS? ';' {}
 
-ConstDecl = 'const' WS name:ID WS? '=' WS? v:NAT WS? ';' {}
+ConstDecl = 'constant' WS name:ID WS? '=' WS? v:NAT WS? ';' {}
 
 VarDecl =
-  dom:NatDom WS name:ID '(' len:NatDom ')' WS? ';'
+  'variable' WS name:ID '(' WS? len:NatDom WS? ')' WS? ':' WS? dom:NatDom WS? ';'
   {$$ = list4_ccstr_Lsp ("decl", dom, name, len);}
 
 ProcDecl =
-  'process' WS ID WS? ':' WS? NatDom
+  'process' WS pc_name:ID '(' WS? idx_name:ID WS? ':' WS? npcs:NatDom WS? ')'
   WS? '{'
-  WS? 'read:' WS? VblRef WS? ';'
-  WS? 'write:' WS?  VblRef WS? ';'
+  WS? 'read:' WS? VblRef (WS? ',' WS? VblRef)* WS? ';'
+  WS? 'write:' WS?  VblRef (WS? ',' WS? VblRef)* WS? ';'
   WS? 'legit:' WS? Expr WS? ';'
   WS? '}'
 
@@ -50,34 +50,38 @@ ConstExpr =
 Expr = a:Disjunction {$$ = a;}
 
 Disjunction =
-  a:Conjunction {$$ = a;}
-  (WS? '||' WS? b:Conjunction {$$ = list3_ccstr_Lsp ("||", $$, b);} )*
+  a:Conjunction
+  (WS? '||' WS? b:Conjunction {a = list3_ccstr_Lsp ("||", a, b);} )*
+  {$$ = a;}
 
 Conjunction =
-  a:Comparison {$$ = a;}
-  (WS? '&&' WS? b:Comparison {$$ = list3_ccstr_Lsp ("&&", $$, b);} )*
+  a:Comparison
+  (WS? '&&' WS? b:Comparison {a = list3_ccstr_Lsp ("&&", a, b);} )*
+  {$$ = a;}
 
 Comparison =
-  a:Sum {$$ = a;}
-  (  (WS? '==' WS? b:Sum {$$ = list3_ccstr_Lsp ("==", $$, b);} )
-   | (WS? '!=' WS? b:Sum {$$ = list3_ccstr_Lsp ("!=", $$, b);} )
+  a:Sum
+  (  (WS? '==' WS? b:Sum {a = list3_ccstr_Lsp ("==", a, b);} )
+   | (WS? '!=' WS? b:Sum {a = list3_ccstr_Lsp ("!=", a, b);} )
   )?
+  {$$ = a;}
 
 Sum =
-  a:Product {$$ = a;}
-  (  (WS? '+' WS? b:Product {$$ = list3_ccstr_Lsp ("+", $$, b);} )
-   | (WS? '-' WS? b:Product {$$ = list3_ccstr_Lsp ("-", $$, b);} )
+  a:Product
+  (  (WS? '+' WS? b:Product {a = list3_ccstr_Lsp ("+", a, b);} )
+   | (WS? '-' WS? b:Product {a = list3_ccstr_Lsp ("-", a, b);} )
   )*
+  {$$ = a;}
 
 Product =
-  a:Neg { $$ = a; }
-  (  (WS? '*' WS? b:Neg {$$ = list3_ccstr_Lsp ("*", $$, b);} )
-   | (WS? '/' WS? b:Neg {$$ = list3_ccstr_Lsp ("/", $$, b);} )
-   | (WS? '%' WS? b:Neg {$$ = list3_ccstr_Lsp ("%", $$, b);} )
+  a:Neg
+  (  (WS? '*' WS? b:Neg {a = list3_ccstr_Lsp ("*", a, b);} )
+   | (WS? '/' WS? b:Neg {a = list3_ccstr_Lsp ("/", a, b);} )
+   | (WS? '%' WS? b:Neg {a = list3_ccstr_Lsp ("%", a, b);} )
   )*
+  {$$ = a;}
 
 Neg =
-  {const char* negprefix = 0;}
   (   '-' {ctx->negprefix = "-";}
    | '!' {ctx->negprefix = "!";}
   )? a:Value
@@ -86,17 +90,19 @@ Neg =
 Value =
     a:VblRef {$$ = a;}
   | a:NAT {$$ = a;}
-  | '(' a:Expr ')' {$$ = list2_ccstr_Lsp ("()", a);}
+  | '(' WS? a:Expr WS? ')'
+    {$$ = list2_ccstr_Lsp ("()", a);}
 
 VblRef =
-  a:ID {$$ = a;}
+  a:ID
   ('(' WS? b:Expr WS? ')'
-   {$$ = list3_ccstr_Lsp ("aref", $$, b);}
+   {a = list3_ccstr_Lsp ("aref", a, b);}
   )?
+  {$$ = a;}
 
 
 NatDom =
-  'Nat(' WS* a:ConstExpr WS* ')'
+  'Nat(' WS? a:ConstExpr WS? ')'
   {$$ = a;}
 
 NAT = < [0-9]+ >
@@ -112,6 +118,7 @@ ID = < [A-Za-z][0-9A-Za-z]* >
   }
 LINE_COMMENT = '//' [^\n]* [\n] {}
 WS = ([ \t\r\n]+ | LINE_COMMENT)+ {}
+END_OF_FILE = !.
 
 %%
 
