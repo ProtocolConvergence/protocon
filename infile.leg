@@ -11,12 +11,11 @@ extern "C" {
 #define YYSTYPE Lsp
 #define YY_CTX_LOCAL
 #define YY_CTX_MEMBERS  LspCtx* spctx;  FILE* infile;  const char* negprefix;
-#define YY_INPUT(buf, result, max_size) \
+#define YY_INPUT(yy, buf, result, max_size) \
 { \
-  int yyc = fgetc(ctx->infile); \
+  int yyc = fgetc(yy->infile); \
   result= (EOF == yyc) ? 0 : (*(buf) = yyc, 1); \
 }
-
 %}
 
 FinFile =
@@ -29,7 +28,7 @@ FinFile =
 
 Protocol = 'protocol' WS name:ID WS? ';' {}
 
-ConstDecl = 'constant' WS name:ID WS? '=' WS? v:NAT WS? ';' {}
+ConstDecl = 'constant' WS name:ID WS? ':=' WS? v:NAT WS? ';' {}
 
 VarDecl =
   'variable' WS name:ID '(' WS? len:NatDom WS? ')' WS? ':' WS? dom:NatDom WS? ';'
@@ -82,10 +81,10 @@ Product =
   {$$ = a;}
 
 Neg =
-  (   '-' {ctx->negprefix = "-";}
-   | '!' {ctx->negprefix = "!";}
+  (   '-' {yy->negprefix = "-";}
+   | '!' {yy->negprefix = "!";}
   )? a:Value
-  {$$ = a;  if (ctx->negprefix)  $$ = list2_ccstr_Lsp (ctx->negprefix, $$);}
+  {$$ = a;  if (yy->negprefix)  $$ = list2_ccstr_Lsp (yy->negprefix, $$);}
 
 Value =
     a:VblRef {$$ = a;}
@@ -109,12 +108,12 @@ NAT = < [0-9]+ >
   {
     uint u;
     xget_uint_cstr (&u, yytext);
-    $$ = make_Nat_Lsp (ctx->spctx, u);
+    $$ = make_Nat_Lsp (yy->spctx, u);
   }
 
 ID = < [A-Za-z][0-9A-Za-z]* >
   {
-    $$ = make_String_Lsp (ctx->spctx, yytext);
+    $$ = make_String_Lsp (yy->spctx, yytext);
   }
 LINE_COMMENT = '//' [^\n]* [\n] {}
 WS = ([ \t\r\n]+ | LINE_COMMENT)+ {}
@@ -132,9 +131,6 @@ void ParseMyThings(const char* fname)
     ;
   free_LspCtx (yyctx.spctx);
   fclose(yyctx.infile);
-  free(yyctx.buf);
-  free(yyctx.thunks);
-  free(yyctx.text);
-  free(yyctx.vals);
+  yyrelease(&yyctx);
 }
 

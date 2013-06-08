@@ -386,6 +386,82 @@ subst_vbls_PFmla (PFmla* b, const PFmla a, uint list_id_new, uint list_id_old)
 }
 
   void
+pre_PFmla (PFmla* dst, const PFmla a)
+{
+  Trit phase = phase_of_PFmla (a);
+  if (phase != May)
+  {
+    wipe1_PFmla (dst, phase == Yes);
+  }
+  else
+  {
+    pre_op2_PFmla (dst, a, a);
+    a->ctx->vt->pre_fn (a->ctx, dst, a);
+  }
+}
+
+  void
+pre1_PFmla (PFmla* dst, const PFmla a, const PFmla b)
+{
+  Trit phase_a = phase_of_PFmla (a);
+  Trit phase_b = phase_of_PFmla (b);
+  if (phase_b != May)
+  {
+    if (phase_b == Yes)
+      pre_PFmla (dst, a);
+    else
+      wipe1_PFmla (dst, Nil);
+  }
+  if (phase_a != May)
+  {
+    wipe1_PFmla (dst, phase_a == Yes);
+  }
+  else
+  {
+    pre_op2_PFmla (dst, a, b);
+    a->ctx->vt->pre1_fn (a->ctx, dst, a, b);
+  }
+}
+
+  void
+img_PFmla (PFmla* dst, const PFmla a)
+{
+  Trit phase = phase_of_PFmla (a);
+  if (phase != May)
+  {
+    wipe1_PFmla (dst, phase == Yes);
+  }
+  else
+  {
+    pre_op2_PFmla (dst, a, a);
+    a->ctx->vt->img_fn (a->ctx, dst, a);
+  }
+}
+
+  void
+img1_PFmla (PFmla* dst, const PFmla a, const PFmla b)
+{
+  Trit phase_a = phase_of_PFmla (a);
+  Trit phase_b = phase_of_PFmla (b);
+  if (phase_b != May)
+  {
+    if (phase_b == Yes)
+      img_PFmla (dst, a);
+    else
+      wipe1_PFmla (dst, Nil);
+  }
+  else if (phase_a != May)
+  {
+    wipe1_PFmla (dst, phase_a == Yes);
+  }
+  else
+  {
+    pre_op2_PFmla (dst, a, b);
+    a->ctx->vt->img1_fn (a->ctx, dst, a, b);
+  }
+}
+
+  void
 eql_PFmlaVbl (PFmla* dst, const PFmlaVbl* a, const PFmlaVbl* b)
 {
   Claim2( a->ctx ,==, b->ctx );
@@ -400,6 +476,20 @@ eqlc_PFmlaVbl (PFmla* dst, const PFmlaVbl* a, uint x)
   a->ctx->vt->vbl_eqlc_fn (a->ctx, dst, a->id, x);
 }
 
+  void
+img_eql_PFmlaVbl (PFmla* dst, const PFmlaVbl* a, const PFmlaVbl* b)
+{
+  Claim2( a->ctx ,==, b->ctx );
+  pre_op_ctx_PFmla (dst, a->ctx);
+  a->ctx->vt->vbl_img_eql_fn (a->ctx, dst, a->id, b->id);
+}
+
+  void
+img_eqlc_PFmlaVbl (PFmla* dst, const PFmlaVbl* a, uint x)
+{
+  pre_op_ctx_PFmla (dst, a->ctx);
+  a->ctx->vt->vbl_img_eqlc_fn (a->ctx, dst, a->id, x);
+}
 
   uint
 add_vbl_PFmlaCtx (PFmlaCtx* ctx, const char* name, uint domsz)
@@ -413,6 +503,8 @@ add_vbl_PFmlaCtx (PFmlaCtx* ctx, const char* name, uint domsz)
   x = elt_LgTable (&ctx->vbls, id);
   x->ctx = ctx;
   x->name = cons1_AlphaTab (name);
+  x->img_name = cons1_AlphaTab (name);
+  cat_cstr_AlphaTab (&x->img_name, "'");
   x->id = id;
   x->domsz = domsz;
 

@@ -127,6 +127,40 @@ InstThreeColoringRing(XnSys& sys, uint npcs)
   }
 }
 
+  void
+TestMakingSumNotTwo(uint npcs)
+{
+  Xn::Net topology;
+  Xn::VblSymm* vbl_symm = topology.add_variables("x", npcs, 3);
+
+  // Create a new symmetry for each process.
+  for (uint i = 0; i < npcs; ++i) {
+    char name[10];
+    char idxname[10];
+    sprintf(name, "P%u", i);
+    Xn::PcSymm* pc_symm = topology.add_processes(name, 1);
+
+    // Make this f(j) = i-1
+    Xn::NatMap indices(1);
+    indices.membs[0] = (int)i - 1;
+    sprintf(idxname, "%d", indices.membs[0]);
+    indices.expression_chunks[0] = idxname;
+    topology.add_read_access(pc_symm, vbl_symm, indices);
+
+    // Now make this f(j) = i
+    indices.membs[0] = (int)i;
+    sprintf(idxname, "%d", indices.membs[0]);
+    indices.expression_chunks[0] = idxname;
+    topology.add_write_access(pc_symm, vbl_symm, indices);
+
+    // Now make this f(j) = i+1
+    indices.membs[0] = (int)i + 1;
+    sprintf(idxname, "%d", indices.membs[0]);
+    indices.expression_chunks[0] = idxname;
+    topology.add_read_access(pc_symm, vbl_symm, indices);
+  }
+}
+
 /**
  * Performs the 2 coloring on a ring problem.
  *

@@ -11,10 +11,12 @@
 namespace Xn {
 typedef std::string String;
 
-class VblSymm;
+class NatMap;
 class Vbl;
-class PcSymm;
+class VblSymm;
 class Pc;
+class PcSymm;
+class ActSymm;
 class Net;
 
 class NatMap {
@@ -59,6 +61,7 @@ public:
 
 class Vbl {
 public:
+  uint pfmla_idx; ///< Index of the variable (in a PmlaFCtx).
   const VblSymm* symm;
   uint symm_idx;
 
@@ -99,6 +102,8 @@ public:
   Cx::Table< const VblSymm* > wvbl_symms;
   Cx::Table< NatMap > rindices;
   Cx::Table< NatMap > windices;
+
+  Cx::Table< Cx::PFmla > act_fmlas;
 
   String vbl_name(uint i, const String& idxparam = "i") const {
     const String& name = rvbl_symms[i]->name;
@@ -164,8 +169,7 @@ class XnVbl {
 public:
   string name; ///< Proper name of variable, should match the name in PFCtx.
   uint domsz; ///< Size of domain.
-  uint pfIdx; ///< Index of unprimed variable (in a PFCtx).
-  uint pfIdxPrimed; ///< Index of the primed variable (in a PFCtx).
+  uint pfIdx; ///< Index of variable (in a PFCtx).
 
   XnVbl(const string& _name, uint _domsz) :
     name(_name)
@@ -230,8 +234,6 @@ public:
 /** A network of processes (topology).*/
 class XnNet {
 private:
-  uint vVblList; // Unprimed
-  uint vVblListPrimed; // Primed
   vector<PF> actionPFs; ///< Storage of action formulas.
   //Cx::Table< ActSet > actsets;
 
@@ -243,8 +245,6 @@ public:
 
   XnNet()
   {
-    vVblList = pfCtx.addVblList();
-    vVblListPrimed = pfCtx.addVblList();
   }
 
   ~XnNet() {
@@ -273,7 +273,7 @@ public:
 
   const PFVbl pfVblPrimed(uint pcIdx, uint vblIdx) const
   {
-    return pfCtx.vbl(pcs[pcIdx].wvbls[vblIdx].pfIdxPrimed);
+    return pfVbl(pcIdx, vblIdx).prime();
   }
 
   const PFVbl pfVblR(uint pcIdx, uint vblIdx) const
@@ -294,36 +294,6 @@ public:
 
   const PF& actionPF(uint actIdx) const
   { return actionPFs[actIdx]; }
-
-  const PF pre(const PF& xnRel) const
-  {
-    return xnRel.smooth(vVblListPrimed);
-  }
-  const PF preimage(const PF& xnRel) const
-  { return pre(xnRel); }
-
-  const PF pre(const PF& xnRel, const PF& image) const
-  {
-    return pre(xnRel & image.substituteNewOld(vVblListPrimed, vVblList));
-  }
-  const PF preimage(const PF& xnRel, const PF& image) const
-  { return pre(xnRel, image); }
-
-  const PF img(const PF& xnRel) const
-  {
-    PF pf( xnRel.smooth(vVblList) );
-    return pf.substituteNewOld(vVblList, vVblListPrimed);
-  }
-
-  const PF image(const PF& xnRel) const
-  { return img(xnRel); }
-
-  const PF img(const PF& xnRel, const PF& preimage) const
-  {
-    return image(xnRel & preimage);
-  }
-  const PF image(const PF& xnRel, const PF& preimage) const
-  { return img(xnRel, preimage); }
 
   ostream& oput(ostream& of,
                 const PF& pf,
@@ -425,7 +395,7 @@ public:
 ostream&
 OPut(ostream& of, const XnAct& act, const XnNet& topo);
 PF
-ClosedSubset(const PF& xnRel, const PF& invariant, const XnNet& topo);
+ClosedSubset(const PF& xnRel, const PF& invariant);
 PF
 LegitInvariant(const XnSys& sys, const PF& loXnRel, const PF& hiXnRel);
 bool
@@ -433,11 +403,11 @@ WeakConvergenceCk(const XnSys& sys, const PF& xnRel, const PF& invariant);
 bool
 WeakConvergenceCk(const XnSys& sys, const PF& xnRel);
 bool
-CycleCk(PF* scc, const XnNet& topo, const PF& xnRel, const PF& pf);
+CycleCk(PF* scc, const PF& xnRel, const PF& pf);
 bool
-CycleCk(const XnNet& topo, const PF& xnRel, const PF& pf);
+CycleCk(const PF& xnRel, const PF& pf);
 PF
-BackwardReachability(const PF& xnRel, const PF& pf, const XnNet& topo);
+BackwardReachability(const PF& xnRel, const PF& pf);
 
 #endif
 

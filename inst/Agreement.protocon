@@ -1,7 +1,7 @@
 
 protocol Agreement;
 
-constant N = 5;
+constant N := 5;
 
 variable x(Nat(N)) : Nat(N);
 

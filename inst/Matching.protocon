@@ -1,7 +1,7 @@
 
 protocol Matching;
 
-constant N = 5;
+constant N := 5;
 
 variable m(Nat(N)) : Nat(3);
 

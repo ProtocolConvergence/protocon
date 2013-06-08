@@ -132,8 +132,8 @@ void Test()
      (topo.pfVblR     (1, 1) == 2) &
      (topo.pfVbl      (1, 0) == 2) &
      (topo.pfVblPrimed(1, 0) == 0));
-  Claim( !actPF.tautologyCk(false) );
-  Claim( actPF.equivCk(topo.actionPF(actId)) );
+  Claim( !actPF.tautology_ck(false) );
+  Claim( actPF.equiv_ck(topo.actionPF(actId)) );
 
   actPF =
     topo.pcs[1].actUnchanged &
@@ -141,7 +141,7 @@ void Test()
      (topo.pfVbl      (2, 0) == 2) &
      (topo.pfVbl      (1, 0) == 2) &
      (topo.pfVblPrimed(1, 0) == 0));
-  Claim( actPF.equivCk(topo.actionPF(actId)) );
+  Claim( actPF.equiv_ck(topo.actionPF(actId)) );
 
 
   PF srcPF =
@@ -152,30 +152,30 @@ void Test()
     ((topo.pfVblR(1, 0) == 1) &
      (topo.pfVblR(1, 1) == 2) &
      (topo.pfVbl (1, 0) == 0));
-  Claim( (actPF - srcPF).tautologyCk(false) );
+  Claim( (actPF - srcPF).tautology_ck(false) );
 
-  Claim( (dstPF & srcPF).tautologyCk(false) );
+  Claim( (dstPF & srcPF).tautology_ck(false) );
 
-  Claim( srcPF <= (topo.preimage(actPF) & srcPF) );
-  Claim( (topo.preimage(actPF) & srcPF).equivCk(srcPF) );
-  Claim( srcPF.equivCk(topo.preimage(actPF, dstPF)) );
+  Claim( srcPF <= (actPF.pre() & srcPF) );
+  Claim( (actPF.pre() & srcPF).equiv_ck(srcPF) );
+  Claim( srcPF.equiv_ck(actPF.pre(dstPF)) );
   {
-    Claim( dstPF.equivCk(topo.image(actPF, srcPF)) );
+    Claim( dstPF.equiv_ck(actPF.img(srcPF)) );
     // The rest of this block is actually implied by the first check.
-    Claim( dstPF <= topo.image(actPF, srcPF) );
-    Claim( topo.image(actPF, srcPF) <= dstPF );
-    Claim( topo.image(actPF, srcPF) <= (topo.pfVblR(1, 0) == 1) );
-    Claim( topo.image(actPF, srcPF) <= (topo.pfVblR(1, 1) == 2) );
-    Claim( topo.image(actPF, srcPF) <= (topo.pfVbl (1, 0) == 0) );
+    Claim( dstPF <= actPF.img(srcPF) );
+    Claim( actPF.img(srcPF) <= dstPF );
+    Claim( actPF.img(srcPF) <= (topo.pfVblR(1, 0) == 1) );
+    Claim( actPF.img(srcPF) <= (topo.pfVblR(1, 1) == 2) );
+    Claim( actPF.img(srcPF) <= (topo.pfVbl (1, 0) == 0) );
   }
-  Claim( dstPF.equivCk(topo.image(actPF & srcPF)) );
+  Claim( dstPF.equiv_ck((actPF & srcPF).img()) );
 
-  Claim( (sys.invariant - sys.invariant).tautologyCk(false) );
-  Claim( (sys.invariant | ~sys.invariant).tautologyCk(true) );
-  Claim( (srcPF & sys.invariant).tautologyCk(false) );
-  Claim( !(dstPF & sys.invariant).tautologyCk(false) );
-  Claim( !(~(dstPF & sys.invariant)).tautologyCk(true) );
-  Claim( (actPF - srcPF).tautologyCk(false) );
+  Claim( (sys.invariant - sys.invariant).tautology_ck(false) );
+  Claim( (sys.invariant | ~sys.invariant).tautology_ck(true) );
+  Claim( (srcPF & sys.invariant).tautology_ck(false) );
+  Claim( !(dstPF & sys.invariant).tautology_ck(false) );
+  Claim( !(~(dstPF & sys.invariant)).tautology_ck(true) );
+  Claim( (actPF - srcPF).tautology_ck(false) );
 
   {
     PF cyclePF =
@@ -189,7 +189,7 @@ void Test()
        (topo.pfVblR(0, 1) == 1) &
        (topo.pfVblPrimed(0, 0) == 1));
     cyclePF &= topo.pcs[0].actUnchanged;
-    Claim( !CycleCk(topo, cyclePF, ~sys.invariant) );
+    Claim( !CycleCk(cyclePF, ~sys.invariant) );
 
     cyclePF |= 
       ((topo.pfVbl(0, 0) == 0) &
@@ -199,7 +199,7 @@ void Test()
       & topo.pcs[0].actUnchanged;
     // All states in the cycle are illegitimate,
     // it should be found.
-    Claim( CycleCk(topo, cyclePF, ~sys.invariant) );
+    Claim( CycleCk(cyclePF, ~sys.invariant) );
   }
 }
  

@@ -73,20 +73,28 @@ public:
   }
 
   /// Check if this is a tautology.
-  bool tautologyCk(bool t = true) const {
+  bool tautology_ck(bool t = true) const
+  {
     if (t)  return tautology_ck_PFmla (g);
     return unsat_ck_PFmla (g);
   }
+  bool tautologyCk(bool t = true) const
+  { return this->tautology_ck(t); }
 
-  bool equivCk(const PFmla& pf) const
+  bool equiv_ck(const PFmla& pf) const
   {
     return equiv_ck_PFmla (g, pf.g);
   }
+  bool equivCk(const PFmla& pf) const
+  { return this->equiv_ck(pf); }
 
-  bool overlapCk(const PFmla& pf) const
+
+  bool overlap_ck(const PFmla& pf) const
   {
     return overlap_ck_PFmla (g, pf.g);
   }
+  bool overlapCk(const PFmla& pf) const
+  { return this->overlap_ck(pf); }
 
   bool operator<=(const PFmla& pf) const
   {
@@ -186,12 +194,40 @@ public:
     return b;
   }
 
+  PFmla pre(const PFmla& img_arg) const
+  {
+    PFmla dst;
+    pre1_PFmla (&dst.g, this->g, img_arg.g);
+    return dst;
+  }
+
+  PFmla pre() const
+  {
+    PFmla dst;
+    pre_PFmla (&dst.g, this->g);
+    return dst;
+  }
+
+  PFmla img(const PFmla& pre_arg) const
+  {
+    PFmla dst;
+    img1_PFmla (&dst.g, this->g, pre_arg.g);
+    return dst;
+  }
+
+  PFmla img() const
+  {
+    PFmla dst;
+    img_PFmla (&dst.g, this->g);
+    return dst;
+  }
 };
 
 class PFmlaVbl
 {
 private:
   C::PFmlaVbl vbl;
+  bool primed;
 
 public:
   PFmlaVbl(const string& _name, uint _domsz)
@@ -200,8 +236,8 @@ public:
     this->vbl.id = 0;
     this->vbl.name = cons1_AlphaTab (_name.c_str());
     this->vbl.domsz = _domsz;
+    this->primed = false;
   }
-
 
   PFmlaVbl(const C::PFmlaVbl& x)
   {
@@ -209,7 +245,10 @@ public:
     this->vbl.id = x.id;
     this->vbl.name = dflt_AlphaTab ();
     copy_AlphaTab (&this->vbl.name, &x.name);
+    this->vbl.img_name = dflt_AlphaTab ();
+    copy_AlphaTab (&this->vbl.img_name, &x.img_name);
     this->vbl.domsz = x.domsz;
+    this->primed = false;
   }
 
   ~PFmlaVbl()
@@ -217,21 +256,49 @@ public:
     lose_PFmlaVbl (&vbl);
   }
 
+  PFmlaVbl prime() const
+  {
+    Claim( !primed );
+    PFmlaVbl x = PFmlaVbl(this->vbl);
+    x.primed = true;
+    return x;
+  }
+
   PFmla operator==(uint x) const
   {
     PFmla pf;
-    eqlc_PFmlaVbl (&pf.g,
-                   vbl_of_PFmlaCtx (vbl.ctx, vbl.id),
-                   x);
+    if (primed) {
+      img_eqlc_PFmlaVbl (&pf.g,
+                         vbl_of_PFmlaCtx (vbl.ctx, vbl.id),
+                         x);
+    }
+    else {
+      eqlc_PFmlaVbl (&pf.g,
+                     vbl_of_PFmlaCtx (vbl.ctx, vbl.id),
+                     x);
+    }
     return pf;
   }
 
   PFmla operator==(const PFmlaVbl& x) const
   {
     PFmla pf;
-    eql_PFmlaVbl (&pf.g,
-                  vbl_of_PFmlaCtx (vbl.ctx, vbl.id),
-                  vbl_of_PFmlaCtx (vbl.ctx, x.vbl.id));
+    if (primed) {
+      Claim( !x.primed );
+      img_eql_PFmlaVbl (&pf.g,
+                        vbl_of_PFmlaCtx (vbl.ctx, vbl.id),
+                        vbl_of_PFmlaCtx (vbl.ctx, x.vbl.id));
+    }
+    else if (x.primed) {
+      img_eql_PFmlaVbl (&pf.g,
+                        vbl_of_PFmlaCtx (vbl.ctx, x.vbl.id),
+                        vbl_of_PFmlaCtx (vbl.ctx, vbl.id));
+    }
+    else {
+      eql_PFmlaVbl (&pf.g,
+                    vbl_of_PFmlaCtx (vbl.ctx, vbl.id),
+                    vbl_of_PFmlaCtx (vbl.ctx, x.vbl.id));
+    }
     return pf;
   }
 

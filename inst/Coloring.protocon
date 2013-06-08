@@ -1,7 +1,7 @@
 
 protocol Coloring;
 
-constant N = 5;
+constant N := 5;
 
 variable c(Nat(N)) : Nat(3);
 

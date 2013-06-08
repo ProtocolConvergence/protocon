@@ -7,7 +7,6 @@
  *    proper names and domain sizes.
  *    In the process, propagate the following data to members:
  *     - pfIdx to variable
- *     - pfIdxPrimed to variable
  * 2. Find /nPossibleActs/ for each process.
  * 3. Construct /actUnchanged/ for each process.
  */
@@ -18,12 +17,7 @@ XnNet::commitInitialization()
     XnPc& pc = pcs[i];
     for (uint j = 0; j < pc.wvbls.size(); ++j) {
       XnVbl& xnVbl = pc.wvbls[j];
-
       xnVbl.pfIdx = pfCtx.addVbl (xnVbl.name, xnVbl.domsz);
-      pfCtx.addToVblList (vVblList, xnVbl.pfIdx);
-
-      xnVbl.pfIdxPrimed = pfCtx.addVbl (xnVbl.name + "p", xnVbl.domsz);
-      pfCtx.addToVblList(vVblListPrimed, xnVbl.pfIdxPrimed);
     }
   }
 
@@ -71,7 +65,7 @@ XnNet::initUnchanged()
     PF eq(true);
     for (uint j = 0; j < pc.wvbls.size(); ++j) {
       const XnVbl& xnVbl = pc.wvbls[j];
-      eq &= (pfCtx.vbl(xnVbl.pfIdx) == pfCtx.vbl(xnVbl.pfIdxPrimed));
+      eq &= (pfCtx.vbl(xnVbl.pfIdx) == pfCtx.vbl(xnVbl.pfIdx).prime());
     }
     for (uint j = 0; j < pcs.size(); ++j) {
       if (i != j) {
@@ -145,7 +139,13 @@ XnNet::oput(ostream& of,
             const string& pfx,
             const string& sfx) const
 {
+
+  (void) pf;
+  of << pfx << "/*(NOT IMPLEMENTED)*/" << sfx;
+  /*
   return this->pfCtx.oput(of, pf, this->vVblList, pfx, sfx);
+  */
+  return of;
 }
 
 
@@ -166,12 +166,10 @@ XnSys::commitInitialization()
       if (this->shadow_vbls.elemCk(p)) {
         this->shadow_self &= (topo.pfVbl(i, j) == topo.pfVblPrimed(i, j));
         topo.pfCtx.addToVblList(this->vShadowVblListId, vbl.pfIdx);
-        topo.pfCtx.addToVblList(this->vShadowVblListId, vbl.pfIdxPrimed);
       }
       else {
         this->puppet_vbls |= p;
         topo.pfCtx.addToVblList(this->vPuppetVblListId, vbl.pfIdx);
-        topo.pfCtx.addToVblList(this->vPuppetVblListId, vbl.pfIdxPrimed);
       }
     }
   }
@@ -198,7 +196,6 @@ XnSys::addShadowAct(const Cx::PFmla& pf, const Set< Cx::Tuple<uint,2> >& vbls)
   bool
 XnSys::integrityCk() const
 {
-  const XnNet& topo = this->topology;
   bool good = true;;
 
   if (this->invariant.tautologyCk(false)) {
@@ -213,7 +210,7 @@ XnSys::integrityCk() const
     }
   }
 
-  if (!(topo.image(this->shadow_protocol, this->invariant) <= this->invariant)) {
+  if (!(this->shadow_protocol.img(this->invariant) <= this->invariant)) {
     DBog0( "Error: Protocol is not closed in the invariant!" );
     good = false;
   }
@@ -245,15 +242,14 @@ OPut(ostream& of, const XnAct& act, const XnNet& topo)
 }
 
   PF
-ClosedSubset(const PF& xnRel, const PF& invariant, const XnNet& topo)
+ClosedSubset(const PF& xnRel, const PF& invariant)
 {
-  return invariant - BackwardReachability(xnRel, ~invariant, topo);
+  return invariant - BackwardReachability(xnRel, ~invariant);
 }
 
   PF
 LegitInvariant(const XnSys& sys, const PF& loXnRel, const PF& hiXnRel)
 {
-  const XnNet& topo = sys.topology;
   if (!sys.shadowVblCk())  return sys.invariant;
 
   const PF& smooth_self = sys.shadow_self;
@@ -261,23 +257,23 @@ LegitInvariant(const XnSys& sys, const PF& loXnRel, const PF& hiXnRel)
   const PF& smooth_live = sys.invariant;
   const PF& smooth_protocol = sys.shadow_protocol;
 
-  PF puppet_live = smooth_live - topo.preimage(loXnRel - smooth_protocol - smooth_self);
-  puppet_live = ClosedSubset(loXnRel, puppet_live, sys.topology);
+  PF puppet_live = smooth_live - (loXnRel - smooth_protocol - smooth_self).pre();
+  puppet_live = ClosedSubset(loXnRel, puppet_live);
   const PF& puppet_protocol = hiXnRel & (smooth_protocol | smooth_self);
 
-  if (CycleCk(topo, loXnRel & smooth_self, puppet_live)) {
+  if (CycleCk(loXnRel & smooth_self, puppet_live)) {
     return PF(false);
   }
 
-  const PF& smooth_beg = smooth_live - topo.image(smooth_protocol, smooth_live);
-  const PF& smooth_end = smooth_live - topo.preimage(smooth_protocol, smooth_live);
+  const PF& smooth_beg = smooth_live - smooth_protocol.img(smooth_live);
+  const PF& smooth_end = smooth_live - smooth_protocol.pre(smooth_live);
 
   while (true)
   {
     const PF old_live = puppet_live;
 
-    puppet_live &= (smooth_beg & puppet_live) | topo.image(puppet_protocol, puppet_live);
-    puppet_live &= (smooth_end & puppet_live) | topo.preimage(puppet_protocol, puppet_live);
+    puppet_live &= (smooth_beg & puppet_live) | puppet_protocol.img(puppet_live);
+    puppet_live &= (smooth_end & puppet_live) | puppet_protocol.pre(puppet_live);
 
     if (old_live.equivCk(puppet_live)) {
       break;
@@ -300,8 +296,7 @@ LegitInvariant(const XnSys& sys, const PF& loXnRel, const PF& hiXnRel)
   bool
 WeakConvergenceCk(const XnSys& sys, const PF& xnRel, const PF& invariant)
 {
-  const XnNet& topo = sys.topology;
-  if (sys.liveLegit && !topo.preimage(xnRel).tautologyCk()) {
+  if (sys.liveLegit && !xnRel.pre().tautologyCk()) {
     return false;
   }
   if (sys.shadowVblCk()) {
@@ -313,7 +308,7 @@ WeakConvergenceCk(const XnSys& sys, const PF& xnRel, const PF& invariant)
 
   PF span0( invariant );
   while (!span0.tautologyCk(true)) {
-    PF span1( span0 | topo.preimage(xnRel, span0) );
+    PF span1( span0 | xnRel.pre(span0) );
     if (span1.equivCk(span0))  return false;
     span0 = span1;
   }
@@ -330,12 +325,12 @@ WeakConvergenceCk(const XnSys& sys, const PF& xnRel)
  * Check for cycles within some state predicate.
  */
   bool
-CycleCk(PF* scc, const XnNet& topo, const PF& xnRel, const PF& pf)
+CycleCk(PF* scc, const PF& xnRel, const PF& pf)
 {
   PF span0( true );
 
   while (true) {
-    const PF& span1 = topo.image(xnRel, span0);
+    const PF& span1 = xnRel.img(span0);
 
     if (!pf.overlapCk(span1))  return false;
     if (span0.equivCk(span1))  break;
@@ -353,9 +348,9 @@ CycleCk(PF* scc, const XnNet& topo, const PF& xnRel, const PF& pf)
  * Check for cycles within some state predicate.
  */
   bool
-CycleCk(const XnNet& topo, const PF& xnRel, const PF& pf)
+CycleCk(const PF& xnRel, const PF& pf)
 {
-  return CycleCk(0, topo, xnRel, pf);
+  return CycleCk(0, xnRel, pf);
 }
 
 
@@ -363,16 +358,15 @@ CycleCk(const XnNet& topo, const PF& xnRel, const PF& pf)
  * Perform backwards reachability.
  * \param xnRel  Transition function.
  * \param pf  Initial states.
- * \param topo  Topology of the system.
  */
   PF
-BackwardReachability(const PF& xnRel, const PF& pf, const XnNet& topo)
+BackwardReachability(const PF& xnRel, const PF& pf)
 {
   PF visitPF( pf );
-  PF layerPF( topo.preimage(xnRel, pf) - visitPF );
+  PF layerPF( xnRel.pre(pf) - visitPF );
   while (!layerPF.tautologyCk(false)) {
     visitPF |= layerPF;
-    layerPF = topo.preimage(xnRel, layerPF) - visitPF;
+    layerPF = xnRel.pre(layerPF) - visitPF;
   }
   return visitPF;
 }
