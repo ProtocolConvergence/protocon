@@ -6,6 +6,7 @@
 #define PFmla_HH_
 
 #include "cx/synhax.hh"
+#include "cx/alphatab.hh"
 
 extern "C" {
 #include "pfmla-glu.h"
@@ -78,23 +79,17 @@ public:
     if (t)  return tautology_ck_PFmla (g);
     return unsat_ck_PFmla (g);
   }
-  bool tautologyCk(bool t = true) const
-  { return this->tautology_ck(t); }
 
   bool equiv_ck(const PFmla& pf) const
   {
     return equiv_ck_PFmla (g, pf.g);
   }
-  bool equivCk(const PFmla& pf) const
-  { return this->equiv_ck(pf); }
 
 
   bool overlap_ck(const PFmla& pf) const
   {
     return overlap_ck_PFmla (g, pf.g);
   }
-  bool overlapCk(const PFmla& pf) const
-  { return this->overlap_ck(pf); }
 
   bool operator<=(const PFmla& pf) const
   {
@@ -187,7 +182,7 @@ public:
     return b;
   }
 
-  PFmla substituteNewOld(uint newSetIdx, uint oldSetIdx) const
+  PFmla substitute_new_old(uint newSetIdx, uint oldSetIdx) const
   {
     PFmla b;
     subst_vbls_PFmla (&b.g, g, newSetIdx, oldSetIdx);
@@ -230,11 +225,11 @@ private:
   bool primed;
 
 public:
-  PFmlaVbl(const string& _name, uint _domsz)
+  PFmlaVbl(const String& _name, uint _domsz)
   {
     this->vbl.ctx = 0;
     this->vbl.id = 0;
-    this->vbl.name = cons1_AlphaTab (_name.c_str());
+    this->vbl.name = cons1_AlphaTab (_name.cstr());
     this->vbl.domsz = _domsz;
     this->primed = false;
   }
@@ -330,38 +325,38 @@ public:
     free_PFmlaCtx (ctx);
   }
 
-  uint addVbl(const string& name, uint domsz)
+  uint add_vbl(const String& name, uint domsz)
   {
-    return add_vbl_PFmlaCtx (ctx, name.c_str(), domsz);
+    return add_vbl_PFmlaCtx (ctx, name.cstr(), domsz);
   }
 
-  uint addVblList()
+  uint add_vbl_list()
   {
     return add_vbl_list_PFmlaCtx (ctx);
   }
 
-  void addToVblList(uint setIdx, uint vblIdx)
+  void add_to_vbl_list(uint setIdx, uint vblIdx)
   {
     add_to_vbl_list_PFmlaCtx (ctx, setIdx, vblIdx);
   }
 
-  void commitInitialization();
+  void commit_initialization();
 
   const PFmlaVbl vbl(uint id) const
   {
     return PFmlaVbl( *vbl_of_PFmlaCtx (ctx, id) );
   }
 
-  const PFmlaVbl vbl(const string& s) const
+  const PFmlaVbl vbl(const String& s) const
   {
-    return PFmlaVbl( *vbl_lookup_PFmlaCtx (ctx, s.c_str()) );
+    return PFmlaVbl( *vbl_lookup_PFmlaCtx (ctx, s.cstr()) );
   }
 
   ostream& oput(ostream& of,
                 const PFmla& a,
                 uint setIdx,
-                const string& pfx = "",
-                const string& sfx = "") const;
+                const String& pfx = "",
+                const String& sfx = "") const;
 };
 }
 

@@ -5,11 +5,12 @@
 #include "cx/set.hh"
 #include "cx/synhax.hh"
 #include "cx/table.hh"
+#include "cx/alphatab.hh"
 #include "pfmla.hh"
 #include "tuple.hh"
 
 namespace Xn {
-typedef std::string String;
+using Cx::String;
 
 class NatMap;
 class Vbl;
@@ -33,6 +34,7 @@ public:
   }
 
   int eval(uint i) const {
+    Claim2( i ,<, membs.sz() );
     return membs[i];
   }
 
@@ -61,9 +63,10 @@ public:
 
 class Vbl {
 public:
-  uint pfmla_idx; ///< Index of the variable (in a PmlaFCtx).
   const VblSymm* symm;
   uint symm_idx;
+  uint pfmla_idx; ///< Index of the variable (in a PmlaFCtx).
+  uint pfmla_list_id;
 
   Vbl(VblSymm* symmetry, uint index)
     : symm(symmetry)
@@ -73,11 +76,20 @@ public:
 
 class VblSymm {
 public:
-  //bool single; // No such thing as a non-array variable for now.
-  Cx::Table< Vbl* > membs;
   uint domsz;
   String name;
+  Cx::Table< Vbl* > membs;
+  uint pfmla_list_id;
+  bool shadow;
+
+  VblSymm()
+    : shadow(false)
+  {}
 };
+
+inline String name_of(const Vbl& vbl) {
+  return vbl.symm->name + "(" + vbl.symm_idx + ")";
+}
 
 class Pc {
 public:
@@ -86,11 +98,22 @@ public:
   /// The rvbls should include wvbls.
   Cx::Table< const Vbl* > rvbls;
   Cx::Table< const Vbl* > wvbls;
+  Cx::PFmla act_unchanged_pfmla;
 
   Pc(PcSymm* symmetry, uint index)
     : symm(symmetry)
     , symm_idx(index)
   {}
+};
+
+class ActSymm {
+public:
+  const PcSymm* pc_symm;
+  Cx::Table< uint > vals;
+
+  uint guard(uint vbl_idx) const;
+  uint assign(uint vbl_idx) const;
+  uint aguard(uint vbl_idx) const;
 };
 
 class PcSymm {
@@ -100,10 +123,12 @@ public:
   /// The rvbls should include wvbls.
   Cx::Table< const VblSymm* > rvbl_symms;
   Cx::Table< const VblSymm* > wvbl_symms;
+  Cx::Table< uint > wmap;
   Cx::Table< NatMap > rindices;
   Cx::Table< NatMap > windices;
 
-  Cx::Table< Cx::PFmla > act_fmlas;
+  uint act_idx_offset;
+  uint n_possible_acts;
 
   String vbl_name(uint i, const String& idxparam = "i") const {
     const String& name = rvbl_symms[i]->name;
@@ -111,13 +136,26 @@ public:
   }
 };
 
+inline uint ActSymm::guard(uint vbl_idx) const
+{ return this->vals[vbl_idx]; }
+inline uint ActSymm::assign(uint vbl_idx) const
+{ return this->vals[this->pc_symm->rvbl_symms.sz() + vbl_idx]; }
+inline uint ActSymm::aguard(uint vbl_idx) const
+{ return this->guard(this->pc_symm->wmap[vbl_idx]); }
+
 class Net {
-private:
+public:
+  Cx::PFmlaCtx pfmla_ctx;
   Cx::LgTable< Vbl > vbls;
   Cx::LgTable< VblSymm > vbl_symms;
   Cx::LgTable< Pc > pcs;
   Cx::LgTable< PcSymm > pc_symms;
+
+  Cx::Table< Cx::PFmla > act_pfmlas;
+  uint n_possible_acts;
+
 public:
+  void commit_initialization();
 
   VblSymm* add_variables(const String& name, uint nmembs, uint domsz)
   {
@@ -156,165 +194,109 @@ public:
   {
     add_read_access (pc_symm, vbl_symm, indices);
     pc_symm->wvbl_symms.push(vbl_symm);
+    pc_symm->wmap.push(pc_symm->rvbl_symms.sz() - 1);
     pc_symm->windices.push(indices);
     for (uint i = 0; i < pc_symm->membs.sz(); ++i) {
       const Vbl* vbl = vbl_symm->membs[indices.index(i, vbl_symm->membs.sz())];
       pc_symm->membs[i]->wvbls.push(vbl);
     }
   }
+
+  uint action_pcsymm_index(uint actidx) const;
+  void action(ActSymm& act, uint actidx) const;
+  uint action_index(const ActSymm& act) const;
+  const Cx::PFmla& action_pfmla(uint i) const {
+    return act_pfmlas[i];
+  }
+
+  Cx::PFmlaVbl pfmla_vbl(uint i) {
+    return this->pfmla_ctx.vbl(this->vbls[i].pfmla_idx);
+  }
+  Cx::PFmlaVbl pfmla_vbl(const Vbl& x) {
+    return this->pfmla_ctx.vbl(x.pfmla_idx);
+  }
+
+  ostream& oput(ostream& of,
+                const Cx::PFmla& pf,
+                const String& pfx,
+                const String& sfx) const;
+
+private:
+  void init_unchanged();
+  void make_action_pfmla(uint actid);
+};
+
+/** This holds the search problem and its solution.**/
+class Sys {
+public:
+  Xn::Net topology;
+  //XnNet topology;
+  vector<uint> actions; ///< Force use of these actions.
+
+  /// Invariant to which we should converge.
+  Cx::PFmla invariant;
+  /// Variables defining the original protocol.
+  //Set< Cx::Tuple<uint,2> > shadow_vbls;
+  /// Variables used to add convergence.
+  //Set< Cx::Tuple<uint,2> > puppet_vbls;
+  /// Transition relation within the invariant.
+  bool shadow_vbls_exist;
+  Cx::PFmla shadow_protocol;
+  /// Self-loops in the invariant.
+  Cx::PFmla shadow_self;
+
+  bool synLegit; ///< Allow synthesized actions to be in legitimate states.
+  bool liveLegit; ///< Ensure no deadlocks in the invariant.
+
+private:
+  map<uint,uint> niceIdcs; ///< Niceness for process symmetries, used in search.
+  uint shadow_pfmla_list_id;
+  uint puppet_pfmla_list_id;
+
+public:
+  Sys()
+    : shadow_vbls_exist(false)
+    , synLegit(false)
+    , liveLegit(false)
+  {
+    this->shadow_pfmla_list_id = this->topology.pfmla_ctx.add_vbl_list();
+    this->puppet_pfmla_list_id = this->topology.pfmla_ctx.add_vbl_list();
+  }
+
+
+  //void markShadowVbl(uint pcIdx, uint vblIdx) {
+  //  shadow_vbls |= Cx::Tuple<uint,2>( pcIdx, vblIdx );
+  //}
+  void commit_initialization();
+
+  void add_shadow_act(const ActSymm& act);
+
+  bool integrityCk() const;
+
+  bool shadowVblCk() const {
+    return this->shadow_vbls_exist;
+  }
+  Cx::PFmla smoothShadowVbls(const Cx::PFmla& pf) const {
+    return pf.smooth(shadow_pfmla_list_id);
+  }
+  Cx::PFmla smoothPuppetVbls(const Cx::PFmla& pf) const {
+    return pf.smooth(puppet_pfmla_list_id);
+  }
+
+  void niceIdxFo(uint pcIdx, uint niceIdx) {
+    niceIdcs[pcIdx] = niceIdx;
+  }
+  uint niceIdxOf(uint pcIdx) const {
+    const uint* niceIdx = MapLookup(niceIdcs, pcIdx);
+    if (!niceIdx) {
+      return topology.pcs.sz() + pcIdx;
+    }
+    return *niceIdx;
+  }
 };
 }
 
-class XnVbl {
-public:
-  string name; ///< Proper name of variable, should match the name in PFCtx.
-  uint domsz; ///< Size of domain.
-  uint pfIdx; ///< Index of variable (in a PFCtx).
-
-  XnVbl(const string& _name, uint _domsz) :
-    name(_name)
-    , domsz(_domsz)
-  {}
-};
-
-/** Variable assignments made by a specific action.*/
-class XnAct {
-public:
-  static const uint NMax = 10;
-
-public:
-  uint pcIdx;
-  uint r0[NMax];
-  uint w0[NMax];
-  uint w1[NMax];
-
-public:
-  XnAct()
-  {
-    for (uint i = 0; i < NMax; ++i) {
-      r0[i] = w0[i] = w1[i] = 0;
-    }
-  }
-};
-
-/** A process.*/
-class XnPc {
-public:
-  vector<XnVbl> wvbls; ///< Variables this process owns.
-
-  /** List of readable variables as
-   * (process index, local variable index) pairs.
-   */
-  vector< Cx::Tuple<uint,2> > rvbls;
-
-  /** Conjunct this with actions of the process to ensure only
-   * the process's variables change when it acts.
-   */
-  PF actUnchanged;
-
-  /// Number of possible local transitions based on topology.
-  uint nPossibleActs;
-  /// My local action of index 0 is this global action index.
-  uint actIdxOffset;
-
-public:
-  void addVbl(const XnVbl& vbl)
-  {
-    wvbls.push_back(vbl);
-  }
-
-  void addPriv(uint pcIdx, uint vblIdx)
-  {
-    Cx::Tuple<uint,2>& p = Grow1(rvbls);
-    p[0] = pcIdx;
-    p[1] = vblIdx;
-  }
-};
-
-/** A network of processes (topology).*/
-class XnNet {
-private:
-  vector<PF> actionPFs; ///< Storage of action formulas.
-  //Cx::Table< ActSet > actsets;
-
-public:
-  PFCtx pfCtx;
-  vector<XnPc> pcs; ///< List of the processes.
-
-public:
-
-  XnNet()
-  {
-  }
-
-  ~XnNet() {
-    // These need to be destroyed before the context goes away.
-    actionPFs.clear();
-    pcs.clear();
-  }
-
-  void commitInitialization();
-
-  const XnVbl& wvbl(uint pcIdx, uint vblIdx) const
-  {
-    return pcs[pcIdx].wvbls[vblIdx];
-  }
-
-  const XnVbl& rvbl(uint pcIdx, uint vblIdx) const
-  {
-    const Cx::Tuple<uint,2>& p = pcs[pcIdx].rvbls[vblIdx];
-    return wvbl(p[0], p[1]);
-  }
-
-  const PFVbl pfVbl(uint pcIdx, uint vblIdx) const
-  {
-    return pfCtx.vbl(pcs[pcIdx].wvbls[vblIdx].pfIdx);
-  }
-
-  const PFVbl pfVblPrimed(uint pcIdx, uint vblIdx) const
-  {
-    return pfVbl(pcIdx, vblIdx).prime();
-  }
-
-  const PFVbl pfVblR(uint pcIdx, uint vblIdx) const
-  {
-    const Cx::Tuple<uint,2>& p = pcs[pcIdx].rvbls[vblIdx];
-    return pfVbl(p[0], p[1]);
-  }
-
-  uint nPossibleActs() const
-  {
-    const XnPc& pc = pcs.back();
-    return pc.actIdxOffset + pc.nPossibleActs;
-  }
-
-  uint actionPcIdx(uint actIdx) const;
-  const XnAct action(uint actIdx) const;
-  uint actionIndex(const XnAct& act) const;
-
-  const PF& actionPF(uint actIdx) const
-  { return actionPFs[actIdx]; }
-
-  ostream& oput(ostream& of,
-                const PF& pf,
-                const string& pfx = "",
-                const string& sfx = "") const;
-
-private:
-  void initUnchanged();
-  void makeActionPF(uint actIdx);
-};
-
 #if 0
-class XnSet {
-private:
-  XnNet* topology;
-public:
-  const PF img() const {
-  }
-};
-#endif
-
 class ActSet {
 public:
   Set<uint> ids; ///< Action ids which make up this set.
@@ -324,84 +306,18 @@ public:
   Set<uint> conflicts;
   PF conflict_pfmla; ///< Formula representing the conflicting actions.
 };
-
-
-/** This holds the search problem and its solution.**/
-class XnSys {
-public:
-  XnNet topology;
-  vector<uint> actions; ///< Force use of these actions.
-
-  /// Invariant to which we should converge.
-  PF invariant;
-  /// Variables defining the original protocol.
-  Set< Cx::Tuple<uint,2> > shadow_vbls;
-  /// Variables used to add convergence.
-  Set< Cx::Tuple<uint,2> > puppet_vbls;
-  /// Transition relation within the invariant.
-  PF shadow_protocol;
-  /// Self-loops in the invariant.
-  PF shadow_self;
-
-  bool synLegit; ///< Allow synthesized actions to be in legitimate states.
-  bool liveLegit; ///< Ensure no deadlocks in the invariant.
-
-private:
-  map<uint,uint> niceIdcs; ///< Niceness for processes, used in search.
-  uint vShadowVblListId;
-  uint vPuppetVblListId;
-
-public:
-  XnSys() :
-    synLegit(false)
-    , liveLegit(false)
-  {
-    this->vShadowVblListId = this->topology.pfCtx.addVblList();
-    this->vPuppetVblListId = this->topology.pfCtx.addVblList();
-  }
-
-
-  void markShadowVbl(uint pcIdx, uint vblIdx) {
-    shadow_vbls |= Cx::Tuple<uint,2>( pcIdx, vblIdx );
-  }
-  void commitInitialization();
-
-  void addShadowAct(const Cx::PFmla& pf, const Set< Cx::Tuple<uint,2> >& vbls);
-
-  bool integrityCk() const;
-
-  bool shadowVblCk() const {
-    return shadow_vbls.size() > 0;
-  }
-  PF smoothShadowVbls(const PF& pf) const {
-    return pf.smooth(vShadowVblListId);
-  }
-  PF smoothPuppetVbls(const PF& pf) const {
-    return pf.smooth(vPuppetVblListId);
-  }
-
-  void niceIdxFo(uint pcIdx, uint niceIdx) {
-    niceIdcs[pcIdx] = niceIdx;
-  }
-  uint niceIdxOf(uint pcIdx) const {
-    const uint* niceIdx = MapLookup(niceIdcs, pcIdx);
-    if (!niceIdx) {
-      return topology.pcs.size() + pcIdx;
-    }
-    return *niceIdx;
-  }
-};
+#endif
 
 ostream&
-OPut(ostream& of, const XnAct& act, const XnNet& topo);
+OPut(ostream& of, const Xn::ActSymm& act);
 PF
 ClosedSubset(const PF& xnRel, const PF& invariant);
 PF
-LegitInvariant(const XnSys& sys, const PF& loXnRel, const PF& hiXnRel);
+LegitInvariant(const Xn::Sys& sys, const PF& loXnRel, const PF& hiXnRel);
 bool
-WeakConvergenceCk(const XnSys& sys, const PF& xnRel, const PF& invariant);
+WeakConvergenceCk(const Xn::Sys& sys, const PF& xnRel, const PF& invariant);
 bool
-WeakConvergenceCk(const XnSys& sys, const PF& xnRel);
+WeakConvergenceCk(const Xn::Sys& sys, const PF& xnRel);
 bool
 CycleCk(PF* scc, const PF& xnRel, const PF& pf);
 bool

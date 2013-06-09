@@ -35,11 +35,12 @@ LXXFLAGS += -L$(GluPath) -lcu -lglu -lcal -lm
 
 -include deps.mk
 
+
 all: $(ExeList)
 
 $(BinPath)/protocon: \
 	$(addprefix $(BldPath)/, pfmla.o pfmla-glu.o pfmla-bittable.o) \
-	$(addprefix $(BldPathCXX)/, main.o inst.o pfmla.o promela.o test.o xnsys.o) \
+	$(addprefix $(BldPathCXX)/, pfmla.o xnsys.o test.o main.o inst.o promela.o) \
 	$(addprefix $(BldPathCXX)/, infile.o) \
 	$(addprefix $(CxBldPath)/, alphatab.o fileb.o syscx.o bstree.o lsp.o rbtree.o)
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(LXXFLAGS)

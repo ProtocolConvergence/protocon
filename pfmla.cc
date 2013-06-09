@@ -12,7 +12,7 @@
  * function is called.
  **/
   void
-PFCtx::commitInitialization()
+PFCtx::commit_initialization()
 {
   commit_initialization_PFmlaCtx (this->ctx);
 }
@@ -28,7 +28,7 @@ PFCtx::commitInitialization()
  **/
   ostream&
 PFCtx::oput(ostream& of, const PF& a, uint setIdx,
-            const string& pfx, const string& sfx) const
+            const String& pfx, const String& sfx) const
 {
   (void) a;
   (void) setIdx;

@@ -27,17 +27,68 @@ decmod(uint i, uint by, uint n)
 /** Create a unidirectional ring topology.**/
 static
   void
-UnidirectionalRing(XnNet& topo, uint npcs, uint domsz, const char* basename)
+UnidirectionalRing(Xn::Net& topo, uint npcs, uint domsz,
+                   const char* basename, bool symmetric, bool distinguished)
 {
-  // Build a bidirectional ring where each process P_i
-  // has variable m_i of domain size 3.
-  for (uint i = 0; i < npcs; ++i) {
-    char name[10];
-    sprintf(name, "%s%u", basename, i);
+  // Build a unidirectional ring where each process P_i
+  Xn::VblSymm* vbl_symm = topo.add_variables(basename, npcs, domsz);
 
-    XnPc& pc = Grow1(topo.pcs);
-    pc.addVbl(XnVbl(name, domsz));
-    pc.addPriv(decmod(i, 1, npcs), 0);
+  Claim( symmetric || !distinguished );
+
+  if (distinguished) {
+    -- npcs;
+  }
+
+  if (symmetric) {
+    Xn::PcSymm* pc_symm = topo.add_processes("P", npcs);
+
+    // Make this f(i) = i-1
+    Xn::NatMap indices(npcs);
+    for (uint i = 0; i < npcs; ++i) {
+      indices.membs[i] = (int)i - 1;
+    }
+    indices.expression_chunks.push("-1");
+    topo.add_read_access(pc_symm, vbl_symm, indices);
+
+    // Now make this f(i) = i
+    indices = Xn::NatMap(npcs);
+    for (uint i = 0; i < npcs; ++i) {
+      indices.membs[i] = (int)i;
+    }
+    indices.expression_chunks.push("");
+    topo.add_write_access(pc_symm, vbl_symm, indices);
+  }
+  else {
+    // Create a new symmetry for each process.
+    for (uint i = 0; i < npcs; ++i) {
+      Xn::PcSymm* pc_symm = topo.add_processes(Xn::String("P") + i, 1);
+
+      // Make this f(j) = i-1
+      Xn::NatMap indices(1);
+      indices.membs[0] = (int)i - 1;
+      indices.expression_chunks[0] = indices.membs[0];
+      topo.add_read_access(pc_symm, vbl_symm, indices);
+
+      // Now make this f(j) = i
+      indices.membs[0] = (int)i;
+      indices.expression_chunks[0] = indices.membs[0];
+      topo.add_write_access(pc_symm, vbl_symm, indices);
+    }
+  }
+
+  if (distinguished) {
+    ++ npcs;
+
+    Xn::PcSymm* pc_symm = topo.add_processes("Bot", 1);
+
+    Xn::NatMap indices(1);
+    indices.membs[0] = (int)npcs - 2;
+    indices.expression_chunks[0] = indices.membs[0];
+    topo.add_read_access(pc_symm, vbl_symm, indices);
+
+    indices.membs[0] = (int)npcs - 1;
+    indices.expression_chunks[0] = indices.membs[0];
+    topo.add_write_access(pc_symm, vbl_symm, indices);
   }
 }
 
@@ -45,20 +96,65 @@ UnidirectionalRing(XnNet& topo, uint npcs, uint domsz, const char* basename)
  **/
 static
   void
-BidirectionalRing(XnNet& topo, uint npcs, uint domsz, const char* basename)
+BidirectionalRing(Xn::Net& topo, uint npcs, uint domsz,
+                  const char* basename, bool symmetric)
 {
   // Build a bidirectional ring where each process P_i
   // has variable m_i of domain size 3.
-  for (uint i = 0; i < npcs; ++i) {
-    char name[10];
-    sprintf(name, "%s%u", basename, i);
+  UnidirectionalRing(topo, npcs, domsz, basename, symmetric, false);
 
-    XnPc& pc = Grow1(topo.pcs);
-    pc.addVbl(XnVbl(name, domsz));
-    pc.addPriv(decmod(i, 1, npcs), 0);
-    pc.addPriv(incmod(i, 1, npcs), 0);
+  if (symmetric) {
+    Xn::PcSymm* pc_symm = &topo.pc_symms[0];
+
+    // Make this f(i) = i+1
+    Xn::NatMap indices(npcs);
+    for (uint i = 0; i < npcs; ++i) {
+      indices.membs[i] = (int)i + 1;
+    }
+    indices.expression_chunks.push("+1");
+    topo.add_read_access(pc_symm, &topo.vbl_symms[0], indices);
+  }
+  else {
+    for (uint i = 0; i < npcs; ++i) {
+      Xn::PcSymm* pc_symm = &topo.pc_symms[i];
+      // Make this f(j) = i+1
+      Xn::NatMap indices(1);
+      indices.membs[0] = (int)i + 1;
+      indices.expression_chunks[0] = indices.membs[0];
+      topo.add_read_access(pc_symm, &topo.vbl_symms[0], indices);
+    }
   }
 }
+
+
+/**
+ * Performs the 3 color on a ring problem.  Each process must be assigned
+ * a color such that it'd color is not the same as either of its
+ * neighbors.  The domain is [0,2], corresponding to each of 3 arbitrary
+ * colors.
+ *
+ * \param sys  The system context
+ * \param npcs The number of processes
+ */
+  void
+InstThreeColoringRing(Xn::Sys& sys, uint npcs)
+{
+  Xn::Net& topo = sys.topology;
+  BidirectionalRing(topo, npcs, 3, "c", true);
+
+  sys.commit_initialization();
+  sys.invariant = true;
+
+  for (uint pcidx = 0; pcidx < npcs; ++pcidx) {
+    const Xn::Pc& pc = topo.pcs[pcidx];
+    const Cx::PFmlaVbl m_p = topo.pfmla_vbl (*pc.rvbls[0]);
+    const Cx::PFmlaVbl m_r = topo.pfmla_vbl (*pc.rvbls[1]);
+    const Cx::PFmlaVbl m_s = topo.pfmla_vbl (*pc.rvbls[2]);
+
+    sys.invariant &= (m_p != m_r) && (m_r != m_s);
+  }
+}
+
 
 /**
  * Return the states for which only one process has a token.
@@ -93,133 +189,63 @@ SingleTokenPF(const vector<PF>& tokenPFs)
 }
 
 /**
- * Performs the 3 color on a ring problem.  Each process must be assigned
- * a color such that it'd color is not the same as either of its
- * neighbors.  The domain is [0,2], corresponding to each of 3 arbitrary
- * colors.
- *
- * \param sys  The system context
- * \param npcs The number of processes
- */
-  void
-InstThreeColoringRing(XnSys& sys, uint npcs)
-{
-  // Initializes the system as a bidirectional ring with a 3 value domain
-  // and the topology defined in sys
-  XnNet& topo=sys.topology;
-  BidirectionalRing(topo,npcs,3,"c");
-
-  // Commit to using this topology, and initilize MDD stuff
-  sys.commitInitialization();
-  sys.invariant=true;
-
-  for(uint pcidx=0; pcidx<npcs; pcidx++){
-
-    // mq is the current process, mp is the left process,
-    // and mr is the right process.
-    const PFVbl mp=topo.pfVblR(pcidx,0);
-    const PFVbl mq=topo.pfVbl (pcidx,0);
-    const PFVbl mr=topo.pfVblR(pcidx,1);
-
-    // Add to the accepting states all of the states where
-    // mq is a different color than both mp and mr
-    sys.invariant &= (mp!=mq) && (mq!=mr);
-  }
-}
-
-  void
-TestMakingSumNotTwo(uint npcs)
-{
-  Xn::Net topology;
-  Xn::VblSymm* vbl_symm = topology.add_variables("x", npcs, 3);
-
-  // Create a new symmetry for each process.
-  for (uint i = 0; i < npcs; ++i) {
-    char name[10];
-    char idxname[10];
-    sprintf(name, "P%u", i);
-    Xn::PcSymm* pc_symm = topology.add_processes(name, 1);
-
-    // Make this f(j) = i-1
-    Xn::NatMap indices(1);
-    indices.membs[0] = (int)i - 1;
-    sprintf(idxname, "%d", indices.membs[0]);
-    indices.expression_chunks[0] = idxname;
-    topology.add_read_access(pc_symm, vbl_symm, indices);
-
-    // Now make this f(j) = i
-    indices.membs[0] = (int)i;
-    sprintf(idxname, "%d", indices.membs[0]);
-    indices.expression_chunks[0] = idxname;
-    topology.add_write_access(pc_symm, vbl_symm, indices);
-
-    // Now make this f(j) = i+1
-    indices.membs[0] = (int)i + 1;
-    sprintf(idxname, "%d", indices.membs[0]);
-    indices.expression_chunks[0] = idxname;
-    topology.add_read_access(pc_symm, vbl_symm, indices);
-  }
-}
-
-/**
  * Performs the 2 coloring on a ring problem.
  *
  * \param sys  Return value. The system context.
  * \param npcs The number of processes.
  */
   void
-InstTwoColoringRing(XnSys& sys, uint npcs)
+InstTwoColoringRing(Xn::Sys& sys, uint npcs)
 {
   if (npcs % 2 == 1) {
     DBog1( "Number of processes is even (%u), this should fail!", npcs );
   }
-  XnNet& topo = sys.topology;
-  UnidirectionalRing(topo, npcs, 2, "c");
+  Xn::Net& topo = sys.topology;
+  UnidirectionalRing(topo, npcs, 2, "c", false, false);
 
-  // Commit to using this topology.
-  // MDD stuff is initialized.
-  sys.commitInitialization();
-
+  sys.commit_initialization();
   sys.invariant = true;
+
   // For each process P[i],
-  for (uint pcidx = 0; pcidx < npcs; ++pcidx) {
-    // c[i-1]
-    const PFVbl c_lo = topo.pfVblR(pcidx, 0);
-    // c[i]
-    const PFVbl c_me = topo.pfVbl (pcidx, 0);
-    // c[i] != c[i-1]
-    sys.invariant &= (c_me != c_lo);
+  for (uint i = 0; i < npcs; ++i) {
+    const Cx::PFmlaVbl c_p = topo.pfmla_vbl(decmod(i, 1, npcs));
+    const Cx::PFmlaVbl c_r = topo.pfmla_vbl(i);
+    sys.invariant &= (c_p != c_r);
   }
 }
 
   void
-InstMatching(XnSys& sys, uint npcs)
+InstMatching(Xn::Sys& sys, uint npcs, bool symmetric)
 {
-  XnNet& topo = sys.topology;
-  BidirectionalRing(topo, npcs, 3, "m");
+  Xn::Net& topo = sys.topology;
+  BidirectionalRing(topo, npcs, 3, "x", symmetric);
 
   // Commit to using this topology.
   // MDD stuff is initialized.
-  sys.commitInitialization();
+  sys.commit_initialization();
   sys.invariant = true;
+
+#if 0
   // Set priorities.
-  for (uint pcIdx = 0; pcIdx < npcs; ++pcIdx) {
-    uint niceIdx0 = 2 * pcIdx;
-    uint niceIdx1 = 2 * (npcs - pcIdx - 1) + 1;
+  for (uint pcidx = 0; pcidx < npcs; ++pcidx) {
+    uint niceIdx0 = 2 * pcidx;
+    uint niceIdx1 = 2 * (npcs - pcidx - 1) + 1;
     uint niceIdx = (niceIdx0 < niceIdx1) ? niceIdx0 : niceIdx1;
-    sys.niceIdxFo(pcIdx, niceIdx);
+    sys.niceIdxFo(pcidx, niceIdx);
   }
+#endif
 
   for (uint pcidx = 0; pcidx < npcs; ++pcidx) {
-    const PFVbl mp = topo.pfVblR(pcidx, 0);
-    const PFVbl mq = topo.pfVbl (pcidx, 0);
-    const PFVbl mr = topo.pfVblR(pcidx, 1);
+    const Xn::Pc& pc = topo.pcs[pcidx];
+    const Cx::PFmlaVbl x_p = topo.pfmla_vbl (*pc.rvbls[0]);
+    const Cx::PFmlaVbl x_r = topo.pfmla_vbl (*pc.rvbls[1]);
+    const Cx::PFmlaVbl x_s = topo.pfmla_vbl (*pc.rvbls[2]);
 
     // 0 = Self, 1 = Left, 2 = Right
     sys.invariant &=
-      (mp == 1 && mq == 0 && mr == 2) || // ( left,  self, right)
-      (mp == 2 && mq == 1           ) || // (right,  left,     X)
-      (           mq == 2 && mr == 1);   // (    X, right,  left)
+      (x_p == 1 && x_r == 0 && x_s == 2) || // ( left,  self, right)
+      (x_p == 2 && x_r == 1            ) || // (right,  left,     X)
+      (            x_r == 2 && x_s == 1);   // (    X, right,  left)
   }
 }
 
@@ -228,27 +254,27 @@ InstMatching(XnSys& sys, uint npcs)
  * You are free to choose the domain size and the target (to miss).
  **/
   void
-InstSumNot(XnSys& sys, uint npcs, uint domsz, uint target)
+InstSumNot(Xn::Sys& sys, uint npcs, uint domsz, uint target)
 {
-  XnNet& topo = sys.topology;
-  UnidirectionalRing(topo, npcs, domsz, "x");
+  Xn::Net& topo = sys.topology;
+  UnidirectionalRing(topo, npcs, domsz, "x", true, false);
 
   // Commit to using this topology.
   // MDD stuff is initialized.
-  sys.commitInitialization();
-
+  sys.commit_initialization();
   sys.invariant = true;
-  // For each process P[r],
-  for (uint r = 0; r < npcs; ++r) {
-    const PFVbl x_lo = topo.pfVblR(r, 0);
-    const PFVbl x_me = topo.pfVbl (r, 0);
+
+  for (uint pcidx = 0; pcidx < npcs; ++pcidx) {
+    const Xn::Pc& pc = topo.pcs[pcidx];
+    const Cx::PFmlaVbl x_p = topo.pfmla_vbl (*pc.rvbls[0]);
+    const Cx::PFmlaVbl x_r = topo.pfmla_vbl (*pc.rvbls[1]);
 
     // (x[r-1] + x[r]) % domsz != target
     // Equivalently:
     // For all i,
     for (uint i = 0; i < domsz; ++i) {
       // (x[r-1] == i) implies (x[r] != ((target - i) % domsz))
-      sys.invariant &= ((x_lo != i) | (x_me != decmod(target, i, domsz)));
+      sys.invariant &= ((x_p != i) | (x_r != decmod(target, i, domsz)));
     }
   }
 }
@@ -257,36 +283,42 @@ InstSumNot(XnSys& sys, uint npcs, uint domsz, uint target)
  * Only enforce that a subset of the invariant be closed.
  **/
   void
-InstAgreementRing(XnSys& sys, uint npcs)
+InstAgreementRing(Xn::Sys& sys, uint npcs)
 {
-  XnNet& topo = sys.topology;
-  // Build a bidirectional ring.
-  for (uint i = 0; i < npcs; ++i) {
-    char name[10];
-    XnPc& pc = Grow1(topo.pcs);
-
-    sprintf(name, "a%u", i);
-    pc.addVbl(XnVbl(name, npcs));
-
-    sprintf(name, "x%u", i);
-    pc.addVbl(XnVbl(name, npcs));
-    sys.markShadowVbl(i, pc.wvbls.size()-1);
-
-    pc.addPriv(decmod(i, 1, npcs), 0);
-    //pc.addPriv(incmod(i, 1, npcs), 0);
-  }
+  Xn::Net& topo = sys.topology;
+  BidirectionalRing(topo, npcs, npcs, "x", true);
 
   // Commit to using this topology, and initilize MDD stuff
-  sys.commitInitialization();
+  sys.commit_initialization();
+  sys.invariant = true;
 
+#if 0
   // Set priorities.
   for (uint pcIdx = 0; pcIdx < npcs; ++pcIdx) {
     sys.niceIdxFo(pcIdx, npcs-pcIdx-1);
   }
+#endif
 
-  sys.invariant = true;
-  for (uint pcIdx = 1; pcIdx < npcs; ++pcIdx) {
-    sys.invariant &= (topo.pfVbl(pcIdx, 1) == topo.pfVbl(pcIdx-1, 1));
+  for (uint pcidx = 0; pcidx < npcs; ++pcidx) {
+    const Xn::Pc& pc = topo.pcs[pcidx];
+    const Cx::PFmlaVbl x_p = topo.pfmla_vbl (*pc.rvbls[0]);
+    const Cx::PFmlaVbl x_r = topo.pfmla_vbl (*pc.rvbls[1]);
+    const Cx::PFmlaVbl x_s = topo.pfmla_vbl (*pc.rvbls[2]);
+
+    Cx::PFmla pf( false );
+    for (uint a = 0; a < npcs; ++a) {
+      for (uint b = 0; b < npcs; ++b) {
+        // Yeah, this last loop definitely isn't needed.
+        // But there's no harm.
+        for (uint c = 0; c < npcs; ++c) {
+          if (decmod(a, b, npcs) == decmod(b, c, npcs)) {
+            pf |= (x_p == a && x_r == b && x_s == c);
+          }
+        }
+      }
+    }
+
+    sys.invariant &= pf;
   }
 }
 
@@ -295,115 +327,180 @@ InstAgreementRing(XnSys& sys, uint npcs)
  * with each process's variable with a domain of size N.
  **/
   void
-InstDijkstraTokenRing(XnSys& sys, uint npcs)
+InstDijkstraTokenRing(Xn::Sys& sys, uint npcs)
 {
-  XnNet& topo = sys.topology;
-  UnidirectionalRing(topo, npcs, npcs, "x");
+  Xn::Net& topo = sys.topology;
+  UnidirectionalRing(topo, npcs, npcs, "x", true, true);
 
   // Commit to using this topology, and initilize MDD stuff
-  sys.commitInitialization();
+  sys.commit_initialization();
   sys.synLegit = true;
   sys.liveLegit = true;
 
+#if 0
   // Set priorities.
   for (uint pcIdx = 0; pcIdx < npcs; ++pcIdx) {
     sys.niceIdxFo(pcIdx, npcs-pcIdx-1);
   }
+#endif
 
   // Formulas for each process having a token.
   vector<PF> tokenPFs(npcs);
-  // (x[0] == x[N-1])
-  tokenPFs[0] = (topo.pfVbl(0, 0) == topo.pfVblR(0, 0));
-  for (uint pcIdx = 1; pcIdx < npcs; ++pcIdx) {
-    // (x[i] == x[i-1])
-    tokenPFs[pcIdx] = (topo.pfVbl(pcIdx, 0) != topo.pfVblR(pcIdx, 0));
+  for (uint i = 0; i < npcs-1; ++i) {
+    // (x[i] != x[i-1])
+    tokenPFs[i] = (topo.pfmla_vbl(decmod(i, 1, npcs)) != topo.pfmla_vbl(i));
   }
+  // (x[N-2] == x[N-1])
+  tokenPFs[npcs-1] = (topo.pfmla_vbl(npcs-2) == topo.pfmla_vbl(npcs-1));
   sys.invariant = SingleTokenPF(tokenPFs);
 }
 
 /** Gouda's three bit token ring.**/
   void
-InstThreeBitTokenRing(XnSys& sys, uint npcs)
+InstThreeBitTokenRing(Xn::Sys& sys, uint npcs)
 {
-  XnNet& topo = sys.topology;
-  // Build a bidirectional ring where each process P_i
-  // has variable m_i of domain size 3.
-  for (uint i = 0; i < npcs; ++i) {
-    char name[10];
-    XnPc& pc = Grow1(topo.pcs);
+  Xn::Net& topo = sys.topology;
+  UnidirectionalRing(topo, npcs, 2, "e", true, true);
 
-    sprintf(name, "e%u", i);
-    pc.addVbl(XnVbl(name, 2));
-    sprintf(name, "t%u", i);
-    pc.addVbl(XnVbl(name, 2));
-    sprintf(name, "ready%u", i);
-    pc.addVbl(XnVbl(name, 2));
+  topo.add_variables("t", npcs, 2);
+  topo.add_variables("ready", npcs, 2);
 
-    pc.addPriv(decmod(i, 1, npcs), 0);
-    pc.addPriv(decmod(i, 1, npcs), 1);
+  // Make this f(i) = i-1
+  Xn::NatMap indices(npcs-1);
+  for (uint i = 0; i < npcs-1; ++i) {
+    indices.membs[i] = (int)i - 1;
   }
+  indices.expression_chunks.push("-1");
+  // P process reads t[i-1]
+  topo.add_read_access(&topo.pc_symms[0], &topo.vbl_symms[1], indices);
+
+  // Now make this f(i) = i
+  indices = Xn::NatMap(npcs-1);
+  for (uint i = 0; i < npcs-1; ++i) {
+    indices.membs[i] = (int)i;
+  }
+  indices.expression_chunks.push("");
+  // P process writes t[i] and ready[i]
+  topo.add_write_access(&topo.pc_symms[0], &topo.vbl_symms[1], indices);
+  topo.add_write_access(&topo.pc_symms[0], &topo.vbl_symms[2], indices);
+
+  // Bot process reads t[n-2]
+  indices = Xn::NatMap(1);
+  indices.membs[0] = (int)npcs-2;
+  indices.expression_chunks[0] = indices.membs[0];
+  topo.add_read_access(&topo.pc_symms[1], &topo.vbl_symms[1], indices);
+
+  // Bot process writes t[n-1]
+  indices.membs[0] = (int)npcs-1;
+  indices.expression_chunks[0] = indices.membs[0];
+  topo.add_write_access(&topo.pc_symms[1], &topo.vbl_symms[1], indices);
+  // Bot process writes ready[n-1]
+  topo.add_write_access(&topo.pc_symms[1], &topo.vbl_symms[2], indices);
 
   // Commit to using this topology, and initilize MDD stuff
-  sys.commitInitialization();
+  sys.commit_initialization();
   sys.synLegit = true;
   sys.liveLegit = true;
 
-  // Set priorities.
-  for (uint pcIdx = 0; pcIdx < npcs; ++pcIdx) {
-    sys.niceIdxFo(pcIdx, pcIdx);
-  }
+#if 0
+  sys.niceIdxFo(0, 1);
+  sys.niceIdxFo(1, 0);
+#endif
 
   // Formulas for each process having a token.
   vector<PF> tokenPFs(npcs);
   // Formula for existence of an enabled process.
   PF existEnabled(false);
 
-  // e[0] == e[N-1]
-  existEnabled |= (topo.pfVbl(0, 0) == topo.pfVblR(0, 0));
-  // t_{i-1} == t_i
-  tokenPFs[0] = (topo.pfVbl(0, 1) == topo.pfVblR(0, 1));
-
-  for (uint pcIdx = 1; pcIdx < npcs; ++pcIdx) {
-    // e_i != e_{i-1}
-    existEnabled |= (topo.pfVbl(pcIdx, 0) != topo.pfVblR(pcIdx, 0));
-    // t_{i-1} != t_i
-    tokenPFs[pcIdx] = (topo.pfVbl(pcIdx, 1) != topo.pfVblR(pcIdx, 1));
+  for (uint i = 0; i < npcs-1; ++i) {
+    // e[i-1] != e[i]
+    existEnabled |= (topo.pfmla_vbl(*topo.pcs[i].rvbls[0]) != topo.pfmla_vbl(*topo.pcs[i].rvbls[1]));
+    // t[i-1] != t[i]
+    tokenPFs[i] = (topo.pfmla_vbl(*topo.pcs[i].rvbls[2]) != topo.pfmla_vbl(*topo.pcs[i].rvbls[3]));
   }
+  // e[N-2] == e[N-1]
+  existEnabled |= (topo.pfmla_vbl(*topo.pcs[npcs-1].rvbls[0]) == topo.pfmla_vbl(*topo.pcs[npcs-1].rvbls[1]));
+  // t[N-2] == t[N-1]
+  tokenPFs[npcs-1] = (topo.pfmla_vbl(*topo.pcs[npcs-1].rvbls[2]) == topo.pfmla_vbl(*topo.pcs[npcs-1].rvbls[3]));
 
   sys.invariant = (SingleTokenPF(tokenPFs) & existEnabled);
 }
 
 /** Dijkstra's two bit token "spring".**/
   void
-InstTwoBitTokenSpring(XnSys& sys, uint npcs)
+InstTwoBitTokenSpring(Xn::Sys& sys, uint npcs)
 {
   if (npcs < 2) {
     DBog1( "Not enough processes (%u), need at least 2.", npcs );
     exit(1);
   }
 
-  XnNet& topo = sys.topology;
-  // Build a bidirectional ring where each process P_i
-  // has variable m_i of domain size 3.
-  for (uint i = 0; i < npcs; ++i) {
-    char name[10];
-    XnPc& pc = Grow1(topo.pcs);
+  Xn::Net& topo = sys.topology;
 
-    sprintf(name, "x%u", i);
-    pc.addVbl(XnVbl(name, 2));
-    sprintf(name, "up%u", i);
-    pc.addVbl(XnVbl(name, 2));
+  topo.add_variables("x", npcs, 2);
+  topo.add_variables("up", npcs, 2);
 
-    if (i > 0) {
-      pc.addPriv(i-1, 0);
-    }
-    if (i < npcs-1) {
-      pc.addPriv(i+1, 0);
-      pc.addPriv(i+1, 1);
-    }
+  topo.add_processes("Bot", 1);
+  topo.add_processes("P", npcs-2);
+  topo.add_processes("Top", 1);
+
+  // Make this f(i) = i
+  Xn::NatMap indices(npcs-2);
+  for (uint i = 0; i < npcs-2; ++i) {
+    indices.membs[i] = (int)i;
   }
+  indices.expression_chunks.push("");
+  // P process reads x[i-1]
+  topo.add_read_access(&topo.pc_symms[1], &topo.vbl_symms[0], indices);
+
+  // Make this f(i) = i+1
+  indices = Xn::NatMap(npcs-2);
+  for (uint i = 0; i < npcs-2; ++i) {
+    indices.membs[i] = (int)i+1;
+  }
+  indices.expression_chunks.push("+1");
+  // P process writes x[i] and up[i]
+  topo.add_write_access(&topo.pc_symms[1], &topo.vbl_symms[0], indices);
+  topo.add_write_access(&topo.pc_symms[1], &topo.vbl_symms[1], indices);
+
+  // Make this f(i) = i+2
+  indices = Xn::NatMap(npcs-2);
+  for (uint i = 0; i < npcs-2; ++i) {
+    indices.membs[i] = (int)i+2;
+  }
+  indices.expression_chunks.push("+2");
+  // P process reads x[i+1] and up[i+1]
+  topo.add_read_access(&topo.pc_symms[1], &topo.vbl_symms[0], indices);
+  topo.add_read_access(&topo.pc_symms[1], &topo.vbl_symms[1], indices);
+
+  indices = Xn::NatMap(1);
+
+  // Top process reads x[N-2]
+  indices.membs[0] = (int)npcs-2;
+  indices.expression_chunks[0] = indices.membs[0];
+  topo.add_read_access(&topo.pc_symms[2], &topo.vbl_symms[0], indices);
+
+  // Bot process writes x[0] and up[0]
+  indices.membs[0] = (int)0;
+  indices.expression_chunks[0] = indices.membs[0];
+  topo.add_write_access(&topo.pc_symms[0], &topo.vbl_symms[0], indices);
+  topo.add_write_access(&topo.pc_symms[0], &topo.vbl_symms[1], indices);
+
+  // Top process writes x[N-1] and up[N-1]
+  indices.membs[0] = (int)npcs-1;
+  indices.expression_chunks[0] = indices.membs[0];
+  topo.add_write_access(&topo.pc_symms[2], &topo.vbl_symms[0], indices);
+  topo.add_write_access(&topo.pc_symms[2], &topo.vbl_symms[1], indices);
+
+  // Bot process reads x[1] and up[1]
+  indices.membs[0] = (int)1;
+  indices.expression_chunks[0] = indices.membs[0];
+  topo.add_read_access(&topo.pc_symms[0], &topo.vbl_symms[0], indices);
+  topo.add_read_access(&topo.pc_symms[0], &topo.vbl_symms[1], indices);
+
+
   // Commit to using this topology, and initilize MDD stuff
-  sys.commitInitialization();
+  sys.commit_initialization();
   sys.synLegit = true;
   sys.liveLegit = true;
 
@@ -411,38 +508,44 @@ InstTwoBitTokenSpring(XnSys& sys, uint npcs)
   vector<PF> tokenPFs(npcs);
   // ((x[0] == x[1]) &&
   //  (up[1] == 0))
-  tokenPFs[0] = ((topo.pfVbl(0, 0) == topo.pfVbl(1, 0)) &&
-                 (topo.pfVbl(1, 1) == 0));
-  for (uint pcIdx = 1; pcIdx < npcs-1; ++pcIdx) {
+  tokenPFs[0] = ((topo.pfmla_vbl(*topo.vbl_symms[0].membs[0]) == topo.pfmla_vbl(*topo.vbl_symms[0].membs[1])) &&
+                 (topo.pfmla_vbl(*topo.vbl_symms[1].membs[1]) == 0));
+  for (uint i = 1; i < npcs-1; ++i) {
       // ((x[i] != x[i-1])
       //  ||
       //  ((x[i] == x[i+1]) &&
       //  (up[i] == 1) &&
       //  (up[i+1] == 0)))
-      tokenPFs[pcIdx] =
-        ((topo.pfVbl(pcIdx, 0) != topo.pfVbl(pcIdx-1, 0))
+      tokenPFs[i] =
+        ((topo.pfmla_vbl(*topo.vbl_symms[0].membs[i])
+          != topo.pfmla_vbl(*topo.vbl_symms[0].membs[i-1]))
          ||
-         ((topo.pfVbl(pcIdx, 0) == topo.pfVbl(pcIdx+1, 0)) &&
-          (topo.pfVbl(pcIdx, 1) == 1) &&
-          (topo.pfVbl(pcIdx+1, 1) == 0)));
+         ((topo.pfmla_vbl(*topo.vbl_symms[0].membs[i])
+           == topo.pfmla_vbl(*topo.vbl_symms[0].membs[i+1]))
+          &&
+          (topo.pfmla_vbl(*topo.vbl_symms[1].membs[i]) == 1) &&
+          (topo.pfmla_vbl(*topo.vbl_symms[1].membs[i+1]) == 0)));
   }
   // (x[N-1] != x[N-2])
-  tokenPFs[npcs-1] = (topo.pfVbl(npcs-1, 0) != topo.pfVbl(npcs-2, 0));
+  tokenPFs[npcs-1] = (topo.pfmla_vbl(*topo.vbl_symms[0].membs[npcs-1]) !=
+                      topo.pfmla_vbl(*topo.vbl_symms[0].membs[npcs-2]));
 
   // ((exactly_one_token) && (up[0] == 1) && (up[N-1] == 0))
   sys.invariant = (SingleTokenPF(tokenPFs) &
-                   (topo.pfVbl(0, 1) == 1) &
-                   (topo.pfVbl(npcs-1, 1) == 0));
+                   (topo.pfmla_vbl(*topo.vbl_symms[1].membs[0]) == 1) &
+                   (topo.pfmla_vbl(*topo.vbl_symms[1].membs[npcs-1]) == 0));
 }
+
+#if 0
 
 /** Testing token ring.
  * Only enforce that a subset of the invariant be closed.
  **/
   void
-InstTestTokenRing(XnSys& sys, uint npcs)
+InstTestTokenRing(Xn::Sys& sys, uint npcs)
 {
   //const uint domsz = 3;
-  XnNet& topo = sys.topology;
+  Xn::Net& topo = sys.topology;
   // Build a unidirectional ring where each process P_i.
   for (uint i = 0; i < npcs; ++i) {
     char name[10];
@@ -561,4 +664,42 @@ InstTestTokenRing(XnSys& sys, uint npcs)
 
   sys.invariant = (SingleTokenPF(tokenPFs));
 }
+
+/** Agreement.
+ * Only enforce that a subset of the invariant be closed.
+ **/
+  void
+InstAgreementRing(Xn::Sys& sys, uint npcs)
+{
+  Xn::Net& topo = sys.topology;
+  // Build a bidirectional ring.
+  for (uint i = 0; i < npcs; ++i) {
+    char name[10];
+    XnPc& pc = Grow1(topo.pcs);
+
+    sprintf(name, "a%u", i);
+    pc.addVbl(XnVbl(name, npcs));
+
+    sprintf(name, "x%u", i);
+    pc.addVbl(XnVbl(name, npcs));
+    sys.markShadowVbl(i, pc.wvbls.size()-1);
+
+    pc.addPriv(decmod(i, 1, npcs), 0);
+    //pc.addPriv(incmod(i, 1, npcs), 0);
+  }
+
+  // Commit to using this topology, and initilize MDD stuff
+  sys.commitInitialization();
+
+  // Set priorities.
+  for (uint pcIdx = 0; pcIdx < npcs; ++pcIdx) {
+    sys.niceIdxFo(pcIdx, npcs-pcIdx-1);
+  }
+
+  sys.invariant = true;
+  for (uint pcIdx = 1; pcIdx < npcs; ++pcIdx) {
+    sys.invariant &= (topo.pfVbl(pcIdx, 1) == topo.pfVbl(pcIdx-1, 1));
+  }
+}
+#endif
 

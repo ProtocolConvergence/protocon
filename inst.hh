@@ -3,26 +3,30 @@
 #define INST_HH_
 #include "cx/synhax.hh"
 
-class XnSys;
+namespace Xn {
+class Sys;
+}
 
 void
-InstThreeColoringRing(XnSys& sys, uint npcs);
+InstThreeColoringRing(Xn::Sys& sys, uint npcs);
 void
-InstTwoColoringRing(XnSys& sys, uint npcs);
+InstTwoColoringRing(Xn::Sys& sys, uint npcs);
 void
-InstMatching(XnSys& sys, uint npcs);
+InstMatching(Xn::Sys& sys, uint npcs, bool symmetric = true);
 void
-InstSumNot(XnSys& sys, uint npcs, uint domsz, uint target);
+InstSumNot(Xn::Sys& sys, uint npcs, uint domsz, uint target);
 void
-InstAgreementRing(XnSys& sys, uint npcs);
+InstAgreementRing(Xn::Sys& sys, uint npcs);
 void
-InstDijkstraTokenRing(XnSys& sys, uint npcs);
+InstDijkstraTokenRing(Xn::Sys& sys, uint npcs);
 void
-InstThreeBitTokenRing(XnSys& sys, uint npcs);
+InstThreeBitTokenRing(Xn::Sys& sys, uint npcs);
 void
-InstTwoBitTokenSpring(XnSys& sys, uint npcs);
+InstTwoBitTokenSpring(Xn::Sys& sys, uint npcs);
+#if 0
 void
-InstTestTokenRing(XnSys& sys, uint npcs);
+InstTestTokenRing(Xn::Sys& sys, uint npcs);
+#endif
 
 #endif
 
