@@ -3,10 +3,7 @@
 
 /**
  * Commit to the topology represented by the vector of processes.
- * 1. Create the PFCtx with unprimed and primed variables using
- *    proper names and domain sizes.
- *    In the process, propagate the following data to members:
- *     - pfIdx to variable
+ * 1. Create variable list for all variables.
  * 2. Find /nPossibleActs/ for each process.
  * 3. Construct /actUnchanged/ for each process.
  */
@@ -29,8 +26,6 @@ Xn::Net::commit_initialization()
     }
   }
 
-  pfmla_ctx.commit_initialization();
-
   uint ntotal = 0;
   for (uint i = 0; i < pc_symms.sz(); ++i) {
     Xn::PcSymm& pc = pc_symms[i];
@@ -39,10 +34,12 @@ Xn::Net::commit_initialization()
 
     for (uint j = 0; j < pc.rvbl_symms.sz(); ++j) {
       uint domsz = pc.rvbl_symms[j]->domsz;
+      pc.doms.push(domsz);
       n *= domsz;
     }
     for (uint j = 0; j < pc.wvbl_symms.sz(); ++j) {
       uint domsz = pc.wvbl_symms[j]->domsz;
+      pc.doms.push(domsz);
       n *= domsz;
     }
 
@@ -68,7 +65,7 @@ Xn::Net::init_unchanged()
   Cx::PFmla eq(true);
   for (uint i = 0; i < vbls.sz(); ++i) {
     const Cx::PFmlaVbl& vbl = pfmla_ctx.vbl(vbls[i].pfmla_idx);
-    eq &= (vbl == vbl.prime());
+    eq &= (vbl.img_eq(vbl));
   }
 
   for (uint i = 0; i < pcs.sz(); ++i) {
@@ -99,36 +96,19 @@ Xn::Net::action(ActSymm& act, uint actidx) const
   act.pc_symm = &pc_symms[pcidx];
   const Xn::PcSymm& pc = *act.pc_symm;
 
-  uint n = pc.n_possible_acts;
   actidx -= pc.act_idx_offset;
 
   act.vals.resize(pc.rvbl_symms.sz() + pc.wvbl_symms.sz());
-  for (uint i = 0; i < pc.rvbl_symms.sz(); ++i) {
-    n /= pc.rvbl_symms[i]->domsz;
-    act.vals[i] = actidx / n;
-    actidx = actidx % n;
-  }
-  for (uint i = 0; i < pc.wvbl_symms.sz(); ++i) {
-    n /= pc.wvbl_symms[i]->domsz;
-    act.vals[pc.rvbl_symms.sz() + i] = actidx / n;
-    actidx = actidx % n;
-  }
+  Cx::state_of_index (&act.vals[0], actidx, pc.doms);
+
 }
 
 uint Xn::Net::action_index(const Xn::ActSymm& act) const
 {
   const Xn::PcSymm& pc = *act.pc_symm;
-  uint actidx = 0;
+  return pc.act_idx_offset +
+    Cx::index_of_state (&act.vals[0], pc.doms);
 
-  for (uint i = 0; i < pc.rvbl_symms.sz(); ++i) {
-    actidx *= pc.rvbl_symms[i]->domsz;
-    actidx += act.vals[i];
-  }
-  for (uint i = 0; i < pc.wvbl_symms.sz(); ++i) {
-    actidx *= pc.wvbl_symms[i]->domsz;
-    actidx += act.vals[pc.rvbl_symms.sz() + i];
-  }
-  return actidx + pc.act_idx_offset;
 }
 
   ostream&
@@ -161,7 +141,7 @@ Xn::Sys::commit_initialization()
     if (vbl.symm->shadow) {
       topo.pfmla_ctx.add_to_vbl_list (shadow_pfmla_list_id, vbl.pfmla_idx);
       const Cx::PFmlaVbl& x = topo.pfmla_ctx.vbl(vbl.pfmla_idx);
-      shadow_self &= (x == x.prime());
+      shadow_self &= (x.img_eq(x));
       shadow_vbls_exist = true;
     }
     else {
@@ -191,7 +171,7 @@ Xn::Sys::add_shadow_act(const ActSymm& act)
     for (uint j = 0; j < pc.wvbls.sz(); ++j) {
       if (pc.wvbls[j]->symm->shadow) {
         const Cx::PFmlaVbl& vbl = topo.pfmla_ctx.vbl(pc.wvbls[j]->pfmla_idx);
-        actpf &= (vbl.prime() == act.assign(j));
+        actpf &= (vbl.img_eq(act.assign(j)));
       }
     }
     pf |= (pc.act_unchanged_pfmla & actpf);
@@ -400,7 +380,7 @@ Xn::Net::make_action_pfmla(uint actidx)
     }
     for (uint j = 0; j < pc.wvbls.sz(); ++j) {
       const Cx::PFmlaVbl& vbl = pfmla_vbl(*pc.wvbls[j]);
-      actpf &= (vbl.prime() == act.assign(j));
+      actpf &= (vbl.img_eq(act.assign(j)));
     }
     pf |= (pc.act_unchanged_pfmla & actpf);
   }

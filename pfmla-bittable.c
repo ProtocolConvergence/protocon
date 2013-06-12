@@ -79,13 +79,6 @@ free_BitTablePFmla (PFmlaCtx* fmlactx, PFmla base_a)
 }
 
 static
-  void
-commit_initialization_BitTablePFmlaCtx (PFmlaCtx* fmlactx)
-{
-  (void) fmlactx;
-}
-
-static
   void*
 lose_BitTablePFmlaCtx (PFmlaCtx* fmlactx)
 {
@@ -111,7 +104,6 @@ make_BitTablePFmlaCtx ()
     vt.free_fn         =         free_BitTablePFmla;
     //vt.vbl_eql_fn      =      vbl_eql_BitTablePFmla;
     //vt.vbl_eqlc_fn     =     vbl_eqlc_BitTablePFmla;
-    vt.ctx_commit_initialization_fn = commit_initialization_BitTablePFmlaCtx;
     vt.ctx_lose_fn = lose_BitTablePFmlaCtx;
   }
   init1_PFmlaCtx (&ctx->fmlactx, &vt);

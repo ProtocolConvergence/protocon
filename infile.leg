@@ -7,10 +7,15 @@ extern "C" {
 #include "cx/fileb.h"
 #include "cx/lsp.h"
 }
+#include "xnsys.hh"
 
 #define YYSTYPE Lsp
 #define YY_CTX_LOCAL
-#define YY_CTX_MEMBERS  LspCtx* spctx;  FILE* infile;  const char* negprefix;
+#define YY_CTX_MEMBERS \
+  LspCtx* spctx; \
+  FILE* infile; \
+  const char* negprefix; \
+  Xn::Sys* sys;
 #define YY_INPUT(yy, buf, result, max_size) \
 { \
   int yyc = fgetc(yy->infile); \
@@ -31,11 +36,13 @@ Protocol = 'protocol' WS name:ID WS? ';' {}
 ConstDecl = 'constant' WS name:ID WS? ':=' WS? v:NAT WS? ';' {}
 
 VarDecl =
-  'variable' WS name:ID '(' WS? len:NatDom WS? ')' WS? ':' WS? dom:NatDom WS? ';'
-  {$$ = list4_ccstr_Lsp ("decl", dom, name, len);}
+  'variable' WS name:ID '[' WS? len:NatDom WS? ']' WS? ':' WS? dom:NatDom WS? ';'
+  {
+    $$ = list4_ccstr_Lsp ("decl", dom, name, len);
+  }
 
 ProcDecl =
-  'process' WS pc_name:ID '(' WS? idx_name:ID WS? ':' WS? npcs:NatDom WS? ')'
+  'process' WS pc_name:ID '[' WS? idx_name:ID WS? ':' WS? npcs:NatDom WS? ']'
   WS? '{'
   WS? 'read:' WS? VblRef (WS? ',' WS? VblRef)* WS? ';'
   WS? 'write:' WS?  VblRef (WS? ',' WS? VblRef)* WS? ';'
@@ -94,7 +101,7 @@ Value =
 
 VblRef =
   a:ID
-  ('(' WS? b:Expr WS? ')'
+  ('[' WS? b:Expr WS? ']'
    {a = list3_ccstr_Lsp ("aref", a, b);}
   )?
   {$$ = a;}
@@ -121,12 +128,13 @@ END_OF_FILE = !.
 
 %%
 
-void ParseMyThings(const char* fname)
+void ParseMyThings(Xn::Sys& sys, const char* fname)
 {
   yycontext yyctx;
   memset (&yyctx, 0, sizeof (yyctx));
   yyctx.spctx = make_LspCtx ();
   yyctx.infile = fopen(fname, "rb");
+  yyctx.sys = &sys;
   while (yyparse(&yyctx))
     ;
   free_LspCtx (yyctx.spctx);

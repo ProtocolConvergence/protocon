@@ -1,0 +1,30 @@
+
+protocol TokenRing;
+
+constant N := 5;
+
+shadow
+variable b[Nat(N)] : Nat(2);
+puppet
+variable x[Nat(N)] : Nat(N);
+
+process P[i : Nat(N-1)]
+{
+  read: b[i-1],  x[i-1];
+  write: b[i], x[i];
+  act: b[i] != b[i-1] --> b[i] := 1 - b[i];
+}
+
+process Bot
+{
+  read: b[N-2], x[N-2];
+  write: b[N-1], x[N-1];
+  act: b[N-1] == b[N-2] --> b[N-1] := 1 - b[N-1];
+}
+
+legit:
+  unique i : Nat(N) :
+  (   i == N-1 && b[i-1] == b[i]
+   || i != N-1 && b[i-1] != b[i]
+  );
+

@@ -267,40 +267,12 @@ free_GluPFmla (PFmlaCtx* ctx, PFmla base_a)
 
 static
   void
-vbl_eql_GluPFmla (PFmlaCtx* fmlactx, PFmla* base_dst,
-                  uint vbl_id_0, uint vbl_id_1)
-{
-  GluPFmlaCtx* ctx = castup_as_GluPFmlaCtx (fmlactx);
-  GluPFmla* dst = castup_as_GluPFmla (*base_dst);
-  if (dst->mdd)  mdd_free (dst->mdd);
-  dst->mdd = mdd_eq (ctx->ctx,
-                     id_of_pre (vbl_id_0),
-                     id_of_pre (vbl_id_1));
-}
-
-static
-  void
 vbl_eqlc_GluPFmla (PFmlaCtx* fmlactx, PFmla* base_dst, uint vbl_id, uint x)
 {
   GluPFmlaCtx* ctx = castup_as_GluPFmlaCtx (fmlactx);
   GluPFmla* dst = castup_as_GluPFmla (*base_dst);
   if (dst->mdd)  mdd_free (dst->mdd);
-  dst->mdd = mdd_eq_c (ctx->ctx,
-                       id_of_pre (vbl_id),
-                       x);
-}
-
-static
-  void
-vbl_img_eql_GluPFmla (PFmlaCtx* fmlactx, PFmla* base_dst,
-                  uint vbl_id_0, uint vbl_id_1)
-{
-  GluPFmlaCtx* ctx = castup_as_GluPFmlaCtx (fmlactx);
-  GluPFmla* dst = castup_as_GluPFmla (*base_dst);
-  if (dst->mdd)  mdd_free (dst->mdd);
-  dst->mdd = mdd_eq (ctx->ctx,
-                     id_of_img (vbl_id_0),
-                     id_of_pre (vbl_id_1));
+  dst->mdd = mdd_eq_c (ctx->ctx, id_of_pre (vbl_id), x);
 }
 
 static
@@ -310,31 +282,7 @@ vbl_img_eqlc_GluPFmla (PFmlaCtx* fmlactx, PFmla* base_dst, uint vbl_id, uint x)
   GluPFmlaCtx* ctx = castup_as_GluPFmlaCtx (fmlactx);
   GluPFmla* dst = castup_as_GluPFmla (*base_dst);
   if (dst->mdd)  mdd_free (dst->mdd);
-  dst->mdd = mdd_eq_c (ctx->ctx,
-                       id_of_img (vbl_id),
-                       x);
-}
-
-static
-  void
-commit_initialization_GluPFmlaCtx (PFmlaCtx* fmlactx)
-{
-  GluPFmlaCtx* ctx = castup_as_GluPFmlaCtx (fmlactx);
-  array_t* doms = array_alloc(uint, 0);
-  array_t* names = array_alloc(char*, 0);
-  {:for (i ; fmlactx->vbls.sz)
-    PFmlaVbl* vbl = (PFmlaVbl*) elt_LgTable (&fmlactx->vbls, i);
-    array_insert_last(uint, doms, vbl->domsz);
-    array_insert_last(uint, doms, vbl->domsz);
-    array_insert_last(const char*, names, cstr_of_AlphaTab (&vbl->name));
-    array_insert_last(const char*, names, cstr_of_AlphaTab (&vbl->img_name));
-    array_insert_last(uint, ctx->pre_vbl_list, id_of_pre (i));
-    array_insert_last(uint, ctx->img_vbl_list, id_of_img (i));
-  }
-  ctx->ctx = mdd_init_empty();
-  mdd_create_variables(ctx->ctx, doms, names, 0);
-  array_free(doms);
-  array_free(names);
+  dst->mdd = mdd_eq_c (ctx->ctx, id_of_img (vbl_id), x);
 }
 
 static
@@ -353,6 +301,27 @@ lose_GluPFmlaCtx (PFmlaCtx* fmlactx)
   if (ctx->ctx)
     mdd_quit (ctx->ctx);
   return ctx;
+}
+
+static
+  void
+add_vbl_GluPFmlaCtx (PFmlaCtx* fmlactx, uint id)
+{
+  GluPFmlaCtx* ctx = castup_as_GluPFmlaCtx (fmlactx);
+  array_t* doms = array_alloc(uint, 0);
+  array_t* names = array_alloc(char*, 0);
+  PFmlaVbl* vbl = (PFmlaVbl*) elt_LgTable (&fmlactx->vbls, id);
+
+  array_insert_last(uint, doms, vbl->domsz);
+  array_insert_last(uint, doms, vbl->domsz);
+  array_insert_last(const char*, names, cstr_of_AlphaTab (&vbl->name));
+  array_insert_last(const char*, names, cstr_of_AlphaTab (&vbl->img_name));
+  array_insert_last(uint, ctx->pre_vbl_list, id_of_pre (id));
+  array_insert_last(uint, ctx->img_vbl_list, id_of_img (id));
+
+  mdd_create_variables(ctx->ctx, doms, names, 0);
+  array_free(doms);
+  array_free(names);
 }
 
 static
@@ -397,17 +366,15 @@ make_GluPFmlaCtx ()
     vt.subseteq_ck_fn  =  subseteq_ck_GluPFmla;
     vt.make_fn         =         make_GluPFmla;
     vt.free_fn         =         free_GluPFmla;
-    vt.vbl_eql_fn      =      vbl_eql_GluPFmla;
     vt.vbl_eqlc_fn     =     vbl_eqlc_GluPFmla;
-    vt.vbl_img_eql_fn  =  vbl_img_eql_GluPFmla;
     vt.vbl_img_eqlc_fn = vbl_img_eqlc_GluPFmla;
-    vt.ctx_commit_initialization_fn = commit_initialization_GluPFmlaCtx;
-    vt.ctx_lose_fn = lose_GluPFmlaCtx;
+    vt.ctx_lose_fn     =      lose_GluPFmlaCtx;
+    vt.ctx_add_vbl_fn  =   add_vbl_GluPFmlaCtx;
     vt.ctx_add_vbl_list_fn = add_vbl_list_GluPFmlaCtx;
     vt.ctx_add_to_vbl_list_fn = add_to_vbl_list_GluPFmlaCtx;
   }
   init1_PFmlaCtx (&ctx->fmlactx, &vt);
-  ctx->ctx = 0;
+  ctx->ctx = mdd_init_empty();
   InitTable( ctx->vbl_lists );
   ctx->pre_vbl_list = array_alloc(uint, 0);
   ctx->img_vbl_list = array_alloc(uint, 0);

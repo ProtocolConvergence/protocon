@@ -59,8 +59,8 @@ struct PFmlaOpVT
   void (*vbl_img_eql_fn) (PFmlaCtx*, PFmla*, uint, uint);
   void (*vbl_img_eqlc_fn) (PFmlaCtx*, PFmla*, uint, uint);
 
-  void (*ctx_commit_initialization_fn) (PFmlaCtx*);
   void* (*ctx_lose_fn) (PFmlaCtx*);
+  void (*ctx_add_vbl_fn) (PFmlaCtx*, uint);
   uint (*ctx_add_vbl_list_fn) (PFmlaCtx*);
   void (*ctx_add_to_vbl_list_fn) (PFmlaCtx*, uint, uint);
 };
@@ -68,8 +68,6 @@ struct PFmlaOpVT
 
 void
 init1_PFmlaCtx (PFmlaCtx* ctx, const PFmlaOpVT* vt);
-void
-commit_initialization_PFmlaCtx (PFmlaCtx* ctx);
 void
 free_PFmlaCtx (PFmlaCtx* ctx);
 
@@ -213,7 +211,7 @@ vbl_lookup_PFmlaCtx (PFmlaCtx* ctx, const char* s)
 {
   AlphaTab alpha = dflt1_AlphaTab (s);
   Assoc* assoc = lookup_Associa (&ctx->vbl_map, &alpha);
-  return (PFmlaVbl*) val_of_Assoc (assoc);
+  return *(PFmlaVbl**) val_of_Assoc (assoc);
 }
 
 #endif

@@ -269,13 +269,7 @@ InstSumNot(Xn::Sys& sys, uint npcs, uint domsz, uint target)
     const Cx::PFmlaVbl x_p = topo.pfmla_vbl (*pc.rvbls[0]);
     const Cx::PFmlaVbl x_r = topo.pfmla_vbl (*pc.rvbls[1]);
 
-    // (x[r-1] + x[r]) % domsz != target
-    // Equivalently:
-    // For all i,
-    for (uint i = 0; i < domsz; ++i) {
-      // (x[r-1] == i) implies (x[r] != ((target - i) % domsz))
-      sys.invariant &= ((x_p != i) | (x_r != decmod(target, i, domsz)));
-    }
+    sys.invariant &= (x_p + x_r != (int) target);
   }
 }
 
@@ -305,20 +299,7 @@ InstAgreementRing(Xn::Sys& sys, uint npcs)
     const Cx::PFmlaVbl x_r = topo.pfmla_vbl (*pc.rvbls[1]);
     const Cx::PFmlaVbl x_s = topo.pfmla_vbl (*pc.rvbls[2]);
 
-    Cx::PFmla pf( false );
-    for (uint a = 0; a < npcs; ++a) {
-      for (uint b = 0; b < npcs; ++b) {
-        // Yeah, this last loop definitely isn't needed.
-        // But there's no harm.
-        for (uint c = 0; c < npcs; ++c) {
-          if (decmod(a, b, npcs) == decmod(b, c, npcs)) {
-            pf |= (x_p == a && x_r == b && x_s == c);
-          }
-        }
-      }
-    }
-
-    sys.invariant &= pf;
+    sys.invariant &= (((x_r - x_p) % npcs) == ((x_s - x_r) % npcs));
   }
 }
 

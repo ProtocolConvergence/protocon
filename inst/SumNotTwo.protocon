@@ -3,12 +3,12 @@ protocol SumNotTwo;
 
 constant N := 5;
 
-variable x(Nat(N)) : Nat(3);
+variable x[Nat(N)] : Nat(3);
 
-process P(i : Nat(N))
+process P[i : Nat(N)]
 {
-  read:  x(i-1);
-  write: x(i);
-  legit: x(i) + x(i-1) != 2;
+  read:  x[i-1];
+  write: x[i];
+  legit: x[i] + x[i-1] != 2;
 }
 

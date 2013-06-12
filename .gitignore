@@ -18,4 +18,5 @@ doc/*/*.vrb
 doc/*.pdf
 doc/*.aux
 doc/*.log
+doc/*.out
 

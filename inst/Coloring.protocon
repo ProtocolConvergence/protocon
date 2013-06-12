@@ -3,12 +3,12 @@ protocol Coloring;
 
 constant N := 5;
 
-variable c(Nat(N)) : Nat(3);
+variable c[Nat(N)] : Nat(3);
 
-process P(i : Nat(N))
+process P[i : Nat(N)]
 {
-  read:  c(i-1), c(i+1);
-  write: c(i);
-  legit: (c(i) != c(i-1)) && (c(i) != c(i+1));
+  read:  c[i-1], c[i+1];
+  write: c[i];
+  legit: (c[i] != c[i-1]) && (c[i] != c[i+1]);
 }
 

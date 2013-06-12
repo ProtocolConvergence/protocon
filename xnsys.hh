@@ -126,6 +126,7 @@ public:
   Cx::Table< uint > wmap;
   Cx::Table< NatMap > rindices;
   Cx::Table< NatMap > windices;
+  Cx::Table< uint > doms;
 
   uint act_idx_offset;
   uint n_possible_acts;

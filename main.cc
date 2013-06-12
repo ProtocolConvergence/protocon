@@ -946,7 +946,10 @@ int main(int argc, char** argv)
       return 0;
     }
     else if (string(argv[argi]) == "parse") {
-      ParseMyThings(argv[argi+1]);
+      {
+        Xn::Sys sys;
+        ParseMyThings(sys, argv[argi+1]);
+      }
       lose_sysCx ();
       return 0;
     }

@@ -12,12 +12,6 @@ init1_PFmlaCtx (PFmlaCtx* ctx, const PFmlaOpVT* vt)
 }
 
   void
-commit_initialization_PFmlaCtx (PFmlaCtx* ctx)
-{
-  ctx->vt->ctx_commit_initialization_fn (ctx);
-}
-
-  void
 free_PFmlaCtx (PFmlaCtx* ctx)
 {
   void* mem = 0;
@@ -410,7 +404,7 @@ pre1_PFmla (PFmla* dst, const PFmla a, const PFmla b)
     if (phase_b == Yes)
       pre_PFmla (dst, a);
     else
-      wipe1_PFmla (dst, Nil);
+      wipe1_PFmla (dst, false);
   }
   if (phase_a != May)
   {
@@ -448,7 +442,7 @@ img1_PFmla (PFmla* dst, const PFmla a, const PFmla b)
     if (phase_b == Yes)
       img_PFmla (dst, a);
     else
-      wipe1_PFmla (dst, Nil);
+      wipe1_PFmla (dst, false);
   }
   else if (phase_a != May)
   {
@@ -466,12 +460,33 @@ eql_PFmlaVbl (PFmla* dst, const PFmlaVbl* a, const PFmlaVbl* b)
 {
   Claim2( a->ctx ,==, b->ctx );
   pre_op_ctx_PFmla (dst, a->ctx);
-  a->ctx->vt->vbl_eql_fn (a->ctx, dst, a->id, b->id);
+  if (a->ctx->vt->vbl_eql_fn) {
+    a->ctx->vt->vbl_eql_fn (a->ctx, dst, a->id, b->id);
+  }
+  else {
+    const uint n = (a->domsz <= b->domsz) ? a->domsz : b->domsz;
+    PFmla tmp_a = dflt_PFmla ();
+    PFmla tmp_b = dflt_PFmla ();
+
+    wipe1_PFmla (dst, false);
+    for (uint i = 0; i < n; ++i) {
+      eqlc_PFmlaVbl (&tmp_a, a, i);
+      eqlc_PFmlaVbl (&tmp_b, b, i);
+      and_PFmla (&tmp_a, tmp_a, tmp_b);
+      or_PFmla (dst, *dst, tmp_a);
+    }
+    lose_PFmla (&tmp_a);
+    lose_PFmla (&tmp_b);
+  }
 }
 
   void
 eqlc_PFmlaVbl (PFmla* dst, const PFmlaVbl* a, uint x)
 {
+  if (x >= a->domsz) {
+    wipe1_PFmla (dst, false);
+    return;
+  }
   pre_op_ctx_PFmla (dst, a->ctx);
   a->ctx->vt->vbl_eqlc_fn (a->ctx, dst, a->id, x);
 }
@@ -481,12 +496,33 @@ img_eql_PFmlaVbl (PFmla* dst, const PFmlaVbl* a, const PFmlaVbl* b)
 {
   Claim2( a->ctx ,==, b->ctx );
   pre_op_ctx_PFmla (dst, a->ctx);
-  a->ctx->vt->vbl_img_eql_fn (a->ctx, dst, a->id, b->id);
+  if (a->ctx->vt->vbl_img_eql_fn) {
+    a->ctx->vt->vbl_img_eql_fn (a->ctx, dst, a->id, b->id);
+  }
+  else {
+    // n is the domain size of RHS since img_eqlc_PFmla() does mod.
+    const uint n = b->domsz;
+    PFmla tmp_a = dflt_PFmla ();
+    PFmla tmp_b = dflt_PFmla ();
+
+    wipe1_PFmla (dst, false);
+    for (uint i = 0; i < n; ++i) {
+      img_eqlc_PFmlaVbl (&tmp_a, a, i);
+      eqlc_PFmlaVbl (&tmp_b, b, i);
+      and_PFmla (&tmp_a, tmp_a, tmp_b);
+      or_PFmla (dst, *dst, tmp_a);
+    }
+    lose_PFmla (&tmp_a);
+    lose_PFmla (&tmp_b);
+  }
 }
 
   void
 img_eqlc_PFmlaVbl (PFmla* dst, const PFmlaVbl* a, uint x)
 {
+  if (x >= a->domsz) {
+    x %= a->domsz;
+  }
   pre_op_ctx_PFmla (dst, a->ctx);
   a->ctx->vt->vbl_img_eqlc_fn (a->ctx, dst, a->id, x);
 }
@@ -516,6 +552,9 @@ add_vbl_PFmlaCtx (PFmlaCtx* ctx, const char* name, uint domsz)
     return 0;
   }
   *(PFmlaVbl**) val_of_Assoc (assoc) = x;
+
+  ctx->vt->ctx_add_vbl_fn (ctx, id);
+
   return id;
 }
 

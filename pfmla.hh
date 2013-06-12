@@ -7,6 +7,7 @@
 
 #include "cx/synhax.hh"
 #include "cx/alphatab.hh"
+#include "cx/table.hh"
 
 extern "C" {
 #include "pfmla-glu.h"
@@ -21,6 +22,7 @@ namespace C {
 }
 
 class PFmla;
+class IntPFmla;
 class PFmlaVbl;
 class PFmlaCtx;
 
@@ -122,12 +124,6 @@ public:
     return c;
   }
 
-  PFmla& operator*=(const PFmla& pf)
-  { return (*this &= pf); }
-
-  PFmla operator*(const PFmla& pf) const
-  { return (*this & pf); }
-
   PFmla operator&&(const PFmla& pf) const
   { return (*this & pf); }
 
@@ -144,12 +140,6 @@ public:
     or_PFmla (&c.g, g, b.g);
     return c;
   }
-
-  PFmla& operator+=(const PFmla& pf)
-  { return (*this |= pf); }
-
-  PFmla operator+(const PFmla& pf) const
-  { return (*this | pf); }
 
   PFmla operator||(const PFmla& pf) const
   { return (*this | pf); }
@@ -216,98 +206,131 @@ public:
     img_PFmla (&dst.g, this->g);
     return dst;
   }
+
+  static PFmla of_state(const uint* state, const Cx::Table<uint>& vbls, C::PFmlaCtx* ctx);
+
 };
+
 
 class PFmlaVbl
 {
-private:
-  C::PFmlaVbl vbl;
-  bool primed;
-
 public:
-  PFmlaVbl(const String& _name, uint _domsz)
-  {
-    this->vbl.ctx = 0;
-    this->vbl.id = 0;
-    this->vbl.name = cons1_AlphaTab (_name.cstr());
-    this->vbl.domsz = _domsz;
-    this->primed = false;
-  }
+  const C::PFmlaVbl* x;
 
-  PFmlaVbl(const C::PFmlaVbl& x)
-  {
-    this->vbl.ctx = x.ctx;
-    this->vbl.id = x.id;
-    this->vbl.name = dflt_AlphaTab ();
-    copy_AlphaTab (&this->vbl.name, &x.name);
-    this->vbl.img_name = dflt_AlphaTab ();
-    copy_AlphaTab (&this->vbl.img_name, &x.img_name);
-    this->vbl.domsz = x.domsz;
-    this->primed = false;
-  }
+  PFmlaVbl() : x(0) {}
 
-  ~PFmlaVbl()
-  {
-    lose_PFmlaVbl (&vbl);
-  }
+  PFmlaVbl(const C::PFmlaVbl* b) : x(b) {}
 
-  PFmlaVbl prime() const
-  {
-    Claim( !primed );
-    PFmlaVbl x = PFmlaVbl(this->vbl);
-    x.primed = true;
-    return x;
-  }
-
-  PFmla operator==(uint x) const
+  PFmla operator==(uint b) const
   {
     PFmla pf;
-    if (primed) {
-      img_eqlc_PFmlaVbl (&pf.g,
-                         vbl_of_PFmlaCtx (vbl.ctx, vbl.id),
-                         x);
-    }
-    else {
-      eqlc_PFmlaVbl (&pf.g,
-                     vbl_of_PFmlaCtx (vbl.ctx, vbl.id),
-                     x);
-    }
+    eqlc_PFmlaVbl (&pf.g, x, b);
     return pf;
   }
 
-  PFmla operator==(const PFmlaVbl& x) const
+  PFmla operator==(const PFmlaVbl& b) const
   {
     PFmla pf;
-    if (primed) {
-      Claim( !x.primed );
-      img_eql_PFmlaVbl (&pf.g,
-                        vbl_of_PFmlaCtx (vbl.ctx, vbl.id),
-                        vbl_of_PFmlaCtx (vbl.ctx, x.vbl.id));
-    }
-    else if (x.primed) {
-      img_eql_PFmlaVbl (&pf.g,
-                        vbl_of_PFmlaCtx (vbl.ctx, x.vbl.id),
-                        vbl_of_PFmlaCtx (vbl.ctx, vbl.id));
-    }
-    else {
-      eql_PFmlaVbl (&pf.g,
-                    vbl_of_PFmlaCtx (vbl.ctx, vbl.id),
-                    vbl_of_PFmlaCtx (vbl.ctx, x.vbl.id));
-    }
+    eql_PFmlaVbl (&pf.g, x, b.x);
     return pf;
   }
 
-  PFmla operator!=(uint x) const
+  PFmla operator!=(uint b) const
+  { return ~((*this) == b); }
+
+  PFmla operator!=(const PFmlaVbl& b) const
+  { return ~((*this) == b); }
+
+  PFmla img_eq(uint b) const
   {
-    return ~((*this) == x);
+    PFmla pf;
+    img_eqlc_PFmlaVbl (&pf.g, x, b);
+    return pf;
   }
 
-  PFmla operator!=(const PFmlaVbl& x) const
+  PFmla img_eq(const PFmlaVbl& b) const
   {
-    return ~((*this) == x);
+    PFmla pf;
+    img_eql_PFmlaVbl (&pf.g, x, b.x);
+    return pf;
+  }
+
+  bool equiv_ck(const PFmlaVbl& b) const
+  {
+    return (x == b.x);
   }
 };
 
+
+class IntPFmla
+{
+private:
+  enum BinIntOp {
+    AddOp, SubOp,
+    MulOp, DivOp, ModOp,
+    NBinIntOps
+  };
+public:
+  C::PFmlaCtx* ctx;
+  Cx::Table<uint> vbls; ///< Variable IDs.
+  Cx::Table<uint> doms; ///< Domain sizes.
+  Cx::Table<int> state_map;
+
+  IntPFmla() : ctx(0) {}
+
+  IntPFmla(const PFmlaVbl& x)
+    : ctx(x.x->ctx)
+  {
+    vbls.push(x.x->id);
+    doms.push(x.x->domsz);
+    state_map.resize(x.x->domsz);
+    for (uint i = 0; i < state_map.sz(); ++i) {
+      state_map[i] = (int) i;
+    }
+  }
+
+  IntPFmla(int x)
+    : ctx(0)
+  {
+    state_map.push(x);
+  }
+
+  IntPFmla& defeq_binop(const IntPFmla& b, BinIntOp op);
+
+  IntPFmla& operator+=(const IntPFmla& b) { return this->defeq_binop(b, AddOp); }
+  IntPFmla& operator-=(const IntPFmla& b) { return this->defeq_binop(b, SubOp); }
+  IntPFmla& operator*=(const IntPFmla& b) { return this->defeq_binop(b, MulOp); }
+  IntPFmla& operator/=(const IntPFmla& b) { return this->defeq_binop(b, DivOp); }
+  IntPFmla& operator%=(const IntPFmla& b) { return this->defeq_binop(b, ModOp); }
+
+  IntPFmla operator+(const IntPFmla& b) const { return IntPFmla(*this) += b; }
+  IntPFmla operator-(const IntPFmla& b) const { return IntPFmla(*this) -= b; }
+  IntPFmla operator*(const IntPFmla& b) const { return IntPFmla(*this) *= b; }
+  IntPFmla operator/(const IntPFmla& b) const { return IntPFmla(*this) /= b; }
+  IntPFmla operator%(const IntPFmla& b) const { return IntPFmla(*this) %= b; }
+
+  PFmla cmp(const IntPFmla& b, Bit c_lt, Bit c_eq, Bit c_gt) const;
+
+  PFmla operator< (const IntPFmla& b) const { return this->cmp(b, 1, 0, 0); }
+  PFmla operator<=(const IntPFmla& b) const { return this->cmp(b, 1, 1, 0); }
+  PFmla operator!=(const IntPFmla& b) const { return this->cmp(b, 1, 0, 1); }
+  PFmla operator==(const IntPFmla& b) const { return this->cmp(b, 0, 1, 0); }
+  PFmla operator>=(const IntPFmla& b) const { return this->cmp(b, 0, 1, 1); }
+  PFmla operator> (const IntPFmla& b) const { return this->cmp(b, 0, 0, 1); }
+};
+
+inline IntPFmla operator+(const PFmlaVbl& a, const IntPFmla& b) { return IntPFmla(a) += b; }
+inline IntPFmla operator-(const PFmlaVbl& a, const IntPFmla& b) { return IntPFmla(a) -= b; }
+inline IntPFmla operator*(const PFmlaVbl& a, const IntPFmla& b) { return IntPFmla(a) *= b; }
+inline IntPFmla operator/(const PFmlaVbl& a, const IntPFmla& b) { return IntPFmla(a) /= b; }
+inline IntPFmla operator%(const PFmlaVbl& a, const IntPFmla& b) { return IntPFmla(a) %= b; }
+
+inline PFmla operator< (const PFmlaVbl& a, const IntPFmla& b) { return IntPFmla(a).cmp(b, 1, 0, 0); }
+inline PFmla operator<=(const PFmlaVbl& a, const IntPFmla& b) { return IntPFmla(a).cmp(b, 1, 1, 0); }
+inline PFmla operator!=(const PFmlaVbl& a, const IntPFmla& b) { return IntPFmla(a).cmp(b, 1, 0, 1); }
+inline PFmla operator==(const PFmlaVbl& a, const IntPFmla& b) { return IntPFmla(a).cmp(b, 0, 1, 0); }
+inline PFmla operator>=(const PFmlaVbl& a, const IntPFmla& b) { return IntPFmla(a).cmp(b, 0, 1, 1); }
+inline PFmla operator> (const PFmlaVbl& a, const IntPFmla& b) { return IntPFmla(a).cmp(b, 0, 0, 1); }
 
 class PFmlaCtx
 {
@@ -340,16 +363,14 @@ public:
     add_to_vbl_list_PFmlaCtx (ctx, setIdx, vblIdx);
   }
 
-  void commit_initialization();
-
   const PFmlaVbl vbl(uint id) const
   {
-    return PFmlaVbl( *vbl_of_PFmlaCtx (ctx, id) );
+    return PFmlaVbl( vbl_of_PFmlaCtx (ctx, id) );
   }
 
   const PFmlaVbl vbl(const String& s) const
   {
-    return PFmlaVbl( *vbl_lookup_PFmlaCtx (ctx, s.cstr()) );
+    return PFmlaVbl( vbl_lookup_PFmlaCtx (ctx, s.cstr()) );
   }
 
   ostream& oput(ostream& of,
@@ -361,8 +382,6 @@ public:
 }
 
 typedef Cx::PFmla PF;
-typedef Cx::PFmlaVbl PFVbl;
-typedef Cx::PFmlaCtx PFCtx;
 
 #endif
 
