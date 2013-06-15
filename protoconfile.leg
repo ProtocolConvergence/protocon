@@ -1,0 +1,202 @@
+
+%{
+#include "cx/synhax.hh"
+
+extern "C" {
+#include "cx/fileb.h"
+}
+#include "protoconfile.hh"
+
+#define YYSTYPE FinMeta
+#define YY_CTX_LOCAL
+#define YY_CTX_MEMBERS \
+  FILE* infile; \
+  const char* negprefix; \
+  ProtoconFile* st;
+
+#define YY_INPUT(yy, buf, result, max_size) \
+{ \
+  int yyc = fgetc(yy->infile); \
+  result= (EOF == yyc) ? 0 : (*(buf) = yyc, 1); \
+}
+%}
+
+ProtoconFile =
+  WS? Protocol
+  (WS? ConstDecl)*
+  (WS? VarDecl)+
+  (WS? ProcDecl)+
+  (WS? GlobalLegit)?
+  WS? END_OF_FILE
+  { DBog0("parsed!"); }
+
+Protocol = 'protocol' WS name:ID WS? ';' {}
+
+ConstDecl =
+  'constant' WS name:ID WS? ':=' WS? v:NAT WS? ';'
+  {
+    uint x = 0;
+    if (!uint_of_Sesp (v.sp, &x)) {
+      DBog0( "Could not get constant value" );
+    }
+    else {
+      yy->st->constant_map[ccstr_of_Sesp (name.sp)] = x;
+    }
+  }
+
+VarDecl =
+  'variable' WS a:ID '[' WS? b:NatDom WS? ']' WS? ':' WS? c:NatDom WS? ';'
+  {yy->st->add_variables(a.sp, b.sp, c.sp);}
+
+ProcDecl =
+  'process' WS pc_name:ID '[' WS? idx_name:ID WS? ':' WS? npcs:NatDom WS? ']'
+  {yy->st->add_processes(pc_name.sp, idx_name.sp, npcs.sp);}
+  WS? '{'
+  (  WS? 'read:'  WS?  u:VblRef  {yy->st->add_access(u.sp, idx_name.sp, 0);}
+     (WS? ',' WS? v:VblRef  {yy->st->add_access(v.sp, idx_name.sp, 0);} )*
+     WS?  ';'
+   | WS? 'write:' WS?  u:VblRef  {yy->st->add_access(u.sp, idx_name.sp, 1);}
+     (WS? ',' WS? v:VblRef  {yy->st->add_access(v.sp, idx_name.sp, 1);} )*
+     WS? ';'
+  )+
+  (WS? 'legit:' WS? legit:Expr WS? ';'
+   {yy->st->add_legit(legit.sp, idx_name.sp);}
+  )?
+  WS? '}'
+
+GlobalLegit =
+  'legit:' WS? a:Expr WS? ';'
+  {yy->st->add_legit(a.sp);}
+
+ConstExpr =
+    a:NAT {$$ = a;}
+  | b:ID {$$ = b;}
+
+Expr =
+    a:Quantify {$$ = a;}
+  | a:Disjunction {$$ = a;}
+
+Quantify =
+    'forall' WS a:ID WS? ':' WS? b:NatDom WS? ':' WS? c:Expr
+    {
+      $$.sp = list4_ccstr_Sesp ("forall", a.sp, b.sp, c.sp);
+      $$.int_ck = 0;
+    }
+  | 'exists' WS a:ID WS? ':' WS? b:NatDom WS? ':' WS? c:Expr
+    {
+      $$.sp = list4_ccstr_Sesp ("exists", a.sp, b.sp, c.sp);
+      $$.int_ck = 0;
+    }
+  | 'unique' WS a:ID WS? ':' WS? b:NatDom WS? ':' WS? c:Expr
+    {
+      $$.sp = list4_ccstr_Sesp ("unique", a.sp, b.sp, c.sp);
+      $$.int_ck = 0;
+    }
+
+Disjunction =
+  a:Conjunction
+  (WS? '||' WS? b:Conjunction {a.sp = list3_ccstr_Sesp ("||", a.sp, b.sp);  a.int_ck = 0;} )*
+  {$$ = a;}
+
+Conjunction =
+  a:Comparison
+  (WS? '&&' WS? b:Comparison {a.sp = list3_ccstr_Sesp ("&&", a.sp, b.sp);  a.int_ck = 0;} )*
+  {$$ = a;}
+
+Comparison =
+  a:Sum
+  (  (WS? '==' WS? b:Sum {a.sp = list3_ccstr_Sesp ((b.int_ck ? "==" : "xnor"), a.sp, b.sp);  a.int_ck = 0;} )
+   | (WS? '!=' WS? b:Sum {a.sp = list3_ccstr_Sesp ((b.int_ck ? "!=" :  "xor"), a.sp, b.sp);  a.int_ck = 0;} )
+  )?
+  {$$ = a;}
+
+Sum =
+  a:Product
+  (  (WS? '+' WS? b:Product {a.sp = list3_ccstr_Sesp ("+", a.sp, b.sp);  a.int_ck = 1;} )
+   | (WS? '-' WS? b:Product {a.sp = list3_ccstr_Sesp ("-", a.sp, b.sp);  a.int_ck = 1;} )
+  )*
+  {$$ = a;}
+
+Product =
+  a:Neg
+  (  (WS? '*' WS? b:Neg {a.sp = list3_ccstr_Sesp ("*", a.sp, b.sp);  a.int_ck = 1;} )
+   | (WS? '/' WS? b:Neg {a.sp = list3_ccstr_Sesp ("/", a.sp, b.sp);  a.int_ck = 1;} )
+   | (WS? '%' WS? b:Neg {a.sp = list3_ccstr_Sesp ("%", a.sp, b.sp);  a.int_ck = 1;} )
+  )*
+  {$$ = a;}
+
+Neg =
+  (   '-' {yy->negprefix = "negate";}
+   | '!' {yy->negprefix = "!";}
+  )? a:Value
+  {
+    $$ = a;
+    if (yy->negprefix)
+      $$.sp = list2_ccstr_Sesp (yy->negprefix, $$.sp);
+  }
+
+Value =
+    a:VblRef {$$ = a;}
+  | a:NAT {$$ = a;}
+  | '(' WS? a:Expr WS? ')'
+    {
+      $$.sp = list2_ccstr_Sesp (a.int_ck ? "(int)" : "(bool)", a.sp);
+      $$.int_ck = a.int_ck;
+    }
+
+VblRef =
+  a:ID
+  ('[' WS? b:Expr WS? ']'
+   {a.sp = list3_ccstr_Sesp ("aref", a.sp, b.sp);}
+  )?
+  {
+    $$ = a;
+    $$.int_ck = 1;
+  }
+
+NatDom =
+  'Nat(' WS? a:ConstExpr WS? ')'
+  {
+    $$.sp = list2_ccstr_Sesp ("NatDom", a.sp);
+    $$.int_ck = 1;
+  }
+
+NAT = < [0-9]+ >
+  {
+    uint u;
+    xget_uint_cstr (&u, yytext);
+    $$.sp = make_Nat_Sesp (yy->st->spctx, u);
+    $$.int_ck = 1;
+  }
+
+ID = < [A-Za-z][0-9A-Za-z]* >
+  {
+    const uint* x = yy->st->constant_map.lookup(yytext);
+    if (x) {
+      $$.sp = make_Nat_Sesp (yy->st->spctx, *x);
+    }
+    else {
+      $$.sp = make_cstr_Sesp (yy->st->spctx, yytext);
+    }
+    $$.int_ck = 1;
+  }
+LINE_COMMENT = '//' [^\n]* [\n] {}
+WS = ([ \t\r\n]+ | LINE_COMMENT)+ {}
+END_OF_FILE = !.
+
+%%
+
+void ReadProtoconFile(Xn::Sys& sys, const char* fname)
+{
+  yycontext yyctx;
+  memset (&yyctx, 0, sizeof (yyctx));
+  yyctx.infile = fopen(fname, "rb");
+  yyctx.st = new ProtoconFile(&sys);
+  while (yyparse(&yyctx))
+    ;
+  delete yyctx.st;
+  fclose(yyctx.infile);
+  yyrelease(&yyctx);
+  sys.commit_initialization();
+}
+

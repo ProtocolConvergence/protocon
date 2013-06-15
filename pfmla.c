@@ -217,6 +217,33 @@ xnor_PFmla (PFmla* c, const PFmla a, const PFmla b)
   }
 }
 
+  void
+xor_PFmla (PFmla* c, const PFmla a, const PFmla b)
+{
+  Trit phase_a = phase_of_PFmla (a);
+  Trit phase_b = phase_of_PFmla (b);
+
+  if (phase_a != May)
+  {
+    if (phase_a == Yes)
+      not_PFmla (c, b);
+    else
+      iden_PFmla (c, b);
+  }
+  else if (phase_b != May)
+  {
+    if (phase_b == Yes)
+      not_PFmla (c, a);
+    else
+      iden_PFmla (c, a);
+  }
+  else
+  {
+    pre_op2_PFmla (c, a, b);
+    a->ctx->vt->op2_fn (a->ctx, c, BitOp_XOR, a, b);
+  }
+}
+
   bool
 tautology_ck_PFmla (const PFmla g)
 {

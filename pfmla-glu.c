@@ -86,6 +86,9 @@ op2_GluPFmla (PFmlaCtx* ctx, PFmla* base_c, BitOp op,
   case BitOp_XNOR:
     tmp = mdd_xnor (a, b);
     break;
+  case BitOp_XOR:
+    tmp = mdd_xor (a, b);
+    break;
   case BitOp_IDEN1:
     tmp = mdd_dup (b);
     break;

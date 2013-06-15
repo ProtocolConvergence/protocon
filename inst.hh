@@ -14,9 +14,10 @@ InstTwoColoringRing(Xn::Sys& sys, uint npcs);
 void
 InstMatching(Xn::Sys& sys, uint npcs, bool symmetric = true);
 void
-InstSumNot(Xn::Sys& sys, uint npcs, uint domsz, uint target);
+InstSumNot(Xn::Sys& sys, uint npcs, uint domsz, uint target,
+           const char* vbl_name = "x");
 void
-InstAgreementRing(Xn::Sys& sys, uint npcs);
+InstAgreementRing(Xn::Sys& sys, uint npcs, const char* vbl_name = "x");
 void
 InstDijkstraTokenRing(Xn::Sys& sys, uint npcs);
 void

@@ -65,6 +65,7 @@ xget_dimacs_result (XFileB* xf, bool* sat, BitTable evs)
     void
 extl_solve_CnfFmla (CnfFmla* fmla, bool* sat, BitTable evs)
 {
+    bool legit = true;
     bool good = true;
     DecloStack1( OSPc, ospc, dflt_OSPc () );
     DecloStack( FileB, fb );
@@ -79,8 +80,6 @@ extl_solve_CnfFmla (CnfFmla* fmla, bool* sat, BitTable evs)
 
     lose_CnfFmla (fmla);
     *fmla = dflt_CnfFmla ();
-
-    BInit();
 
     if (SatSolve_Z3)
     {
@@ -98,20 +97,20 @@ extl_solve_CnfFmla (CnfFmla* fmla, bool* sat, BitTable evs)
     }
 
     good = spawn_OSPc (ospc);
-    BCasc( good, good, "spawn_OSPc()" );
-
-    if (SatSolve_Z3)
+    if (LegitCk( good, legit, "spawn_OSPc()" ))
     {
+      if (SatSolve_Z3)
+      {
         xget_dimacs_result (ospc->xf, sat, evs);
-    }
-    else
-    {
+      }
+      else
+      {
         close_OSPc (ospc);
         seto_FileB (fb, false);
         open_FileB (fb, 0, "sat.out");
         xget_dimacs_result (&fb->xo, sat, evs);
+      }
     }
-    BLose();
 
     lose_FileB (fb);
     lose_OSPc (ospc);

@@ -6,6 +6,7 @@
 #include "cx/synhax.hh"
 #include "cx/table.hh"
 #include "cx/alphatab.hh"
+#include "cx/map.hh"
 #include "pfmla.hh"
 #include "tuple.hh"
 
@@ -39,15 +40,7 @@ public:
   }
 
   uint index(uint i, uint m) const {
-    int x = eval(i);
-    uint y = 0;
-    if (x < 0) {
-      y = (m - ((uint) (- x) % m));
-    }
-    else {
-      y = (uint) x % m;
-    }
-    return y;
+    return umod_int (eval (i), m);
   }
 
   String expression(const String& idxparam) const
@@ -88,7 +81,7 @@ public:
 };
 
 inline String name_of(const Vbl& vbl) {
-  return vbl.symm->name + "(" + vbl.symm_idx + ")";
+  return vbl.symm->name + "[" + vbl.symm_idx + "]";
 }
 
 class Pc {
@@ -126,6 +119,7 @@ public:
   Cx::Table< uint > wmap;
   Cx::Table< NatMap > rindices;
   Cx::Table< NatMap > windices;
+  /// Domains of readable variables.
   Cx::Table< uint > doms;
 
   uint act_idx_offset;
@@ -163,8 +157,15 @@ public:
     VblSymm& symm = vbl_symms.grow1();
     symm.name = name;
     symm.domsz = domsz;
+    symm.pfmla_list_id = pfmla_ctx.add_vbl_list();
+
     for (uint i = 0; i < nmembs; ++i) {
-      symm.membs.push( &vbls.push( Vbl(&symm, i) ) );
+      Vbl* vbl = &vbls.push(Vbl(&symm, i));
+      symm.membs.push(vbl);
+      vbl->pfmla_idx = pfmla_ctx.add_vbl(name_of (*vbl), domsz);
+      vbl->pfmla_list_id = pfmla_ctx.add_vbl_list();
+      pfmla_ctx.add_to_vbl_list(vbl->pfmla_list_id, vbl->pfmla_idx);
+      pfmla_ctx.add_to_vbl_list(symm.pfmla_list_id, vbl->pfmla_idx);
     }
     return &symm;
   }
@@ -250,7 +251,7 @@ public:
   bool liveLegit; ///< Ensure no deadlocks in the invariant.
 
 private:
-  map<uint,uint> niceIdcs; ///< Niceness for process symmetries, used in search.
+  Map<uint,uint> niceIdcs; ///< Niceness for process symmetries, used in search.
   uint shadow_pfmla_list_id;
   uint puppet_pfmla_list_id;
 
@@ -288,7 +289,7 @@ public:
     niceIdcs[pcIdx] = niceIdx;
   }
   uint niceIdxOf(uint pcIdx) const {
-    const uint* niceIdx = MapLookup(niceIdcs, pcIdx);
+    const uint* niceIdx = niceIdcs.lookup(pcIdx);
     if (!niceIdx) {
       return topology.pcs.sz() + pcIdx;
     }

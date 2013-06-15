@@ -41,8 +41,8 @@ all: $(ExeList)
 $(BinPath)/protocon: \
 	$(addprefix $(BldPath)/, pfmla.o pfmla-glu.o pfmla-bittable.o) \
 	$(addprefix $(BldPathCXX)/, pfmla.o xnsys.o test.o main.o inst.o promela.o) \
-	$(addprefix $(BldPathCXX)/, infile.o) \
-	$(addprefix $(CxBldPath)/, alphatab.o fileb.o syscx.o bstree.o lsp.o rbtree.o)
+	$(addprefix $(BldPathCXX)/, protoconfile.o protoconfile.leg.o) \
+	$(addprefix $(CxBldPath)/, alphatab.o fileb.o syscx.o bstree.o sesp.o rbtree.o)
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(LXXFLAGS)
 
 $(call binexe,satsyn): $(BldPath)/satsyn.o $(BldPath)/xnsys.o \
@@ -55,13 +55,15 @@ $(BldPath)/pfmla-glu.o: $(BldPath)/pfmla-glu.c
 $(BldPathCXX)/pfmla-minisat.o: $(BldPathCXX)/pfmla-minisat.cc
 	$(CXX) -c $(CXXFLAGS) -isystem $(MinisatIncludePath) $< -o $@
 
-$(BldPathCXX)/infile.cc: infile.leg
+$(BldPathCXX)/protoconfile.leg.cc: protoconfile.leg
 	leg -o $@ $<
 
 #$(CXX) -c $(filter-out -pedantic -Wall -Wextra,$(CXXFLAGS)) 
 
 .PHONY: depend
 depend: deps.mk
+
+$(BldPathCXX)/protoconfile.leg.cc: $(BldPathCXX)/protoconfile.hh
 
 deps.mk:
 	grep '^#include *"' *.cc *.hh *.c *.h \

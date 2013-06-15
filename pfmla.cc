@@ -60,18 +60,37 @@ PFmla::of_state(const uint* state, const Cx::Table<uint>& vbls, C::PFmlaCtx* ctx
 
 
 static inline
-  ujint
+  void
 intmap_init_op (Cx::Table<uint>& vbl_map, IntPFmla& a, const IntPFmla& b)
 {
+  Claim2( a.state_map.sz() ,>, 0 );
+  Claim2( b.state_map.sz() ,>, 0 );
+
+  if (a.vbls.sz() == 0 && b.vbls.sz() == 0) {
+    Claim( !a.ctx );
+    Claim( !b.ctx );
+
+    for (uint i = 0; i < b.doms.sz(); ++i) {
+      a.doms.push(b.doms[i]);
+    }
+    // This is equivalent to adding each domain individually.
+    a.state_map.add_domain(b.state_map.sz());
+    return;
+  }
+  Claim2( a.vbls.sz() ,==, a.doms.sz() );
+  Claim2( b.vbls.sz() ,==, b.doms.sz() );
   if (!a.ctx) {
     a.ctx = b.ctx;
   }
-  else if (b.ctx) {
+  Claim( a.ctx );
+  Claim2( a.vbls.sz() ,>, 0 );
+  if (b.ctx) {
     Claim2( a.ctx ,==, b.ctx );
   }
-  for (uint i = 0; i < b.doms.sz(); ++i) {
+
+  for (uint i = 0; i < b.vbls.sz(); ++i) {
     bool found = false;
-    for (uint j = 0; j < a.doms.sz(); ++j) {
+    for (uint j = 0; j < a.vbls.sz(); ++j) {
       if (b.vbls[i] == a.vbls[j]) {
         found = true;
         vbl_map[i] = j;
@@ -85,12 +104,6 @@ intmap_init_op (Cx::Table<uint>& vbl_map, IntPFmla& a, const IntPFmla& b)
       a.state_map.add_domain(b.doms[i]);
     }
   }
-
-  ujint n = 1;
-  for (uint i = 0; i < a.doms.sz(); ++i) {
-    n *= a.doms[i];
-  }
-  return n;
 }
 
 static inline
@@ -102,13 +115,27 @@ intmap_coerce_lookup(const IntPFmla& a,
                      uint* state_a,
                      uint* state_b)
 {
+  if (a.vbls.sz() == 0) {
+    return b.state_map[idx_a % b.state_map.sz()];
+  }
   state_of_index (state_a, idx_a, a.doms);
 
   for (uint j = 0; j < b.doms.sz(); ++j) {
     state_b[j] = state_a[vbl_map[j]];
   }
   ujint idx_b = index_of_state (state_b, b.doms);
+
   return b.state_map[idx_b];
+}
+
+  IntPFmla&
+IntPFmla::negate()
+{
+  ujint n = state_map.sz();
+  for (ujint i = 0; i < n; ++i) {
+    state_map[i] = - state_map[i];
+  }
+  return *this;
 }
 
   IntPFmla&
@@ -116,10 +143,11 @@ IntPFmla::defeq_binop(const IntPFmla& b, IntPFmla::BinIntOp op)
 {
   IntPFmla& a = *this;
 
-  Cx::Table< uint > vbl_map( b.doms.sz() );
-  ujint n = intmap_init_op (vbl_map, a, b);
-  Cx::Table< uint > state_a( a.doms.sz() );
-  Cx::Table< uint > state_b( b.doms.sz() );
+  Cx::Table< uint > vbl_map( b.vbls.sz() );
+  intmap_init_op (vbl_map, a, b);
+  Cx::Table< uint > state_a( a.vbls.sz() );
+  Cx::Table< uint > state_b( b.vbls.sz() );
+  const ujint n = a.state_map.sz();
 
 #define val_a() a.state_map[idx_a]
 #define val_b() intmap_coerce_lookup(a, b, idx_a, vbl_map, &state_a[0], &state_b[0])
@@ -148,17 +176,7 @@ IntPFmla::defeq_binop(const IntPFmla& b, IntPFmla::BinIntOp op)
     for (ujint idx_a = 0; idx_a < n; ++idx_a) {
       int x = val_b();
       Claim2( x ,>, 0 );
-      int y = val_a();
-      if (y >= 0) {
-        y = y % x;
-      }
-      else {
-        y = x - ((- y) % x);
-        if (x == y) {
-          y = 0;
-        }
-      }
-      val_a() = y;
+      val_a() = umod_int (val_a(), (uint) x);
     }
     break;
   case IntPFmla::NBinIntOps:
@@ -177,10 +195,17 @@ IntPFmla::cmp(const IntPFmla& b, Bit c_lt, Bit c_eq, Bit c_gt) const
 {
   IntPFmla a( *this );
 
-  Cx::Table< uint > vbl_map( b.doms.sz() );
-  ujint n = intmap_init_op (vbl_map, a, b);
-  Cx::Table< uint > state_a( a.doms.sz() );
-  Cx::Table< uint > state_b( b.doms.sz() );
+  if (a.vbls.sz() == 0 && b.vbls.sz() == 0) {
+    // Not sure if sets make sense here.
+    Claim2( a.state_map.sz() ,==, 1 );
+    Claim2( b.state_map.sz() ,==, 1 );
+  }
+
+  Cx::Table< uint > vbl_map( b.vbls.sz() );
+  intmap_init_op (vbl_map, a, b);
+  Cx::Table< uint > state_a( a.vbls.sz() );
+  Cx::Table< uint > state_b( b.vbls.sz() );
+  const ujint n = a.state_map.sz();
 
   PFmla disj( false );
   for (ujint idx_a = 0; idx_a < n; ++idx_a) {

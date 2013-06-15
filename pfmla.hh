@@ -158,10 +158,27 @@ public:
     return c;
   }
 
+  PFmla& defeq_xnor(const PFmla& b)
+  {
+    xnor_PFmla (&g, g, b.g);
+    return *this;
+  }
   PFmla xnor(const PFmla& b) const
   {
     PFmla c;
     xnor_PFmla (&c.g, g, b.g);
+    return c;
+  }
+
+  PFmla& operator^=(const PFmla& b)
+  {
+    xor_PFmla (&g, g, b.g);
+    return *this;
+  }
+  PFmla operator^(const PFmla& b) const
+  {
+    PFmla c;
+    xor_PFmla (&c.g, g, b.g);
     return c;
   }
 
@@ -261,6 +278,8 @@ public:
   }
 };
 
+inline uint id_of(const PFmlaVbl& vbl) { return vbl.x->id; }
+
 
 class IntPFmla
 {
@@ -283,7 +302,7 @@ public:
   {
     vbls.push(x.x->id);
     doms.push(x.x->domsz);
-    state_map.resize(x.x->domsz);
+    state_map.grow(x.x->domsz);
     for (uint i = 0; i < state_map.sz(); ++i) {
       state_map[i] = (int) i;
     }
@@ -294,6 +313,18 @@ public:
   {
     state_map.push(x);
   }
+
+  IntPFmla(int mul, int add, uint n)
+    : ctx(0)
+  {
+    doms.push(n);
+    state_map.grow(n);
+    for (uint i = 0; i < n; ++i) {
+      state_map[i] = (mul * (add + (int) i));
+    }
+  }
+
+  IntPFmla& negate();
 
   IntPFmla& defeq_binop(const IntPFmla& b, BinIntOp op);
 
@@ -345,8 +376,24 @@ public:
 
   ~PFmlaCtx()
   {
-    free_PFmlaCtx (ctx);
+    if (ctx) {
+      free_PFmlaCtx (ctx);
+    }
   }
+
+  /**
+   * If this is called, be sure to call nullify_context()
+   * before the object is destroyed.
+   */
+  void use_context_of(PFmlaCtx& a)
+  {
+    if (ctx) {
+      free_PFmlaCtx (ctx);
+    }
+    ctx = a.ctx;
+  }
+  void nullify_context()
+  { ctx = 0; }
 
   uint add_vbl(const String& name, uint domsz)
   {

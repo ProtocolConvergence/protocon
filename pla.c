@@ -107,52 +107,50 @@ oput_pla_pc (OFileB* of, const XnPc* pc, const XnSys* sys,
     bool
 do_pla_XnSys (const XnSys* sys, const TableT(XnRule) rules)
 {
-    bool good = true;
-    DecloStack1( OSPc, ospc, dflt_OSPc () );
-    OFileB* of = stdout_OFileB ();
+  bool good = true;
+  bool legit = true;
+  DecloStack1( OSPc, ospc, dflt_OSPc () );
+  OFileB* of = stdout_OFileB ();
 
 #if 0
-    FileB ofb;
-    init_FileB (&ofb);
-    seto_FileB (&ofb, true);
-    open_FileB (&ofb, 0, "legit0.esp");
-    of = &ofb.xo;
-    oput_pla_legit (of, sys);
+  FileB ofb;
+  init_FileB (&ofb);
+  seto_FileB (&ofb, true);
+  open_FileB (&ofb, 0, "legit0.esp");
+  of = &ofb.xo;
+  oput_pla_legit (of, sys);
 #endif
 
-    BInit();
-
-    stdxpipe_OSPc (ospc);
-    stdopipe_OSPc (ospc);
-    ospc->cmd = cons1_AlphaTab ("espresso");
-    /* Using -Dexact can take a long time.*/
-    /* PushTable( ospc->args, cons1_AlphaTab ("-Dexact") ); */
-    good = spawn_OSPc (ospc);
-    BCasc( good, good, "spawn_OSPc()" );
-
+  stdxpipe_OSPc (ospc);
+  stdopipe_OSPc (ospc);
+  ospc->cmd = cons1_AlphaTab ("espresso");
+  /* Using -Dexact can take a long time.*/
+  /* PushTable( ospc->args, cons1_AlphaTab ("-Dexact") ); */
+  good = spawn_OSPc (ospc);
+  if (LegitCk( good, legit, "spawn_OSPc()" ))
+  {
     oput_pla_legit (ospc->of, sys);
     close_OFileB (ospc->of);
     xget_XFileB (ospc->xf);
     if (0)
-        oput_cstr_OFileB (of, cstr1_XFileB (ospc->xf, 0));
+      oput_cstr_OFileB (of, cstr1_XFileB (ospc->xf, 0));
     close_OSPc (ospc);
 
     if (0)
     {:for (pcidx ; sys->pcs.sz)
-        good = spawn_OSPc (ospc);
-        if (!good)  break;
-        oput_pla_pc (ospc->of, &sys->pcs.s[pcidx], sys, rules);
-        close_OFileB (ospc->of);
-        oput_cstr_OFileB (of, xget_FileB (&ospc->xfb));
-        close_OSPc (ospc);
+      good = spawn_OSPc (ospc);
+      if (!good)  break;
+      oput_pla_pc (ospc->of, &sys->pcs.s[pcidx], sys, rules);
+      close_OFileB (ospc->of);
+      oput_cstr_OFileB (of, xget_FileB (&ospc->xfb));
+      close_OSPc (ospc);
     }
+  }
+  if (LegitCk( good, legit, "spawn_OSPc()" ))
+  {}
 
-    BCasc( good, good, "spawn_OSPc()" );
-
-    BLose();
-
-    /* lose_FileB (&ofb); */
-    lose_OSPc (ospc);
-    return good;
+  /* lose_FileB (&ofb); */
+  lose_OSPc (ospc);
+  return legit;
 }
 

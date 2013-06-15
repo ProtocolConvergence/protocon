@@ -3,29 +3,16 @@
 
 /**
  * Commit to the topology represented by the vector of processes.
- * 1. Create variable list for all variables.
- * 2. Find /nPossibleActs/ for each process.
- * 3. Construct /actUnchanged/ for each process.
+ *
+ * TODO this function needs to go away,
+ * or at least we need to initialize on a per-process basis.
+ *
+ * 1. Find /nPossibleActs/ for each process.
+ * 2. Construct /actUnchanged/ for each process.
  */
   void
 Xn::Net::commit_initialization()
 {
-  for (uint i = 0; i < vbls.sz(); ++i) {
-    Xn::Vbl& vbl = vbls[i];
-    vbl.pfmla_idx = pfmla_ctx.add_vbl(name_of (vbl), vbl.symm->domsz);
-    vbl.pfmla_list_id = pfmla_ctx.add_vbl_list();
-    pfmla_ctx.add_to_vbl_list(vbl.pfmla_list_id, vbl.pfmla_idx);
-  }
-
-  for (uint i = 0; i < vbl_symms.sz(); ++i) {
-    Xn::VblSymm& vbl_symm = vbl_symms[i];
-    vbl_symm.pfmla_list_id = pfmla_ctx.add_vbl_list();
-    for (uint j = 0; j < vbl_symm.membs.sz(); ++j) {
-      pfmla_ctx.add_to_vbl_list(vbl_symm.pfmla_list_id,
-                                vbl_symm.membs[j]->pfmla_idx);
-    }
-  }
-
   uint ntotal = 0;
   for (uint i = 0; i < pc_symms.sz(); ++i) {
     Xn::PcSymm& pc = pc_symms[i];

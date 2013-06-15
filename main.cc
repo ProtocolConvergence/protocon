@@ -10,7 +10,7 @@ extern "C" {
 #include "test.hh"
 #include "xnsys.hh"
 #include <fstream>
-#include "infile.hh"
+#include "protoconfile.hh"
 
 static std::ostream& DBogOF = std::cerr;
 
@@ -295,7 +295,7 @@ PickActionMCV(uint& ret_actId,
     << ") (mcv-sz " << candidates.size()
     << ")\n";
 
-  map< uint, Set<uint> > biasMap;
+  Map< uint, Set<uint> > biasMap;
   bool biasToMax = true;
 
   if (nicePolicy == Opt::BegNice) {
@@ -320,7 +320,7 @@ PickActionMCV(uint& ret_actId,
   if (pickMethod == Opt::GreedyPick || pickMethod == Opt::GreedySlowPick) {
     biasToMax = true;
 
-    map< uint, uint > resolveMap;
+    Map< uint, uint > resolveMap;
     for (uint j = dlsetIdx; j < dlsets.size(); ++j) {
       const Set<uint>& resolveSet = (candidates & dlsets[j].candidates);
       for (it = resolveSet.begin(); it != resolveSet.end(); ++it) {
@@ -347,7 +347,7 @@ PickActionMCV(uint& ret_actId,
           }
         }
 
-        uint* n = MapLookup(resolveMap, actId);
+        uint* n = resolveMap.lookup(actId);
         if (!n) {
           resolveMap[actId] = w;
         }
@@ -359,7 +359,7 @@ PickActionMCV(uint& ret_actId,
 
     for (it = candidates.begin(); it != candidates.end(); ++it) {
       const uint actId = *it;
-      uint n = *MapLookup(resolveMap, actId);
+      uint n = *resolveMap.lookup(actId);
 #if 0
       const PF& backReachPF = tape.backReachPF;
       if (backReachPF.overlap_ck(topo.action_pfmla(actId).img())) {
@@ -407,7 +407,7 @@ PickActionMCV(uint& ret_actId,
   }
   else if (pickMethod == Opt::LCVJankPick) {
     biasToMax = true;
-    map< uint, Set<uint> > overlapSets;
+    Map< uint, Set<uint> > overlapSets;
 
     for (it = candidates.begin(); it != candidates.end(); ++it) {
       overlapSets[*it] = Set<uint>(*it);
@@ -419,7 +419,7 @@ PickActionMCV(uint& ret_actId,
       const PF& actPF = topo.action_pfmla(actId);
       const PF actPrePF = actPF.pre();
 
-      Set<uint>& overlapSet = *MapLookup(overlapSets, actId);
+      Set<uint>& overlapSet = *overlapSets.lookup(actId);
 
       Set<uint>::const_iterator jt = it;
       for (++jt; jt != candidates.end(); ++jt) {
@@ -427,7 +427,7 @@ PickActionMCV(uint& ret_actId,
         const PF& actPF2 = topo.action_pfmla(actId2);
         if (deadlockPF.overlap_ck(actPrePF & actPF2.pre())) {
           overlapSet |= actId2;
-          *MapLookup(overlapSets, actId2) |= actId;
+          *overlapSets.lookup(actId2) |= actId;
         }
       }
     }
@@ -435,7 +435,7 @@ PickActionMCV(uint& ret_actId,
     bool have = false;
     Set<uint> minOverlapSet;
 
-    map< uint,Set<uint> >::const_iterator mit;
+    Map< uint,Set<uint> >::const_iterator mit;
     for (mit = overlapSets.begin(); mit != overlapSets.end(); ++mit) {
       const Set<uint>& overlapSet = mit->second;
       if (!have || overlapSet.size() < minOverlapSet.size()) {
@@ -903,6 +903,7 @@ AddConvergence(Xn::Sys& sys, const AddConvergenceOpt& opt)
 int main(int argc, char** argv)
 {
   enum ProblemInstance {
+    FromFileInstance,
     ThreeColoringRingInstance,
     TwoColoringRingInstance,
     MaximalMatchingInstance,
@@ -918,6 +919,7 @@ int main(int argc, char** argv)
   uint npcs = 4;
   AddConvergenceOpt opt;
   const char* modelFilePath = 0;
+  const char* infile_path = 0;
 
   // Use to disable picking only actions which resolve deadlocks
   // by making them backwards reachable from the invariant.
@@ -945,13 +947,13 @@ int main(int argc, char** argv)
       lose_sysCx ();
       return 0;
     }
-    else if (string(argv[argi]) == "parse") {
-      {
-        Xn::Sys sys;
-        ParseMyThings(sys, argv[argi+1]);
+    else if (string(argv[argi]) == "-x") {
+      DBog0("Problem: From File");
+      problem = FromFileInstance;
+      infile_path = argv[++argi];
+      if (!infile_path) {
+        failout_sysCx("Not enuff arguments.\n");
       }
-      lose_sysCx ();
-      return 0;
     }
     else if (string(argv[argi]) == "3-coloring") {
       DBog0("Problem: 3-Coloring on Bidirectional Ring");
@@ -999,7 +1001,9 @@ int main(int argc, char** argv)
     failout_sysCx("No valid problem given.\n");
   }
 
-  if (argi < argc) {
+  if (problem == FromFileInstance) {
+  }
+  else if (argi < argc) {
     npcs = (uint) atoi(argv[argi++]);
   }
   else {
@@ -1012,6 +1016,8 @@ int main(int argc, char** argv)
   // Set up the chosen problem.
   Xn::Sys sys;
   switch(problem){
+    case FromFileInstance:
+      ReadProtoconFile(sys, infile_path);  break;
     case ThreeColoringRingInstance:
       InstThreeColoringRing(sys, npcs);  break;
     case TwoColoringRingInstance:

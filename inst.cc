@@ -254,10 +254,10 @@ InstMatching(Xn::Sys& sys, uint npcs, bool symmetric)
  * You are free to choose the domain size and the target (to miss).
  **/
   void
-InstSumNot(Xn::Sys& sys, uint npcs, uint domsz, uint target)
+InstSumNot(Xn::Sys& sys, uint npcs, uint domsz, uint target, const char* vbl_name)
 {
   Xn::Net& topo = sys.topology;
-  UnidirectionalRing(topo, npcs, domsz, "x", true, false);
+  UnidirectionalRing(topo, npcs, domsz, vbl_name, true, false);
 
   // Commit to using this topology.
   // MDD stuff is initialized.
@@ -277,10 +277,10 @@ InstSumNot(Xn::Sys& sys, uint npcs, uint domsz, uint target)
  * Only enforce that a subset of the invariant be closed.
  **/
   void
-InstAgreementRing(Xn::Sys& sys, uint npcs)
+InstAgreementRing(Xn::Sys& sys, uint npcs, const char* vbl_name)
 {
   Xn::Net& topo = sys.topology;
-  BidirectionalRing(topo, npcs, npcs, "x", true);
+  BidirectionalRing(topo, npcs, npcs, vbl_name, true);
 
   // Commit to using this topology, and initilize MDD stuff
   sys.commit_initialization();

@@ -87,6 +87,8 @@ void
 nimp_PFmla (PFmla* c, const PFmla a, const PFmla b);
 void
 xnor_PFmla (PFmla* c, const PFmla a, const PFmla b);
+void
+xor_PFmla (PFmla* c, const PFmla a, const PFmla b);
 
 bool
 tautology_ck_PFmla (const PFmla g);

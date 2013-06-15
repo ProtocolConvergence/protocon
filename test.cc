@@ -1,10 +1,19 @@
 
 #include "test.hh"
 
+#include "cx/synhax.hh"
+
+extern "C" {
+#include "cx/sesp.h"
+}
+#include "cx/alphatab.hh"
+#include "cx/map.hh"
 #include "cx/table.hh"
 #include "inst.hh"
 #include "xnsys.hh"
+#include "protoconfile.hh"
 #include <stdio.h>
+
 
 /**
  * Test dat code.
@@ -43,8 +52,14 @@ TestPFmla()
 {
   Cx::PFmlaCtx ctx;
 
+  const Cx::PFmlaVbl& w = ctx.vbl( ctx.add_vbl("w", 4) );
   const Cx::PFmlaVbl& x = ctx.vbl( ctx.add_vbl("x", 4) );
   const Cx::PFmlaVbl& y = ctx.vbl( ctx.add_vbl("y", 7) );
+
+  uint w_list_id = ctx.add_vbl_list();
+  uint x_list_id = ctx.add_vbl_list();
+  ctx.add_to_vbl_list(w_list_id, id_of(w));
+  ctx.add_to_vbl_list(x_list_id, id_of(x));
 
   Cx::PFmla pf( x == y );
 
@@ -62,6 +77,16 @@ TestPFmla()
   const Cx::PFmlaVbl& z = ctx.vbl( ctx.add_vbl("z", 5) );
   Claim( pf.equiv_ck(x == y) );
   Claim( pf.overlap_ck(x == z) );
+
+  // Ensure substitution smooths the source variables.
+  Cx::PFmla pf_a = (w == 2);
+  Cx::PFmla pf_b = (x == 2);
+
+  Claim( !pf_a.equiv_ck(pf_b) );
+  pf = pf_b.substitute_new_old(w_list_id, x_list_id);
+  Claim( pf.equiv_ck(pf_a) );
+  pf = pf_a.substitute_new_old(x_list_id, w_list_id);
+  Claim( pf.equiv_ck(pf_b) );
 }
 
 static void
@@ -203,6 +228,45 @@ TestXnSys()
   }
 }
 
+void TestProtoconFile(bool agreement)
+{
+  Xn::Sys sys_f; //< From file.
+  Xn::Sys sys_c; //< From code.
+
+  Xn::Net& topo_f = sys_f.topology;
+  Xn::Net& topo_c = sys_c.topology;
+
+  topo_c.pfmla_ctx.use_context_of(topo_f.pfmla_ctx);
+
+  Cx::PFmla pf;
+
+  if (agreement)
+    ReadProtoconFile(sys_f, "inst/Agreement.protocon");
+  else 
+    ReadProtoconFile(sys_f, "inst/SumNotTwo.protocon");
+
+  uint npcs = topo_f.pcs.sz();
+  Claim2( npcs ,>=, 3 );
+
+  if (agreement)
+    InstAgreementRing(sys_c, npcs, "y");
+  else
+    InstSumNot(sys_c, npcs, 3, 2, "y");
+
+  Claim2( topo_f.pcs.sz()  ,==, topo_c.pcs.sz() );
+  Claim2( topo_f.vbls.sz() ,==, topo_c.vbls.sz() );
+  Claim2( topo_f.pc_symms[0].wmap ,==, topo_c.pc_symms[0].wmap );
+
+  Claim( !sys_f.invariant.equiv_ck(sys_c.invariant) );
+
+  pf = sys_c.invariant;
+  pf = pf.substitute_new_old(topo_f.vbl_symms[0].pfmla_list_id,
+                             topo_c.vbl_symms[0].pfmla_list_id);
+  Claim( pf.equiv_ck(sys_f.invariant) );
+
+  topo_c.pfmla_ctx.nullify_context();
+}
+
 /**
  * Test dat code.
  */
@@ -213,5 +277,7 @@ void Test()
   TestPFmla();
   TestIntPFmla();
   TestXnSys();
+  TestProtoconFile(true);
+  TestProtoconFile(false);
 }
  
