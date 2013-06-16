@@ -11,6 +11,7 @@ extern "C" {
 #include "xnsys.hh"
 #include <fstream>
 #include "protoconfile.hh"
+#include "ordersyn.hh"
 
 static std::ostream& DBogOF = std::cerr;
 
@@ -524,7 +525,7 @@ PickActionMCV(uint& ret_actId,
 /**
  * Do trivial trimming of the candidate actions after using an action.
  * The pruned candidate actions would break our assumption that processes are
- * self-disabling.
+ * self-disabling and deterministic.
  */
   void
 QuickTrim(Set<uint>& delSet,
@@ -534,32 +535,10 @@ QuickTrim(Set<uint>& delSet,
 {
   Xn::ActSymm act0;
   topo.action(act0, actId);
-  const Xn::PcSymm& pc = *act0.pc_symm;
+  Xn::ActSymm act1;
   for (uint i = 0; i < candidates.size(); ++i) {
-    Xn::ActSymm act1;
     topo.action(act1, candidates[i]);
-    bool add = true;
-    if (act0.pc_symm == act1.pc_symm) {
-      bool enabling = true;
-      for (uint j = 0; enabling && j < pc.rvbl_symms.sz(); ++j) {
-        if (act0.guard(j) != act1.guard(j)) {
-          enabling = false;
-        }
-      }
-      bool enabling01 = enabling;
-      bool enabling10 = enabling;
-      for (uint j = 0; enabling && j < pc.wvbl_symms.sz(); ++j) {
-        if (act0.assign(j) != act1.aguard(j)) {
-          enabling01 = false;
-        }
-        if (act1.assign(j) != act0.guard(j)) {
-          enabling10 = false;
-        }
-        enabling = (enabling01 || enabling10);
-      }
-      add = !enabling;
-    }
-    if (!add) {
+    if (!coexist_ck(act0, act1)) {
       delSet |= candidates[i];
     }
   }
@@ -801,7 +780,6 @@ AddConvergence(vector<uint>& retActions,
 AddConvergence(Xn::Sys& sys, const AddConvergenceOpt& opt)
 {
   Xn::Net& topo = sys.topology;
-  const uint nPossibleActs = topo.n_possible_acts;
 
   if (sys.liveLegit && !sys.synLegit) {
     DBog0( "For liveness in the invariant, we must be able to add actions there!" );
@@ -812,56 +790,17 @@ AddConvergence(Xn::Sys& sys, const AddConvergenceOpt& opt)
   tape.loXnRel = false;
   tape.hiXnRel = false;
 
-  if (sys.invariant.tautology_ck(false)) {
-    DBog0( "Invariant is empty!" );
+  bool good =
+    candidate_actions(tape.candidates, sys);
+  if (!good) {
     return false;
   }
-
-  if (sys.invariant.tautology_ck(true)) {
-    DBog0( "All states are invariant!" );
-    if (!sys.shadowVblCk()) {
-      return true;
-    }
+  if (good && tape.candidates.size() == 0) {
+    return true;
   }
 
-  for (uint i = 0; i < nPossibleActs; ++i) {
-    bool add = true;
-
-    Xn::ActSymm act;
-    topo.action(act, i);
-    const PF& actPF = topo.action_pfmla(i);
-
-    // Check for self-loops.
-    if (add) {
-      const Xn::PcSymm& pc = *act.pc_symm;
-      bool selfloop = true;
-      for (uint j = 0; j < pc.wvbl_symms.sz(); ++j) {
-        if (act.assign(j) != act.aguard(j)) {
-          selfloop = false;
-        }
-      }
-      add = !selfloop;
-      if (false && selfloop) {
-        OPut((DBogOF << "Action " << i << " is a self-loop: "), act) << '\n';
-      }
-    }
-
-    if (add && !sys.shadowVblCk() && sys.invariant.overlap_ck(actPF)) {
-      // This action does starts in the invariant.
-      // If /!sys.synLegit/, we shouldn't add any actions
-      // within the legitimate states, even if closure isn't broken.
-      if (!sys.synLegit || (~sys.invariant).overlap_ck(actPF.img(sys.invariant))) {
-        add = false;
-        if (false) {
-          OPut((DBogOF << "Action " << i << " breaks closure: "), act) << '\n';
-        }
-      }
-    }
-
-    if (add) {
-      tape.candidates.push_back(i);
-      tape.hiXnRel |= topo.action_pfmla(i);
-    }
+  for (uint i = 0; i < tape.candidates.size(); ++i) {
+    tape.hiXnRel |= topo.action_pfmla(tape.candidates[i]);
   }
 
   if (sys.liveLegit) {
@@ -920,6 +859,7 @@ int main(int argc, char** argv)
   AddConvergenceOpt opt;
   const char* modelFilePath = 0;
   const char* infile_path = 0;
+  bool use_random_method = false;
 
   // Use to disable picking only actions which resolve deadlocks
   // by making them backwards reachable from the invariant.
@@ -938,6 +878,10 @@ int main(int argc, char** argv)
       if (!modelFilePath){
         DBog0("No path given!!!!");
       }
+    }
+    if (string(argv[argi]) == "-random") {
+      ++argi;
+      use_random_method = true;
     }
 
     if (string(argv[argi]) == "test") {
@@ -1048,8 +992,18 @@ int main(int argc, char** argv)
     failout_sysCx ("Bad system definition.");
   }
 
+  bool found = false;
   // Run the algorithm.
-  bool found = AddConvergence(sys, opt);
+  if (use_random_method) {
+    if (!infile_path) {
+      failout_sysCx ("Need to use input file with random method!");
+    }
+    found = ordering_synthesis(sys.actions, infile_path);
+  }
+  else {
+    found = AddConvergence(sys, opt);
+  }
+
   if (found) {
     DBog0("Solution found!");
     for (uint i = 0; i < sys.actions.size(); ++i) {

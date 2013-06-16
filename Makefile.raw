@@ -13,6 +13,7 @@ CONFIG += debug
 #CONFIG += ultradebug
 #CONFIG += fast
 #CONFIG += noassert
+#CONFIG += openmp
 
 CxPath = ../cx
 BinPath = ../bin
@@ -40,7 +41,7 @@ all: $(ExeList)
 
 $(BinPath)/protocon: \
 	$(addprefix $(BldPath)/, pfmla.o pfmla-glu.o pfmla-bittable.o) \
-	$(addprefix $(BldPathCXX)/, pfmla.o xnsys.o test.o main.o inst.o promela.o) \
+	$(addprefix $(BldPathCXX)/, pfmla.o xnsys.o test.o ordersyn.o main.o inst.o promela.o) \
 	$(addprefix $(BldPathCXX)/, protoconfile.o protoconfile.leg.o) \
 	$(addprefix $(CxBldPath)/, alphatab.o fileb.o syscx.o bstree.o sesp.o rbtree.o)
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(LXXFLAGS)

@@ -117,6 +117,7 @@ public:
   Cx::Table< const VblSymm* > rvbl_symms;
   Cx::Table< const VblSymm* > wvbl_symms;
   Cx::Table< uint > wmap;
+  std::vector< bool > write_flags;
   Cx::Table< NatMap > rindices;
   Cx::Table< NatMap > windices;
   /// Domains of readable variables.
@@ -128,6 +129,10 @@ public:
   String vbl_name(uint i, const String& idxparam = "i") const {
     const String& name = rvbl_symms[i]->name;
     return name + "(" + rindices[i].expression(idxparam) + ")";
+  }
+
+  bool write_ck(uint ridx) const {
+    return write_flags[ridx];
   }
 };
 
@@ -184,6 +189,7 @@ public:
                         const NatMap& indices)
   {
     pc_symm->rvbl_symms.push(vbl_symm);
+    pc_symm->write_flags.push_back(false);
     pc_symm->rindices.push(indices);
     for (uint i = 0; i < pc_symm->membs.sz(); ++i) {
       const Vbl* vbl = vbl_symm->membs[indices.index(i, vbl_symm->membs.sz())];
@@ -197,6 +203,7 @@ public:
     add_read_access (pc_symm, vbl_symm, indices);
     pc_symm->wvbl_symms.push(vbl_symm);
     pc_symm->wmap.push(pc_symm->rvbl_symms.sz() - 1);
+    pc_symm->write_flags[pc_symm->rvbl_symms.sz() - 1] = true;
     pc_symm->windices.push(indices);
     for (uint i = 0; i < pc_symm->membs.sz(); ++i) {
       const Vbl* vbl = vbl_symm->membs[indices.index(i, vbl_symm->membs.sz())];
