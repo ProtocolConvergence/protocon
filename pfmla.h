@@ -45,6 +45,8 @@ struct PFmlaOpVT
   void (*pre1_fn) (PFmlaCtx*, PFmla*, const PFmla, const PFmla);
   void (*img_fn) (PFmlaCtx*, PFmla*, const PFmla);
   void (*img1_fn) (PFmlaCtx*, PFmla*, const PFmla, const PFmla);
+  void (*as_img_fn) (PFmlaCtx*, PFmla*, const PFmla);
+  void (*pick_pre_fn) (PFmlaCtx*, PFmla*, const PFmla);
   bool (*tautology_ck_fn) (PFmlaCtx*, const PFmla);
   bool (*unsat_ck_fn) (PFmlaCtx*, const PFmla);
   bool (*equiv_ck_fn) (PFmlaCtx*, const PFmla, const PFmla);
@@ -112,6 +114,10 @@ void
 img_PFmla (PFmla* dst, const PFmla a);
 void
 img1_PFmla (PFmla* dst, const PFmla a, const PFmla b);
+void
+as_img_PFmla (PFmla* dst, const PFmla a);
+void
+pick_pre_PFmla (PFmla* dst, const PFmla a);
 void
 eql_PFmlaVbl (PFmla* dst, const PFmlaVbl* a, const PFmlaVbl* b);
 void

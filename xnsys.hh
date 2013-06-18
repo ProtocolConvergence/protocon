@@ -333,6 +333,8 @@ bool
 CycleCk(const PF& xnRel, const PF& pf);
 PF
 BackwardReachability(const PF& xnRel, const PF& pf);
+bool
+SCC_Find(Cx::PFmla* ret_cycles, const Cx::PFmla& E, const Cx::PFmla& pf);
 
 #endif
 

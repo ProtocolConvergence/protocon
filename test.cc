@@ -15,6 +15,7 @@ extern "C" {
 #include <stdio.h>
 
 
+
 /**
  * Test dat code.
  */
@@ -87,6 +88,11 @@ TestPFmla()
   Claim( pf.equiv_ck(pf_a) );
   pf = pf_a.substitute_new_old(x_list_id, w_list_id);
   Claim( pf.equiv_ck(pf_b) );
+
+  // Test picking.
+  pf = (x == y).pick_pre();
+  Claim2( pf ,<=, (x == y) );
+  Claim( !pf.equiv_ck(x == y) );
 }
 
 static void
@@ -216,6 +222,8 @@ TestXnSys()
     cyclePF &= topo.pcs[0].act_unchanged_pfmla;
     Claim( !CycleCk(cyclePF, ~sys.invariant) );
 
+    Claim( !SCC_Find(0, cyclePF, ~sys.invariant) );
+
     cyclePF |= 
       ((topo.pfmla_vbl(0) == 0) &
        (topo.pfmla_vbl(2) == 2) &
@@ -225,6 +233,8 @@ TestXnSys()
     // All states in the cycle are illegitimate,
     // it should be found.
     Claim( CycleCk(cyclePF, ~sys.invariant) );
+
+    Claim( SCC_Find(0, cyclePF, ~sys.invariant) );
   }
 }
 

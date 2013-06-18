@@ -153,14 +153,19 @@ try_order_synthesis(vector<uint>& actions, const Xn::Sys& sys,
 class RNG {
 public:
   GMRand gmrand;
+  uint npcs;
 
-  RNG() {
+  RNG(uint pcidx, uint npcs) {
     init_GMRand( &gmrand );
-  }
-  explicit RNG(uint i) {
-    init1_GMRand( &gmrand, i );
+    this->npcs = npcs;
+    for (uint i = 0; i < pcidx; ++i) {
+      uint32_GMRand (&gmrand);
+    }
   }
   int operator()(int n) {
+    for (uint i = 0; i < npcs-1; ++i) {
+      uint32_GMRand (&gmrand);
+    }
     return (int) uint_GMRand (&gmrand, (uint) n);
   }
 };
@@ -203,7 +208,11 @@ ordering_synthesis(vector<uint>& ret_actions, const char* infile_path)
       done = true;
   }
 
-  RNG rng( PcIdx );
+#ifdef _OPENMP
+#pragma omp barrier
+#endif
+
+  RNG rng( PcIdx, NPcs );
   std::vector<uint> tmp_candidates;
   uint i = 0;
 
@@ -230,11 +239,12 @@ ordering_synthesis(vector<uint>& ret_actions, const char* infile_path)
     bool found =
       try_order_synthesis(actions, sys, tmp_candidates);
 
+    if (found)
+    {
 #ifdef _OPENMP
 #pragma omp critical
 #endif
-    {
-      if (found) {
+      {
         done = true;
         ret_actions = actions;
         solution_found = true;

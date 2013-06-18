@@ -224,6 +224,24 @@ public:
     return dst;
   }
 
+  PFmla as_img() const
+  {
+    PFmla dst;
+    as_img_PFmla (&dst.g, this->g);
+    return dst;
+  }
+
+  /**
+   * Pick a single satisfying instance.
+   * Not reentrant due to Glu/CUDD, use with caution.
+   */
+  PFmla pick_pre() const
+  {
+    PFmla dst;
+    pick_pre_PFmla (&dst.g, this->g);
+    return dst;
+  }
+
   static PFmla of_state(const uint* state, const Cx::Table<uint>& vbls, C::PFmlaCtx* ctx);
 
 };

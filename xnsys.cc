@@ -296,6 +296,10 @@ WeakConvergenceCk(const Xn::Sys& sys, const PF& xnRel)
 
 /**
  * Check for cycles within some state predicate.
+ *
+ * This uses a variant of the Emerson-Lei algorithm.
+ * It simply computes a fixpoint of the transition relation by
+ * iteratively computing the image until it does not change.
  */
   bool
 CycleCk(PF* scc, const PF& xnRel, const PF& pf)
@@ -323,7 +327,11 @@ CycleCk(PF* scc, const PF& xnRel, const PF& pf)
   bool
 CycleCk(const PF& xnRel, const PF& pf)
 {
+#if 0
+  return SCC_Find(0, xnRel, pf);
+#else
   return CycleCk(0, xnRel, pf);
+#endif
 }
 
 
@@ -373,5 +381,127 @@ Xn::Net::make_action_pfmla(uint actidx)
   }
 
   act_pfmlas[actidx] = pf;
+}
+
+
+////// Linear SCC detection
+static
+  void
+Skel_Forward(const Cx::PFmla& V, const Cx::PFmla& E, const Cx::PFmla& NODE,
+             Cx::PFmla& FW, Cx::PFmla& S1, Cx::PFmla& NODE1)
+{
+  using Cx::PFmla;
+
+  Cx::Table< PFmla > stack;
+
+  PFmla level( NODE );
+  FW = false;
+
+  // Compute the forward set and push onto /stack/.
+  while (!level.tautology_ck(false))
+  {
+    stack.push(level);
+    FW |= level;
+    level = (V & E.img(level)) - FW;
+  }
+
+  // Determine a skeleton of the forward set.
+  level = stack.top();
+  stack.mpop(1);
+  NODE1 = level.pick_pre();
+  S1 = NODE1;
+  while (stack.sz() != 0) {
+    level = stack.top();
+    stack.mpop(1);
+    S1 |= (E.pre(S1) & level).pick_pre();
+  }
+}
+
+static
+  bool
+SCC_Find(Cx::PFmla* ret_cycles,
+         const Cx::PFmla& V, const Cx::PFmla& E,
+         const Cx::PFmla& S, const Cx::PFmla& NODE)
+{
+  using Cx::PFmla;
+
+  if (V.tautology_ck(false))
+    return false;
+
+  // Determine the node for which the SCC is computed.
+  PFmla scc;
+  if (S.tautology_ck(false))
+    scc = V.pick_pre();
+  else
+    scc = NODE;
+
+  PFmla FW;
+  PFmla NewS;
+  PFmla NewNODE;
+
+  // Compute the forward-set of the vertex in NODE together with a skeleton.
+  Skel_Forward(V, E, scc, FW, NewS, NewNODE);
+
+  // Determine the SCC containing NODE.
+  bool found = false;
+  for (PFmla pf = (E.pre(scc) & FW);
+       !(pf - scc).tautology_ck(false);
+       pf = (E.pre(scc) & FW))
+  {
+    if (!ret_cycles)  return true;
+    found = true;
+    scc |= pf;
+  }
+
+  // Insert the SCC in the partition.
+  if (found)
+    *ret_cycles |= scc;
+
+  // First recursive call: Computation of the SCCs in V - FW.
+  {
+    const PFmla& V1 = V - FW;
+    // No reason to modify the E relation since we always AND the results
+    // of E.img() or E.pre() with the vertex set V (or subsets of it).
+    //const PFmla& E1 = (E & V1) & V1.as_img();
+    const PFmla& S1 = S - scc;
+    const PFmla& NODE1 = E.pre(scc | S) & (S - scc);
+    found = found ||
+      SCC_Find(ret_cycles, V1, E, S1, NODE1);
+
+    if (found && !ret_cycles)
+      return true;
+  }
+
+  // Second recursive call: Computation of the SCCs in FW - SCC
+  {
+    const PFmla& V1 = FW - scc;
+    // No reason to modify the E relation since we always AND the results
+    // of E.img() or E.pre() with the vertex set V (or subsets of it).
+    //const PFmla& E1 = (E & V1) & V1.as_img();
+    const PFmla& S1 = NewS - scc;
+    const PFmla& NODE1 = NewNODE - scc;
+    found = found ||
+      SCC_Find(ret_cycles, V1, E, S1, NODE1);
+  }
+
+  return found;
+}
+
+/**
+ * Find cycles in a linear number of symbolic steps as per the algorithm given by
+ * by Gentilini, Piazza, and Policriti in their 2003 paper
+ * "Computing strongly connected components in a linear number of symbolic steps".
+ *
+ * Even though it is theoretically linear, I have found the Emerson-Lei algorithm
+ * to be faster.
+ *
+ * This is also not threadsafe when using Glu/CUDD for MDDs.
+ *
+ * \sa CycleCk()
+ */
+  bool
+SCC_Find(Cx::PFmla* ret_cycles, const Cx::PFmla& E, const Cx::PFmla& pf)
+{
+  return SCC_Find(ret_cycles, pf, E, PF(false), PF(false));
 }
 

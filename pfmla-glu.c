@@ -200,6 +200,66 @@ img1_GluPFmla (PFmlaCtx* fmlactx, PFmla* base_dst, const PFmla base_a, const PFm
 }
 
 static
+  void
+as_img_GluPFmla (PFmlaCtx* fmlactx, PFmla* base_dst, const PFmla base_a)
+{
+  GluPFmlaCtx* ctx = castup_as_GluPFmlaCtx (fmlactx);
+  const GluPFmla* a = ccastup_as_GluPFmla (base_a);
+  GluPFmla* dst = castup_as_GluPFmla (*base_dst);
+  mdd_t* tmp = dst->mdd;
+  dst->mdd = mdd_substitute (ctx->ctx, a->mdd,
+                             ctx->pre_vbl_list,
+                             ctx->img_vbl_list);
+  if (tmp)  mdd_free (tmp);
+}
+
+static
+  void
+pick_pre_GluPFmla (PFmlaCtx* fmlactx, PFmla* base_dst, const PFmla base_a)
+{
+  GluPFmlaCtx* ctx = castup_as_GluPFmlaCtx (fmlactx);
+  const GluPFmla* a = ccastup_as_GluPFmla (base_a);
+  GluPFmla* dst = castup_as_GluPFmla (*base_dst);
+  //mdd_t* smoothed = mdd_smooth (ctx->ctx, a->mdd, ctx->img_vbl_list);
+  //array_t* support = mdd_get_support (ctx->ctx, smoothed);
+  //mdd_gen* gen = mdd_first_minterm (smoothed, &minterm, support);
+  array_t* minterm = 0;
+  mdd_gen* gen = mdd_first_minterm (a->mdd, &minterm, ctx->pre_vbl_list);
+
+  if (gen->status == bdd_EMPTY)
+  {
+    iden_PFmla (base_dst, base_a);
+  }
+  else
+  {
+    if (dst->mdd)  mdd_free (dst->mdd);
+    dst->mdd = 0;
+
+    for (uint i = 0; i < (uint) array_n(ctx->pre_vbl_list); ++i) {
+      uint idx = array_fetch(uint, ctx->pre_vbl_list, i);
+      uint val = array_fetch(uint, minterm, i);
+      mdd_t* eq = mdd_eq_c (ctx->ctx, idx, val);
+
+      if (dst->mdd)
+      {
+        mdd_t* tmp = dst->mdd;
+        dst->mdd = mdd_and (dst->mdd, eq, 1, 1);
+        mdd_free (tmp);
+        mdd_free (eq);
+      }
+      else
+      {
+        dst->mdd = eq;
+      }
+    }
+  }
+  mdd_gen_free (gen);
+  if (minterm)
+    array_free (minterm);
+  //mdd_free (smoothed);
+}
+
+static
   bool
 tautology_ck_GluPFmla (PFmlaCtx* ctx, const PFmla base_a)
 {
@@ -362,6 +422,8 @@ make_GluPFmlaCtx ()
     vt.pre1_fn         =         pre1_GluPFmla;
     vt.img_fn          =          img_GluPFmla;
     vt.img1_fn         =         img1_GluPFmla;
+    vt.as_img_fn       =       as_img_GluPFmla;
+    vt.pick_pre_fn     =     pick_pre_GluPFmla;
     vt.tautology_ck_fn = tautology_ck_GluPFmla;
     vt.unsat_ck_fn     =     unsat_ck_GluPFmla;
     vt.equiv_ck_fn     =     equiv_ck_GluPFmla;

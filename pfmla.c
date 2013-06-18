@@ -483,6 +483,37 @@ img1_PFmla (PFmla* dst, const PFmla a, const PFmla b)
 }
 
   void
+as_img_PFmla (PFmla* dst, const PFmla a)
+{
+  Trit phase_a = phase_of_PFmla (a);
+  if (phase_a != May)
+  {
+    wipe1_PFmla (dst, (phase_a == Yes));
+  }
+  else
+  {
+    pre_op1_PFmla (dst, a);
+    a->ctx->vt->as_img_fn (a->ctx, dst, a);
+  }
+}
+
+  void
+pick_pre_PFmla (PFmla* dst, const PFmla a)
+{
+  Trit phase_a = phase_of_PFmla (a);
+  if (phase_a != May)
+  {
+    Claim( (phase_a == Nil) && "No context available." );
+    wipe1_PFmla (dst, false);
+  }
+  else
+  {
+    pre_op1_PFmla (dst, a);
+    a->ctx->vt->pick_pre_fn (a->ctx, dst, a);
+  }
+}
+
+  void
 eql_PFmlaVbl (PFmla* dst, const PFmlaVbl* a, const PFmlaVbl* b)
 {
   Claim2( a->ctx ,==, b->ctx );
