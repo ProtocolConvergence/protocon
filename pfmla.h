@@ -54,6 +54,7 @@ struct PFmlaOpVT
   bool (*subseteq_ck_fn) (PFmlaCtx*, const PFmla, const PFmla);
 
   PFmla (*make_fn) (PFmlaCtx*);
+  PFmla (*make1_fn) (PFmlaCtx*, bool);
   void (*free_fn) (PFmlaCtx*, PFmla);
 
   void (*vbl_eql_fn) (PFmlaCtx*, PFmla*, uint, uint);
@@ -174,6 +175,15 @@ cons_PFmla (PFmlaCtx* ctx)
 }
 
 qual_inline
+  PFmla
+cons1_PFmla (PFmlaCtx* ctx, bool phase)
+{
+  PFmla g = ctx->vt->make1_fn (ctx, phase);
+  g->ctx = ctx;
+  return g;
+}
+
+qual_inline
   Trit
 phase_of_PFmla (const PFmla g)
 {
@@ -204,6 +214,29 @@ wipe_PFmla (PFmla* g)
 {
   lose_PFmla (g);
   *g = 0;
+}
+
+qual_inline
+  void
+fill_ctx_PFmla (PFmla* a, PFmla* b)
+{
+  Trit phase_a = phase_of_PFmla (*a);
+  Trit phase_b = phase_of_PFmla (*b);
+  if (phase_a == May)
+  {
+    if (phase_b == May)
+      Claim2( (*a)->ctx, ==, (*b)->ctx);
+    else
+      *b = cons1_PFmla ((*a)->ctx, phase_b == Yes);
+  }
+  else if (phase_b == May)
+  {
+    *a = cons1_PFmla ((*b)->ctx, phase_a == Yes);
+  }
+  else
+  {
+    Claim( phase_a == May || phase_b == May );
+  }
 }
 
 qual_inline

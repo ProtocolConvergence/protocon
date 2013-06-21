@@ -506,10 +506,36 @@ pick_pre_PFmla (PFmla* dst, const PFmla a)
     Claim( (phase_a == Nil) && "No context available." );
     wipe1_PFmla (dst, false);
   }
-  else
+  else if (a->ctx->vt->pick_pre_fn)
   {
     pre_op1_PFmla (dst, a);
     a->ctx->vt->pick_pre_fn (a->ctx, dst, a);
+  }
+  else
+  {
+    PFmlaCtx* ctx = a->ctx;
+    PFmla eq = dflt_PFmla ();
+    PFmla conj = dflt1_PFmla (true);
+    PFmla tmp_conj = dflt_PFmla ();
+
+    for (uint i = 0; i < ctx->vbls.sz; ++i) {
+      const PFmlaVbl* vbl = (PFmlaVbl*) elt_LgTable (&ctx->vbls, i);
+      bool found = false;
+      for (uint val = 0; !found && val < vbl->domsz-1; ++val) {
+        eqlc_PFmlaVbl (&eq, vbl, val);
+        and_PFmla (&tmp_conj, conj, eq);
+        if (overlap_ck_PFmla (tmp_conj, a))
+          found = true;
+      }
+      if (!found) {
+        eqlc_PFmlaVbl (&eq, vbl, vbl->domsz-1);
+      }
+      and_PFmla (&conj, conj, eq);
+    }
+    iden_PFmla (dst, conj);
+    lose_PFmla (&tmp_conj);
+    lose_PFmla (&conj);
+    lose_PFmla (&eq);
   }
 }
 

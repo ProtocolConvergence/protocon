@@ -64,6 +64,15 @@ public:
     lose_PFmla (&g);
   }
 
+  friend void fill_ctx (PFmla&, PFmla&);
+
+  PFmla tautology(bool phase) const
+  {
+    PFmla a;
+    a.g = cons1_PFmla (g->ctx, phase);
+    return a;
+  }
+
   PFmla& operator=(const PFmla& pf)
   {
     iden_PFmla (&g, pf.g);
@@ -233,7 +242,6 @@ public:
 
   /**
    * Pick a single satisfying instance.
-   * Not reentrant due to Glu/CUDD, use with caution.
    */
   PFmla pick_pre() const
   {
@@ -246,6 +254,12 @@ public:
 
 };
 
+inline
+  void
+fill_ctx (PFmla& a, PFmla& b)
+{
+  fill_ctx_PFmla (&a.g, &b.g);
+}
 
 class PFmlaVbl
 {
@@ -447,6 +461,17 @@ public:
 }
 
 typedef Cx::PFmla PF;
+
+PF
+ClosedSubset(const PF& xnRel, const PF& invariant);
+PF
+BackwardReachability(const PF& xnRel, const PF& pf);
+bool
+CycleCk(PF* scc, const PF& xnRel, const PF& pf);
+bool
+CycleCk(const PF& xnRel, const PF& pf);
+bool
+SCC_Find(Cx::PFmla* ret_cycles, const Cx::PFmla& E, const Cx::PFmla& pf);
 
 #endif
 

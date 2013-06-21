@@ -320,21 +320,11 @@ public:
 ostream&
 OPut(ostream& of, const Xn::ActSymm& act);
 PF
-ClosedSubset(const PF& xnRel, const PF& invariant);
-PF
 LegitInvariant(const Xn::Sys& sys, const PF& loXnRel, const PF& hiXnRel);
 bool
 WeakConvergenceCk(const Xn::Sys& sys, const PF& xnRel, const PF& invariant);
 bool
 WeakConvergenceCk(const Xn::Sys& sys, const PF& xnRel);
-bool
-CycleCk(PF* scc, const PF& xnRel, const PF& pf);
-bool
-CycleCk(const PF& xnRel, const PF& pf);
-PF
-BackwardReachability(const PF& xnRel, const PF& pf);
-bool
-SCC_Find(Cx::PFmla* ret_cycles, const Cx::PFmla& E, const Cx::PFmla& pf);
 
 #endif
 
