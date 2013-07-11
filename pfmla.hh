@@ -198,6 +198,8 @@ public:
     return b;
   }
 
+  PFmla smooth(const PFmlaVbl& vbl) const;
+
   PFmla substitute_new_old(uint newSetIdx, uint oldSetIdx) const
   {
     PFmla b;
@@ -251,6 +253,7 @@ public:
   }
 
   static PFmla of_state(const uint* state, const Cx::Table<uint>& vbls, C::PFmlaCtx* ctx);
+  static PFmla of_img_state(const uint* state, const Cx::Table<uint>& vbls, C::PFmlaCtx* ctx);
 
 };
 
@@ -304,6 +307,8 @@ public:
     return pf;
   }
 
+  PFmla img_eq(const IntPFmla& b) const;
+
   bool equiv_ck(const PFmlaVbl& b) const
   {
     return (x == b.x);
@@ -311,6 +316,15 @@ public:
 };
 
 inline uint id_of(const PFmlaVbl& vbl) { return vbl.x->id; }
+
+inline
+  PFmla
+PFmla::smooth(const PFmlaVbl& vbl) const
+{
+  PFmla b;
+  smooth_vbl_PFmla (&b.g, g, vbl.x);
+  return b;
+}
 
 
 class IntPFmla
@@ -380,6 +394,7 @@ public:
   PFmla operator==(const IntPFmla& b) const { return this->cmp(b, 0, 1, 0); }
   PFmla operator>=(const IntPFmla& b) const { return this->cmp(b, 0, 1, 1); }
   PFmla operator> (const IntPFmla& b) const { return this->cmp(b, 0, 0, 1); }
+  PFmla img_eq(const IntPFmla& b) const;
 };
 
 inline IntPFmla operator+(const PFmlaVbl& a, const IntPFmla& b) { return IntPFmla(a) += b; }
@@ -394,6 +409,7 @@ inline PFmla operator!=(const PFmlaVbl& a, const IntPFmla& b) { return IntPFmla(
 inline PFmla operator==(const PFmlaVbl& a, const IntPFmla& b) { return IntPFmla(a).cmp(b, 0, 1, 0); }
 inline PFmla operator>=(const PFmlaVbl& a, const IntPFmla& b) { return IntPFmla(a).cmp(b, 0, 1, 1); }
 inline PFmla operator> (const PFmlaVbl& a, const IntPFmla& b) { return IntPFmla(a).cmp(b, 0, 0, 1); }
+inline PFmla PFmlaVbl::img_eq(const IntPFmla& b) const { return IntPFmla(*this).img_eq(b); }
 
 class PFmlaCtx
 {

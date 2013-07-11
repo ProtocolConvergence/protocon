@@ -1,0 +1,19 @@
+
+protocol Leader;
+
+constant N := 4;
+constant M := N;
+
+shadow variable d[Int % N] : Int % 2;
+puppet variable x[Int % N] : Int % M;
+
+process P[i : Int % N]
+{
+  write: d[i];
+  read:  x[i-1];
+  write: x[i];
+  read:  x[i+1];
+}
+
+legit: (unique i : Int % N : d[i] == 1);
+

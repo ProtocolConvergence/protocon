@@ -377,6 +377,12 @@ subseteq_ck_PFmla (const PFmla a, const PFmla b)
 }
 
   void
+smooth_vbl_PFmla (PFmla* dst, const PFmla a, const PFmlaVbl* vbl)
+{
+  smooth_vbls_PFmla (dst, a, vbl->list_id);
+}
+
+  void
 smooth_vbls_PFmla (PFmla* b, const PFmla a, uint list_id)
 {
   Trit phase = phase_of_PFmla (a);
@@ -433,7 +439,7 @@ pre1_PFmla (PFmla* dst, const PFmla a, const PFmla b)
     else
       wipe1_PFmla (dst, false);
   }
-  if (phase_a != May)
+  else if (phase_a != May)
   {
     wipe1_PFmla (dst, phase_a == Yes);
   }
@@ -627,6 +633,8 @@ add_vbl_PFmlaCtx (PFmlaCtx* ctx, const char* name, uint domsz)
   cat_cstr_AlphaTab (&x->img_name, "'");
   x->id = id;
   x->domsz = domsz;
+  x->list_id = add_vbl_list_PFmlaCtx (ctx);
+  add_to_vbl_list_PFmlaCtx (ctx, x->list_id, x->id);
 
   assoc = ensure1_Associa (&ctx->vbl_map, &x->name, &added);
   if (!added) {

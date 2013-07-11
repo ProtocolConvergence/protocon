@@ -468,7 +468,7 @@ PickActionMCV(uint& ret_actId,
     for (it = candidates.begin(); it != candidates.end(); ++it) {
       uint actId = *it;
       const PF& actPF = topo.action_pfmla(actId);
-      if (sys.shadowVblCk()) {
+      if (sys.shadow_puppet_synthesis_ck()) {
         if (!actPF.overlap_ck(tape.hi_invariant)) {
           biasMap[0] |= actId;
         }
@@ -569,7 +569,7 @@ FMem_AddConvergence::reviseActions(const Xn::Sys& sys,
   this->loXnRel |= addActPF;
 
   PF invariant;
-  if (sys.shadowVblCk()) {
+  if (sys.shadow_puppet_synthesis_ck()) {
     invariant = LegitInvariant(sys, this->loXnRel, this->hiXnRel);
     this->hi_invariant = invariant;
     if (invariant.tautology_ck(false)) {
@@ -597,7 +597,7 @@ FMem_AddConvergence::reviseActions(const Xn::Sys& sys,
 
       /* TODO */
 #if 0
-      if (sys.shadowVblCk()) {
+      if (sys.shadow_puppet_synthesis_ck()) {
         if (sys.smoothShadowVbls(addActPF).equivCk(sys.smoothShadowVbls(actPF))) {
           const PF actEss = addActPF & sys.smoothShadowVbls(actPF);
           if (actEss.img().equivCk(actPF.img())) {
@@ -611,7 +611,7 @@ FMem_AddConvergence::reviseActions(const Xn::Sys& sys,
       }
 #endif
 
-      if (sys.shadowVblCk() && actPF.overlap_ck(invariant)) {
+      if (sys.shadow_puppet_synthesis_ck() && actPF.overlap_ck(invariant)) {
         const PF& pf = ~LegitInvariant(sys, this->loXnRel | actPF, this->hiXnRel);
         if (CycleCk(this->loXnRel | actPF, pf)) {
           dels |= actId;
@@ -625,7 +625,7 @@ FMem_AddConvergence::reviseActions(const Xn::Sys& sys,
         }
       }
 
-      if (false && sys.shadowVblCk()) {
+      if (false && sys.shadow_puppet_synthesis_ck()) {
         if (!WeakConvergenceCk(sys, this->hiXnRel - actPF, this->backReachPF)) {
           reqAdds |= actId;
           continue;
@@ -643,7 +643,7 @@ FMem_AddConvergence::reviseActions(const Xn::Sys& sys,
   this->hiXnRel -= delActPF;
 
   bool revise = true;
-  if (sys.shadowVblCk()) {
+  if (sys.shadow_puppet_synthesis_ck()) {
     invariant = LegitInvariant(sys, this->loXnRel, this->hiXnRel);
     this->hi_invariant = invariant;
     if (invariant.tautology_ck(false)) {
@@ -724,7 +724,7 @@ AddConvergence(vector<uint>& retActions,
                const AddConvergenceOpt& opt)
 {
   while (!tape.candidates.empty()) {
-    if (!sys.shadowVblCk()) {
+    if (!sys.shadow_puppet_synthesis_ck()) {
       if (!WeakConvergenceCk(sys, tape.hiXnRel, sys.invariant)) {
         return false;
       }
@@ -754,7 +754,7 @@ AddConvergence(vector<uint>& retActions,
   }
 
   if (tape.deadlockPF.tautology_ck(false)) {
-    const PF& invariant = sys.shadowVblCk() ? tape.hi_invariant : sys.invariant;
+    const PF& invariant = sys.shadow_puppet_synthesis_ck() ? tape.hi_invariant : sys.invariant;
     if (CycleCk(tape.loXnRel, ~invariant)) {
       DBog0( "Why are there cycles?" );
       return false;
@@ -781,11 +781,6 @@ AddConvergence(Xn::Sys& sys, const AddConvergenceOpt& opt)
 {
   Xn::Net& topo = sys.topology;
 
-  if (sys.liveLegit && !sys.synLegit) {
-    DBog0( "For liveness in the invariant, we must be able to add actions there!" );
-    return false;
-  }
-
   FMem_AddConvergence tape;
   tape.loXnRel = false;
   tape.hiXnRel = false;
@@ -803,15 +798,11 @@ AddConvergence(Xn::Sys& sys, const AddConvergenceOpt& opt)
     tape.hiXnRel |= topo.action_pfmla(tape.candidates[i]);
   }
 
-  if (sys.liveLegit) {
-    tape.deadlockPF = true;
+  tape.deadlockPF = ~sys.invariant;
+  if (sys.shadow_puppet_synthesis_ck()) {
+    tape.deadlockPF |= sys.shadow_protocol.pre();
   }
-  else {
-    tape.deadlockPF = ~sys.invariant;
-    if (sys.shadowVblCk()) {
-      tape.deadlockPF |= sys.shadow_protocol.pre();
-    }
-  }
+
   tape.backReachPF = sys.invariant;
 
   RankDeadlocksMCV(tape.mcvDeadlocks,

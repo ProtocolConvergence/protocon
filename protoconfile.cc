@@ -3,7 +3,8 @@
 #include "protoconfile.hh"
 
   bool
-ProtoconFile::add_variables(Sesp vbl_name_sp, Sesp vbl_nmembs_sp, Sesp vbl_dom_sp)
+ProtoconFile::add_variables(Sesp vbl_name_sp, Sesp vbl_nmembs_sp, Sesp vbl_dom_sp,
+                            Xn::Vbl::ShadowPuppetRole role)
 {
   bool good = true;
   const char* name = 0;
@@ -11,16 +12,15 @@ ProtoconFile::add_variables(Sesp vbl_name_sp, Sesp vbl_nmembs_sp, Sesp vbl_dom_s
   uint domsz = 0;
 
   name = ccstr_of_Sesp (vbl_name_sp);
-  if (LegitCk(name, good, ""))
+  if (LegitCk(name, good, "")) {}
+  if (LegitCk(eq_cstr ("NatDom", ccstr_of_Sesp (car_of_Sesp (vbl_nmembs_sp))), good, "")) {}
+  if (LegitCk(eq_cstr ("NatDom", ccstr_of_Sesp (car_of_Sesp (vbl_dom_sp))), good, "")) {}
+
+  if (LegitCk(eval_gtz (&nmembs, cadr_of_Sesp (vbl_nmembs_sp)), good, ""))
   {}
-  if (LegitCk(uint_of_Sesp (cadr_of_Sesp (vbl_nmembs_sp), &nmembs), good, ""))
-  {}
-  if (LegitCk(uint_of_Sesp (cadr_of_Sesp (vbl_dom_sp), &domsz), good, ""))
+  if (LegitCk(eval_gtz (&domsz, cadr_of_Sesp (vbl_dom_sp)), good, ""))
   {
-    // TODO
-    // We shouldn't be able to get a domsz so easily.
-    // We should evaluate some expression... this allows N-1 to be the domain size..
-    Xn::VblSymm* symm = sys->topology.add_variables(name, nmembs, domsz);
+    Xn::VblSymm* symm = sys->topology.add_variables(name, nmembs, domsz, role);
     vbl_map[name] = symm;
   }
   return good;
@@ -29,17 +29,28 @@ ProtoconFile::add_variables(Sesp vbl_name_sp, Sesp vbl_nmembs_sp, Sesp vbl_dom_s
   bool
 ProtoconFile::add_processes(Sesp pc_name, Sesp idx_name, Sesp npcs)
 {
+  Claim2( index_map.sz() ,==, 0 );
   bool good = true;
   const char* name_a = ccstr_of_Sesp (pc_name);
   const char* name_b = ccstr_of_Sesp (idx_name);
   if (LegitCk(name_a && name_b, good, "")) {
     uint domsz = 0;
-    if (LegitCk(uint_of_Sesp (cadr_of_Sesp (npcs), &domsz), good, "")) {
-      sys->topology.add_processes(name_a, domsz);
-      Claim2( index_map.sz() ,==, 0 );
+    if (LegitCk(eval_gtz (&domsz, cadr_of_Sesp (npcs)), good, "")) {
+      sys->topology.add_processes(name_a, (uint) domsz);
     }
   }
   return good;
+}
+
+  bool
+ProtoconFile::add_let(Sesp name_sp, Sesp val_sp)
+{
+  bool legit = true;
+  const char* name = ccstr_of_Sesp (name_sp);
+  if (LegitCk(name, legit, "")) {
+    let_map[name] = val_sp;
+  }
+  return legit;
 }
 
   bool
@@ -78,11 +89,7 @@ ProtoconFile::add_access(Sesp vbl_sp, Sesp pc_idx_sp, Bit write)
 
     for (uint i = 0; i < pc_symm.membs.sz(); ++i) {
       index_map[idx_name] = i;
-      if (LegitCk( eval(ipf, vbl_idx_sp), legit, "" ))
-      {}
-      if (LegitCk( ipf.state_map.sz() == 1, legit, "" )) {
-        indices.membs[i] = ipf.state_map[0];
-      }
+      if (LegitCk( eval_int (&indices.membs[i], vbl_idx_sp), legit, "" )) {}
     }
     index_map.erase(idx_name);
 
@@ -102,6 +109,65 @@ ProtoconFile::add_access(Sesp vbl_sp, Sesp pc_idx_sp, Bit write)
     }
   }
 
+  return legit;
+}
+
+  bool
+ProtoconFile::add_action(Sesp act_sp, Sesp pc_idx_sp)
+{
+  bool legit = true;
+  Xn::Net& topo = sys->topology;
+  const char* idx_name = ccstr_of_Sesp (pc_idx_sp);
+  if (LegitCk( idx_name, legit, "" ))
+  {}
+  if (LegitCk( topo.pc_symms.sz() > 0, legit, "" ))
+  {
+    Xn::PcSymm& pc_symm = topo.pc_symms.top();
+    Cx::PFmla act_pf( false );
+
+    for (uint i = 0; legit && i < pc_symm.membs.sz(); ++i) {
+      Xn::Pc& pc = *pc_symm.membs[i];
+      index_map[idx_name] = i;
+      Cx::PFmla guard_pf;
+      if (LegitCk( eval(guard_pf, cadr_of_Sesp (act_sp)), legit, "" ))
+      {
+        Cx::PFmla assign_pf( topo.identity_pfmla );
+        Sesp assign_sp = cddr_of_Sesp (act_sp);
+
+        for (uint j = 0; j < pc.wvbls.sz(); ++j) {
+          const Xn::Vbl& vbl = *pc.wvbls[j];
+          if (vbl.symm->pure_puppet_ck()) {
+            assign_pf = assign_pf.smooth(topo.pfmla_vbl(vbl));
+          }
+        }
+
+        while (!nil_ck_Sesp (assign_sp)) {
+          Sesp sp = car_of_Sesp (assign_sp);
+          Claim( eq_cstr (":=", ccstr_of_Sesp (car_of_Sesp (sp))) );
+          Sesp vbl_sp = cadr_of_Sesp (sp);
+          Sesp val_sp = caddr_of_Sesp (sp);
+          assign_sp = cdr_of_Sesp (assign_sp);
+
+          Xn::Vbl* vbl = 0;
+          Cx::IntPFmla val;
+          if (LegitCk( eval_vbl(&vbl, vbl_sp), legit, "" )) {}
+          if (LegitCk( eval(val, val_sp), legit, "" )) {
+            val %= vbl->symm->domsz;
+            const Cx::PFmlaVbl& pf_vbl = topo.pfmla_vbl(*vbl);
+            assign_pf = (assign_pf.smooth(pf_vbl)
+                         && pf_vbl.img_eq(val));
+          }
+        }
+        act_pf |= guard_pf & assign_pf;
+      }
+    }
+    index_map.erase(idx_name);
+
+    if (legit) {
+      pc_symm.act_pfmla |= act_pf;
+      sys->shadow_protocol |= act_pf;
+    }
+  }
   return legit;
 }
 
@@ -128,6 +194,7 @@ ProtoconFile::add_legit(Sesp legit_sp, Sesp pc_idx_sp)
     }
     index_map.erase(idx_name);
   }
+  let_map.clear();
   return good;
 }
 
@@ -158,8 +225,15 @@ ProtoconFile::expression_chunks(Cx::Table<Cx::String>& chunks, Sesp a, const Cx:
     const char* name = ccstr_of_Sesp (a);
     if (name)
     {
-      if (LegitCk( idx_name == name, good, "" )) {
+      if (idx_name == name) {
         chunks.push("");
+        return good;
+      }
+      Sesp* sp = let_map.lookup(name);
+      if (sp) {
+        return expression_chunks (chunks, *sp, idx_name);
+      }
+      if (LegitCk( idx_name == name || sp, good, "" )) {
       }
       return good;
     }
@@ -344,6 +418,48 @@ ProtoconFile::eval(Cx::PFmla& pf, Sesp a)
       }
       index_map.erase(idxname);
     }
+#if 0
+    if (LegitCk( ipf_c.vbls.sz() == 0, good, "" )) {
+      const uint n = ipf_c.state_map.sz();
+
+      Cx::Table< Cx::PFmla > pfmlas( n );
+
+      for (uint i = 0; good && i < n; ++i) {
+        index_map[idxname] = ipf_c.state_map[i];
+        if (LegitCk( eval(pfmlas[i], d), good, "" ))
+        {}
+      }
+
+      if (good) {
+        if (eq_cstr (key, "forall")) {
+          pf = true;
+          for (uint i = 0; i < n; ++i) {
+            pf &= pfmlas[i];
+          }
+        }
+        else if (eq_cstr (key, "exists")) {
+          pf = false;
+          for (uint i = 0; i < n; ++i) {
+            pf |= pfmlas[i];
+          }
+        }
+        else {
+          pf = false;
+          for (uint i = 0; i < n; ++i) {
+            Cx::PFmla conj( pfmlas[i] );
+            for (uint j = 0; j < n; ++j) {
+              if (j != i) {
+                conj &= ~ pfmlas[j];
+              }
+            }
+            pf |= conj;
+          }
+        }
+      }
+
+      index_map.erase(idxname);
+    }
+#endif
   }
   else {
     good = false;
@@ -368,9 +484,9 @@ ProtoconFile::eval(Cx::IntPFmla& ipf, Sesp a)
     const char* name = ccstr_of_Sesp (a);
     if (name)
     {
-      const int* val = index_map.lookup(name);
-      if (LegitCk( val, good, "index_map.lookup(name)" )) {
-        ipf = Cx::IntPFmla( *val );
+      int val = 0;
+      if (LegitCk( lookup_int(&val, name), good, "lookup_int()" )) {
+        ipf = Cx::IntPFmla( val );
         //DBog2("index %s is: %d", name, *val);
       }
       return good;
@@ -409,6 +525,9 @@ ProtoconFile::eval(Cx::IntPFmla& ipf, Sesp a)
       DBog0("it's a list");
     if (atom_ck_Sesp (a))
       DBog0("it's an atom");
+    if (a) {
+      DBog1( "a->kind->vt->kind_name = %s", a->kind->vt->kind_name );
+    }
   }
 
   if (!good)
@@ -478,14 +597,10 @@ ProtoconFile::eval(Cx::IntPFmla& ipf, Sesp a)
         symm = *tmp;
     }
 
-    bool ev = false;
-    if (LegitCk( symm, good, "" ))
-      ev = eval(ipf, c);
-
-    if (LegitCk( ev, good, "eval()" ))  {}
-    if (LegitCk( ipf.state_map.sz() == 1, good, "" ))
+    int idx_int = 0;
+    if (LegitCk( eval_int (&idx_int, c), good, "" ))
     {
-      uint idx = umod_int (ipf.state_map[0], symm->membs.sz());
+      uint idx = umod_int (idx_int, symm->membs.sz());
       ipf = Cx::IntPFmla(sys->topology.pfmla_vbl(*symm->membs[idx]));
     }
   }
@@ -494,7 +609,80 @@ ProtoconFile::eval(Cx::IntPFmla& ipf, Sesp a)
     DBog1( "No matching string, key is: \"%s\"", key );;
   }
 
-
   return good;
 }
+
+  bool
+ProtoconFile::eval_int(int* ret, Sesp sp)
+{
+  bool legit = true;
+  Cx::IntPFmla ipf;
+  if (LegitCk( eval(ipf, sp), legit, "" )) {
+    if (LegitCk( ipf.state_map.sz() == 1, legit, "" )) {
+      *ret = ipf.state_map[0];
+    }
+  }
+  return legit;
+}
+
+  bool
+ProtoconFile::eval_gtz(uint* ret, Sesp sp)
+{
+  int x = 0;
+  bool legit = eval_int (&x, sp);;
+  if (LegitCk( x > 0, legit, "" )) {
+    *ret = (uint) x;
+  }
+  return legit;
+}
+
+  bool
+ProtoconFile::eval_vbl(Xn::Vbl** ret, Sesp a)
+{
+  Claim( eq_cstr ("aref", ccstr_of_Sesp (car_of_Sesp (a))) );
+  return eval_vbl(ret, cadr_of_Sesp (a), caddr_of_Sesp (a));
+}
+
+  bool
+ProtoconFile::eval_vbl(Xn::Vbl** ret, Sesp b, Sesp c)
+{
+  bool legit = true;
+  const char* name = 0;
+
+  if (LegitCk( b, legit, "" ))
+    name = ccstr_of_Sesp (b);
+
+  const Xn::VblSymm* symm = 0;
+  if (LegitCk( name, legit, "" ))
+  {
+    const Xn::VblSymm** tmp = vbl_map.lookup(name);
+    if (LegitCk( tmp, legit, "" ))
+      symm = *tmp;
+  }
+
+  int idx = 0;
+  if (LegitCk( eval_int (&idx, c), legit, "" ))
+  {
+    *ret = symm->membs[umod_int (idx, symm->membs.sz())];
+  }
+  return legit;
+}
+
+  bool
+ProtoconFile::lookup_int(int* ret, const Cx::String& name)
+{
+  const int* val = index_map.lookup(name);
+  if (val) {
+    *ret = *val;
+    return true;
+  }
+
+  bool legit = true;
+  Sesp* sp = let_map.lookup(name);
+  if (LegitCk( sp, legit, "let_map.lookup()" )) {
+    if (LegitCk( eval_int(ret, *sp), legit, "" )) {}
+  }
+  return legit;
+}
+
 

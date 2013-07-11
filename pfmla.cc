@@ -4,6 +4,7 @@
  */
 
 #include "pfmla.hh"
+#include "cx/map.hh"
 
 namespace Cx {
 
@@ -58,6 +59,17 @@ PFmla::of_state(const uint* state, const Cx::Table<uint>& vbls, C::PFmlaCtx* ctx
   return conj;
 }
 
+  PFmla
+PFmla::of_img_state(const uint* state, const Cx::Table<uint>& vbls, C::PFmlaCtx* ctx)
+{
+  PFmla conj( true );
+  PFmla pf;
+  for (uint i = 0; i < vbls.sz(); ++i) {
+    img_eqlc_PFmlaVbl (&pf.g, vbl_of_PFmlaCtx (ctx, vbls[i]), state[i]);
+    conj &= pf;
+  }
+  return conj;
+}
 
 static inline
   void
@@ -83,7 +95,7 @@ intmap_init_op (Cx::Table<uint>& vbl_map, IntPFmla& a, const IntPFmla& b)
     a.ctx = b.ctx;
   }
   Claim( a.ctx );
-  Claim2( a.vbls.sz() ,>, 0 );
+  //Claim2( a.vbls.sz() ,>, 0 );
   if (b.ctx) {
     Claim2( a.ctx ,==, b.ctx );
   }
@@ -220,6 +232,61 @@ IntPFmla::cmp(const IntPFmla& b, Bit c_lt, Bit c_eq, Bit c_gt) const
       disj |= PFmla::of_state(&state_a[0], a.vbls, a.ctx);
     }
   }
+  return disj;
+}
+
+  PFmla
+IntPFmla::img_eq(const IntPFmla& b) const
+{
+  const IntPFmla& a = *this;
+  if (a.vbls.sz() == 0) {
+    return (a == b);
+  }
+
+  Cx::Map< int, Cx::Table<ujint> > inverse_a;
+  Cx::Map< int, Cx::Table<ujint> > inverse_b;
+  for (ujint idx_a = 0; idx_a < a.state_map.sz(); ++idx_a) {
+    inverse_a[a.state_map[idx_a]].push(idx_a);
+  }
+  for (ujint idx_b = 0; idx_b < b.state_map.sz(); ++idx_b) {
+    inverse_b[b.state_map[idx_b]].push(idx_b);
+  }
+
+  PFmla disj( false );
+
+  Cx::Table< uint > state_a( a.vbls.sz() );
+  Cx::Table< uint > state_b( b.vbls.sz() );
+  typename Cx::Map< int, Cx::Table<ujint> >::const_iterator itb = inverse_b.begin();
+  typename Cx::Map< int, Cx::Table<ujint> >::iterator ita = inverse_a.lower_bound(itb->first);
+  typename Cx::Map< int, Cx::Table<ujint> >::key_compare compfun = inverse_a.key_comp();
+  while (ita != inverse_a.end() && itb != inverse_b.end()) {
+    if (compfun(ita->first,itb->first)) {
+      ita = inverse_a.lower_bound(itb->first);
+    }
+    else if (compfun(itb->first,ita->first)) {
+      itb = inverse_b.lower_bound(ita->first);
+    }
+    else {
+      const Cx::Table<ujint>& idcs_a = ita->second;
+      const Cx::Table<ujint>& idcs_b = itb->second;
+
+      PFmla disj_a( false );
+      PFmla disj_b( false );
+      for (ujint i = 0; i < idcs_a.sz(); ++i) {
+        state_of_index (&state_a[0], idcs_a[i], a.doms);
+        disj_a |= PFmla::of_img_state(&state_a[0], a.vbls, a.ctx);
+      }
+      for (ujint i = 0; i < idcs_b.sz(); ++i) {
+        state_of_index (&state_b[0], idcs_b[i], b.doms);
+        disj_b |= PFmla::of_state(&state_b[0], b.vbls, b.ctx);
+      }
+      disj |= (disj_a & disj_b);
+
+      ++ita;
+      ++itb;
+    }
+  }
+
   return disj;
 }
 

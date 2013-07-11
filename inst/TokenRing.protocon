@@ -1,30 +1,30 @@
 
 protocol TokenRing;
 
-constant N := 5;
+constant N := 4;
+constant M := N;
 
-shadow
-variable b[Nat(N)] : Nat(2);
-puppet
-variable x[Nat(N)] : Nat(N);
+shadow variable b[Int % N] : Int % 2;
+puppet variable x[Int % N] : Int % M;
 
-process P[i : Nat(N-1)]
+process Bot[i : Int % 1]
 {
-  read: b[i-1],  x[i-1];
-  write: b[i], x[i];
-  act: b[i] != b[i-1] --> b[i] := 1 - b[i];
+  read:  b[i-1], x[i-1];
+  write: b[i],   x[i];
+  act: ( b[i-1] == b[i] --> b[i] := 1 - b[i]; );
 }
 
-process Bot
+process P[j : Int % (N-1)]
 {
-  read: b[N-2], x[N-2];
-  write: b[N-1], x[N-1];
-  act: b[N-1] == b[N-2] --> b[N-1] := 1 - b[N-1];
+  let i := j+1;
+  read:  b[i-1], x[i-1];
+  write: b[i],   x[i];
+  act: ( b[i-1] != b[i] --> b[i] := 1 - b[i]; );
 }
 
 legit:
-  unique i : Nat(N) :
-  (   i == N-1 && b[i-1] == b[i]
-   || i != N-1 && b[i-1] != b[i]
+  unique i : Int % N :
+  (   i == 0 && b[i-1] == b[i]
+   || i != 0 && b[i-1] != b[i]
   );
 

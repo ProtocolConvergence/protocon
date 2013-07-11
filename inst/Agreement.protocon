@@ -3,13 +3,13 @@ protocol Agreement;
 
 constant N := 5;
 
-variable x[Nat(N)] : Nat(N);
+variable x[Int % N] : Int % N;
 
-process P[i : Nat(N)]
+process P[i : Int % N]
 {
   read:  x[i-1];
   write: x[i];
   read: x[i+1];
-  legit: (x[i] - x[i-1]) % N == (x[i+1] - x[i]) % N;
+  legit: (x[i-1] - x[i]) % N == (x[i] - x[i+1]) % N;
 }
 

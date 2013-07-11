@@ -1,6 +1,8 @@
 
 #include "xnsys.hh"
 
+namespace Xn {
+
 /**
  * Commit to the topology represented by the vector of processes.
  *
@@ -8,10 +10,9 @@
  * or at least we need to initialize on a per-process basis.
  *
  * 1. Find /nPossibleActs/ for each process.
- * 2. Construct /actUnchanged/ for each process.
  */
   void
-Xn::Net::commit_initialization()
+Net::commit_initialization()
 {
   uint ntotal = 0;
   for (uint i = 0; i < pc_symms.sz(); ++i) {
@@ -34,8 +35,6 @@ Xn::Net::commit_initialization()
     ntotal += n;
   }
 
-  init_unchanged();
-
   act_pfmlas.resize(ntotal);
   n_possible_acts = ntotal;
   for (uint i = 0; i < ntotal; ++i) {
@@ -43,30 +42,74 @@ Xn::Net::commit_initialization()
   }
 }
 
-/**
- * Construct /act_unchanged_pfmla/ for each process.
- */
-  void
-Xn::Net::init_unchanged()
+  VblSymm*
+Net::add_variables(const String& name, uint nmembs, uint domsz,
+                   Vbl::ShadowPuppetRole role)
 {
-  Cx::PFmla eq(true);
-  for (uint i = 0; i < vbls.sz(); ++i) {
-    const Cx::PFmlaVbl& vbl = pfmla_ctx.vbl(vbls[i].pfmla_idx);
-    eq &= (vbl.img_eq(vbl));
-  }
+  VblSymm& symm = vbl_symms.grow1();
+  symm.name = name;
+  symm.domsz = domsz;
+  symm.pfmla_list_id = pfmla_ctx.add_vbl_list();
+  symm.shadow_puppet_role = role;
 
-  for (uint i = 0; i < pcs.sz(); ++i) {
-    Xn::Pc& pc = pcs[i];
-    pc.act_unchanged_pfmla = eq;
-    for (uint j = 0; j < pc.wvbls.sz(); ++j) {
-      pc.act_unchanged_pfmla =
-        pc.act_unchanged_pfmla.smooth(pc.wvbls[j]->pfmla_list_id);
-    }
+  for (uint i = 0; i < nmembs; ++i) {
+    Vbl* vbl = &vbls.push(Vbl(&symm, i));
+    symm.membs.push(vbl);
+    vbl->pfmla_idx = pfmla_ctx.add_vbl(name_of (*vbl), domsz);
+    pfmla_ctx.add_to_vbl_list(symm.pfmla_list_id, vbl->pfmla_idx);
+
+    const Cx::PFmlaVbl& pf_vbl = this->pfmla_vbl(*vbl);
+    this->identity_pfmla &= pf_vbl.img_eq(pf_vbl);
+  }
+  return &symm;
+}
+
+  PcSymm*
+Net::add_processes(const String& name, uint nmembs)
+{
+  PcSymm& symm = pc_symms.grow1();
+  symm.name = name;
+  for (uint i = 0; i < nmembs; ++i) {
+    Pc& pc = pcs.push(Pc(&symm, i));
+    symm.membs.push(&pc);
+    pc.act_unchanged_pfmla = this->identity_pfmla;
+  }
+  return &symm;
+}
+
+  void
+Net::add_read_access (PcSymm* pc_symm, const VblSymm* vbl_symm,
+                      const NatMap& indices)
+{
+  pc_symm->rvbl_symms.push(vbl_symm);
+  pc_symm->write_flags.push_back(false);
+  pc_symm->rindices.push(indices);
+  for (uint i = 0; i < pc_symm->membs.sz(); ++i) {
+    const Vbl* vbl = vbl_symm->membs[indices.index(i, vbl_symm->membs.sz())];
+    pc_symm->membs[i]->rvbls.push(vbl);
+  }
+}
+
+  void
+Net::add_write_access (PcSymm* pc_symm, const VblSymm* vbl_symm,
+                       const NatMap& indices)
+{
+  add_read_access (pc_symm, vbl_symm, indices);
+  pc_symm->wvbl_symms.push(vbl_symm);
+  pc_symm->wmap.push(pc_symm->rvbl_symms.sz() - 1);
+  pc_symm->write_flags[pc_symm->rvbl_symms.sz() - 1] = true;
+  pc_symm->windices.push(indices);
+  for (uint i = 0; i < pc_symm->membs.sz(); ++i) {
+    const Vbl* vbl = vbl_symm->membs[indices.index(i, vbl_symm->membs.sz())];
+    Pc& pc = *pc_symm->membs[i];
+    pc.wvbls.push(vbl);
+    pc.act_unchanged_pfmla =
+      pc.act_unchanged_pfmla.smooth(pfmla_vbl(*vbl));
   }
 }
 
   uint
-Xn::Net::action_pcsymm_index(uint actidx) const
+Net::action_pcsymm_index(uint actidx) const
 {
   for (uint i = 0; i < pc_symms.sz()-1; ++i) {
     if (actidx < pc_symms[i+1].act_idx_offset) {
@@ -77,7 +120,7 @@ Xn::Net::action_pcsymm_index(uint actidx) const
 }
 
   void
-Xn::Net::action(ActSymm& act, uint actidx) const
+Net::action(ActSymm& act, uint actidx) const
 {
   uint pcidx = this->action_pcsymm_index(actidx);
   act.pc_symm = &pc_symms[pcidx];
@@ -90,7 +133,8 @@ Xn::Net::action(ActSymm& act, uint actidx) const
 
 }
 
-uint Xn::Net::action_index(const Xn::ActSymm& act) const
+  uint
+Net::action_index(const Xn::ActSymm& act) const
 {
   const Xn::PcSymm& pc = *act.pc_symm;
   return pc.act_idx_offset +
@@ -99,10 +143,10 @@ uint Xn::Net::action_index(const Xn::ActSymm& act) const
 }
 
   ostream&
-Xn::Net::oput(ostream& of,
-            const Cx::PFmla& pf,
-            const String& pfx,
-            const String& sfx) const
+Net::oput(ostream& of,
+          const Cx::PFmla& pf,
+          const String& pfx,
+          const String& sfx) const
 {
 
   (void) pf;
@@ -115,72 +159,46 @@ Xn::Net::oput(ostream& of,
 
 
   void
-Xn::Sys::commit_initialization()
+Sys::commit_initialization()
 {
   Xn::Net& topo = this->topology;
   topo.commit_initialization();
 
-  this->shadow_protocol = false;
+  if (!this->shadow_protocol.tautology_ck(false)) {
+    shadow_puppet_synthesis = true;
+  }
   this->shadow_self = true;
 
   for (uint i = 0; i < topo.vbls.sz(); ++i) {
     const Xn::Vbl& vbl = topo.vbls[i];
-    if (vbl.symm->shadow) {
+    if (vbl.symm->pure_shadow_ck()) {
+      shadow_puppet_synthesis = true;
+    }
+    if (vbl.symm->shadow_ck()) {
       topo.pfmla_ctx.add_to_vbl_list (shadow_pfmla_list_id, vbl.pfmla_idx);
       const Cx::PFmlaVbl& x = topo.pfmla_ctx.vbl(vbl.pfmla_idx);
       shadow_self &= (x.img_eq(x));
-      shadow_vbls_exist = true;
     }
     else {
+      pure_puppet_vbl_exists = true;
       topo.pfmla_ctx.add_to_vbl_list (puppet_pfmla_list_id, vbl.pfmla_idx);
     }
   }
 }
 
-/** Add an action to the protocol which runs in the legitimate states.*/
-  void
-Xn::Sys::add_shadow_act(const ActSymm& act)
-{
-  const Xn::Net& topo = this->topology;
-  const Xn::PcSymm& pc_symm = *act.pc_symm;
-
-  Cx::PFmla pf( false );
-
-  for (uint i = 0; i < pc_symm.membs.sz(); ++i) {
-    const Xn::Pc& pc = *pc_symm.membs[i];
-    Cx::PFmla actpf( true );
-    for (uint j = 0; j < pc.rvbls.sz(); ++j) {
-      if (pc.rvbls[j]->symm->shadow) {
-        const Cx::PFmlaVbl& vbl = topo.pfmla_ctx.vbl(pc.rvbls[j]->pfmla_idx);
-        actpf &= (vbl == act.guard(j));
-      }
-    }
-    for (uint j = 0; j < pc.wvbls.sz(); ++j) {
-      if (pc.wvbls[j]->symm->shadow) {
-        const Cx::PFmlaVbl& vbl = topo.pfmla_ctx.vbl(pc.wvbls[j]->pfmla_idx);
-        actpf &= (vbl.img_eq(act.assign(j)));
-      }
-    }
-    pf |= (pc.act_unchanged_pfmla & actpf);
-  }
-  this->shadow_protocol |= pf;
-}
-
   bool
-Xn::Sys::integrityCk() const
+Sys::integrityCk() const
 {
-  bool good = true;;
+  bool good = true;
 
   if (this->invariant.tautology_ck(false)) {
     DBog0( "Error: Invariant is empty!" );
     good = false;
   }
 
-  if (this->shadowVblCk()) {
-    if (!this->invariant.equiv_ck(this->invariant.smooth(this->puppet_pfmla_list_id))) {
-      DBog0( "Error: Invariant includes puppet variables." );
-      good = false;
-    }
+  if (!this->invariant.smooth(this->shadow_pfmla_list_id).tautology_ck(true)) {
+    DBog0( "Error: Invariant includes non-shadow variables." );
+    good = false;
   }
 
   if (!(this->shadow_protocol.img(this->invariant) <= this->invariant)) {
@@ -189,6 +207,8 @@ Xn::Sys::integrityCk() const
   }
 
   return good;
+}
+
 }
 
 /**
@@ -217,7 +237,7 @@ OPut(ostream& of, const Xn::ActSymm& act)
   PF
 LegitInvariant(const Xn::Sys& sys, const PF& loXnRel, const PF& hiXnRel)
 {
-  if (!sys.shadowVblCk())  return sys.invariant;
+  if (!sys.shadow_puppet_synthesis_ck())  return sys.invariant;
 
   const PF& smooth_self = sys.shadow_self;
 
@@ -263,10 +283,7 @@ LegitInvariant(const Xn::Sys& sys, const PF& loXnRel, const PF& hiXnRel)
   bool
 WeakConvergenceCk(const Xn::Sys& sys, const PF& xnRel, const PF& invariant)
 {
-  if (sys.liveLegit && !xnRel.pre().tautology_ck()) {
-    return false;
-  }
-  if (sys.shadowVblCk()) {
+  if (sys.shadow_puppet_synthesis_ck()) {
     const PF& shadow_protocol = sys.smoothPuppetVbls(xnRel & invariant);
     if (!sys.shadow_protocol <= shadow_protocol) {
       return false;

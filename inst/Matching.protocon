@@ -3,14 +3,16 @@ protocol Matching;
 
 constant N := 5;
 
-variable m[Nat(N)] : Nat(3);
+variable m[Int % N] : Int % 3;
 
-process P[i : Nat(N)]
+process P[i : Int % N]
 {
-  read:  m[i-1], m[i+1];
+  read: m[i-1];
   write: m[i];
-  legit: (   m[i] == 0 && m[i-1] == 1 && m[i+1] == 2
-          || m[i] == 1 && m[i-1] == 2
-          || m[i] == 2 && m[i+1] == 1);
+  read: m[i+1];
+  legit: (   m[i-1] == 2 && m[i] == 1
+          || m[i-1] == 1 && m[i] == 0 && m[i+1] == 2
+          ||                m[i] == 2 && m[i+1] == 1
+         );
 }
 

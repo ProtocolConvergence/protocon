@@ -3,9 +3,9 @@ protocol Coloring;
 
 constant N := 5;
 
-variable c[Nat(N)] : Nat(3);
+variable c[Int % N] : Int % 3;
 
-process P[i : Nat(N)]
+process P[i : Int % N]
 {
   read:  c[i-1], c[i+1];
   write: c[i];

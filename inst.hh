@@ -3,10 +3,19 @@
 #define INST_HH_
 #include "cx/synhax.hh"
 
+namespace Cx {
+  class PFmla;
+}
 namespace Xn {
+class Net;
 class Sys;
 }
 
+void
+UnidirectionalRing(Xn::Net& topo, uint npcs, uint domsz,
+                   const char* basename, bool symmetric, bool distinguished);
+Cx::PFmla
+SingleTokenPFmla(const vector<Cx::PFmla>& tokenPFs);
 void
 InstThreeColoringRing(Xn::Sys& sys, uint npcs);
 void

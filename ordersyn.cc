@@ -13,11 +13,6 @@ candidate_actions(vector<uint>& candidates, const Xn::Sys& sys)
 {
   const Xn::Net& topo = sys.topology;
 
-  if (sys.liveLegit && !sys.synLegit) {
-    DBog0( "For liveness in the invariant, we must be able to add actions there!" );
-    return false;
-  }
-
   if (sys.invariant.tautology_ck(false)) {
     DBog0( "Invariant is empty!" );
     return false;
@@ -25,7 +20,7 @@ candidate_actions(vector<uint>& candidates, const Xn::Sys& sys)
 
   if (sys.invariant.tautology_ck(true)) {
     DBog0( "All states are invariant!" );
-    if (!sys.shadowVblCk()) {
+    if (!sys.shadow_puppet_synthesis_ck()) {
       return true;
     }
   }
@@ -35,13 +30,13 @@ candidate_actions(vector<uint>& candidates, const Xn::Sys& sys)
 
     Xn::ActSymm act;
     topo.action(act, i);
+    const Xn::PcSymm& pc_symm = *act.pc_symm;
     const PF& actPF = topo.action_pfmla(i);
 
     // Check for self-loops.
     if (add) {
-      const Xn::PcSymm& pc = *act.pc_symm;
       bool selfloop = true;
-      for (uint j = 0; j < pc.wvbl_symms.sz(); ++j) {
+      for (uint j = 0; j < pc_symm.wvbl_symms.sz(); ++j) {
         if (act.assign(j) != act.aguard(j)) {
           selfloop = false;
         }
@@ -52,21 +47,20 @@ candidate_actions(vector<uint>& candidates, const Xn::Sys& sys)
       }
     }
 
-    if (add && !sys.shadowVblCk() && sys.invariant.overlap_ck(actPF)) {
-      // This action does starts in the invariant.
-      // If /!sys.synLegit/, we shouldn't add any actions
-      // within the legitimate states, even if closure isn't broken.
-      if (!sys.synLegit || (~sys.invariant).overlap_ck(actPF.img(sys.invariant))) {
-        add = false;
-        if (false) {
-          OPut((DBogOF << "Action " << i << " breaks closure: "), act) << '\n';
-        }
+    if (add && !sys.shadow_puppet_synthesis_ck() && sys.invariant.overlap_ck(actPF)) {
+      add = false;
+      if (false) {
+        OPut((DBogOF << "Action " << i << " exists in the invariant: "), act) << '\n';
       }
     }
 
     if (add) {
       candidates.push_back(i);
     }
+  }
+  if (candidates.size() == 0) {
+    DBog0( "No candidates actions!" );
+    return false;
   }
   return true;
 }

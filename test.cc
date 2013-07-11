@@ -238,6 +238,45 @@ TestXnSys()
   }
 }
 
+static void
+TestTokenRingClosure()
+{
+  Xn::Sys sys;
+  Xn::Net& topo = sys.topology;
+  const uint npcs = 4;
+  UnidirectionalRing(topo, npcs, 2, "b", true, true);
+
+  vector<PF> token_pfmlas(npcs);
+
+  for (uint me = 0; me < npcs; ++me) {
+    uint pd = (me + npcs - 1) % npcs;
+    const Xn::Pc& pc = topo.pcs[me];
+
+    if (me == npcs-1) {
+      topo.pc_symms[1].act_pfmla |=
+        pc.act_unchanged_pfmla &&
+        topo.pfmla_vbl(pd) == topo.pfmla_vbl(me) &&
+        topo.pfmla_vbl(me).img_eq(Cx::IntPFmla(1) - topo.pfmla_vbl(me));
+      token_pfmlas[me] = (topo.pfmla_vbl(pd) == topo.pfmla_vbl(me));
+    }
+    else {
+      topo.pc_symms[0].act_pfmla |=
+        pc.act_unchanged_pfmla &&
+        topo.pfmla_vbl(pd) != topo.pfmla_vbl(me) &&
+        topo.pfmla_vbl(me).img_eq(Cx::IntPFmla(1) - topo.pfmla_vbl(me));
+      token_pfmlas[me] = (topo.pfmla_vbl(pd) != topo.pfmla_vbl(me));
+    }
+  }
+
+  sys.shadow_protocol |= (topo.pc_symms[0].act_pfmla | topo.pc_symms[1].act_pfmla);
+
+  sys.invariant &= SingleTokenPFmla(token_pfmlas);
+
+  sys.commit_initialization();
+
+  Claim( sys.integrityCk() );
+}
+
 void TestProtoconFile(bool agreement)
 {
   Xn::Sys sys_f; //< From file.
@@ -287,6 +326,7 @@ void Test()
   TestPFmla();
   TestIntPFmla();
   TestXnSys();
+  TestTokenRingClosure();
   TestProtoconFile(true);
   TestProtoconFile(false);
 }

@@ -21,10 +21,11 @@ struct PFmlaBase
 struct PFmlaVbl
 {
   PFmlaCtx* ctx;
+  uint domsz;
   uint id;
   AlphaTab name;
   AlphaTab img_name;
-  uint domsz;
+  uint list_id;
 };
 
 struct PFmlaCtx
@@ -103,6 +104,8 @@ bool
 overlap_ck_PFmla (const PFmla a, const PFmla b);
 bool
 subseteq_ck_PFmla (const PFmla a, const PFmla b);
+void
+smooth_vbl_PFmla (PFmla* dst, const PFmla a, const PFmlaVbl* vbl);
 void
 smooth_vbls_PFmla (PFmla* dst, const PFmla a, uint list_id);
 void

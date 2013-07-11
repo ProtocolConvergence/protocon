@@ -25,7 +25,6 @@ decmod(uint i, uint by, uint n)
 }
 
 /** Create a unidirectional ring topology.**/
-static
   void
 UnidirectionalRing(Xn::Net& topo, uint npcs, uint domsz,
                    const char* basename, bool symmetric, bool distinguished)
@@ -160,9 +159,8 @@ InstThreeColoringRing(Xn::Sys& sys, uint npcs)
  * Return the states for which only one process has a token.
  * \param tokenPFs  Formulas for each process having a token.
  */
-static
-  PF
-SingleTokenPF(const vector<PF>& tokenPFs)
+  Cx::PFmla
+SingleTokenPFmla(const vector<Cx::PFmla>& tokenPFs)
 {
   const uint n = tokenPFs.size();
   vector<PF> singleToken(n, PF(true));
@@ -315,8 +313,8 @@ InstDijkstraTokenRing(Xn::Sys& sys, uint npcs)
 
   // Commit to using this topology, and initilize MDD stuff
   sys.commit_initialization();
-  sys.synLegit = true;
-  sys.liveLegit = true;
+  //sys.synLegit = true;
+  //sys.liveLegit = true;
 
 #if 0
   // Set priorities.
@@ -333,7 +331,7 @@ InstDijkstraTokenRing(Xn::Sys& sys, uint npcs)
   }
   // (x[N-2] == x[N-1])
   tokenPFs[npcs-1] = (topo.pfmla_vbl(npcs-2) == topo.pfmla_vbl(npcs-1));
-  sys.invariant = SingleTokenPF(tokenPFs);
+  sys.invariant = SingleTokenPFmla(tokenPFs);
 }
 
 /** Gouda's three bit token ring.**/
@@ -380,8 +378,8 @@ InstThreeBitTokenRing(Xn::Sys& sys, uint npcs)
 
   // Commit to using this topology, and initilize MDD stuff
   sys.commit_initialization();
-  sys.synLegit = true;
-  sys.liveLegit = true;
+  //sys.synLegit = true;
+  //sys.liveLegit = true;
 
 #if 0
   sys.niceIdxFo(0, 1);
@@ -404,7 +402,7 @@ InstThreeBitTokenRing(Xn::Sys& sys, uint npcs)
   // t[N-2] == t[N-1]
   tokenPFs[npcs-1] = (topo.pfmla_vbl(*topo.pcs[npcs-1].rvbls[2]) == topo.pfmla_vbl(*topo.pcs[npcs-1].rvbls[3]));
 
-  sys.invariant = (SingleTokenPF(tokenPFs) & existEnabled);
+  sys.invariant = (SingleTokenPFmla(tokenPFs) & existEnabled);
 }
 
 /** Dijkstra's two bit token "spring".**/
@@ -482,8 +480,8 @@ InstTwoBitTokenSpring(Xn::Sys& sys, uint npcs)
 
   // Commit to using this topology, and initilize MDD stuff
   sys.commit_initialization();
-  sys.synLegit = true;
-  sys.liveLegit = true;
+  //sys.synLegit = true;
+  //sys.liveLegit = true;
 
   // Formulas for each process having a token.
   vector<PF> tokenPFs(npcs);
@@ -512,7 +510,7 @@ InstTwoBitTokenSpring(Xn::Sys& sys, uint npcs)
                       topo.pfmla_vbl(*topo.vbl_symms[0].membs[npcs-2]));
 
   // ((exactly_one_token) && (up[0] == 1) && (up[N-1] == 0))
-  sys.invariant = (SingleTokenPF(tokenPFs) &
+  sys.invariant = (SingleTokenPFmla(tokenPFs) &
                    (topo.pfmla_vbl(*topo.vbl_symms[1].membs[0]) == 1) &
                    (topo.pfmla_vbl(*topo.vbl_symms[1].membs[npcs-1]) == 0));
 }
@@ -643,7 +641,7 @@ InstTestTokenRing(Xn::Sys& sys, uint npcs)
     tokenPFs[pcIdx] = (topo.pfVbl(pcIdx, 0) != topo.pfVbl(pcIdx-1, 0));
   }
 
-  sys.invariant = (SingleTokenPF(tokenPFs));
+  sys.invariant = (SingleTokenPFmla(tokenPFs));
 }
 
 /** Agreement.

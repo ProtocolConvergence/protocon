@@ -54,12 +54,14 @@ public:
   }
 };
 
+
 class Vbl {
+public:
+  enum ShadowPuppetRole { Direct, Shadow, Puppet };
 public:
   const VblSymm* symm;
   uint symm_idx;
   uint pfmla_idx; ///< Index of the variable (in a PmlaFCtx).
-  uint pfmla_list_id;
 
   Vbl(VblSymm* symmetry, uint index)
     : symm(symmetry)
@@ -73,11 +75,18 @@ public:
   String name;
   Cx::Table< Vbl* > membs;
   uint pfmla_list_id;
-  bool shadow;
+  Vbl::ShadowPuppetRole shadow_puppet_role;
 
   VblSymm()
-    : shadow(false)
+    : shadow_puppet_role( Vbl::Direct )
   {}
+
+  bool direct_ck() const { return shadow_puppet_role == Vbl::Direct; }
+  bool pure_shadow_ck() const { return shadow_puppet_role == Vbl::Shadow; }
+  bool pure_puppet_ck() const { return shadow_puppet_role == Vbl::Puppet; }
+
+  bool shadow_ck() const { return pure_shadow_ck() || direct_ck(); }
+  bool puppet_ck() const { return pure_puppet_ck() || direct_ck(); }
 };
 
 inline String name_of(const Vbl& vbl) {
@@ -123,8 +132,14 @@ public:
   /// Domains of readable variables.
   Cx::Table< uint > doms;
 
+  Cx::PFmla act_pfmla;
+
   uint act_idx_offset;
   uint n_possible_acts;
+
+  PcSymm()
+    : act_pfmla( false )
+  {}
 
   String vbl_name(uint i, const String& idxparam = "i") const {
     const String& name = rvbl_symms[i]->name;
@@ -153,63 +168,26 @@ public:
 
   Cx::Table< Cx::PFmla > act_pfmlas;
   uint n_possible_acts;
+  Cx::PFmla identity_pfmla;
 
 public:
+  Net()
+    : identity_pfmla(true)
+  {}
+
   void commit_initialization();
 
-  VblSymm* add_variables(const String& name, uint nmembs, uint domsz)
-  {
-    VblSymm& symm = vbl_symms.grow1();
-    symm.name = name;
-    symm.domsz = domsz;
-    symm.pfmla_list_id = pfmla_ctx.add_vbl_list();
-
-    for (uint i = 0; i < nmembs; ++i) {
-      Vbl* vbl = &vbls.push(Vbl(&symm, i));
-      symm.membs.push(vbl);
-      vbl->pfmla_idx = pfmla_ctx.add_vbl(name_of (*vbl), domsz);
-      vbl->pfmla_list_id = pfmla_ctx.add_vbl_list();
-      pfmla_ctx.add_to_vbl_list(vbl->pfmla_list_id, vbl->pfmla_idx);
-      pfmla_ctx.add_to_vbl_list(symm.pfmla_list_id, vbl->pfmla_idx);
-    }
-    return &symm;
-  }
-
-  PcSymm* add_processes(const String& name, uint nmembs)
-  {
-    PcSymm& symm = pc_symms.grow1();
-    symm.name = name;
-    for (uint i = 0; i < nmembs; ++i) {
-      symm.membs.push( &pcs.push( Pc(&symm, i) ) );
-    }
-    return &symm;
-  }
-
-  void add_read_access (PcSymm* pc_symm, const VblSymm* vbl_symm,
-                        const NatMap& indices)
-  {
-    pc_symm->rvbl_symms.push(vbl_symm);
-    pc_symm->write_flags.push_back(false);
-    pc_symm->rindices.push(indices);
-    for (uint i = 0; i < pc_symm->membs.sz(); ++i) {
-      const Vbl* vbl = vbl_symm->membs[indices.index(i, vbl_symm->membs.sz())];
-      pc_symm->membs[i]->rvbls.push(vbl);
-    }
-  }
-
-  void add_write_access (PcSymm* pc_symm, const VblSymm* vbl_symm,
-                         const NatMap& indices)
-  {
-    add_read_access (pc_symm, vbl_symm, indices);
-    pc_symm->wvbl_symms.push(vbl_symm);
-    pc_symm->wmap.push(pc_symm->rvbl_symms.sz() - 1);
-    pc_symm->write_flags[pc_symm->rvbl_symms.sz() - 1] = true;
-    pc_symm->windices.push(indices);
-    for (uint i = 0; i < pc_symm->membs.sz(); ++i) {
-      const Vbl* vbl = vbl_symm->membs[indices.index(i, vbl_symm->membs.sz())];
-      pc_symm->membs[i]->wvbls.push(vbl);
-    }
-  }
+  VblSymm*
+  add_variables(const String& name, uint nmembs, uint domsz,
+                Vbl::ShadowPuppetRole role = Vbl::Direct);
+  PcSymm*
+  add_processes(const String& name, uint nmembs);
+  void
+  add_read_access (PcSymm* pc_symm, const VblSymm* vbl_symm,
+                   const NatMap& indices);
+  void
+  add_write_access (PcSymm* pc_symm, const VblSymm* vbl_symm,
+                    const NatMap& indices);
 
   uint action_pcsymm_index(uint actidx) const;
   void action(ActSymm& act, uint actidx) const;
@@ -231,7 +209,6 @@ public:
                 const String& sfx) const;
 
 private:
-  void init_unchanged();
   void make_action_pfmla(uint actid);
 };
 
@@ -249,13 +226,11 @@ public:
   /// Variables used to add convergence.
   //Set< Cx::Tuple<uint,2> > puppet_vbls;
   /// Transition relation within the invariant.
-  bool shadow_vbls_exist;
+  bool shadow_puppet_synthesis;
+  bool pure_puppet_vbl_exists;
   Cx::PFmla shadow_protocol;
   /// Self-loops in the invariant.
   Cx::PFmla shadow_self;
-
-  bool synLegit; ///< Allow synthesized actions to be in legitimate states.
-  bool liveLegit; ///< Ensure no deadlocks in the invariant.
 
 private:
   Map<uint,uint> niceIdcs; ///< Niceness for process symmetries, used in search.
@@ -264,9 +239,10 @@ private:
 
 public:
   Sys()
-    : shadow_vbls_exist(false)
-    , synLegit(false)
-    , liveLegit(false)
+    : invariant( true )
+    , shadow_puppet_synthesis(false)
+    , pure_puppet_vbl_exists(false)
+    , shadow_protocol(false)
   {
     this->shadow_pfmla_list_id = this->topology.pfmla_ctx.add_vbl_list();
     this->puppet_pfmla_list_id = this->topology.pfmla_ctx.add_vbl_list();
@@ -278,17 +254,19 @@ public:
   //}
   void commit_initialization();
 
-  void add_shadow_act(const ActSymm& act);
-
   bool integrityCk() const;
 
-  bool shadowVblCk() const {
-    return this->shadow_vbls_exist;
+  /// Do the shadow puppet synthesis
+  bool shadow_puppet_synthesis_ck() const {
+    return this->shadow_puppet_synthesis;
   }
   Cx::PFmla smoothShadowVbls(const Cx::PFmla& pf) const {
     return pf.smooth(shadow_pfmla_list_id);
   }
   Cx::PFmla smoothPuppetVbls(const Cx::PFmla& pf) const {
+    if (!pure_puppet_vbl_exists) {
+      return pf;
+    }
     return pf.smooth(puppet_pfmla_list_id);
   }
 

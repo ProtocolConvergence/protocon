@@ -11,7 +11,6 @@ extern "C" {
 #define YY_CTX_LOCAL
 #define YY_CTX_MEMBERS \
   FILE* infile; \
-  const char* negprefix; \
   ProtoconFile* st;
 
 #define YY_INPUT(yy, buf, result, max_size) \
@@ -33,44 +32,108 @@ ProtoconFile =
 Protocol = 'protocol' WS name:ID WS? ';' {}
 
 ConstDecl =
-  'constant' WS name:ID WS? ':=' WS? v:NAT WS? ';'
+  'constant' WS name:ID WS? ':=' WS? v:ConstExpr WS? ';'
   {
-    uint x = 0;
-    if (!uint_of_Sesp (v.sp, &x)) {
-      DBog0( "Could not get constant value" );
-    }
-    else {
-      yy->st->constant_map[ccstr_of_Sesp (name.sp)] = x;
+    bool legit = true;
+    int x = 0;
+    if (LegitCk( yy->st->eval_int (&x, v.sp), legit, "" )) {
+      if (LegitCk( x >= 0, legit, "" )) {
+        yy->st->constant_map[ccstr_of_Sesp (name.sp)] = (uint) x;
+      }
     }
   }
 
+OptionalShadowPuppetRole =
+  {$$.sp = 0;}
+  (  'shadow' WS {$$.sp = make_ccstr_Sesp (yy->st->spctx, "shadow");}
+   | 'puppet' WS {$$.sp = make_ccstr_Sesp (yy->st->spctx, "puppet");}
+   | 'direct' WS
+  )?
+
 VarDecl =
-  'variable' WS a:ID '[' WS? b:NatDom WS? ']' WS? ':' WS? c:NatDom WS? ';'
-  {yy->st->add_variables(a.sp, b.sp, c.sp);}
+  r:OptionalShadowPuppetRole 'variable'
+  WS a:ID '[' WS? b:NatDom WS? ']' WS? ':' WS? c:NatDom WS? ';'
+  {
+    Xn::Vbl::ShadowPuppetRole role = Xn::Vbl::Direct;
+    if (pfxeq_cstr ("shadow", ccstr_of_Sesp (r.sp))) {
+      role = Xn::Vbl::Shadow;
+    }
+    else if (pfxeq_cstr ("puppet", ccstr_of_Sesp (r.sp))) {
+      role = Xn::Vbl::Puppet;
+    }
+    if (r.sp)  lose_Sesp (r.sp);
+    yy->st->add_variables(a.sp, b.sp, c.sp, role);
+  }
 
 ProcDecl =
   'process' WS pc_name:ID '[' WS? idx_name:ID WS? ':' WS? npcs:NatDom WS? ']'
   {yy->st->add_processes(pc_name.sp, idx_name.sp, npcs.sp);}
-  WS? '{'
-  (  WS? 'read:'  WS?  u:VblRef  {yy->st->add_access(u.sp, idx_name.sp, 0);}
-     (WS? ',' WS? v:VblRef  {yy->st->add_access(v.sp, idx_name.sp, 0);} )*
-     WS?  ';'
-   | WS? 'write:' WS?  u:VblRef  {yy->st->add_access(u.sp, idx_name.sp, 1);}
-     (WS? ',' WS? v:VblRef  {yy->st->add_access(v.sp, idx_name.sp, 1);} )*
-     WS? ';'
+  WS? '{' WS?
+  ( 'let' WS let_name:ID WS? ':=' WS? let_val:Expr WS? ';' WS?
+    {yy->st->add_let(let_name.sp, let_val.sp);}
+  )*
+  ( (  'read:'  WS?  u:VblRef  {yy->st->add_access(u.sp, idx_name.sp, 0);}
+       (WS? ',' WS? v:VblRef  {yy->st->add_access(v.sp, idx_name.sp, 0);} )*
+     | 'write:' WS?  u:VblRef  {yy->st->add_access(u.sp, idx_name.sp, 1);}
+       (WS? ',' WS? v:VblRef  {yy->st->add_access(v.sp, idx_name.sp, 1);} )*
+    )
+    WS? ';' WS?
   )+
-  (WS? 'legit:' WS? legit:Expr WS? ';'
-   {yy->st->add_legit(legit.sp, idx_name.sp);}
+  ( 'act:' WS?  '(' WS?
+    act:Expr WS? '-->' WS?  {act.sp = list2_ccstr_Sesp ("-->", act.sp);}
+    ( vbl:VblRef WS? ':=' WS? val:Expr WS? ';' WS?
+      {pushlast_Sesp (act.sp, list3_ccstr_Sesp (":=", vbl.sp, val.sp));}
+    )+
+    ')' WS? ';' WS?
+    {yy->st->add_action (act.sp, idx_name.sp);}
+  )*
+  ( 'legit:' WS? legit:Expr WS? ';' WS?
+    {yy->st->add_legit(legit.sp, idx_name.sp);}
   )?
-  WS? '}'
+  '}'
 
 GlobalLegit =
   'legit:' WS? a:Expr WS? ';'
   {yy->st->add_legit(a.sp);}
 
-ConstExpr =
+ConstExpr = a:ConstSum {$$ = a;}
+
+ConstSum =
+  a:ConstProduct
+  (  (WS? '+' WS? b:ConstProduct {a.sp = list3_ccstr_Sesp ("+", a.sp, b.sp);  a.int_ck = 1;} )
+   | (WS? '-' WS? b:ConstProduct {a.sp = list3_ccstr_Sesp ("-", a.sp, b.sp);  a.int_ck = 1;} )
+  )*
+  {$$ = a;}
+
+ConstProduct =
+  a:ConstNeg
+  (  (WS? '*' WS? b:ConstNeg {a.sp = list3_ccstr_Sesp ("*", a.sp, b.sp);  a.int_ck = 1;} )
+   | (WS? '/' WS? b:ConstNeg {a.sp = list3_ccstr_Sesp ("/", a.sp, b.sp);  a.int_ck = 1;} )
+   | (WS? '%' WS? b:ConstNeg {a.sp = list3_ccstr_Sesp ("%", a.sp, b.sp);  a.int_ck = 1;} )
+  )*
+  {$$ = a;}
+
+OptionalArithNeg =
+  {$$.sp = 0;}
+  ( '-' WS? {$$.sp = make_ccstr_Sesp (yy->st->spctx, "negate");} )?
+
+ConstNeg =
+  pfx:OptionalArithNeg a:ConstValue
+  {
+    $$ = a;
+    if (pfx.sp)
+      $$.sp = list2_Sesp (pfx.sp, $$.sp);
+  }
+
+ConstValue =
     a:NAT {$$ = a;}
-  | b:ID {$$ = b;}
+  | a:ID {$$ = a;}
+  | '(' WS? a:ConstExpr WS? ')'
+    {
+      $$.sp = list2_ccstr_Sesp ("(int)", a.sp);
+      $$.int_ck = a.int_ck;
+    }
+
 
 Expr =
     a:Quantify {$$ = a;}
@@ -125,14 +188,18 @@ Product =
   )*
   {$$ = a;}
 
+OptionalNeg =
+  {$$.sp = 0;}
+  (   '-' WS? {$$.sp = make_ccstr_Sesp (yy->st->spctx, "negate");}
+    | '!' WS? {$$.sp = make_ccstr_Sesp (yy->st->spctx, "!");}
+  )?
+
 Neg =
-  (   '-' {yy->negprefix = "negate";}
-   | '!' {yy->negprefix = "!";}
-  )? a:Value
+  pfx:OptionalNeg a:Value
   {
     $$ = a;
-    if (yy->negprefix)
-      $$.sp = list2_ccstr_Sesp (yy->negprefix, $$.sp);
+    if (pfx.sp)
+      $$.sp = list2_Sesp (pfx.sp, $$.sp);
   }
 
 Value =
@@ -155,7 +222,7 @@ VblRef =
   }
 
 NatDom =
-  'Nat(' WS? a:ConstExpr WS? ')'
+  ('Int' | 'Nat') WS? '%' WS? a:ConstValue
   {
     $$.sp = list2_ccstr_Sesp ("NatDom", a.sp);
     $$.int_ck = 1;
@@ -192,8 +259,9 @@ void ReadProtoconFile(Xn::Sys& sys, const char* fname)
   memset (&yyctx, 0, sizeof (yyctx));
   yyctx.infile = fopen(fname, "rb");
   yyctx.st = new ProtoconFile(&sys);
-  while (yyparse(&yyctx))
-    ;
+  if (!yyparse(&yyctx)) {
+    DBog1( "Error parsing the file: %s", fname );
+  }
   delete yyctx.st;
   fclose(yyctx.infile);
   yyrelease(&yyctx);
