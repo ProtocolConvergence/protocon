@@ -23,6 +23,7 @@ ProtoconFile::add_variables(Sesp vbl_name_sp, Sesp vbl_nmembs_sp, Sesp vbl_dom_s
     Xn::VblSymm* symm = sys->topology.add_variables(name, nmembs, domsz, role);
     vbl_map[name] = symm;
   }
+  if (LegitCk( good, allgood, "" )) {}
   return good;
 }
 
@@ -39,6 +40,7 @@ ProtoconFile::add_processes(Sesp pc_name, Sesp idx_name, Sesp npcs)
       sys->topology.add_processes(name_a, (uint) domsz);
     }
   }
+  if (LegitCk( good, allgood, "" )) {}
   return good;
 }
 
@@ -50,6 +52,7 @@ ProtoconFile::add_let(Sesp name_sp, Sesp val_sp)
   if (LegitCk(name, legit, "")) {
     let_map[name] = val_sp;
   }
+  if (LegitCk( legit, allgood, "" )) {}
   return legit;
 }
 
@@ -109,6 +112,7 @@ ProtoconFile::add_access(Sesp vbl_sp, Sesp pc_idx_sp, Bit write)
     }
   }
 
+  if (LegitCk( legit, allgood, "" )) {}
   return legit;
 }
 
@@ -122,8 +126,8 @@ ProtoconFile::add_action(Sesp act_sp, Sesp pc_idx_sp)
   {}
   if (LegitCk( topo.pc_symms.sz() > 0, legit, "" ))
   {
-    Xn::PcSymm& pc_symm = topo.pc_symms.top();
     Cx::PFmla act_pf( false );
+    Xn::PcSymm& pc_symm = topo.pc_symms.top();
 
     for (uint i = 0; legit && i < pc_symm.membs.sz(); ++i) {
       Xn::Pc& pc = *pc_symm.membs[i];
@@ -163,11 +167,37 @@ ProtoconFile::add_action(Sesp act_sp, Sesp pc_idx_sp)
     }
     index_map.erase(idx_name);
 
-    if (legit) {
-      pc_symm.act_pfmla |= act_pf;
-      sys->shadow_protocol |= act_pf;
+    if (LegitCk( !act_pf.overlap_ck(topo.identity_pfmla), legit, "action has self-loop" )) {
+      pc_symm.shadow_pfmla |= act_pf;
+      sys->shadow_pfmla |= act_pf;
+
+      const Cx::PFmla& pre_pf = act_pf.pre();
+      const Cx::PFmla& img_pf = act_pf.img();
+      bool fully_defined = true;
+
+      for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
+        const Xn::VblSymm& vbl_symm = *pc_symm.rvbl_symms[i];
+        if (!vbl_symm.pure_puppet_ck())
+          continue;
+        if (!pre_pf.equiv_ck(pre_pf.smooth(vbl_symm.pfmla_list_id)))
+          continue;
+
+        if (pc_symm.write_flags[i]) {
+          if (!img_pf.equiv_ck(img_pf.smooth(vbl_symm.pfmla_list_id)))
+            continue;
+        }
+
+        fully_defined = false;
+        break;
+      }
+
+      if (fully_defined) {
+        pc_symm.direct_pfmla |= act_pf;
+        sys->direct_pfmla |= act_pf;
+      }
     }
   }
+  if (LegitCk( legit, allgood, "" )) {}
   return legit;
 }
 
@@ -195,6 +225,7 @@ ProtoconFile::add_legit(Sesp legit_sp, Sesp pc_idx_sp)
     index_map.erase(idx_name);
   }
   let_map.clear();
+  if (LegitCk( good, allgood, "" )) {}
   return good;
 }
 
@@ -207,6 +238,7 @@ ProtoconFile::add_legit(Sesp legit_sp)
   if (LegitCk( eval(pf, legit_sp), good, "" ))
     sys->invariant &= pf;
 
+  if (LegitCk( good, allgood, "" )) {}
   return good;
 }
 
@@ -296,6 +328,7 @@ ProtoconFile::expression_chunks(Cx::Table<Cx::String>& chunks, Sesp a, const Cx:
     DBog1( "No matching string, key is: \"%s\"", key );;
   }
 
+  if (LegitCk( good, allgood, "" )) {}
   return good;
 }
 
@@ -466,6 +499,7 @@ ProtoconFile::eval(Cx::PFmla& pf, Sesp a)
     DBog1( "No matching string, key is: \"%s\"", key );;
   }
 
+  if (LegitCk( good, allgood, "" )) {}
   return good;
 }
 
@@ -489,6 +523,7 @@ ProtoconFile::eval(Cx::IntPFmla& ipf, Sesp a)
         ipf = Cx::IntPFmla( val );
         //DBog2("index %s is: %d", name, *val);
       }
+      if (LegitCk( good, allgood, "" )) {}
       return good;
     }
 
@@ -609,6 +644,7 @@ ProtoconFile::eval(Cx::IntPFmla& ipf, Sesp a)
     DBog1( "No matching string, key is: \"%s\"", key );;
   }
 
+  if (LegitCk( good, allgood, "" )) {}
   return good;
 }
 
@@ -622,6 +658,7 @@ ProtoconFile::eval_int(int* ret, Sesp sp)
       *ret = ipf.state_map[0];
     }
   }
+  if (LegitCk( legit, allgood, "" )) {}
   return legit;
 }
 
@@ -633,6 +670,7 @@ ProtoconFile::eval_gtz(uint* ret, Sesp sp)
   if (LegitCk( x > 0, legit, "" )) {
     *ret = (uint) x;
   }
+  if (LegitCk( legit, allgood, "" )) {}
   return legit;
 }
 
@@ -665,6 +703,7 @@ ProtoconFile::eval_vbl(Xn::Vbl** ret, Sesp b, Sesp c)
   {
     *ret = symm->membs[umod_int (idx, symm->membs.sz())];
   }
+  if (LegitCk( legit, allgood, "" )) {}
   return legit;
 }
 
@@ -682,6 +721,7 @@ ProtoconFile::lookup_int(int* ret, const Cx::String& name)
   if (LegitCk( sp, legit, "let_map.lookup()" )) {
     if (LegitCk( eval_int(ret, *sp), legit, "" )) {}
   }
+  if (LegitCk( legit, allgood, "" )) {}
   return legit;
 }
 

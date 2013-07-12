@@ -253,14 +253,14 @@ TestTokenRingClosure()
     const Xn::Pc& pc = topo.pcs[me];
 
     if (me == npcs-1) {
-      topo.pc_symms[1].act_pfmla |=
+      topo.pc_symms[1].shadow_pfmla |=
         pc.act_unchanged_pfmla &&
         topo.pfmla_vbl(pd) == topo.pfmla_vbl(me) &&
         topo.pfmla_vbl(me).img_eq(Cx::IntPFmla(1) - topo.pfmla_vbl(me));
       token_pfmlas[me] = (topo.pfmla_vbl(pd) == topo.pfmla_vbl(me));
     }
     else {
-      topo.pc_symms[0].act_pfmla |=
+      topo.pc_symms[0].shadow_pfmla |=
         pc.act_unchanged_pfmla &&
         topo.pfmla_vbl(pd) != topo.pfmla_vbl(me) &&
         topo.pfmla_vbl(me).img_eq(Cx::IntPFmla(1) - topo.pfmla_vbl(me));
@@ -268,7 +268,7 @@ TestTokenRingClosure()
     }
   }
 
-  sys.shadow_protocol |= (topo.pc_symms[0].act_pfmla | topo.pc_symms[1].act_pfmla);
+  sys.shadow_pfmla |= (topo.pc_symms[0].shadow_pfmla | topo.pc_symms[1].shadow_pfmla);
 
   sys.invariant &= SingleTokenPFmla(token_pfmlas);
 

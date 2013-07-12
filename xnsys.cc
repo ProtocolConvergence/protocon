@@ -164,9 +164,6 @@ Sys::commit_initialization()
   Xn::Net& topo = this->topology;
   topo.commit_initialization();
 
-  if (!this->shadow_protocol.tautology_ck(false)) {
-    shadow_puppet_synthesis = true;
-  }
   this->shadow_self = true;
 
   for (uint i = 0; i < topo.vbls.sz(); ++i) {
@@ -174,14 +171,29 @@ Sys::commit_initialization()
     if (vbl.symm->pure_shadow_ck()) {
       shadow_puppet_synthesis = true;
     }
+    if (vbl.symm->pure_puppet_ck()) {
+      shadow_puppet_synthesis = true;
+      pure_puppet_vbl_exists = true;
+      topo.pfmla_ctx.add_to_vbl_list (pure_puppet_pfmla_list_id, vbl.pfmla_idx);
+    }
     if (vbl.symm->shadow_ck()) {
       topo.pfmla_ctx.add_to_vbl_list (shadow_pfmla_list_id, vbl.pfmla_idx);
       const Cx::PFmlaVbl& x = topo.pfmla_ctx.vbl(vbl.pfmla_idx);
       shadow_self &= (x.img_eq(x));
     }
-    else {
-      pure_puppet_vbl_exists = true;
+    if (vbl.symm->puppet_ck()) {
+      puppet_vbl_exists = true;
       topo.pfmla_ctx.add_to_vbl_list (puppet_pfmla_list_id, vbl.pfmla_idx);
+    }
+  }
+
+  for (uint act_idx = 0; act_idx < topo.n_possible_acts; ++act_idx) {
+    const Cx::PFmla& act_pfmla = topo.action_pfmla(act_idx);
+    if (act_pfmla <= this->direct_pfmla) {
+      this->actions.push_back(act_idx);
+    }
+    else {
+      Claim( !act_pfmla.overlap_ck(this->direct_pfmla) );
     }
   }
 }
@@ -201,7 +213,7 @@ Sys::integrityCk() const
     good = false;
   }
 
-  if (!(this->shadow_protocol.img(this->invariant) <= this->invariant)) {
+  if (!(this->shadow_pfmla.img(this->invariant) <= this->invariant)) {
     DBog0( "Error: Protocol is not closed in the invariant!" );
     good = false;
   }
@@ -211,9 +223,6 @@ Sys::integrityCk() const
 
 }
 
-/**
- * Output an action in a valid Promela format.
- */
   ostream&
 OPut(ostream& of, const Xn::ActSymm& act)
 {
@@ -225,11 +234,11 @@ OPut(ostream& of, const Xn::ActSymm& act)
       << "[" << pc.rindices[i].expression("i") << "]"
       << "==" << act.guard(i);
   }
-  of << " ->";
+  of << " -->";
   for (uint i = 0; i < pc.wvbl_symms.sz(); ++i) {
     of << ' ' << pc.wvbl_symms[i]->name
       << "[" << pc.windices[i].expression("i") << "]"
-      << "=" << act.assign(i) << ';';
+      << ":=" << act.assign(i) << ';';
   }
   return of;
 }
@@ -242,7 +251,7 @@ LegitInvariant(const Xn::Sys& sys, const PF& loXnRel, const PF& hiXnRel)
   const PF& smooth_self = sys.shadow_self;
 
   const PF& smooth_live = sys.invariant;
-  const PF& smooth_protocol = sys.shadow_protocol;
+  const PF& smooth_protocol = sys.shadow_pfmla;
 
   PF puppet_live = smooth_live - (loXnRel - smooth_protocol - smooth_self).pre();
   puppet_live = ClosedSubset(loXnRel, puppet_live);
@@ -267,11 +276,11 @@ LegitInvariant(const Xn::Sys& sys, const PF& loXnRel, const PF& hiXnRel)
     }
   }
 
-  if (!smooth_live.equiv_ck(sys.smoothPuppetVbls(puppet_live))) {
+  if (!smooth_live.equiv_ck(sys.smooth_pure_puppet_vbls(puppet_live))) {
     return PF(false);
   }
 
-  if (!(smooth_live & smooth_protocol).equiv_ck(sys.smoothPuppetVbls(puppet_live & (puppet_protocol - smooth_self)))) {
+  if (!(smooth_live & smooth_protocol).equiv_ck(sys.smooth_pure_puppet_vbls(puppet_live & (puppet_protocol - smooth_self)))) {
     return PF(false);
   }
   return puppet_live;
@@ -284,8 +293,8 @@ LegitInvariant(const Xn::Sys& sys, const PF& loXnRel, const PF& hiXnRel)
 WeakConvergenceCk(const Xn::Sys& sys, const PF& xnRel, const PF& invariant)
 {
   if (sys.shadow_puppet_synthesis_ck()) {
-    const PF& shadow_protocol = sys.smoothPuppetVbls(xnRel & invariant);
-    if (!sys.shadow_protocol <= shadow_protocol) {
+    const PF& shadow_pfmla = sys.smooth_pure_puppet_vbls(xnRel & invariant);
+    if (!sys.shadow_pfmla <= shadow_pfmla) {
       return false;
     }
   }

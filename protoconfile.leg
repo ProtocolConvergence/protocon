@@ -27,7 +27,6 @@ ProtoconFile =
   (WS? ProcDecl)+
   (WS? GlobalLegit)?
   WS? END_OF_FILE
-  { DBog0("parsed!"); }
 
 Protocol = 'protocol' WS name:ID WS? ';' {}
 
@@ -253,18 +252,21 @@ END_OF_FILE = !.
 
 %%
 
-void ReadProtoconFile(Xn::Sys& sys, const char* fname)
+bool ReadProtoconFile(Xn::Sys& sys, const char* fname)
 {
+  bool good = true;
   yycontext yyctx;
   memset (&yyctx, 0, sizeof (yyctx));
   yyctx.infile = fopen(fname, "rb");
   yyctx.st = new ProtoconFile(&sys);
-  if (!yyparse(&yyctx)) {
+  if (!yyparse(&yyctx) || !yyctx.st->allgood) {
+    good = false;
     DBog1( "Error parsing the file: %s", fname );
   }
   delete yyctx.st;
   fclose(yyctx.infile);
   yyrelease(&yyctx);
   sys.commit_initialization();
+  return good;
 }
 

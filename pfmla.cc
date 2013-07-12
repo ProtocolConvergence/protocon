@@ -256,9 +256,9 @@ IntPFmla::img_eq(const IntPFmla& b) const
 
   Cx::Table< uint > state_a( a.vbls.sz() );
   Cx::Table< uint > state_b( b.vbls.sz() );
-  typename Cx::Map< int, Cx::Table<ujint> >::const_iterator itb = inverse_b.begin();
-  typename Cx::Map< int, Cx::Table<ujint> >::iterator ita = inverse_a.lower_bound(itb->first);
-  typename Cx::Map< int, Cx::Table<ujint> >::key_compare compfun = inverse_a.key_comp();
+  Cx::Map< int, Cx::Table<ujint> >::const_iterator itb = inverse_b.begin();
+  Cx::Map< int, Cx::Table<ujint> >::iterator ita = inverse_a.lower_bound(itb->first);
+  Cx::Map< int, Cx::Table<ujint> >::key_compare compfun = inverse_a.key_comp();
   while (ita != inverse_a.end() && itb != inverse_b.end()) {
     if (compfun(ita->first,itb->first)) {
       ita = inverse_a.lower_bound(itb->first);

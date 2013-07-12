@@ -47,7 +47,8 @@ candidate_actions(vector<uint>& candidates, const Xn::Sys& sys)
       }
     }
 
-    if (add && !sys.shadow_puppet_synthesis_ck() && sys.invariant.overlap_ck(actPF)) {
+    if (add && !(sys.shadow_puppet_synthesis_ck() || actPF <= sys.direct_pfmla)
+        && sys.invariant.overlap_ck(actPF)) {
       add = false;
       if (false) {
         OPut((DBogOF << "Action " << i << " exists in the invariant: "), act) << '\n';

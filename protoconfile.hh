@@ -8,7 +8,7 @@ extern "C" {
 }
 #include "xnsys.hh"
 
-void ReadProtoconFile(Xn::Sys& sys, const char* fname);
+bool ReadProtoconFile(Xn::Sys& sys, const char* fname);
 
 struct FinMeta
 {
@@ -24,6 +24,7 @@ private:
 
 public:
 
+  bool allgood;
   Map< Cx::String, uint > constant_map;
   Map< Cx::String, Sesp > let_map;
   Map< Cx::String, int > index_map;
@@ -31,7 +32,9 @@ public:
   Xn::Sys* sys;
   SespCtx* spctx;
 
-  ProtoconFile(Xn::Sys* sys) {
+  ProtoconFile(Xn::Sys* sys)
+    : allgood( true )
+  {
     this->sys = sys;
     this->sys->invariant = true;
     spctx = make_SespCtx ();

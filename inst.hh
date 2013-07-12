@@ -27,16 +27,6 @@ InstSumNot(Xn::Sys& sys, uint npcs, uint domsz, uint target,
            const char* vbl_name = "x");
 void
 InstAgreementRing(Xn::Sys& sys, uint npcs, const char* vbl_name = "x");
-void
-InstDijkstraTokenRing(Xn::Sys& sys, uint npcs);
-void
-InstThreeBitTokenRing(Xn::Sys& sys, uint npcs);
-void
-InstTwoBitTokenSpring(Xn::Sys& sys, uint npcs);
-#if 0
-void
-InstTestTokenRing(Xn::Sys& sys, uint npcs);
-#endif
 
 #endif
 

@@ -3,6 +3,27 @@
 #include "xnsys.hh"
 
 static
+  ostream&
+OPutPromelaAction(ostream& of, const Xn::ActSymm& act)
+{
+  const Xn::PcSymm& pc = *act.pc_symm;
+  of << "/*" << pc.name << "[i]" << "*/ ";
+  for (uint i = 0; i < pc.rvbl_symms.sz(); ++i) {
+    if (i != 0)  of << " && ";
+    of << pc.rvbl_symms[i]->name
+      << "[" << pc.rindices[i].expression("i") << "]"
+      << "==" << act.guard(i);
+  }
+  of << " ->";
+  for (uint i = 0; i < pc.wvbl_symms.sz(); ++i) {
+    of << ' ' << pc.wvbl_symms[i]->name
+      << "[" << pc.windices[i].expression("i") << "]"
+      << "=" << act.assign(i) << ';';
+  }
+  return of;
+}
+
+static
   void
 OPutPromelaSelect(ostream& of, const Xn::Vbl& x)
 {
@@ -40,7 +61,7 @@ OPutPromelaPc(ostream& of, const Xn::Sys& sys, uint pcidx)
     topo.action(act, sys.actions[i]);
     if (act.pc_symm == &topo.pc_symms[pcidx]) {
       of << "  :: atomic {";
-      OPut(of, act);
+      OPutPromelaAction(of, act);
       of << "  }\n";
     }
   }

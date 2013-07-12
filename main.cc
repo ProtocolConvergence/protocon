@@ -634,6 +634,13 @@ FMem_AddConvergence::reviseActions(const Xn::Sys& sys,
     }
   }
 
+  if (!(adds & dels).empty()) {
+    DBog0( "Tried to add conflicting actions... this is not good!!!" );
+    this->candidates.clear();
+    this->deadlockPF = true;
+    return;
+  }
+
   PF delActPF( false );
   for (it = dels.begin(); it != dels.end(); ++it) {
     uint actId = *it;
@@ -800,7 +807,7 @@ AddConvergence(Xn::Sys& sys, const AddConvergenceOpt& opt)
 
   tape.deadlockPF = ~sys.invariant;
   if (sys.shadow_puppet_synthesis_ck()) {
-    tape.deadlockPF |= sys.shadow_protocol.pre();
+    tape.deadlockPF |= sys.shadow_pfmla.pre();
   }
 
   tape.backReachPF = sys.invariant;
@@ -821,6 +828,13 @@ AddConvergence(Xn::Sys& sys, const AddConvergenceOpt& opt)
     tape.reviseActions(sys, Set<uint>(sys.actions), Set<uint>(), forcePrune);
   }
 
+  if (tape.deadlockPF.tautology_ck(false) &&
+      tape.actions.size() == sys.actions.size() &&
+      tape.candidates.size() == 0)
+  {
+    DBog0("The given protocol is self-stabilizing.");
+  }
+
   vector<uint> retActions;
   bool found = AddConvergence(retActions, sys, tape, opt);
   if (!found)  return false;
@@ -839,10 +853,6 @@ int main(int argc, char** argv)
     MaximalMatchingInstance,
     SumNotTwoInstance,
     AgreementRingInstance,
-    DijkstraTokenRingInstance,
-    ThreeBitTokenRingInstance,
-    TwoBitTokenSpingInstance,
-    TestTokenRingInstance,
     NProblemInstances
   } problem = NProblemInstances;
   int argi = (init_sysCx (&argc, &argv), 1);
@@ -910,22 +920,6 @@ int main(int argc, char** argv)
       DBog0("Problem: Agreement");
       problem = AgreementRingInstance;
     }
-    else if (string(argv[argi]) == "dijkstra-tr") {
-      DBog0("Problem: Dijkstra's Token Ring");
-      problem = DijkstraTokenRingInstance;
-    }
-    else if (string(argv[argi]) == "3-bit-tr") {
-      DBog0("Problem: Gouda's Three Bit Token Ring");
-      problem = ThreeBitTokenRingInstance;
-    }
-    else if (string(argv[argi]) == "2-bit-tr") {
-      DBog0("Problem: Dijkstra's Two Bit Token Spring");
-      problem = TwoBitTokenSpingInstance;
-    }
-    else if (string(argv[argi]) == "test-tr") {
-      DBog0("Problem: Testing Token Ring");
-      problem = TestTokenRingInstance;
-    }
     else{
       //printf("%s: Only supported argument is \"test\".\n", argv[0]);
       failout_sysCx("No valid problem given.\n");
@@ -952,7 +946,9 @@ int main(int argc, char** argv)
   Xn::Sys sys;
   switch(problem){
     case FromFileInstance:
-      ReadProtoconFile(sys, infile_path);  break;
+      if (!ReadProtoconFile(sys, infile_path))
+        failout_sysCx ("");
+      break;
     case ThreeColoringRingInstance:
       InstThreeColoringRing(sys, npcs);  break;
     case TwoColoringRingInstance:
@@ -963,16 +959,6 @@ int main(int argc, char** argv)
       InstSumNot(sys, npcs, 3, 2);  break;
     case AgreementRingInstance:
       InstAgreementRing(sys, npcs);  break;
-    case DijkstraTokenRingInstance:
-      InstDijkstraTokenRing(sys, npcs);  break;
-    case ThreeBitTokenRingInstance:
-      InstThreeBitTokenRing(sys, npcs);  break;
-    case TwoBitTokenSpingInstance:
-      InstTwoBitTokenSpring(sys, npcs);  break;
-#if 0
-    case TestTokenRingInstance:
-      InstTestTokenRing(sys, npcs);  break;
-#endif
     case NProblemInstances:
     default:
       DBog0("No case for this problem instance!");
@@ -1004,13 +990,14 @@ int main(int argc, char** argv)
       OPut(DBogOF, act) << '\n';
     }
     if (modelFilePath)  {
-      std::fstream of("model.pml",
+      std::fstream of(modelFilePath,
                       std::ios::binary |
                       std::ios::out |
                       std::ios::trunc);
       OPutPromelaModel(of, sys);
       of.close();
       DBog1("Model written to \"%s\".", modelFilePath);
+      DBog0("WARNING: The model is not working at this time.");
     }
   }
   else {
