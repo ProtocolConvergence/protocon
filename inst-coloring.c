@@ -9,7 +9,8 @@ inst_coloring_XnSys (uint npcs, uint domsz)
 {
     DeclTable( XnDomSz, vs );
     DecloStack1( XnSys, sys, dflt_XnSys () );
-    OFileB name = dflt_OFileB ();
+    OFile name[1];
+    init_OFile( name );
 
 #if 0
     const bool symmetric = true;
@@ -29,9 +30,9 @@ inst_coloring_XnSys (uint npcs, uint domsz)
 
         vbl.domsz = domsz;
 
-        flush_OFileB (&name);
-        printf_OFileB (&name, "c%u", r);
-        copy_AlphaTab_OFileB (&vbl.name, &name);
+        flush_OFile (name);
+        printf_OFile (name, "c%u", r);
+        copy_AlphaTab_OFile (&vbl.name, name);
 
         PushTable( sys->pcs, dflt_XnPc () );
         PushTable( sys->vbls, vbl );
@@ -58,7 +59,7 @@ inst_coloring_XnSys (uint npcs, uint domsz)
         setb_BitTable (sys->legit, sidx, good);
     }
 
-    lose_OFileB (&name);
+    lose_OFile (name);
     LoseTable( vs );
     return *sys;
 }

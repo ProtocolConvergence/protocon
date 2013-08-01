@@ -11,7 +11,8 @@ inst_dijkstra_XnSys (uint npcs)
     DeclTable( uint, x_idcs );
     DeclTable( XnDomSz, vs );
     DecloStack1( XnSys, sys, dflt_XnSys () );
-    OFileB name = dflt_OFileB ();
+    OFile name[1];
+    init_OFile( name );
 
     /* Make processes and variables.*/
     {:for (r ; npcs)
@@ -19,9 +20,9 @@ inst_dijkstra_XnSys (uint npcs)
         PushTable( sys->pcs, dflt_XnPc () );
 
         x_vbl.domsz = npcs + 1;
-        flush_OFileB (&name);
-        printf_OFileB (&name, "x%u", r);
-        copy_AlphaTab_OFileB (&x_vbl.name, &name);
+        flush_OFile (name);
+        printf_OFile (name, "x%u", r);
+        copy_AlphaTab_OFile (&x_vbl.name, name);
         PushTable( x_idcs, sys->vbls.sz );
         PushTable( sys->vbls, x_vbl );
     }
@@ -47,7 +48,7 @@ inst_dijkstra_XnSys (uint npcs)
         setb_BitTable (sys->legit, sidx, (ntokens == 1));
     }
 
-    lose_OFileB (&name);
+    lose_OFile (name);
     LoseTable( vs );
     LoseTable( x_idcs );
     return *sys;

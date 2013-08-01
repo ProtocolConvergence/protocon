@@ -12,7 +12,8 @@ inst_dijkstra4state_XnSys (uint npcs)
     DeclTable( uint, up_idcs );
     DeclTable( XnDomSz, vs );
     DecloStack1( XnSys, sys, dflt_XnSys () );
-    OFileB name = dflt_OFileB ();
+    OFile name[1];
+    init_OFile( name );
 
     /* bottom:
      * x up=true
@@ -37,16 +38,16 @@ inst_dijkstra4state_XnSys (uint npcs)
         XnVbl up_vbl = dflt_XnVbl ();
 
         x_vbl.domsz = 2;
-        flush_OFileB (&name);
-        printf_OFileB (&name, "x%u", r);
-        copy_AlphaTab_OFileB (&x_vbl.name, &name);
+        flush_OFile (name);
+        printf_OFile (name, "x%u", r);
+        copy_AlphaTab_OFile (&x_vbl.name, name);
         PushTable( x_idcs, sys->vbls.sz );
         PushTable( sys->vbls, x_vbl );
 
         up_vbl.domsz = 2;
-        flush_OFileB (&name);
-        printf_OFileB (&name, "up%u", r);
-        copy_AlphaTab_OFileB (&up_vbl.name, &name);
+        flush_OFile (name);
+        printf_OFile (name, "up%u", r);
+        copy_AlphaTab_OFile (&up_vbl.name, name);
         PushTable( up_idcs, sys->vbls.sz );
         PushTable( sys->vbls, up_vbl );
     }
@@ -103,7 +104,7 @@ inst_dijkstra4state_XnSys (uint npcs)
                        vs.s[up_idcs.s[npcs-1]] == 0);
     }
 
-    lose_OFileB (&name);
+    lose_OFile (name);
     LoseTable( vs );
     LoseTable( x_idcs );
     LoseTable( up_idcs );

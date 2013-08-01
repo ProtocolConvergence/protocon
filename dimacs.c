@@ -1,29 +1,29 @@
 
 
     void
-oput_dimacs_CnfFmla (OFileB* of, const CnfFmla* fmla)
+oput_dimacs_CnfFmla (OFile* of, const CnfFmla* fmla)
 {
-    DecloStack1( CnfDisj, clause, dflt_CnfDisj () );
-    printf_OFileB (of, "p cnf %u %u\n",
-                   (uint) fmla->nvbls,
-                   (uint) fmla->idcs.sz);
-    {:for (i ; fmla->idcs.sz)
-        clause_of_CnfFmla (clause, fmla, i);
-        {:for (j ; clause->lits.sz)
-            if (!clause->lits.s[j].val)
-                oput_char_OFileB (of, '-');
-            oput_uint_OFileB (of, 1+clause->lits.s[j].vbl);
-            oput_char_OFileB (of, ' ');
-        }
-        oput_cstr_OFileB (of, "0\n");
+  DecloStack1( CnfDisj, clause, dflt_CnfDisj () );
+  printf_OFile (of, "p cnf %u %u\n",
+                (uint) fmla->nvbls,
+                (uint) fmla->idcs.sz);
+  {:for (i ; fmla->idcs.sz)
+    clause_of_CnfFmla (clause, fmla, i);
+    {:for (j ; clause->lits.sz)
+      if (!clause->lits.s[j].val)
+        oput_char_OFile (of, '-');
+      oput_uint_OFile (of, 1+clause->lits.s[j].vbl);
+      oput_char_OFile (of, ' ');
     }
-    lose_CnfDisj (clause);
+    oput_cstr_OFile (of, "0\n");
+  }
+  lose_CnfDisj (clause);
 }
 
     void
-xget_dimacs_result (XFileB* xf, bool* sat, BitTable evs)
+xget_dimacs_result (XFile* xf, bool* sat, BitTable evs)
 {
-    const char* line = getline_XFileB (xf);
+    const char* line = getline_XFile (xf);
     wipe_BitTable (evs, 0);
     if (!line)
     {
@@ -42,12 +42,12 @@ xget_dimacs_result (XFileB* xf, bool* sat, BitTable evs)
         bool good;
         *sat = true;
 
-        good = xget_int_XFileB (xf, &v);
+        good = xget_int_XFile (xf, &v);
         while (good)
         {
             if      (v > 0)  set1_BitTable (evs, +v-1);
             else if (v < 0)  set0_BitTable (evs, -v-1);
-            good = xget_int_XFileB (xf, &v);
+            good = xget_int_XFile (xf, &v);
         }
     }
 }
@@ -68,15 +68,17 @@ extl_solve_CnfFmla (CnfFmla* fmla, bool* sat, BitTable evs)
     bool legit = true;
     bool good = true;
     DecloStack1( OSPc, ospc, dflt_OSPc () );
-    DecloStack( FileB, fb );
+    OFileB ofb[1];
+    XFileB xfb[1];
 
     *sat = false;
 
-    init_FileB (fb);
-    seto_FileB (fb, true);
-    open_FileB (fb, 0, "sat.in");
-    oput_dimacs_CnfFmla (&fb->xo, fmla);
-    close_FileB (fb);
+    init_OFileB (ofb);
+    init_XFileB (xfb);
+
+    open_FileB (&ofb->fb, 0, "sat.in");
+    oput_dimacs_CnfFmla (&ofb->of, fmla);
+    close_OFileB (ofb);
 
     lose_CnfFmla (fmla);
     *fmla = dflt_CnfFmla ();
@@ -106,13 +108,13 @@ extl_solve_CnfFmla (CnfFmla* fmla, bool* sat, BitTable evs)
       else
       {
         close_OSPc (ospc);
-        seto_FileB (fb, false);
-        open_FileB (fb, 0, "sat.out");
-        xget_dimacs_result (&fb->xo, sat, evs);
+        open_FileB (&xfb->fb, 0, "sat.out");
+        xget_dimacs_result (&xfb->xf, sat, evs);
       }
     }
 
-    lose_FileB (fb);
+    lose_OFileB (ofb);
+    lose_XFileB (xfb);
     lose_OSPc (ospc);
 }
 

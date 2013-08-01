@@ -9,7 +9,8 @@ inst_matching_XnSys (uint npcs)
 {
     DeclTable( XnDomSz, vs );
     DecloStack1( XnSys, sys, dflt_XnSys () );
-    OFileB name = dflt_OFileB ();
+    OFile name[1];
+    init_OFile( name );
 
     /* Make processes and variables.*/
     {:for (r ; npcs)
@@ -17,9 +18,9 @@ inst_matching_XnSys (uint npcs)
 
         vbl.domsz = 3;
 
-        flush_OFileB (&name);
-        printf_OFileB (&name, "m%u", r);
-        copy_AlphaTab_OFileB (&vbl.name, &name);
+        flush_OFile (name);
+        printf_OFile (name, "m%u", r);
+        copy_AlphaTab_OFile (&vbl.name, name);
 
         PushTable( sys->pcs, dflt_XnPc () );
         PushTable( sys->vbls, vbl );
@@ -54,7 +55,7 @@ inst_matching_XnSys (uint npcs)
         setb_BitTable (sys->legit, sidx, good);
     }
 
-    lose_OFileB (&name);
+    lose_OFile (name);
     LoseTable( vs );
     return *sys;
 }

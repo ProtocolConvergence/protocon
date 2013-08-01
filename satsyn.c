@@ -198,10 +198,10 @@ clause_of_CnfFmla (CnfDisj* clause, const CnfFmla* fmla, ujint i)
 
 qual_inline
     void
-oput_BitTable (OFileB* f, const BitTable bt)
+oput_BitTable (OFile* f, const BitTable bt)
 {
     for (ujint i = 0; i < bt.sz; ++i)
-        oput_char_OFileB (f, test_BitTable (bt, i) ? '1' : '0');
+        oput_char_OFile (f, test_BitTable (bt, i) ? '1' : '0');
 }
 
 
@@ -947,10 +947,10 @@ synsearch_quicktrim_mayrules (FMem_synsearch* tape, XnSz nadded)
         }
         else if (false)
         {
-            OFileB* of = stderr_OFileB ();
-            oput_cstr_OFileB (of, "Pruned: ");
+            OFile* of = stderr_OFile ();
+            oput_cstr_OFile (of, "Pruned: ");
             oput_promela_XnRule (of, g0, sys);
-            oput_char_OFileB (of, '\n');
+            oput_char_OFile (of, '\n');
         }
     }
     if (DBog_QuickTrim)
@@ -1041,10 +1041,10 @@ synsearch_trim (FMem_synsearch* tape)
             }
             else if (false)
             {
-                OFileB* of = stderr_OFileB ();
-                oput_cstr_OFileB (of, "Pruned: ");
+                OFile* of = stderr_OFile ();
+                oput_cstr_OFile (of, "Pruned: ");
                 oput_promela_XnRule (of, g, sys);
-                oput_char_OFileB (of, '\n');
+                oput_char_OFile (of, '\n');
             }
 
             back1_Xn (&tape->xns, &tape->xn_stk);
@@ -1303,15 +1303,15 @@ synsearch (FMem_synsearch* tape)
             if (DBog_SearchStep
                 || tape->may_rules.sz-1 < 40)
             {
-                OFileB* of = stderr_OFileB ();
-                oput_cstr_OFileB (of, " -- ");
-                oput_uint_OFileB (of, tape->may_rules.sz - 1);
-                oput_cstr_OFileB (of, " -- ");
-                oput_uint_OFileB (of, may_rules->sz);
-                oput_cstr_OFileB (of, " -- ");
+                OFile* of = stderr_OFile ();
+                oput_cstr_OFile (of, " -- ");
+                oput_uint_OFile (of, tape->may_rules.sz - 1);
+                oput_cstr_OFile (of, " -- ");
+                oput_uint_OFile (of, may_rules->sz);
+                oput_cstr_OFile (of, " -- ");
                 oput_promela_XnRule (of, g, sys);
-                oput_char_OFileB (of, '\n');
-                flush_OFileB (of);
+                oput_char_OFile (of, '\n');
+                flush_OFile (of);
             }
 
             synsearch (tape);
@@ -1682,8 +1682,8 @@ synsearch_sat (FMem_synsearch* tape)
         extl_solve_CnfFmla (fmla, &sat, evs);
         if (0)
         {
-            oput_BitTable (stderr_OFileB (), evs);
-            oput_char_OFileB (stderr_OFileB (), '\n');
+            oput_BitTable (stderr_OFile (), evs);
+            oput_char_OFile (stderr_OFile (), '\n');
         }
 
         tape->stabilizing = sat;
@@ -1897,12 +1897,12 @@ main (int argc, char** argv)
         if (tape.stabilizing || (manual_soln && tape.rules.sz > 0))
         {
             /* Promela.*/
-            FileB pmlf = dflt_FileB ();
+            OFileB pmlf[1];
+            init_OFileB (pmlf);
 
-            seto_FileB (&pmlf, true);
-            open_FileB (&pmlf, 0, "model.pml");
-            oput_promela (&pmlf.xo, sys, tape.rules);
-            lose_FileB (&pmlf);
+            open_FileB (&pmlf->fb, 0, "model.pml");
+            oput_promela (&pmlf->of, sys, tape.rules);
+            lose_OFileB (pmlf);
 
 
             /* This is just a test, but should be used to

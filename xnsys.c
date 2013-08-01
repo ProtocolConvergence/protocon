@@ -390,12 +390,12 @@ statevs_of_XnSys (TableT(XnDomSz)* t, const XnSys* sys, XnSz sidx)
 
 
     void
-oput_XnEVbl (OFileB* of, const XnEVbl* ev, const char* delim)
+oput_XnEVbl (OFile* of, const XnEVbl* ev, const char* delim)
 {
     oput_AlphaTab (of, &ev->vbl->name);
     if (!delim)  delim = "=";
-    oput_cstr_OFileB (of, delim);
-    oput_uint_OFileB (of, ev->val);
+    oput_cstr_OFile (of, delim);
+    oput_uint_OFile (of, ev->val);
 }
 
     void

@@ -13,9 +13,9 @@ sat3_legit_XnSys (FMem_do_XnSys* fix,
 {
     bool ring = (npcs != 3);
 #if 0
-    OFileB* of = stderr_OFileB ();
+    OFile* of = stderr_OFile ();
     oput_BitTable (of, sys->legit);
-    oput_char_OFileB (of, '\n');
+    oput_char_OFile (of, '\n');
 #endif
 
 #if 1
@@ -114,25 +114,25 @@ sat3_legit_XnSys (FMem_do_XnSys* fix,
 
 #if 0
     oput_BitTable (of, sys->legit);
-    oput_char_OFileB (of, '\n');
+    oput_char_OFile (of, '\n');
 
     if (false)
     {:for (i ; sys->legit.sz)
         if (test_BitTable (sys->legit, i))
         {
-            oput_char_OFileB (of, '+');
+            oput_char_OFile (of, '+');
             oput_promela_state_XnSys (of, sys, i);
-            oput_char_OFileB (of, '\n');
+            oput_char_OFile (of, '\n');
         }
         else
         {
-            oput_char_OFileB (of, '-');
+            oput_char_OFile (of, '-');
             oput_promela_state_XnSys (of, sys, i);
-            oput_char_OFileB (of, '\n');
+            oput_char_OFile (of, '\n');
         }
     }
 
-    flush_OFileB (of);
+    flush_OFile (of);
 #endif
 }
 
@@ -145,7 +145,8 @@ inst_sat3_XnSys (const CnfFmla* fmla)
     uint y_idcs[3];
     uint sat_idx;
     DecloStack( XnSys, sys );
-    OFileB name = dflt_OFileB ();
+    OFile name[1];
+    init_OFile( name );
 
     *sys = dflt_XnSys ();
 
@@ -156,16 +157,16 @@ inst_sat3_XnSys (const CnfFmla* fmla)
         PushTable( sys->pcs, dflt_XnPc () );
 
         x.domsz = fmla->nvbls;
-        flush_OFileB (&name);
-        printf_OFileB (&name, "x%u", r);
-        copy_AlphaTab_OFileB (&x.name, &name);
+        flush_OFile (name);
+        printf_OFile (name, "x%u", r);
+        copy_AlphaTab_OFile (&x.name, name);
         x_idcs[r] = sys->vbls.sz;
         PushTable( sys->vbls, x );
 
         y.domsz = 2;
-        flush_OFileB (&name);
-        printf_OFileB (&name, "y%u", r);
-        copy_AlphaTab_OFileB (&y.name, &name);
+        flush_OFile (name);
+        printf_OFile (name, "y%u", r);
+        copy_AlphaTab_OFile (&y.name, name);
         y_idcs[r] = sys->vbls.sz;
         PushTable( sys->vbls, y );
     }
@@ -175,9 +176,9 @@ inst_sat3_XnSys (const CnfFmla* fmla)
     {
         XnVbl sat = dflt_XnVbl ();
         sat.domsz = 2;
-        flush_OFileB (&name);
-        oput_cstr_OFileB (&name, "sat");
-        copy_AlphaTab_OFileB (&sat.name, &name);
+        flush_OFile (name);
+        oput_cstr_OFile (name, "sat");
+        copy_AlphaTab_OFile (&sat.name, name);
         sat_idx = sys->vbls.sz;
         PushTable( sys->vbls, sat );
     }
@@ -228,7 +229,7 @@ inst_sat3_XnSys (const CnfFmla* fmla)
     }
     */
 
-    lose_OFileB (&name);
+    lose_OFile (name);
     return *sys;
 }
 
@@ -240,7 +241,8 @@ inst_sat3_ring_XnSys (const CnfFmla* fmla, const bool use_sat)
     uint sat_idcs[ArraySz( x_idcs )];
     const uint npcs = ArraySz( x_idcs );
     DecloStack( XnSys, sys );
-    OFileB name = dflt_OFileB ();
+    OFile name[1];
+    init_OFile( name );
 
     *sys = dflt_XnSys ();
 
@@ -271,13 +273,13 @@ inst_sat3_ring_XnSys (const CnfFmla* fmla, const bool use_sat)
         x->domsz = fmla->nvbls;
         y->domsz = (use_sat ? 2 : 3);
 
-        flush_OFileB (&name);
-        printf_OFileB (&name, "x%u", r);
-        copy_AlphaTab_OFileB (&x->name, &name);
+        flush_OFile (name);
+        printf_OFile (name, "x%u", r);
+        copy_AlphaTab_OFile (&x->name, name);
 
-        flush_OFileB (&name);
-        printf_OFileB (&name, "y%u", r);
-        copy_AlphaTab_OFileB (&y->name, &name);
+        flush_OFile (name);
+        printf_OFile (name, "y%u", r);
+        copy_AlphaTab_OFile (&y->name, name);
 
 
         /* Process r */
@@ -298,9 +300,9 @@ inst_sat3_ring_XnSys (const CnfFmla* fmla, const bool use_sat)
         XnVbl* sat = &sys->vbls.s[sat_idcs[r]];
         sat->domsz = 2;
 
-        flush_OFileB (&name);
-        printf_OFileB (&name, "sat%u", r);
-        copy_AlphaTab_OFileB (&sat->name, &name);
+        flush_OFile (name);
+        printf_OFile (name, "sat%u", r);
+        copy_AlphaTab_OFile (&sat->name, name);
         /* Process r */
         assoc_XnSys (sys, r, sat_idcs[r], Yes);
         /* Process r+1 */
@@ -309,7 +311,7 @@ inst_sat3_ring_XnSys (const CnfFmla* fmla, const bool use_sat)
         assoc_XnSys (sys, (r + npcs - 1) % npcs, sat_idcs[r], May);
     }
 
-    lose_OFileB (&name);
+    lose_OFile (name);
 
     accept_topology_XnSys (sys);
 
@@ -372,7 +374,7 @@ sat3_soln_XnSys (TableT(XnRule)* rules,
         uint y_idx = 0;
         uint sat_idx = 0;
         const XnVbl* x_vbl;
-        const XnVbl* y_vbl;
+        //const XnVbl* y_vbl;
 
         {:for (i ; 3)
             char c = sys->vbls.s[pc->vbls.s[i]].name.s[0];
@@ -382,7 +384,7 @@ sat3_soln_XnSys (TableT(XnRule)* rules,
         }
 
         x_vbl = &sys->vbls.s[pc->vbls.s[x_idx]];
-        y_vbl = &sys->vbls.s[pc->vbls.s[y_idx]];
+        //y_vbl = &sys->vbls.s[pc->vbls.s[y_idx]];
 
         {:for (x_val ; x_vbl->domsz)
             XnRule g = cons2_XnRule (3, 1);
