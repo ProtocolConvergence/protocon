@@ -15,5 +15,5 @@ process P[i : Int % N]
   read:  x[i+1];
 }
 
-legit: (unique i : Int % N : d[i] == 1);
+invariant: (unique i : Int % N : d[i] == 1);
 

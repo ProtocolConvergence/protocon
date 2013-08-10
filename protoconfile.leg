@@ -51,7 +51,7 @@ OptionalShadowPuppetRole =
 
 VarDecl =
   r:OptionalShadowPuppetRole 'variable'
-  WS a:ID '[' WS? b:NatDom WS? ']' WS? ':' WS? c:NatDom WS? ';'
+  WS a:ID '[' WS? b:NatDom WS? ']' WS? IN WS? c:NatDom WS? ';'
   {
     Xn::Vbl::ShadowPuppetRole role = Xn::Vbl::Direct;
     if (pfxeq_cstr ("shadow", ccstr_of_Sesp (r.sp))) {
@@ -65,7 +65,7 @@ VarDecl =
   }
 
 ProcDecl =
-  'process' WS pc_name:ID '[' WS? idx_name:ID WS? ':' WS? npcs:NatDom WS? ']'
+  'process' WS pc_name:ID '[' WS? idx_name:ID WS? IN WS? npcs:NatDom WS? ']'
   {yy->st->add_processes(pc_name.sp, idx_name.sp, npcs.sp);}
   WS? '{' WS?
   ( 'let' WS let_name:ID WS? ':=' WS? let_val:Expr WS? ';' WS?
@@ -86,13 +86,13 @@ ProcDecl =
     ')' WS? ';' WS?
     {yy->st->add_action (act.sp, idx_name.sp);}
   )*
-  ( 'legit:' WS? legit:Expr WS? ';' WS?
+  ( INVARIANT WS? legit:Expr WS? ';' WS?
     {yy->st->add_legit(legit.sp, idx_name.sp);}
   )?
   '}'
 
 GlobalLegit =
-  'legit:' WS? a:Expr WS? ';'
+  INVARIANT WS? a:Expr WS? ';'
   {yy->st->add_legit(a.sp);}
 
 ConstExpr = a:ConstSum {$$ = a;}
@@ -139,17 +139,17 @@ Expr =
   | a:Disjunction {$$ = a;}
 
 Quantify =
-    'forall' WS a:ID WS? ':' WS? b:NatDom WS? ':' WS? c:Expr
+    'forall' WS a:ID WS? IN WS? b:NatDom WS? ':' WS? c:Expr
     {
       $$.sp = list4_ccstr_Sesp ("forall", a.sp, b.sp, c.sp);
       $$.int_ck = 0;
     }
-  | 'exists' WS a:ID WS? ':' WS? b:NatDom WS? ':' WS? c:Expr
+  | 'exists' WS a:ID WS? IN WS? b:NatDom WS? ':' WS? c:Expr
     {
       $$.sp = list4_ccstr_Sesp ("exists", a.sp, b.sp, c.sp);
       $$.int_ck = 0;
     }
-  | 'unique' WS a:ID WS? ':' WS? b:NatDom WS? ':' WS? c:Expr
+  | 'unique' WS a:ID WS? IN WS? b:NatDom WS? ':' WS? c:Expr
     {
       $$.sp = list4_ccstr_Sesp ("unique", a.sp, b.sp, c.sp);
       $$.int_ck = 0;
@@ -234,6 +234,10 @@ NAT = < [0-9]+ >
     $$.sp = make_Nat_Sesp (yy->st->spctx, u);
     $$.int_ck = 1;
   }
+
+IN = ':'
+
+INVARIANT = 'invariant:'
 
 ID = < [A-Za-z][0-9A-Za-z]* >
   {

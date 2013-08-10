@@ -377,13 +377,14 @@ subseteq_ck_PFmla (const PFmla a, const PFmla b)
 }
 
   void
-smooth_vbl_PFmla (PFmla* dst, const PFmla a, const PFmlaVbl* vbl)
+smooth_vbl_PFmla (PFmla* dst, const PFmla a, const PFmlaVbl* vbl,
+                  Signum pre_or_img)
 {
-  smooth_vbls_PFmla (dst, a, vbl->list_id);
+  smooth_vbls_PFmla (dst, a, vbl->list_id, pre_or_img);
 }
 
   void
-smooth_vbls_PFmla (PFmla* b, const PFmla a, uint list_id)
+smooth_vbls_PFmla (PFmla* b, const PFmla a, uint list_id, Signum pre_or_img)
 {
   Trit phase = phase_of_PFmla (a);
   if (phase != May)
@@ -393,7 +394,7 @@ smooth_vbls_PFmla (PFmla* b, const PFmla a, uint list_id)
   else
   {
     pre_op2_PFmla (b, a, a);
-    a->ctx->vt->smooth_vbls_fn (a->ctx, b, a, list_id);
+    a->ctx->vt->smooth_vbls_fn (a->ctx, b, a, list_id, pre_or_img);
   }
 }
 
@@ -539,6 +540,46 @@ pick_pre_PFmla (PFmla* dst, const PFmla a)
       and_PFmla (&conj, conj, eq);
     }
     iden_PFmla (dst, conj);
+    lose_PFmla (&tmp_conj);
+    lose_PFmla (&conj);
+    lose_PFmla (&eq);
+  }
+}
+
+  void
+state_of_PFmla (uint* state, const PFmla a, const uint* indices, uint n)
+{
+  Trit phase_a = phase_of_PFmla (a);
+  if (phase_a != May)
+  {
+    Claim( (phase_a == Yes) && "No satisfying state." );
+    for (i ; n)  state[i] = 0;
+  }
+  else
+  {
+    PFmlaCtx* ctx = a->ctx;
+    PFmla eq = dflt_PFmla ();
+    PFmla conj = dflt1_PFmla (true);
+    PFmla tmp_conj = dflt_PFmla ();
+
+    for (i ; n) {
+      const PFmlaVbl* vbl = (PFmlaVbl*) elt_LgTable (&ctx->vbls, indices[i]);
+      bool found = false;
+      for (val ; vbl->domsz-1) {
+        eqlc_PFmlaVbl (&eq, vbl, val);
+        and_PFmla (&tmp_conj, conj, eq);
+        if (overlap_ck_PFmla (tmp_conj, a)) {
+          found = true;
+          state[i] = val;
+          break;
+        }
+      }
+      if (!found) {
+        eqlc_PFmlaVbl (&eq, vbl, vbl->domsz-1);
+        state[i] = vbl->domsz-1;
+      }
+      and_PFmla (&conj, conj, eq);
+    }
     lose_PFmla (&tmp_conj);
     lose_PFmla (&conj);
     lose_PFmla (&eq);

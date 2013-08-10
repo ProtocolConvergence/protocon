@@ -38,7 +38,7 @@ process P[j : Int % (N-1)]
        );
 }
 
-legit:
+invariant:
   // Some process is enabled.
   (exists i : Int % N :
       i == 0 && e[i-1] == e[i]

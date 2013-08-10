@@ -10,6 +10,6 @@ process P[i : Int % N]
   read:  x[i-1];
   write: x[i];
   read: x[i+1];
-  legit: (x[i-1] - x[i]) % N == (x[i] - x[i+1]) % N;
+  invariant: (x[i-1] - x[i]) % N == (x[i] - x[i+1]) % N;
 }
 

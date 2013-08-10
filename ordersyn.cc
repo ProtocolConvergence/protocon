@@ -63,8 +63,33 @@ candidate_actions(vector<uint>& candidates, const Xn::Sys& sys)
     DBog0( "No candidates actions!" );
     return false;
   }
+
   return true;
 }
+
+  void
+rank_states (Cx::Table<Cx::PFmla>& state_layers,
+             const Cx::PFmla& xn_pf, const Cx::PFmla& legit)
+{
+  state_layers.resize(0);
+  state_layers.push(legit);
+
+  PF visit_pf( legit );
+  PF layer_pf( xn_pf.pre(legit) - visit_pf );
+  while (!layer_pf.tautology_ck(false)) {
+    state_layers.push(layer_pf);
+    visit_pf |= layer_pf;
+    layer_pf = xn_pf.pre(layer_pf) - visit_pf;
+  }
+  if (!visit_pf.tautology_ck(true)) {
+  }
+}
+
+//  void
+//rank_actions (Cx::Table<Cx::PFmla>& act_layers,
+//              const Cx::PFmla& xn_pf, const Cx::PFmla& legit)
+//{
+//}
 
 /**
  * Check if two actions can coexist in a
@@ -116,6 +141,52 @@ try_order_synthesis(vector<uint>& actions, const Xn::Sys& sys,
 
   Xn::ActSymm act;
   Xn::ActSymm act_tmp;
+#if 0
+  vector<uint> skipped_candidates = candidates;
+  while (skipped_candidates.size() > 0)
+  {
+    vector<uint> candidates;
+    candidates = skipped_candidates;
+    skipped_candidates.clear();
+    for (uint i = 0; i < candidates.size(); ++i)
+    {
+      bool add = true;
+      const uint act_idx = candidates[i];
+      topo.action(act, act_idx);
+      for (uint j = 0; add && j < actions.size(); ++j)
+      {
+        topo.action(act_tmp, actions[j]);
+        add = add && coexist_ck(act, act_tmp);
+      }
+      if (!add)  continue;
+      const Cx::PFmla& act_pf = topo.action_pfmla(act_idx);
+      Cx::PFmla pre_pf( act_pf.pre() );
+      if (!pre_pf.overlap_ck(deadlock_pfmla))
+        continue;
+      if (CycleCk(xn_pfmla | act_pf, Cx::PFmla(true)))
+        continue;
+
+      if (act_pf.img() <= deadlock_pfmla)
+      {
+        skipped_candidates.push_back(act_idx);
+        continue;
+      }
+
+      actions.push_back(act_idx);
+      xn_pfmla |= act_pf;
+      deadlock_pfmla -= pre_pf;
+
+      if (deadlock_pfmla.tautology_ck(false)) {
+        return true;
+      }
+    }
+    if (skipped_candidates.size() == candidates.size()) {
+      // No candidates reach the current state.
+      break;
+    }
+  }
+  DBog1( "actions.size() = %u", (uint) actions.size() );
+#else
   for (uint i = 0; i < candidates.size(); ++i)
   {
     bool add = true;
@@ -142,6 +213,7 @@ try_order_synthesis(vector<uint>& actions, const Xn::Sys& sys,
       return true;
     }
   }
+#endif
   return false;
 }
 

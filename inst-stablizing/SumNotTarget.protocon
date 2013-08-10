@@ -12,6 +12,6 @@ process P[i : Int % N]
   read:  x[i-1];
   write: x[i];
   act: ( x[i-1] + x[i] == Target --> x[i] := Target + 1 - x[i-1]; );
-  legit: x[i-1] + x[i] != Target;
+  invariant: x[i-1] + x[i] != Target;
 }
 

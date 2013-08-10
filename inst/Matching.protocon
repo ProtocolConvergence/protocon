@@ -10,9 +10,10 @@ process P[i : Int % N]
   read: m[i-1];
   write: m[i];
   read: m[i+1];
-  legit: (   m[i-1] == 2 && m[i] == 1
-          || m[i-1] == 1 && m[i] == 0 && m[i+1] == 2
-          ||                m[i] == 2 && m[i+1] == 1
-         );
+  invariant:
+    (   m[i-1] == 2 && m[i] == 1
+     || m[i-1] == 1 && m[i] == 0 && m[i+1] == 2
+     ||                m[i] == 2 && m[i+1] == 1
+    );
 }
 

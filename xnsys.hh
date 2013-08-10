@@ -211,6 +211,12 @@ public:
                 const String& pfx,
                 const String& sfx) const;
 
+  ostream& oput_pfmla(ostream& of, Cx::PFmla pf,
+                      Signum pre_or_img, bool just_one) const;
+  ostream& oput_one_xn(ostream& of, const Cx::PFmla& pf) const;
+  ostream& oput_all_xn(ostream& of, const Cx::PFmla& pf) const;
+  ostream& oput_all_pf(ostream& of, const Cx::PFmla& pf) const;
+
 private:
   void make_action_pfmla(uint actid);
 };
@@ -283,6 +289,12 @@ public:
       return pf;
     }
     return pf.smooth(pure_puppet_pfmla_list_id);
+  }
+  Cx::PFmla smooth_pure_puppet_img_vbls(const Cx::PFmla& pf) const {
+    if (!pure_puppet_vbl_exists) {
+      return pf;
+    }
+    return pf.smooth_img(pure_puppet_pfmla_list_id);
   }
 
   void niceIdxFo(uint pcIdx, uint niceIdx) {

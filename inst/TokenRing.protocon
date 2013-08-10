@@ -22,7 +22,7 @@ process P[j : Int % (N-1)]
   act: ( b[i-1] != b[i] --> b[i] := 1 - b[i]; );
 }
 
-legit:
+invariant:
   unique i : Int % N :
   (   i == 0 && b[i-1] == b[i]
    || i != 0 && b[i-1] != b[i]

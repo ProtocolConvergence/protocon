@@ -9,6 +9,6 @@ process P[i : Int % N]
 {
   read:  x[i-1];
   write: x[i];
-  legit: x[i] + x[i-1] != 2;
+  invariant: x[i] + x[i-1] != 2;
 }
 

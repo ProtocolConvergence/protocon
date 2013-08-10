@@ -40,7 +40,9 @@ struct PFmlaOpVT
 {
   void (*op2_fn) (PFmlaCtx*, PFmla*, BitOp, const PFmla, const PFmla);
 
-  void (*smooth_vbls_fn) (PFmlaCtx*, PFmla*, const PFmla, uint);
+  void (*smooth_vbls_fn) (PFmlaCtx*, PFmla*, const PFmla, uint, Signum);
+  void (*smooth_pre_vbls_fn) (PFmlaCtx*, PFmla*, const PFmla, uint);
+  void (*smooth_img_vbls_fn) (PFmlaCtx*, PFmla*, const PFmla, uint);
   void (*subst_vbls_fn) (PFmlaCtx*, PFmla*, const PFmla, uint, uint);
   void (*pre_fn) (PFmlaCtx*, PFmla*, const PFmla);
   void (*pre1_fn) (PFmlaCtx*, PFmla*, const PFmla, const PFmla);
@@ -105,9 +107,9 @@ overlap_ck_PFmla (const PFmla a, const PFmla b);
 bool
 subseteq_ck_PFmla (const PFmla a, const PFmla b);
 void
-smooth_vbl_PFmla (PFmla* dst, const PFmla a, const PFmlaVbl* vbl);
+smooth_vbl_PFmla (PFmla* dst, const PFmla a, const PFmlaVbl* vbl, Signum pre_or_img);
 void
-smooth_vbls_PFmla (PFmla* dst, const PFmla a, uint list_id);
+smooth_vbls_PFmla (PFmla* dst, const PFmla a, uint list_id, Signum pre_or_img);
 void
 subst_vbls_PFmla (PFmla* dst, const PFmla a, uint list_id_new, uint list_id_old);
 void
@@ -122,6 +124,8 @@ void
 as_img_PFmla (PFmla* dst, const PFmla a);
 void
 pick_pre_PFmla (PFmla* dst, const PFmla a);
+void
+state_of_PFmla (uint* state, const PFmla a, const uint* indices, uint n);
 void
 eql_PFmlaVbl (PFmla* dst, const PFmlaVbl* a, const PFmlaVbl* b);
 void

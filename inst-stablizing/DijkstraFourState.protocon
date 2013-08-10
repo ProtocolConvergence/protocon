@@ -40,7 +40,7 @@ process Top[j : Int % 1]
        );
 }
 
-legit:
+invariant:
   // The bottom and top processes have fixed up values.
   up[0] == 1 && up[N-1] == 0 &&
   // Some process is enabled.

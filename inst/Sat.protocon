@@ -1,0 +1,71 @@
+
+// This is a protocol used to show NP-completeness of adding convergence.
+// An instance of 3-SAT corresponds to this protocol.
+// A stabilizing protocol can be synthesized if and only if the corresponding
+// 3-SAT instance can be satisfied.
+//
+// In this case, the 3-SAT instance is:
+//   phi = ( v0 ||  v1 ||  v2) &&
+//         (!v1 || !v1 || !v2) &&
+//         (!v1 || !v1 ||  v2) &&
+//         ( v1 || !v2 || !v0)
+// where v0, v1, and v2 are boolean variables.
+//
+// This formula defines the protocol's $x[0..2]$ domains (via the constant $M$)
+// and the legitimate states.
+
+protocol Sat;
+
+// Number of variables in 3-SAT formula.
+constant M := 3;
+
+variable x[Nat % 3] : Nat % M;
+variable y[Nat % 3] : Nat % 2;
+variable sat[Nat % 1] : Nat % 2;
+
+process P[i : Nat % 3]
+{
+  read: sat[0];
+  read: x[i];
+  write: y[i];
+}
+
+// Uncomment these instead if you don't want symmetry.
+// (Hint: They will still be symmetric!)
+//process P0[i : Nat % 1] { read: sat[0], x[0]; write: y[0]; }
+//process P1[i : Nat % 1] { read: sat[0], x[1]; write: y[1]; }
+//process P2[i : Nat % 1] { read: sat[0], x[2]; write: y[2]; }
+
+
+process P3[i : Nat % 1]
+{
+  read: x[0], x[1], x[2];
+  read: y[0], y[1], y[2];
+  write: sat[0];
+}
+
+invariant:
+  (forall i : Nat % 3 :
+   (forall j : Nat % 3 :
+    (x[i] != x[j]) || (y[i] == y[j])))
+  &&
+  (sat[0] == 1)
+  &&
+  // Clauses:
+  //      v0           v1           v2
+  (x[0] != 0 || x[1] != 1 || x[2] != 2 ||
+   y[0] == 1 || y[1] == 1 || y[2] == 1)
+  &&
+  //     !v1          !v1          !v2
+  (x[0] != 1 || x[1] != 1 || x[2] != 2 ||
+   y[0] == 0 || y[1] == 0 || y[2] == 0)
+  &&
+  //     !v1          !v1           v2
+  (x[0] != 1 || x[1] != 1 || x[2] != 2 ||
+   y[0] == 0 || y[1] == 0 || y[2] == 1)
+  &&
+  //      v1          !v2          !v0
+  (x[0] != 1 || x[1] != 2 || x[2] != 0 ||
+   y[0] == 1 || y[1] == 0 || y[2] == 0)
+  ;
+

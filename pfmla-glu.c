@@ -19,6 +19,8 @@ struct GluPFmlaCtx
   PFmlaCtx fmlactx;
   mdd_manager* ctx;
   TableT(array_t_memloc) vbl_lists;
+  TableT(array_t_memloc) pre_vbl_lists;
+  TableT(array_t_memloc) img_vbl_lists;
   array_t* pre_vbl_list;
   array_t* img_vbl_list;
 };
@@ -109,14 +111,23 @@ op2_GluPFmla (PFmlaCtx* ctx, PFmla* base_c, BitOp op,
 
 static
   void
-smooth_vbls_GluPFmla (PFmlaCtx* fmlactx, PFmla* base_b, const PFmla base_a, uint set_id)
+smooth_vbls_GluPFmla (PFmlaCtx* fmlactx, PFmla* base_b, const PFmla base_a,
+                      uint set_id, Signum pre_or_img)
 {
   GluPFmlaCtx* ctx = castup_as_GluPFmlaCtx (fmlactx);
   const GluPFmla* a = ccastup_as_GluPFmla (base_a);
   GluPFmla* b = castup_as_GluPFmla (*base_b);
   mdd_t* tmp = b->mdd;
+  array_t* list;
 
-  b->mdd = mdd_smooth (ctx->ctx, a->mdd, ctx->vbl_lists.s[set_id]);
+  if (pre_or_img < 0)
+    list = ctx->pre_vbl_lists.s[set_id];
+  else if (pre_or_img > 0)
+    list = ctx->img_vbl_lists.s[set_id];
+  else
+    list = ctx->vbl_lists.s[set_id];
+
+  b->mdd = mdd_smooth (ctx->ctx, a->mdd, list);
   if (tmp)  mdd_free (tmp);
 }
 
@@ -322,9 +333,14 @@ lose_GluPFmlaCtx (PFmlaCtx* fmlactx)
   GluPFmlaCtx* ctx = castup_as_GluPFmlaCtx (fmlactx);
   if (ctx->vbl_lists.sz > 0)
   {
-    for (i ; ctx->vbl_lists.sz)
+    for (i ; ctx->vbl_lists.sz) {
       array_free(ctx->vbl_lists.s[i]);
+      array_free(ctx->pre_vbl_lists.s[i]);
+      array_free(ctx->img_vbl_lists.s[i]);
+    }
     LoseTable( ctx->vbl_lists );
+    LoseTable( ctx->pre_vbl_lists );
+    LoseTable( ctx->img_vbl_lists );
   }
   array_free( ctx->pre_vbl_list );
   array_free( ctx->img_vbl_list );
@@ -360,6 +376,8 @@ add_vbl_list_GluPFmlaCtx (PFmlaCtx* fmlactx)
 {
   GluPFmlaCtx* ctx = castup_as_GluPFmlaCtx (fmlactx);
   PushTable( ctx->vbl_lists, array_alloc(uint, 0) );
+  PushTable( ctx->pre_vbl_lists, array_alloc(uint, 0) );
+  PushTable( ctx->img_vbl_lists, array_alloc(uint, 0) );
   return ctx->vbl_lists.sz - 1;
 }
 
@@ -370,6 +388,8 @@ add_to_vbl_list_GluPFmlaCtx (PFmlaCtx* fmlactx, uint listid, uint vblid)
   GluPFmlaCtx* ctx = castup_as_GluPFmlaCtx (fmlactx);
   array_insert_last(uint, ctx->vbl_lists.s[listid], id_of_pre (vblid));
   array_insert_last(uint, ctx->vbl_lists.s[listid], id_of_img (vblid));
+  array_insert_last(uint, ctx->pre_vbl_lists.s[listid], id_of_pre (vblid));
+  array_insert_last(uint, ctx->img_vbl_lists.s[listid], id_of_img (vblid));
 }
 
   PFmlaCtx*
@@ -408,6 +428,8 @@ make_GluPFmlaCtx ()
   init1_PFmlaCtx (&ctx->fmlactx, &vt);
   ctx->ctx = mdd_init_empty();
   InitTable( ctx->vbl_lists );
+  InitTable( ctx->pre_vbl_lists );
+  InitTable( ctx->img_vbl_lists );
   ctx->pre_vbl_list = array_alloc(uint, 0);
   ctx->img_vbl_list = array_alloc(uint, 0);
   return &ctx->fmlactx;

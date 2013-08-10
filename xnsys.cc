@@ -157,6 +157,70 @@ Net::oput(ostream& of,
   return of;
 }
 
+  ostream&
+Net::oput_pfmla(ostream& of, Cx::PFmla pf,
+                Signum pre_or_img, bool just_one) const
+{
+  Cx::Table<uint> state_pre(this->vbls.sz(), 0);
+  Cx::Table<uint> state_img(this->vbls.sz(), 0);
+  while (!pf.tautology_ck(false))
+  {
+    Cx::PFmla pf_pre = pf.pick_pre();
+    Cx::PFmla pf_img = pf.img(pf_pre).pick_pre();
+
+    for (uint i = 0; i < this->vbls.sz(); ++i) {
+      state_pre[i] = this->vbls[i].pfmla_idx;
+      state_img[i] = this->vbls[i].pfmla_idx;
+    }
+    pf_pre.state(&state_pre[0], state_pre);
+    pf_img.state(&state_img[0], state_img);
+
+    if (pre_or_img <= 0) {
+      of << "pre:";
+      for (uint i = 0; i < this->vbls.sz(); ++i) {
+        of << ' ' << state_pre[i];
+      }
+      of << '\n';
+    }
+    if (pre_or_img >= 0) {
+      of << "img:";
+      for (uint i = 0; i < this->vbls.sz(); ++i) {
+        of << ' ' << state_img[i];
+      }
+      of << '\n';
+    }
+
+    if (just_one)  break;
+
+    if (pre_or_img < 0)
+      pf -= pf_pre;
+    else if (pre_or_img > 0)
+      pf -= pf_img.as_img();
+    else
+      pf -= pf_pre & pf_img.as_img();
+  }
+  return of;
+}
+
+
+  ostream&
+Net::oput_one_xn(ostream& of, const Cx::PFmla& pf) const
+{
+  return this->oput_pfmla(of, pf, 0, true);
+}
+
+  ostream&
+Net::oput_all_xn(ostream& of, const Cx::PFmla& pf) const
+{
+  return this->oput_pfmla(of, pf, 0, false);
+}
+
+  ostream&
+Net::oput_all_pf(ostream& of, const Cx::PFmla& pf) const
+{
+  return this->oput_pfmla(of, pf, -1, false);
+}
+
 
   void
 Sys::commit_initialization()
@@ -202,6 +266,7 @@ Sys::commit_initialization()
 Sys::integrityCk() const
 {
   bool good = true;
+  const Net& topo = this->topology;
 
   if (this->invariant.tautology_ck(false)) {
     DBog0( "Error: Invariant is empty!" );
@@ -216,6 +281,9 @@ Sys::integrityCk() const
   if (!(this->shadow_pfmla.img(this->invariant) <= this->invariant)) {
     DBog0( "Error: Protocol is not closed in the invariant!" );
     good = false;
+
+    Cx::PFmla bad_xn = this->shadow_pfmla & this->invariant & (~this->invariant).as_img();
+    topo.oput_one_xn(std::cerr, bad_xn);
   }
 
   return good;
@@ -244,46 +312,132 @@ OPut(ostream& of, const Xn::ActSymm& act)
 }
 
   PF
-LegitInvariant(const Xn::Sys& sys, const PF& loXnRel, const PF& hiXnRel)
+LegitInvariant(const Xn::Sys& sys, const PF& lo_xn_rel, const PF& hi_xn_rel)
 {
   if (!sys.shadow_puppet_synthesis_ck())  return sys.invariant;
 
-  const PF& smooth_self = sys.shadow_self;
+  const Cx::PFmla& shadow_invariant = sys.invariant;
+  const Cx::PFmla& shadow_protocol = sys.shadow_pfmla;
+  const Cx::PFmla& shadow_self = sys.shadow_self;
+  const Cx::PFmla& shadow_live = shadow_invariant & shadow_protocol;
 
-  const PF& smooth_live = sys.invariant;
-  const PF& smooth_protocol = sys.shadow_pfmla;
-
-  PF puppet_live = smooth_live - (loXnRel - smooth_protocol - smooth_self).pre();
-  puppet_live = ClosedSubset(loXnRel, puppet_live);
-  const PF& puppet_protocol = hiXnRel & (smooth_protocol | smooth_self);
-
-  if (CycleCk(loXnRel & smooth_self, puppet_live)) {
+  // There shouldn't be non-progress cycles.
+  if (CycleCk(lo_xn_rel & shadow_self & shadow_protocol.pre(), shadow_invariant)) {
     return PF(false);
   }
 
-  const PF& smooth_beg = smooth_live - smooth_protocol.img(smooth_live);
-  const PF& smooth_end = smooth_live - smooth_protocol.pre(smooth_live);
+  // Invariant states with no transitions to them.
+  const Cx::PFmla& shadow_beg =
+    shadow_invariant - shadow_protocol.img(shadow_invariant);
+  // Invariant states with no transitions from them.
+  const Cx::PFmla& shadow_end =
+    shadow_invariant - shadow_protocol.pre(shadow_invariant);
 
+  // Over-approximation of invariant.
+  Cx::PFmla hi_invariant = shadow_invariant;
+  // Over-approximation of protocol which does not change shadow variables.
+  Cx::PFmla hi_self = hi_xn_rel & shadow_self;
+  // Over-approximation of protocol which does change shadow variables.
+  Cx::PFmla hi_live = hi_xn_rel & shadow_protocol;
+
+  // Trim all states which cannot be in the invariant since we cannot
+  // simulate the shadow protocol in those states given the current
+  // over-approximated protocol.
   while (true)
   {
-    const PF old_live = puppet_live;
+    hi_invariant = ClosedSubset(lo_xn_rel, hi_invariant);
 
-    puppet_live &= (smooth_beg & puppet_live) | puppet_protocol.img(puppet_live);
-    puppet_live &= (smooth_end & puppet_live) | puppet_protocol.pre(puppet_live);
+    const Cx::PFmla old_invariant = hi_invariant;
+    const Cx::PFmla& hi_img = hi_invariant.as_img();
 
-    if (old_live.equiv_ck(puppet_live)) {
+    hi_self &= hi_invariant;         
+    hi_self &= hi_img;
+
+    hi_live &= hi_invariant;
+    hi_live &= hi_img;
+    hi_live -= (shadow_live - sys.smooth_pure_puppet_img_vbls(hi_live)).pre();
+
+    const Cx::PFmla& hi_beg = hi_invariant & shadow_beg;
+    const Cx::PFmla& hi_end = hi_invariant & shadow_end;
+
+    hi_invariant &= ForwardReachability (hi_self, hi_beg | hi_live.img());
+    hi_invariant &= BackwardReachability(hi_self, hi_end | hi_live.pre());
+
+    //hi_invariant &= shadow_beg | hi_protocol.img(hi_invariant);
+    //hi_invariant &= shadow_end | hi_protocol.pre(hi_invariant);
+
+    if (old_invariant.equiv_ck(hi_invariant)) {
       break;
     }
   }
 
-  if (!smooth_live.equiv_ck(sys.smooth_pure_puppet_vbls(puppet_live))) {
+  if (!shadow_invariant.equiv_ck(sys.smooth_pure_puppet_vbls(hi_invariant))) {
     return PF(false);
   }
 
-  if (!(smooth_live & smooth_protocol).equiv_ck(sys.smooth_pure_puppet_vbls(puppet_live & (puppet_protocol - smooth_self)))) {
+  //if (CycleCk(lo_xn_rel, ~hi_invariant)) {
+  if (CycleCk(lo_xn_rel, shadow_invariant - hi_invariant)) {
     return PF(false);
   }
-  return puppet_live;
+
+#if 0
+  Cx::PFmla shadow_live = shadow_protocol & shadow_invariant;
+  Cx::PFmla hi_live = hi_protocol & hi_invariant & hi_invariant.as_img();
+
+  while (!shadow_live.tautology_ck(false))
+  {
+    bool found = false;
+
+    Cx::PFmla shadow_seed = shadow_live.pick_pre();
+    Cx::PFmla shadow_reach = UndirectedReachability(shadow_live, shadow_seed);
+    shadow_live -= shadow_reach;
+
+    Cx::PFmla hi_reach_set = hi_invariant & shadow_reach;
+
+    while (!hi_reach_set.tautology_ck(false))
+    {
+      Cx::PFmla hi_seed = hi_reach_set & shadow_reach;
+      Cx::PFmla hi_reach = UndirectedReachability(hi_live, hi_seed);
+
+      hi_reach_set -= hi_reach;
+
+      if (shadow_reach.equiv_ck(sys.smooth_pure_puppet_vbls(hi_reach))) {
+        found = true;
+      }
+      else {
+        hi_invariant -= hi_reach;
+      }
+    }
+
+    if (!found) {
+      return Cx::PFmla(false);
+    }
+  }
+#endif
+
+  const Cx::PFmla& lhs =
+    sys.smooth_pure_puppet_vbls(shadow_live);
+  const Cx::PFmla& rhs =
+    sys.smooth_pure_puppet_vbls(hi_live);
+
+#if 0
+  Claim( lhs.equiv_ck(rhs) );
+#else
+  if (!lhs.equiv_ck(rhs)) {
+#if 0
+    if (!(lhs <= rhs)) {
+      DBog0("shadow_protocol is bigger");
+      sys.topology.oput_one_xn(std::cerr, lhs - rhs);
+    }
+    if (!(rhs <= lhs)) {
+      DBog0("hi_protocol is bigger");
+      sys.topology.oput_one_xn(std::cerr, rhs - lhs);
+    }
+#endif
+    return PF(false);
+  }
+#endif
+  return hi_invariant;
 }
 
 /**
@@ -292,16 +446,18 @@ LegitInvariant(const Xn::Sys& sys, const PF& loXnRel, const PF& hiXnRel)
   bool
 WeakConvergenceCk(const Xn::Sys& sys, const PF& xnRel, const PF& invariant)
 {
-  if (sys.shadow_puppet_synthesis_ck()) {
-    const PF& shadow_pfmla = sys.smooth_pure_puppet_vbls(xnRel & invariant);
-    if (!sys.shadow_pfmla <= shadow_pfmla) {
-      return false;
-    }
-  }
+  //if (sys.shadow_puppet_synthesis_ck()) {
+  //  const PF& shadow_pfmla =
+  //    sys.smooth_pure_puppet_vbls(xnRel & invariant & invariant.as_img())
+  //    - sys.shadow_self;
+  //  if (!shadow_pfmla.equiv_ck(sys.shadow_pfmla & sys.invariant)) {
+  //    return false;
+  //  }
+  //}
 
   PF span0( invariant );
   while (!span0.tautology_ck(true)) {
-    PF span1( span0 | xnRel.pre(span0) );
+    const Cx::PFmla& span1 = span0 | xnRel.pre(span0);
     if (span1.equiv_ck(span0))  return false;
     span0 = span1;
   }

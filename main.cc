@@ -626,7 +626,8 @@ FMem_AddConvergence::reviseActions(const Xn::Sys& sys,
       }
 
       if (false && sys.shadow_puppet_synthesis_ck()) {
-        if (!WeakConvergenceCk(sys, this->hiXnRel - actPF, this->backReachPF)) {
+        const PF& pf = LegitInvariant(sys, this->loXnRel, this->hiXnRel - actPF);
+        if (!WeakConvergenceCk(sys, this->hiXnRel - actPF, pf)) {
           reqAdds |= actId;
           continue;
         }
@@ -767,7 +768,9 @@ AddConvergence(vector<uint>& retActions,
       return false;
     }
     if (!WeakConvergenceCk(sys, tape.loXnRel, invariant)) {
-      DBog0( "Why does weak convergence not hold?" );
+      if (!invariant.tautology_ck(false)) {
+        DBog0( "Why does weak convergence not hold?" );
+      }
       return false;
     }
     retActions = tape.actions;
@@ -868,6 +871,7 @@ int main(int argc, char** argv)
   // Use to disable process ordering.
   //opt.nicePolicy = opt.NilNice;
   // Use to change picking method.
+  //opt.pickMethod = opt.GreedyPick;
   //opt.pickMethod = opt.QuickPick;
   //opt.pickMethod = opt.LCVHeavyPick;
   opt.pickMethod = opt.LCVLitePick;

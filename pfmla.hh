@@ -194,7 +194,21 @@ public:
   PFmla smooth(uint setIdx) const
   {
     PFmla b;
-    smooth_vbls_PFmla (&b.g, g, setIdx);
+    smooth_vbls_PFmla (&b.g, g, setIdx,  0);
+    return b;
+  }
+
+  PFmla smooth_pre(uint setIdx) const
+  {
+    PFmla b;
+    smooth_vbls_PFmla (&b.g, g, setIdx, -1);
+    return b;
+  }
+
+  PFmla smooth_img(uint setIdx) const
+  {
+    PFmla b;
+    smooth_vbls_PFmla (&b.g, g, setIdx,  1);
     return b;
   }
 
@@ -252,9 +266,14 @@ public:
     return dst;
   }
 
+  void state (uint* state, const Cx::Table<uint>& vbls) const
+  {
+    state_of_PFmla (state, this->g, &vbls[0], vbls.sz());
+  }
+
+
   static PFmla of_state(const uint* state, const Cx::Table<uint>& vbls, C::PFmlaCtx* ctx);
   static PFmla of_img_state(const uint* state, const Cx::Table<uint>& vbls, C::PFmlaCtx* ctx);
-
 };
 
 inline
@@ -322,7 +341,7 @@ inline
 PFmla::smooth(const PFmlaVbl& vbl) const
 {
   PFmla b;
-  smooth_vbl_PFmla (&b.g, g, vbl.x);
+  smooth_vbl_PFmla (&b.g, g, vbl.x, 0);
   return b;
 }
 
@@ -480,8 +499,12 @@ typedef Cx::PFmla PF;
 
 PF
 ClosedSubset(const PF& xnRel, const PF& invariant);
+Cx::PFmla
+ForwardReachability(const Cx::PFmla& xn, const Cx::PFmla& pf);
 PF
 BackwardReachability(const PF& xnRel, const PF& pf);
+Cx::PFmla
+UndirectedReachability(const Cx::PFmla& xn, const Cx::PFmla& pf);
 bool
 CycleCk(PF* scc, const PF& xnRel, const PF& pf);
 bool

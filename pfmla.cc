@@ -300,6 +300,23 @@ ClosedSubset(const PF& xnRel, const PF& invariant)
 }
 
 /**
+ * Perform forward reachability.
+ * \param xn  Transition function.
+ * \param pf  Initial states.
+ */
+  Cx::PFmla
+ForwardReachability(const Cx::PFmla& xn, const Cx::PFmla& pf)
+{
+  Cx::PFmla visit( pf );
+  Cx::PFmla layer( xn.img(pf) - visit );
+  while (!layer.tautology_ck(false)) {
+    visit |= layer;
+    layer = xn.img(layer) - visit;
+  }
+  return visit;
+}
+
+/**
  * Perform backwards reachability.
  * \param xnRel  Transition function.
  * \param pf  Initial states.
@@ -314,6 +331,23 @@ BackwardReachability(const PF& xnRel, const PF& pf)
     layerPF = xnRel.pre(layerPF) - visitPF;
   }
   return visitPF;
+}
+
+/**
+ * Perform forward and backward reachability.
+ * \param xn  Transition function.
+ * \param pf  Initial states.
+ */
+  Cx::PFmla
+UndirectedReachability(const Cx::PFmla& xn, const Cx::PFmla& pf)
+{
+  Cx::PFmla visit( pf );
+  Cx::PFmla layer( (xn.pre(pf) | xn.img(pf)) - visit );
+  while (!layer.tautology_ck(false)) {
+    visit |= layer;
+    layer = (xn.pre(layer) | xn.img(layer)) - visit;
+  }
+  return visit;
 }
 
 /**
