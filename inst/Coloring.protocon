@@ -7,8 +7,9 @@ variable c[Int % N] : Int % 3;
 
 process P[i : Int % N]
 {
-  read:  c[i-1], c[i+1];
+  read:  c[i-1];
   write: c[i];
+  read:  c[i+1];
   invariant: (c[i] != c[i-1]) && (c[i] != c[i+1]);
 }
 

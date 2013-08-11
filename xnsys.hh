@@ -145,7 +145,7 @@ public:
 
   String vbl_name(uint i, const String& idxparam = "i") const {
     const String& name = rvbl_symms[i]->name;
-    return name + "(" + rindices[i].expression(idxparam) + ")";
+    return name + "[" + rindices[i].expression(idxparam) + "]";
   }
 
   bool write_ck(uint ridx) const {
@@ -230,6 +230,7 @@ public:
 
   /// Invariant to which we should converge.
   Cx::PFmla invariant;
+  Cx::String invariant_expression;
   /// Variables defining the original protocol.
   //Set< Cx::Tuple<uint,2> > shadow_vbls;
   /// Variables used to add convergence.

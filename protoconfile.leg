@@ -21,7 +21,7 @@ extern "C" {
 %}
 
 ProtoconFile =
-  WS? Protocol
+  (WS? Protocol)?
   (WS? ConstDecl)*
   (WS? VarDecl)+
   (WS? ProcDecl)+
@@ -89,6 +89,7 @@ ProcDecl =
   ( INVARIANT WS? legit:Expr WS? ';' WS?
     {yy->st->add_legit(legit.sp, idx_name.sp);}
   )?
+  {yy->st->let_map.clear();}
   '}'
 
 GlobalLegit =

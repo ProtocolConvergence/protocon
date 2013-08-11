@@ -1,8 +1,10 @@
 
 default: all
 
-CXX = g++
 CC = gcc
+CXX = g++
+#CC = clang
+#CXX = clang++
 #CC = $(CXX)
 
 CONFIG += ansi
@@ -41,9 +43,11 @@ all: $(ExeList)
 
 $(BinPath)/protocon: \
 	$(addprefix $(BldPath)/, pfmla.o pfmla-glu.o pfmla-bittable.o) \
-	$(addprefix $(BldPathCXX)/, pfmla.o xnsys.o test.o ordersyn.o main.o inst.o promela.o) \
+	$(addprefix $(BldPathCXX)/, pfmla.o xnsys.o test.o inst.o) \
+	$(addprefix $(BldPathCXX)/, promela.o pla.o) \
+	$(addprefix $(BldPathCXX)/, ordersyn.o main.o stability.o) \
 	$(addprefix $(BldPathCXX)/, protoconfile.o protoconfile.leg.o) \
-	$(CxStdObjs) $(addprefix $(CxBldPath)/, bstree.o sesp.o rbtree.o)
+	$(CxStdObjs) $(addprefix $(CxBldPath)/, bstree.o sesp.o rbtree.o ospc.o)
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(LXXFLAGS)
 
 $(call binexe,satsyn): $(BldPath)/satsyn.o $(BldPath)/xnsys.o \
@@ -59,7 +63,7 @@ $(BldPathCXX)/pfmla-minisat.o: $(BldPathCXX)/pfmla-minisat.cc
 $(BldPathCXX)/protoconfile.leg.cc: protoconfile.leg
 	leg -o $@ $<
 
-#$(CXX) -c $(filter-out -pedantic -Wall -Wextra,$(CXXFLAGS)) 
+#$(CXX) -c $(filter-out -pedantic -Wall -Wextra,$(CXXFLAGS))
 
 .PHONY: depend
 depend: deps.mk

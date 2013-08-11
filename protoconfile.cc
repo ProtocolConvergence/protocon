@@ -222,9 +222,20 @@ ProtoconFile::add_legit(Sesp legit_sp, Sesp pc_idx_sp)
         sys->invariant &= pf;
       }
     }
+    Cx::String invariant_expression;
+    if (LegitCk( expression(invariant_expression, legit_sp), good, "" )) {
+      if (sys->invariant_expression != "") {
+        sys->invariant_expression =
+          Cx::String("(") + sys->invariant_expression + ")\n  &&\n  ";
+      }
+
+      sys->invariant_expression += Cx::String("(forall ")
+        + idx_name + " : Nat % " + pc_symm.membs.sz() + " : ";
+      sys->invariant_expression += invariant_expression;;
+      sys->invariant_expression += ")";
+    }
     index_map.erase(idx_name);
   }
-  let_map.clear();
   if (LegitCk( good, allgood, "" )) {}
   return good;
 }
@@ -238,7 +249,26 @@ ProtoconFile::add_legit(Sesp legit_sp)
   if (LegitCk( eval(pf, legit_sp), good, "" ))
     sys->invariant &= pf;
 
+  Cx::String invariant_expression;
+  if (LegitCk( expression(invariant_expression, legit_sp), good, "" )) {
+    if (sys->invariant_expression != "") {
+      sys->invariant_expression =
+        Cx::String("(") + sys->invariant_expression + ")\n  &&\n  ";
+    }
+    sys->invariant_expression += invariant_expression;;
+  }
+
   if (LegitCk( good, allgood, "" )) {}
+  return good;
+}
+
+  bool
+ProtoconFile::expression(Cx::String& expression, Sesp a)
+{
+  Cx::Table<Cx::String> chunks(1);
+  bool good = expression_chunks(chunks, a, "");
+  Claim2( chunks.sz() ,==, 1 );
+  expression = chunks[0];
   return good;
 }
 
@@ -265,8 +295,7 @@ ProtoconFile::expression_chunks(Cx::Table<Cx::String>& chunks, Sesp a, const Cx:
       if (sp) {
         return expression_chunks (chunks, *sp, idx_name);
       }
-      if (LegitCk( idx_name == name || sp, good, "" )) {
-      }
+      chunks.top() += name;
       return good;
     }
 
@@ -309,8 +338,13 @@ ProtoconFile::expression_chunks(Cx::Table<Cx::String>& chunks, Sesp a, const Cx:
            eq_cstr (key, "*") ||
            eq_cstr (key, "/") ||
            eq_cstr (key, "%")) {
+    bool pad =
+      (eq_cstr (key, "&&") ||
+       eq_cstr (key, "||"));
     expression_chunks (chunks, cadr_of_Sesp (a), idx_name);
+    if (pad)  chunks.top() += " ";
     chunks.top() += key;
+    if (pad)  chunks.top() += " ";
     expression_chunks (chunks, caddr_of_Sesp (a), idx_name);
   }
   else if (eq_cstr (key, "xnor")) {
@@ -322,6 +356,29 @@ ProtoconFile::expression_chunks(Cx::Table<Cx::String>& chunks, Sesp a, const Cx:
     expression_chunks (chunks, cadr_of_Sesp (a), idx_name);
     chunks.top() += "!=";
     expression_chunks (chunks, caddr_of_Sesp (a), idx_name);
+  }
+  else if (eq_cstr (key, "NatDom")) {
+    chunks.top() += "Nat % ";
+    expression_chunks (chunks, cadr_of_Sesp (a), idx_name);
+  }
+  else if (eq_cstr (key, "aref")) {
+    chunks.top() += ccstr_of_Sesp (cadr_of_Sesp (a));
+    chunks.top() += "[";
+    expression_chunks (chunks, caddr_of_Sesp (a), idx_name);
+    chunks.top() += "]";
+  }
+  else if (eq_cstr (key, "forall") ||
+           eq_cstr (key, "exists") ||
+           eq_cstr (key, "unique")
+          )
+  {
+    chunks.top() += key;
+    chunks.top() += " ";
+    chunks.top() += ccstr_of_Sesp (cadr_of_Sesp (a));
+    chunks.top() += " : ";
+    expression_chunks (chunks, caddr_of_Sesp (a), idx_name);
+    chunks.top() += " : ";
+    expression_chunks (chunks, cadddr_of_Sesp (a), idx_name);
   }
   else {
     good = false;

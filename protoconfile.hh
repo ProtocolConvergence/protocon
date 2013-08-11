@@ -59,6 +59,7 @@ public:
 
   bool add_legit(Sesp legit_sp);
 
+  bool expression(Cx::String& expression, Sesp a);
   bool expression_chunks(Cx::Table<Cx::String>& chunks, Sesp a, const Cx::String& idx_name);
 
   bool eval(Cx::PFmla& pf, Sesp a);
