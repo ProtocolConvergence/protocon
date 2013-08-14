@@ -6,6 +6,7 @@ extern "C" {
 #include "stability.hh"
 #include "pla.hh"
 #include "cx/fileb.hh"
+#include "ordersyn.hh"
 
 
 /**
@@ -22,36 +23,66 @@ AddConvergence(vector<uint>& retActions,
                StabilitySynLvl& tape,
                const AddConvergenceOpt& opt)
 {
+  tape.failed_bt_level = tape.bt_level;
   while (!tape.candidates.empty()) {
-    if (!sys.shadow_puppet_synthesis_ck()) {
-      if (!WeakConvergenceCk(sys, tape.hiXnRel, sys.invariant)) {
-        return false;
-      }
-    }
-    else {
-      if (!WeakConvergenceCk(sys, tape.hiXnRel, tape.hi_invariant)) {
-        return false;
-      }
+    if (tape.ctx->solution_found && *tape.ctx->solution_found)
+      return false;
+
+    if (!WeakConvergenceCk(sys, tape.hiXnRel, tape.hi_invariant)) {
+      DBog0("No weak!");
+      return false;
     }
 
     // Pick the action.
     uint actId = 0;
     if (!PickActionMCV(actId, sys, tape, opt)) {
+      DBog0("Cannot resolve all deadlocks!");
       return false;
     }
 
     StabilitySynLvl next( tape );
     next.bt_dbog = (tape.bt_dbog && (true || tape.bt_level < 18));
     next.bt_level = tape.bt_level + 1;
-    next.reviseActions(sys, Set<uint>(actId), Set<uint>());
-
-    bool found = AddConvergence(retActions, sys, next, opt);
-    if (found) {
-      return true;
+    if (next.revise_actions(sys, Set<uint>(actId), Set<uint>()))
+    {
+      bool found =
+        AddConvergence(retActions, sys, next, opt);
+      if (found) {
+        if (tape.ctx->solution_found) {
+          *tape.ctx->solution_found = true;
+        }
+        return true;
+      }
     }
-    tape.reviseActions(sys, Set<uint>(), Set<uint>(actId));
+
+    if (next.failed_bt_level > tape.failed_bt_level) {
+      tape.failed_bt_level = next.failed_bt_level;
+    }
+
+    if (tape.ctx->solution_found && *tape.ctx->solution_found)
+      return false;
+
+    if (opt.random_one_shot && opt.bt_depth + tape.bt_level <= tape.failed_bt_level)
+    {
+      if (opt.bt_depth + tape.bt_level == tape.failed_bt_level)
+      {
+        DBog1("Got to depth: %u", tape.failed_bt_level);
+      }
+      if (!tape.deadlockPF.tautology_ck(false)) {
+        return false;
+      }
+      break;
+    }
+    if (!tape.revise_actions(sys, Set<uint>(), Set<uint>(actId)))
+    {
+      if (tape.bt_dbog) {
+        DBog0("giveup");
+      }
+      return false;
+    }
   }
 
+  Claim(tape.deadlockPF.tautology_ck(false));
   if (tape.deadlockPF.tautology_ck(false)) {
     const PF& invariant = sys.shadow_puppet_synthesis_ck() ? tape.hi_invariant : sys.invariant;
     if (CycleCk(tape.loXnRel, ~invariant)) {
@@ -65,6 +96,9 @@ AddConvergence(vector<uint>& retActions,
       return false;
     }
     retActions = tape.actions;
+    if (tape.ctx->solution_found) {
+      *tape.ctx->solution_found = true;
+    }
     return true;
   }
   return false;
@@ -77,14 +111,46 @@ AddConvergence(vector<uint>& retActions,
  * \param sys  System definition. It is modified if convergence is added.
  * \return  True iff convergence could be added.
  */
-  bool
-AddConvergence(Xn::Sys& sys, const AddConvergenceOpt& opt)
-{
-  Xn::Net& topo = sys.topology;
 
-  StabilitySynLvl tape;
+/**
+ * Initialize synthesis structures.
+ */
+  bool
+InitStabilitySyn(StabilitySyn& synctx,
+                 StabilitySynLvl& tape,
+                 const Xn::Sys& sys,
+                 const AddConvergenceOpt& opt)
+{
+  const Xn::Net& topo = sys.topology;
+  synctx.opt = opt;
+
+  for (uint pcidx = 0; pcidx < topo.pc_symms.sz(); ++pcidx)
+  {
+    const Xn::PcSymm& pc_symm = topo.pc_symms[pcidx];
+    for (uint i = 0; i < pc_symm.pre_domsz; ++i)
+    {
+      Cx::String name = pc_symm.name + "@pre_enum[" + i + "]";
+      uint vbl_idx =
+        synctx.csp_pfmla_ctx.add_vbl(name, pc_symm.img_domsz);
+      Claim2( vbl_idx ,==, pc_symm.pre_dom_offset + i );
+    }
+
+    Xn::ActSymm act;
+    // Enforce self-disabling actions.
+    if (false)
+    for (uint actidx = 0; actidx < pc_symm.n_possible_acts; ++actidx) {
+      DBog2("fuuuu %u %u", actidx, pc_symm.n_possible_acts);
+      pc_symm.action(act, actidx);
+      synctx.csp_base_pfmla &=
+        (synctx.csp_pfmla_ctx.vbl(act.pre_idx) != act.img_idx)
+        |
+        (synctx.csp_pfmla_ctx.vbl(act.pre_idx_of_img) == act.img_idx);
+    }
+  }
+
   tape.loXnRel = false;
   tape.hiXnRel = false;
+  tape.csp_pfmla = synctx.csp_base_pfmla;
 
   bool good =
     candidate_actions(tape.candidates, sys);
@@ -116,10 +182,11 @@ AddConvergence(Xn::Sys& sys, const AddConvergenceOpt& opt)
     return false;
   }
 
+  tape.bt_dbog = opt.bt_dbog;
+  if (!tape.revise_actions(sys, Set<uint>(sys.actions), Set<uint>()))
   {
-    const bool forcePrune = true;
-    tape.bt_dbog = true;
-    tape.reviseActions(sys, Set<uint>(sys.actions), Set<uint>(), forcePrune);
+    DBog0("No actions apply!");
+    return false;
   }
 
   if (tape.deadlockPF.tautology_ck(false) &&
@@ -128,6 +195,16 @@ AddConvergence(Xn::Sys& sys, const AddConvergenceOpt& opt)
   {
     DBog0("The given protocol is self-stabilizing.");
   }
+  return good;
+}
+
+
+  bool
+AddConvergence(Xn::Sys& sys, const AddConvergenceOpt& opt)
+{
+  StabilitySyn synctx;
+  StabilitySynLvl tape( &synctx );
+  InitStabilitySyn(synctx, tape, sys, opt);
 
   vector<uint> retActions;
   bool found = AddConvergence(retActions, sys, tape, opt);
@@ -159,7 +236,7 @@ int main(int argc, char** argv)
 
   // Use to disable picking only actions which resolve deadlocks
   // by making them backwards reachable from the invariant.
-  //opt.pickBackReach = false;
+  opt.pickBackReach = false;
   // Use to disable process ordering.
   //opt.nicePolicy = opt.NilNice;
   // Use to change picking method.
@@ -284,7 +361,9 @@ int main(int argc, char** argv)
     if (!infile_path) {
       failout_sysCx ("Need to use input file with random method!");
     }
-    found = ordering_synthesis(sys.actions, infile_path);
+    found =
+      flat_backtrack_synthesis(sys.actions, infile_path, opt);
+    // ordering_synthesis(sys.actions, infile_path);
   }
   else {
     found = AddConvergence(sys, opt);
@@ -318,7 +397,7 @@ int main(int argc, char** argv)
   else {
     DBog0("No solution found...");
   }
-  std::flush(DBogOF);
+  DBogOF.flush();
 
   lose_sysCx ();
   return 0;

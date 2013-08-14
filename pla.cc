@@ -75,19 +75,21 @@ oput_protocon_pc_act (Cx::OFile& of, XFile* xf,
                       const Cx::Table<Cx::String>& guard_vbls,
                       const Cx::Table<Cx::String>& assign_vbls)
 {
-  Signum stat = 0;
+  Sign good = 1;
   bool clause = false;
   of << "  act:( ";
   for (uint i = 0;
-       !stat && i < (guard_vbls.sz() + assign_vbls.sz());
+       good && i < (guard_vbls.sz() + assign_vbls.sz());
        ++i)
   {
     const char* tok = nextok_XFile (xf, 0, 0);
-    Do_stat(stat) !tok;
+
+    DoLegit(good, "read token")
+      good = !!tok;
 
     uint m = 0;
     Cx::Table<uint> vals;
-    while (!stat && tok[m])
+    while (good && tok[m])
     {
       Claim( tok[m] == '0' || tok[m] == '1' );
       if (tok[m] == '1')
@@ -121,14 +123,14 @@ oput_protocon_pc_act (Cx::OFile& of, XFile* xf,
     }
 
     if (vals.sz() > 1)  of << "(";
-    for (uint j = 0; !stat && j < vals.sz(); ++j) {
+    for (uint j = 0; good && j < vals.sz(); ++j) {
       if (j > 0)  of << " || ";
       of << guard_vbls[i] << "==" << vals[j];
     }
     if (vals.sz() > 1)  of << ")";
   }
   of << " );\n";
-  return !stat;
+  return good;
 }
 
   bool
@@ -137,7 +139,7 @@ oput_protocon_pc_acts (Cx::OFile& of, const Xn::PcSymm& pc_symm,
                        const Cx::Table<Xn::ActSymm>& acts,
                        OSPc* ospc)
 {
-  Signum stat = 0;
+  Sign good = 1;
 
   // Names for variables.
   Cx::Table<Cx::String> guard_vbls( pc_symm.rvbl_symms.sz() );
@@ -149,44 +151,45 @@ oput_protocon_pc_acts (Cx::OFile& of, const Xn::PcSymm& pc_symm,
     assign_vbls[i] = pc_symm.vbl_name(pc_symm.wmap[i], idxname);
   }
 
-  Do_stat(stat) !
-    spawn_OSPc (ospc);
+  DoLegit(good, "spawn process")
+    good = spawn_OSPc (ospc);
 
-  if (!stat)
+  if (good)
   {
     Cx::OFile espresso_xf(ospc->of);
     oput_pla_pc_acts (espresso_xf, pc_symm, acts);
     close_OFile (ospc->of);
   }
-  while (!stat && !skip_cstr_XFile (ospc->xf, ".p"))
+  while (good && !skip_cstr_XFile (ospc->xf, ".p"))
   {
-    Do_stat(stat) !
-      getline_XFile (ospc->xf);
+    DoLegit(good, "get line")
+      good = !!getline_XFile (ospc->xf);
   }
 
   uint n = 0;
-  Do_stat(stat) !
-    xget_uint_XFile (ospc->xf, &n);
+  DoLegit(good, "read number of lines from espresso")
+    good = xget_uint_XFile (ospc->xf, &n);
+
   getline_XFile (ospc->xf);
 
-  for (uint i = 0; !stat && i < n; ++i) {
+  for (uint i = 0; good && i < n; ++i) {
     XFile olay[1];
 
-    Do_stat(stat) !
-      getlined_olay_XFile (olay, ospc->xf, "\n");
+    DoLegit(good, "get line from espresso")
+      good = getlined_olay_XFile (olay, ospc->xf, "\n");
 
-    if (Ck1_stat(stat, "not enough data from espresso"))
+    DoLegit(good, 0)
       oput_protocon_pc_act (of, olay, guard_vbls, assign_vbls);
   }
 
   close_OSPc (ospc);
-  return !stat;
+  return good;
 }
 
   bool
 oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys)
 {
-  Signum stat = 0;
+  Sign good = 1;
   OSPc ospc[1];
   *ospc = dflt_OSPc ();
 
@@ -215,14 +218,14 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys)
       << "[" << idxname << " : Nat % " << pc_symm.membs.sz() << "]\n";
     of << "{\n";
     oput_protocon_pc_vbls (of, pc_symm, idxname);
-    Do_stat(stat) !
-      oput_protocon_pc_acts (of, pc_symm, idxname, acts, ospc);
+    DoLegit(good, "output actions")
+      good = oput_protocon_pc_acts (of, pc_symm, idxname, acts, ospc);
     of << "}\n";
   }
 
   of << "invariant:\n  " << sys.invariant_expression << "\n  ;\n";
 
   lose_OSPc (ospc);
-  return !stat;
+  return good;
 }
 

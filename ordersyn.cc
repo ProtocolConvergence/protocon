@@ -3,69 +3,20 @@
 #include "xnsys.hh"
 #include <algorithm>
 
-#include "cx/gmrand.h"
+#include "cx/urandom.h"
 #include "protoconfile.hh"
+#include "stability.hh"
 
-static std::ostream& DBogOF = std::cerr;
-
-  bool
-candidate_actions(vector<uint>& candidates, const Xn::Sys& sys)
-{
-  const Xn::Net& topo = sys.topology;
-
-  if (sys.invariant.tautology_ck(false)) {
-    DBog0( "Invariant is empty!" );
-    return false;
-  }
-
-  if (sys.invariant.tautology_ck(true)) {
-    DBog0( "All states are invariant!" );
-    if (!sys.shadow_puppet_synthesis_ck()) {
-      return true;
-    }
-  }
-
-  for (uint i = 0; i < topo.n_possible_acts; ++i) {
-    bool add = true;
-
-    Xn::ActSymm act;
-    topo.action(act, i);
-    const Xn::PcSymm& pc_symm = *act.pc_symm;
-    const PF& actPF = topo.action_pfmla(i);
-
-    // Check for self-loops.
-    if (add) {
-      bool selfloop = true;
-      for (uint j = 0; j < pc_symm.wvbl_symms.sz(); ++j) {
-        if (act.assign(j) != act.aguard(j)) {
-          selfloop = false;
-        }
-      }
-      add = !selfloop;
-      if (false && selfloop) {
-        OPut((DBogOF << "Action " << i << " is a self-loop: "), act) << '\n';
-      }
-    }
-
-    if (add && !(sys.shadow_puppet_synthesis_ck() || actPF <= sys.direct_pfmla)
-        && sys.invariant.overlap_ck(actPF)) {
-      add = false;
-      if (false) {
-        OPut((DBogOF << "Action " << i << " exists in the invariant: "), act) << '\n';
-      }
-    }
-
-    if (add) {
-      candidates.push_back(i);
-    }
-  }
-  if (candidates.size() == 0) {
-    DBog0( "No candidates actions!" );
-    return false;
-  }
-
-  return true;
-}
+bool
+AddConvergence(vector<uint>& retActions,
+               const Xn::Sys& sys,
+               StabilitySynLvl& tape,
+               const AddConvergenceOpt& opt);
+bool
+InitStabilitySyn(StabilitySyn& synctx,
+                 StabilitySynLvl& tape,
+                 const Xn::Sys& sys,
+                 const AddConvergenceOpt& opt);
 
   void
 rank_states (Cx::Table<Cx::PFmla>& state_layers,
@@ -90,43 +41,6 @@ rank_states (Cx::Table<Cx::PFmla>& state_layers,
 //              const Cx::PFmla& xn_pf, const Cx::PFmla& legit)
 //{
 //}
-
-/**
- * Check if two actions can coexist in a
- * deterministic protocol of self-disabling processes.
- */
-  bool
-coexist_ck(const Xn::ActSymm& a, const Xn::ActSymm& b)
-{
-  if (a.pc_symm != b.pc_symm)  return true;
-  const Xn::PcSymm& pc = *a.pc_symm;
-
-  bool enabling = true;
-  bool deterministic = false;
-  for (uint j = 0; enabling && j < pc.rvbl_symms.sz(); ++j) {
-    if (a.guard(j) != b.guard(j)) {
-      deterministic = true;
-      if (!pc.write_ck(j)) {
-        enabling = false;
-      }
-    }
-  }
-
-  if (!deterministic)  return false;
-  if (!enabling)  return true;
-
-  bool a_enables = true;
-  bool b_enables = true;
-  for (uint j = 0; j < pc.wvbl_symms.sz(); ++j) {
-    if (a.assign(j) != b.aguard(j)) {
-      a_enables = false;
-    }
-    if (b.assign(j) != a.aguard(j)) {
-      b_enables = false;
-    }
-  }
-  return !(a_enables || b_enables);
-}
 
 static
   bool
@@ -217,25 +131,75 @@ try_order_synthesis(vector<uint>& actions, const Xn::Sys& sys,
   return false;
 }
 
-class RNG {
-public:
-  GMRand gmrand;
-  uint npcs;
+  bool
+flat_backtrack_synthesis(vector<uint>& ret_actions, const char* infile_path,
+                         const AddConvergenceOpt& global_opt)
+{
+  const uint ntrials = 300;
 
-  RNG(uint pcidx, uint npcs) {
-    init_GMRand( &gmrand );
-    this->npcs = npcs;
-    for (uint i = 0; i < pcidx; ++i) {
-      uint32_GMRand (&gmrand);
+  bool done = false;
+  bool solution_found = false;
+  uint NPcs = 0; 
+#ifdef _OPENMP
+#pragma omp parallel shared(done,NPcs,solution_found)
+#endif
+  {
+  AddConvergenceOpt opt(global_opt);
+  uint PcIdx;
+#ifdef _OPENMP
+#pragma omp critical
+#endif
+  {
+    PcIdx = NPcs;
+    ++ NPcs;
+  }
+
+  Xn::Sys sys;
+  ReadProtoconFile(sys, infile_path);
+
+#ifdef _OPENMP
+#pragma omp barrier
+#endif
+  opt.sys_pcidx = PcIdx;
+  opt.sys_npcs = NPcs;
+  opt.random_one_shot = true;
+  opt.bt_dbog = false;
+
+  StabilitySyn synctx( PcIdx, NPcs );
+  StabilitySynLvl synlvl( &synctx );
+  InitStabilitySyn(synctx, synlvl, sys, opt);
+  synctx.solution_found = &solution_found;
+
+  for (uint i = 0; !done && i < ntrials; ++i)
+  {
+#ifdef _OPENMP
+#pragma omp critical
+#endif
+    DBog2( "trial %u %u", PcIdx, i+1 );
+
+
+    vector<uint> actions;
+    bool found =
+      AddConvergence(actions, sys, synlvl, opt);
+
+    if (found)
+    {
+#ifdef _OPENMP
+#pragma omp critical
+#endif
+      {
+      done = true;
+      ret_actions = actions;
+      solution_found = true;
+      DBog0("SOLUTION FOUND!");
+      }
     }
   }
-  int operator()(int n) {
-    for (uint i = 0; i < npcs-1; ++i) {
-      uint32_GMRand (&gmrand);
-    }
-    return (int) uint_GMRand (&gmrand, (uint) n);
   }
-};
+
+  return solution_found;
+}
+
 
   bool
 ordering_synthesis(vector<uint>& ret_actions, const char* infile_path)
@@ -279,15 +243,15 @@ ordering_synthesis(vector<uint>& ret_actions, const char* infile_path)
 #pragma omp barrier
 #endif
 
-  RNG rng( PcIdx, NPcs );
+  URandom shufseq[1];
+  init2_URandom (shufseq, PcIdx, NPcs);
   std::vector<uint> tmp_candidates;
-  uint i = 0;
 
   vector<uint> actions;
-  while (!done && i < ntrials)
+  for (uint i = 0; !done && i < ntrials; ++i)
   {
     tmp_candidates = candidates;
-    std::random_shuffle(tmp_candidates.begin(), tmp_candidates.end(), rng);
+    shuffle_uints_URandom (shufseq, &tmp_candidates[0], tmp_candidates.size());
 #ifdef _OPENMP
 #pragma omp critical
 #endif
@@ -317,7 +281,6 @@ ordering_synthesis(vector<uint>& ret_actions, const char* infile_path)
         solution_found = true;
       }
     }
-    ++ i;
   }
   }
 

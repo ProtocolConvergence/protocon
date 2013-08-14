@@ -112,7 +112,7 @@ op2_GluPFmla (PFmlaCtx* ctx, PFmla* base_c, BitOp op,
 static
   void
 smooth_vbls_GluPFmla (PFmlaCtx* fmlactx, PFmla* base_b, const PFmla base_a,
-                      uint set_id, Signum pre_or_img)
+                      uint set_id, Sign pre_or_img)
 {
   GluPFmlaCtx* ctx = castup_as_GluPFmlaCtx (fmlactx);
   const GluPFmla* a = ccastup_as_GluPFmla (base_a);
@@ -308,7 +308,7 @@ free_GluPFmla (PFmlaCtx* ctx, PFmla base_a)
 
 static
   void
-vbl_eqlc_GluPFmla (PFmlaCtx* fmlactx, PFmla* base_dst, uint vbl_id, uint x)
+vbl_eqc_GluPFmla (PFmlaCtx* fmlactx, PFmla* base_dst, uint vbl_id, uint x)
 {
   GluPFmlaCtx* ctx = castup_as_GluPFmlaCtx (fmlactx);
   GluPFmla* dst = castup_as_GluPFmla (*base_dst);
@@ -318,7 +318,7 @@ vbl_eqlc_GluPFmla (PFmlaCtx* fmlactx, PFmla* base_dst, uint vbl_id, uint x)
 
 static
   void
-vbl_img_eqlc_GluPFmla (PFmlaCtx* fmlactx, PFmla* base_dst, uint vbl_id, uint x)
+vbl_img_eqc_GluPFmla (PFmlaCtx* fmlactx, PFmla* base_dst, uint vbl_id, uint x)
 {
   GluPFmlaCtx* ctx = castup_as_GluPFmlaCtx (fmlactx);
   GluPFmla* dst = castup_as_GluPFmla (*base_dst);
@@ -418,8 +418,8 @@ make_GluPFmlaCtx ()
     vt.make_fn         =         make_GluPFmla;
     vt.make1_fn        =        make1_GluPFmla;
     vt.free_fn         =         free_GluPFmla;
-    vt.vbl_eqlc_fn     =     vbl_eqlc_GluPFmla;
-    vt.vbl_img_eqlc_fn = vbl_img_eqlc_GluPFmla;
+    vt.vbl_eqc_fn      =      vbl_eqc_GluPFmla;
+    vt.vbl_img_eqc_fn  =  vbl_img_eqc_GluPFmla;
     vt.ctx_lose_fn     =      lose_GluPFmlaCtx;
     vt.ctx_add_vbl_fn  =   add_vbl_GluPFmlaCtx;
     vt.ctx_add_vbl_list_fn = add_vbl_list_GluPFmlaCtx;

@@ -53,7 +53,7 @@ PFmla::of_state(const uint* state, const Cx::Table<uint>& vbls, C::PFmlaCtx* ctx
   PFmla conj( true );
   PFmla pf;
   for (uint i = 0; i < vbls.sz(); ++i) {
-    eqlc_PFmlaVbl (&pf.g, vbl_of_PFmlaCtx (ctx, vbls[i]), state[i]);
+    eqc_PFmlaVbl (&pf.g, vbl_of_PFmlaCtx (ctx, vbls[i]), state[i]);
     conj &= pf;
   }
   return conj;
@@ -65,7 +65,7 @@ PFmla::of_img_state(const uint* state, const Cx::Table<uint>& vbls, C::PFmlaCtx*
   PFmla conj( true );
   PFmla pf;
   for (uint i = 0; i < vbls.sz(); ++i) {
-    img_eqlc_PFmlaVbl (&pf.g, vbl_of_PFmlaCtx (ctx, vbls[i]), state[i]);
+    img_eqc_PFmlaVbl (&pf.g, vbl_of_PFmlaCtx (ctx, vbls[i]), state[i]);
     conj &= pf;
   }
   return conj;

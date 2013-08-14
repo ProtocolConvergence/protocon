@@ -15,7 +15,7 @@ CONFIG += debug
 #CONFIG += ultradebug
 #CONFIG += fast
 #CONFIG += noassert
-#CONFIG += openmp
+CONFIG += openmp
 
 CxPath = ../cx
 BinPath = ../bin

@@ -295,14 +295,14 @@ public:
   PFmla operator==(uint b) const
   {
     PFmla pf;
-    eqlc_PFmlaVbl (&pf.g, x, b);
+    eqc_PFmlaVbl (&pf.g, x, b);
     return pf;
   }
 
   PFmla operator==(const PFmlaVbl& b) const
   {
     PFmla pf;
-    eql_PFmlaVbl (&pf.g, x, b.x);
+    eq_PFmlaVbl (&pf.g, x, b.x);
     return pf;
   }
 
@@ -315,14 +315,14 @@ public:
   PFmla img_eq(uint b) const
   {
     PFmla pf;
-    img_eqlc_PFmlaVbl (&pf.g, x, b);
+    img_eqc_PFmlaVbl (&pf.g, x, b);
     return pf;
   }
 
   PFmla img_eq(const PFmlaVbl& b) const
   {
     PFmla pf;
-    img_eql_PFmlaVbl (&pf.g, x, b.x);
+    img_eq_PFmlaVbl (&pf.g, x, b.x);
     return pf;
   }
 

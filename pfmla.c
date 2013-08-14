@@ -378,13 +378,13 @@ subseteq_ck_PFmla (const PFmla a, const PFmla b)
 
   void
 smooth_vbl_PFmla (PFmla* dst, const PFmla a, const PFmlaVbl* vbl,
-                  Signum pre_or_img)
+                  Sign pre_or_img)
 {
   smooth_vbls_PFmla (dst, a, vbl->list_id, pre_or_img);
 }
 
   void
-smooth_vbls_PFmla (PFmla* b, const PFmla a, uint list_id, Signum pre_or_img)
+smooth_vbls_PFmla (PFmla* b, const PFmla a, uint list_id, Sign pre_or_img)
 {
   Trit phase = phase_of_PFmla (a);
   if (phase != May)
@@ -529,13 +529,13 @@ pick_pre_PFmla (PFmla* dst, const PFmla a)
       const PFmlaVbl* vbl = (PFmlaVbl*) elt_LgTable (&ctx->vbls, i);
       bool found = false;
       for (uint val = 0; !found && val < vbl->domsz-1; ++val) {
-        eqlc_PFmlaVbl (&eq, vbl, val);
+        eqc_PFmlaVbl (&eq, vbl, val);
         and_PFmla (&tmp_conj, conj, eq);
         if (overlap_ck_PFmla (tmp_conj, a))
           found = true;
       }
       if (!found) {
-        eqlc_PFmlaVbl (&eq, vbl, vbl->domsz-1);
+        eqc_PFmlaVbl (&eq, vbl, vbl->domsz-1);
       }
       and_PFmla (&conj, conj, eq);
     }
@@ -566,7 +566,7 @@ state_of_PFmla (uint* state, const PFmla a, const uint* indices, uint n)
       const PFmlaVbl* vbl = (PFmlaVbl*) elt_LgTable (&ctx->vbls, indices[i]);
       bool found = false;
       for (val ; vbl->domsz-1) {
-        eqlc_PFmlaVbl (&eq, vbl, val);
+        eqc_PFmlaVbl (&eq, vbl, val);
         and_PFmla (&tmp_conj, conj, eq);
         if (overlap_ck_PFmla (tmp_conj, a)) {
           found = true;
@@ -575,7 +575,7 @@ state_of_PFmla (uint* state, const PFmla a, const uint* indices, uint n)
         }
       }
       if (!found) {
-        eqlc_PFmlaVbl (&eq, vbl, vbl->domsz-1);
+        eqc_PFmlaVbl (&eq, vbl, vbl->domsz-1);
         state[i] = vbl->domsz-1;
       }
       and_PFmla (&conj, conj, eq);
@@ -587,12 +587,12 @@ state_of_PFmla (uint* state, const PFmla a, const uint* indices, uint n)
 }
 
   void
-eql_PFmlaVbl (PFmla* dst, const PFmlaVbl* a, const PFmlaVbl* b)
+eq_PFmlaVbl (PFmla* dst, const PFmlaVbl* a, const PFmlaVbl* b)
 {
   Claim2( a->ctx ,==, b->ctx );
   pre_op_ctx_PFmla (dst, a->ctx);
-  if (a->ctx->vt->vbl_eql_fn) {
-    a->ctx->vt->vbl_eql_fn (a->ctx, dst, a->id, b->id);
+  if (a->ctx->vt->vbl_eq_fn) {
+    a->ctx->vt->vbl_eq_fn (a->ctx, dst, a->id, b->id);
   }
   else {
     const uint n = (a->domsz <= b->domsz) ? a->domsz : b->domsz;
@@ -601,8 +601,8 @@ eql_PFmlaVbl (PFmla* dst, const PFmlaVbl* a, const PFmlaVbl* b)
 
     wipe1_PFmla (dst, false);
     for (uint i = 0; i < n; ++i) {
-      eqlc_PFmlaVbl (&tmp_a, a, i);
-      eqlc_PFmlaVbl (&tmp_b, b, i);
+      eqc_PFmlaVbl (&tmp_a, a, i);
+      eqc_PFmlaVbl (&tmp_b, b, i);
       and_PFmla (&tmp_a, tmp_a, tmp_b);
       or_PFmla (dst, *dst, tmp_a);
     }
@@ -612,34 +612,34 @@ eql_PFmlaVbl (PFmla* dst, const PFmlaVbl* a, const PFmlaVbl* b)
 }
 
   void
-eqlc_PFmlaVbl (PFmla* dst, const PFmlaVbl* a, uint x)
+eqc_PFmlaVbl (PFmla* dst, const PFmlaVbl* a, uint x)
 {
   if (x >= a->domsz) {
     wipe1_PFmla (dst, false);
     return;
   }
   pre_op_ctx_PFmla (dst, a->ctx);
-  a->ctx->vt->vbl_eqlc_fn (a->ctx, dst, a->id, x);
+  a->ctx->vt->vbl_eqc_fn (a->ctx, dst, a->id, x);
 }
 
   void
-img_eql_PFmlaVbl (PFmla* dst, const PFmlaVbl* a, const PFmlaVbl* b)
+img_eq_PFmlaVbl (PFmla* dst, const PFmlaVbl* a, const PFmlaVbl* b)
 {
   Claim2( a->ctx ,==, b->ctx );
   pre_op_ctx_PFmla (dst, a->ctx);
-  if (a->ctx->vt->vbl_img_eql_fn) {
-    a->ctx->vt->vbl_img_eql_fn (a->ctx, dst, a->id, b->id);
+  if (a->ctx->vt->vbl_img_eq_fn) {
+    a->ctx->vt->vbl_img_eq_fn (a->ctx, dst, a->id, b->id);
   }
   else {
-    // n is the domain size of RHS since img_eqlc_PFmla() does mod.
+    // n is the domain size of RHS since img_eqc_PFmla() does mod.
     const uint n = b->domsz;
     PFmla tmp_a = dflt_PFmla ();
     PFmla tmp_b = dflt_PFmla ();
 
     wipe1_PFmla (dst, false);
     for (uint i = 0; i < n; ++i) {
-      img_eqlc_PFmlaVbl (&tmp_a, a, i);
-      eqlc_PFmlaVbl (&tmp_b, b, i);
+      img_eqc_PFmlaVbl (&tmp_a, a, i);
+      eqc_PFmlaVbl (&tmp_b, b, i);
       and_PFmla (&tmp_a, tmp_a, tmp_b);
       or_PFmla (dst, *dst, tmp_a);
     }
@@ -649,13 +649,13 @@ img_eql_PFmlaVbl (PFmla* dst, const PFmlaVbl* a, const PFmlaVbl* b)
 }
 
   void
-img_eqlc_PFmlaVbl (PFmla* dst, const PFmlaVbl* a, uint x)
+img_eqc_PFmlaVbl (PFmla* dst, const PFmlaVbl* a, uint x)
 {
   if (x >= a->domsz) {
     x %= a->domsz;
   }
   pre_op_ctx_PFmla (dst, a->ctx);
-  a->ctx->vt->vbl_img_eqlc_fn (a->ctx, dst, a->id, x);
+  a->ctx->vt->vbl_img_eqc_fn (a->ctx, dst, a->id, x);
 }
 
   uint

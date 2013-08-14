@@ -6,6 +6,7 @@
 #include "cx/synhax.hh"
 #include "cx/table.hh"
 #include "cx/alphatab.hh"
+#include "cx/ofile.hh"
 #include "cx/map.hh"
 #include "pfmla.hh"
 #include "tuple.hh"
@@ -112,6 +113,9 @@ class ActSymm {
 public:
   const PcSymm* pc_symm;
   Cx::Table< uint > vals;
+  uint pre_idx;
+  uint img_idx;
+  uint pre_idx_of_img;
 
   uint guard(uint vbl_idx) const;
   uint assign(uint vbl_idx) const;
@@ -138,6 +142,10 @@ public:
   uint act_idx_offset;
   uint n_possible_acts;
 
+  uint pre_dom_offset;
+  uint pre_domsz;
+  uint img_domsz;
+
   PcSymm()
     : shadow_pfmla( false )
     , direct_pfmla( false )
@@ -151,6 +159,8 @@ public:
   bool write_ck(uint ridx) const {
     return write_flags[ridx];
   }
+
+  void action(ActSymm& act, uint actidx) const;
 };
 
 inline uint ActSymm::guard(uint vbl_idx) const
@@ -170,11 +180,13 @@ public:
 
   Cx::Table< Cx::PFmla > act_pfmlas;
   uint n_possible_acts;
+  uint total_pre_domsz;
   Cx::PFmla identity_pfmla;
 
 public:
   Net()
     : n_possible_acts(0)
+    , total_pre_domsz(0)
     , identity_pfmla(true)
   {}
 
@@ -195,6 +207,10 @@ public:
   uint action_pcsymm_index(uint actidx) const;
   void action(ActSymm& act, uint actidx) const;
   uint action_index(const ActSymm& act) const;
+
+  uint action_pre_index(uint actidx) const;
+  uint action_img_index(uint actidx) const;
+
   const Cx::PFmla& action_pfmla(uint i) const {
     return act_pfmlas[i];
   }
@@ -212,7 +228,7 @@ public:
                 const String& sfx) const;
 
   ostream& oput_pfmla(ostream& of, Cx::PFmla pf,
-                      Signum pre_or_img, bool just_one) const;
+                      Sign pre_or_img, bool just_one) const;
   ostream& oput_one_xn(ostream& of, const Cx::PFmla& pf) const;
   ostream& oput_all_xn(ostream& of, const Cx::PFmla& pf) const;
   ostream& oput_all_pf(ostream& of, const Cx::PFmla& pf) const;
@@ -323,8 +339,8 @@ public:
 };
 #endif
 
-ostream&
-OPut(ostream& of, const Xn::ActSymm& act);
+Cx::OFile&
+OPut(Cx::OFile& of, const Xn::ActSymm& act);
 PF
 LegitInvariant(const Xn::Sys& sys, const PF& loXnRel, const PF& hiXnRel);
 bool

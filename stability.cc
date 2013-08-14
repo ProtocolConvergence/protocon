@@ -1,6 +1,104 @@
 
 #include "stability.hh"
 
+Cx::OFile DBogOF( stderr_OFile () );
+
+  bool
+candidate_actions(vector<uint>& candidates, const Xn::Sys& sys)
+{
+  const Xn::Net& topo = sys.topology;
+
+  if (sys.invariant.tautology_ck(false)) {
+    DBog0( "Invariant is empty!" );
+    return false;
+  }
+
+  if (sys.invariant.tautology_ck(true)) {
+    DBog0( "All states are invariant!" );
+    if (!sys.shadow_puppet_synthesis_ck()) {
+      return true;
+    }
+  }
+
+  for (uint i = 0; i < topo.n_possible_acts; ++i) {
+    bool add = true;
+
+    Xn::ActSymm act;
+    topo.action(act, i);
+    const Xn::PcSymm& pc_symm = *act.pc_symm;
+    const PF& actPF = topo.action_pfmla(i);
+
+    // Check for self-loops.
+    if (add) {
+      bool selfloop = true;
+      for (uint j = 0; j < pc_symm.wvbl_symms.sz(); ++j) {
+        if (act.assign(j) != act.aguard(j)) {
+          selfloop = false;
+        }
+      }
+      add = !selfloop;
+      if (false && selfloop) {
+        OPut((DBogOF << "Action " << i << " is a self-loop: "), act) << '\n';
+      }
+    }
+
+    if (add && !(sys.shadow_puppet_synthesis_ck() || actPF <= sys.direct_pfmla)
+        && sys.invariant.overlap_ck(actPF)) {
+      add = false;
+      if (false) {
+        OPut((DBogOF << "Action " << i << " exists in the invariant: "), act) << '\n';
+      }
+    }
+
+    if (add) {
+      candidates.push_back(i);
+    }
+  }
+  if (candidates.size() == 0) {
+    DBog0( "No candidates actions!" );
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Check if two actions can coexist in a
+ * deterministic protocol of self-disabling processes.
+ */
+  bool
+coexist_ck(const Xn::ActSymm& a, const Xn::ActSymm& b)
+{
+  if (a.pc_symm != b.pc_symm)  return true;
+  const Xn::PcSymm& pc = *a.pc_symm;
+
+  bool enabling = true;
+  bool deterministic = false;
+  for (uint j = 0; enabling && j < pc.rvbl_symms.sz(); ++j) {
+    if (a.guard(j) != b.guard(j)) {
+      deterministic = true;
+      if (!pc.write_ck(j)) {
+        enabling = false;
+      }
+    }
+  }
+
+  if (!deterministic)  return false;
+  if (!enabling)  return true;
+
+  bool a_enables = true;
+  bool b_enables = true;
+  for (uint j = 0; j < pc.wvbl_symms.sz(); ++j) {
+    if (a.assign(j) != b.aguard(j)) {
+      a_enables = false;
+    }
+    if (b.assign(j) != a.aguard(j)) {
+      b_enables = false;
+    }
+  }
+  return !(a_enables || b_enables);
+}
+
 /** Rank the deadlocks by how many actions can resolve them.*/
   void
 RankDeadlocksMCV(vector<DeadlockConstraint>& dlsets,
@@ -180,7 +278,7 @@ PickActionMCV(uint& ret_actId,
   Set<uint>::const_iterator it;
 
   // Do most constrained variable (MCV).
-  // That is, find an action which resolves a deadlock for which
+  // That is, find an action which resolves a deadlock which
   // can only be resolved by some small number of actions.
   // Try to choose an action which adds a new path to the invariant.
   for (uint i = 0; i < dlsets.size(); ++i) {
@@ -205,11 +303,14 @@ PickActionMCV(uint& ret_actId,
   }
 
 
-  DBogOF
-    <<" (lvl " << tape.bt_level
-    << ") (mcv " << dlsetIdx
-    << ") (mcv-sz " << candidates.size()
-    << ")\n";
+  if (tape.bt_dbog) {
+    DBogOF
+      <<" (lvl " << tape.bt_level
+      << ") (mcv " << dlsetIdx
+      << ") (mcv-sz " << candidates.size()
+      << ")\n";
+    DBogOF.flush();
+  }
 
   Map< uint, Set<uint> > biasMap;
   bool biasToMax = true;
@@ -309,9 +410,12 @@ PickActionMCV(uint& ret_actId,
       const uint actId = *it;
       StabilitySynLvl next( tape );
       next.bt_dbog = false;
-      next.reviseActions(sys, Set<uint>(actId), Set<uint>());
-      uint n = (tape.candidates.size() - next.candidates.size());
-      n /= (next.actions.size() - tape.actions.size());
+      uint n = tape.candidates.size();
+      if (next.revise_actions(sys, Set<uint>(actId), Set<uint>()))
+      {
+        n -= next.candidates.size();
+        n /= (next.actions.size() - tape.actions.size());
+      }
       //uint n = next.candidates.size() + next.actions.size();
       //uint n = 0;
       //for (uint j = 1; j < next.mcvDeadlocks.size(); ++j) {
@@ -366,9 +470,9 @@ PickActionMCV(uint& ret_actId,
       const uint actId = *it;
       StabilitySynLvl next( tape );
       next.bt_dbog = false;
-      next.reviseActions(sys, Set<uint>(actId), Set<uint>());
-
-      uint n = next.candidates.size();
+      uint n = 0;
+      if (next.revise_actions(sys, Set<uint>(actId), Set<uint>()))
+        n = next.candidates.size();
       //uint n = next.candidates.size() + next.actions.size();
       //uint n = 0;
       //for (uint j = 1; j < next.mcvDeadlocks.size(); ++j) {
@@ -414,7 +518,13 @@ PickActionMCV(uint& ret_actId,
     return false;
   }
 
-  if (nicePolicy == Opt::EndNice) {
+  if (opt.random_one_shot) {
+    vector<uint> candidates_vec;
+    candidates.fill(candidates_vec);
+    uint idx = tape.ctx->urandom.pick(candidates_vec.size());
+    ret_actId = candidates_vec[idx];
+  }
+  else if (nicePolicy == Opt::EndNice) {
     bool have = false;
     uint niceIdxMin = 0;
     uint extremeActId = 0;
@@ -460,155 +570,182 @@ QuickTrim(Set<uint>& delSet,
 }
 
 
+  uint
+count_actions_in_cycle (const Cx::PFmla& scc, Cx::PFmla edg,
+                        const vector<uint>& actions, const Xn::Net& topo)
+{
+  uint n = 1;
+  Cx::Table<uint> scc_actidcs;
+  for (uint i = 0; i < actions.size(); ++i) {
+    const Cx::PFmla& act_pfmla = topo.action_pfmla(actions[i]);
+    if (scc.overlap_ck(act_pfmla)) {
+      if (scc.overlap_ck(act_pfmla.img())) {
+        edg |= act_pfmla;
+        scc_actidcs.push(actions[i]);
+        ++ n;
+      }
+    }
+  }
+  uint nneed = 1;
+  uint nmin = 1;
+  Cx::PFmla min_edg = edg;
+  for (uint i = 0; i < scc_actidcs.size(); ++i) {
+    const Cx::PFmla& act_pfmla = topo.action_pfmla(scc_actidcs[i]);
+    if (!CycleCk(edg - act_pfmla, scc)) {
+      ++ nneed;
+      ++ nmin;
+    }
+    else {
+      if (CycleCk(min_edg - act_pfmla, min_edg)) {
+        min_edg -= act_pfmla;
+      }
+      else {
+        ++ nmin;
+      }
+    }
+  }
+  DBog1("needed:%u", nneed);
+  DBog1("nmin:%u", nmin);
+  return n;
+}
 
-/** Add actions to protocol and delete actions from candidate list.**/
-  void
-StabilitySynLvl::reviseActions(const Xn::Sys& sys,
-                               Set<uint> adds,
-                               Set<uint> dels,
-                               bool forcePrune)
+/** Infer and prune actions from candidate list.**/
+  bool
+StabilitySynLvl::check_forward(const Xn::Sys& sys)
 {
   const Xn::Net& topo = sys.topology;
+  const Cx::PFmla& invariant = this->hi_invariant;
+
+  if (this->mcvDeadlocks.size() <= 1) {
+    // This should have been caught if no deadlocks remain.
+    Claim(this->deadlockPF.tautology_ck(false));
+    this->candidates.clear();
+    return true;
+  }
+  Set<uint> adds;
+  Set<uint> dels;
+  adds |= this->mcvDeadlocks[1].candidates;
+
+  for (uint i = 0; i < this->candidates.size(); ++i) {
+    uint actidx = this->candidates[i];
+    if (dels.elem_ck(actidx))  continue;
+
+    const PF& act_pf = topo.action_pfmla(actidx);
+    if (!this->deadlockPF.overlap_ck(act_pf.pre())) {
+      if (false && this->bt_dbog) {
+        Xn::ActSymm act;
+        DBog0("DEAD PRUNE!");
+        DBogOF
+          << "DEL (lvl " << this->bt_level
+          << ") (sz " << this->actions.size()
+          << ") (rem " << this->candidates.size()
+          << ")  ";
+        topo.action(act, actidx);
+        OPut(DBogOF, act) << '\n';
+        DBogOF.flush();
+      }
+      dels |= actidx;
+      continue;
+    }
+
+    if (this->ctx->opt.random_one_shot)
+      continue;
+
+    if (sys.shadow_puppet_synthesis_ck() && act_pf.overlap_ck(invariant)) {
+      const PF& pf = LegitInvariant(sys, this->loXnRel | act_pf, this->hiXnRel);
+      if (pf.tautology_ck(false)) {
+        dels |= actidx;
+        continue;
+      }
+      if (false && !WeakConvergenceCk(sys, this->hiXnRel, pf)) {
+        DBog0("WEAK PRUNED!");
+        dels |= actidx;
+        continue;
+      }
+      Cx::PFmla scc;
+      if (CycleCk(&scc, this->loXnRel | act_pf, ~pf)) {
+        DBog0("CYCLE PRUNED!");
+        //uint n = count_actions_in_cycle(scc, act_pf, this->actions, topo);
+        //DBog1("scc actions: %u", n);
+        dels |= actidx;
+        continue;
+      }
+    }
+    else {
+      Cx::PFmla scc;
+      if (CycleCk(&scc, this->loXnRel | act_pf, ~invariant)) {
+        //uint n = count_actions_in_cycle(scc, act_pf, this->actions, topo);
+        //DBog1("scc actions: %u", n);
+        dels |= actidx;
+        continue;
+      }
+    }
+
+    if (false && sys.shadow_puppet_synthesis_ck()) {
+      const PF& pf = LegitInvariant(sys, this->loXnRel, this->hiXnRel - act_pf);
+      if (!WeakConvergenceCk(sys, this->hiXnRel - act_pf, pf)) {
+        DBog1("Need for weak: %u", actidx);
+        adds |= actidx;
+        continue;
+      }
+    }
+  }
+  if (!adds.empty() || !dels.empty()) {
+    this->inferredActions |= adds;
+    return this->revise_actions(sys, adds, dels);
+  }
+  return true;
+}
+
+/** Add actions to protocol and delete actions from candidate list.**/
+  bool
+StabilitySynLvl::revise_actions(const Xn::Sys& sys,
+                                Set<uint> adds,
+                                Set<uint> dels)
+{
+  const Xn::Net& topo = sys.topology;
+  Xn::ActSymm act;
   Set<uint>::const_iterator it;
+  const bool use_csp = false;
 
   adds |= this->mcvDeadlocks[1].candidates;
+  this->inferredActions |= this->mcvDeadlocks[1].candidates;
 
   PF addActPF( false );
   for (it = adds.begin(); it != adds.end(); ++it) {
     uint actId = *it;
+    if (use_csp) {
+      this->csp_pfmla &=
+        this->ctx->csp_pfmla_ctx.vbl(topo.action_pre_index(actId))
+        == topo.action_img_index(actId);
+    }
+
     Remove1(this->candidates, actId);
     this->actions.push_back(actId);
     QuickTrim(dels, this->candidates, topo, actId);
     addActPF |= topo.action_pfmla(actId);
   }
 
-  this->deadlockPF -= addActPF.pre();
-  this->loXnRel |= addActPF;
-
-  PF invariant;
-  if (sys.shadow_puppet_synthesis_ck()) {
-    invariant = LegitInvariant(sys, this->loXnRel, this->hiXnRel);
-    this->hi_invariant = invariant;
-    if (invariant.tautology_ck(false)) {
-      this->candidates.clear();
-      return;
-    }
-  }
-  else {
-    invariant = sys.invariant;
-  }
-  this->backReachPF =
-    BackwardReachability(this->loXnRel, invariant);
-
-  Set<uint> reqAdds;
-  if (!adds.empty() || forcePrune) {
-    for (uint i = 0; i < this->candidates.size(); ++i) {
-      uint actId = this->candidates[i];
-      if (dels.elem_ck(actId))  continue;
-
-      const PF& actPF = topo.action_pfmla(actId);
-      if (!this->deadlockPF.overlap_ck(actPF.pre())) {
-        dels |= actId;
-        continue;
-      }
-
-      /* TODO */
-#if 0
-      if (sys.shadow_puppet_synthesis_ck()) {
-        if (sys.smoothShadowVbls(addActPF).equivCk(sys.smoothShadowVbls(actPF))) {
-          const PF actEss = addActPF & sys.smoothShadowVbls(actPF);
-          if (actEss.img().equivCk(actPF.img())) {
-            reqAdds |= actId;
-          }
-          else {
-            dels |= actId;
-          }
-          continue;
-        }
-      }
-#endif
-
-      if (sys.shadow_puppet_synthesis_ck() && actPF.overlap_ck(invariant)) {
-        const PF& pf = ~LegitInvariant(sys, this->loXnRel | actPF, this->hiXnRel);
-        if (CycleCk(this->loXnRel | actPF, pf)) {
-          dels |= actId;
-          continue;
-        }
-      }
-      else {
-        if (CycleCk(this->loXnRel | actPF, ~invariant)) {
-          dels |= actId;
-          continue;
-        }
-      }
-
-      if (false && sys.shadow_puppet_synthesis_ck()) {
-        const PF& pf = LegitInvariant(sys, this->loXnRel, this->hiXnRel - actPF);
-        if (!WeakConvergenceCk(sys, this->hiXnRel - actPF, pf)) {
-          reqAdds |= actId;
-          continue;
-        }
-      }
-    }
-  }
-
   if (!(adds & dels).empty()) {
     DBog0( "Tried to add conflicting actions... this is not good!!!" );
-    this->candidates.clear();
-    this->deadlockPF = true;
-    return;
+    return false;
   }
+
+  this->loXnRel |= addActPF;
+  this->deadlockPF -= addActPF.pre();
 
   PF delActPF( false );
   for (it = dels.begin(); it != dels.end(); ++it) {
     uint actId = *it;
+    if (use_csp) {
+      this->csp_pfmla &=
+        this->ctx->csp_pfmla_ctx.vbl(topo.action_pre_index(actId))
+        != topo.action_img_index(actId);
+    }
     Remove1(this->candidates, actId);
     delActPF |= topo.action_pfmla(actId);
   }
   this->hiXnRel -= delActPF;
-
-  bool revise = true;
-  if (sys.shadow_puppet_synthesis_ck()) {
-    invariant = LegitInvariant(sys, this->loXnRel, this->hiXnRel);
-    this->hi_invariant = invariant;
-    if (invariant.tautology_ck(false)) {
-      this->candidates.clear();
-      this->loXnRel = false;
-      this->hiXnRel = false;
-      this->hiXnRel = false;
-      return;
-    }
-    this->backReachPF =
-      BackwardReachability(this->loXnRel, invariant);
-
-    for (uint i = 0; i < this->actions.size(); ++i) {
-      uint actId = this->actions[i];
-      if (this->inferredActions.elem_ck(actId))  continue;
-      if (!this->backReachPF.overlap_ck(topo.action_pfmla(actId))) {
-        this->candidates.clear();
-        this->loXnRel = false;
-        this->hiXnRel = false;
-        this->hiXnRel = false;
-        return;
-      }
-    }
-
-    PF dl = (~invariant - this->loXnRel.pre());
-    if (!dl.tautology_ck(false)) {
-      this->deadlockPF |= dl;
-      RankDeadlocksMCV(this->mcvDeadlocks,
-                       sys.topology,
-                       this->candidates,
-                       this->deadlockPF);
-      if (this->mcvDeadlocks.size() < 2) {
-        return;
-      }
-      revise = false;
-    }
-  }
-  if (revise) {
-    ReviseDeadlocksMCV(this->mcvDeadlocks, topo, adds, dels);
-  }
 
   for (it = adds.begin(); it != adds.end(); ++it) {
     uint actId = *it;
@@ -618,19 +755,56 @@ StabilitySynLvl::reviseActions(const Xn::Sys& sys,
         << ") (sz " << this->actions.size()
         << ") (rem " << this->candidates.size()
         << ")  ";
-      Xn::ActSymm act;
       topo.action(act, actId);
       OPut(DBogOF, act) << '\n';
+      DBogOF.flush();
     }
   }
 
-  reqAdds |= this->mcvDeadlocks[1].candidates;
-  if (reqAdds.size() > this->mcvDeadlocks[1].candidates.size()) {
-    DBog1( "did something: %u", (uint) (reqAdds.size() - this->mcvDeadlocks[1].candidates.size()));
+  if (sys.shadow_puppet_synthesis_ck()) {
+    this->hi_invariant =
+      LegitInvariant(sys, this->loXnRel, this->hiXnRel);
+    if (this->hi_invariant.tautology_ck(false)) {
+      if (this->bt_dbog) {
+        DBogOF << "LEGIT";
+      }
+      return false;
+    }
   }
-  if (!reqAdds.empty()) {
-    this->inferredActions |= reqAdds;
-    this->reviseActions(sys, reqAdds, Set<uint>());
+  else {
+    this->hi_invariant = sys.invariant;
   }
+
+  if (CycleCk(this->loXnRel, ~this->hi_invariant)) {
+    if (this->bt_dbog) {
+      DBogOF << "CYCLE";
+    }
+    return false;
+  }
+
+  if (!WeakConvergenceCk(sys, this->hiXnRel, this->hi_invariant)) {
+    if (this->bt_dbog) {
+      DBogOF << "REACH";
+    }
+    return false;
+  }
+
+  this->backReachPF =
+    BackwardReachability(this->loXnRel, this->hi_invariant);
+
+
+  bool revise = true;
+  if (sys.shadow_puppet_synthesis_ck()) {
+    RankDeadlocksMCV(this->mcvDeadlocks,
+                     sys.topology,
+                     this->candidates,
+                     this->deadlockPF);
+    revise = false;
+  }
+  if (revise) {
+    ReviseDeadlocksMCV(this->mcvDeadlocks, topo, adds, dels);
+  }
+
+  return this->check_forward(sys);
 }
 

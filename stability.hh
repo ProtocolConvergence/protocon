@@ -3,6 +3,7 @@
 #define StabilitySynLvl_HH_
 
 #include "cx/set.hh"
+#include "cx/urandom.hh"
 #include "pfmla.hh"
 #include "inst.hh"
 #include "promela.hh"
@@ -10,9 +11,8 @@
 #include "xnsys.hh"
 #include <fstream>
 #include "protoconfile.hh"
-#include "ordersyn.hh"
 
-static std::ostream& DBogOF = std::cerr;
+extern Cx::OFile DBogOF;
 
 //static const bool DBog_PruneCycles = false;
 static const bool DBog_RankDeadlocksMCV = false;
@@ -49,19 +49,53 @@ public:
   PickActionHeuristic pickMethod;
   NicePolicy nicePolicy;
   bool pickBackReach;
+  bool bt_dbog;
+
+  // For parallel algorithms.
+  bool random_one_shot;
+  uint bt_depth;
+  uint sys_pcidx;
+  uint sys_npcs;
 
   AddConvergenceOpt() :
     pickMethod( GreedyPick )
     , nicePolicy( EndNice )
-    , pickBackReach( true )
+    , pickBackReach( false )
+    , bt_dbog( true )
+    , random_one_shot( false )
+    , bt_depth( 3 )
+    , sys_pcidx( 0 )
+    , sys_npcs( 1 )
+  {}
+};
+
+class StabilitySyn {
+public:
+  Cx::PFmlaCtx csp_pfmla_ctx;
+  Cx::PFmla csp_base_pfmla;
+  Cx::URandom urandom;
+  AddConvergenceOpt opt;
+  volatile bool* solution_found;
+
+  StabilitySyn()
+    : csp_base_pfmla(true)
+    , solution_found(0)
+  {}
+  StabilitySyn(uint pcidx, uint npcs)
+    : csp_base_pfmla(true)
+    , urandom(pcidx, npcs)
+    , solution_found(0)
   {}
 };
 
 // Decision level for synthesis.
 class StabilitySynLvl {
 public:
+  StabilitySyn* ctx;
+
   bool bt_dbog;
   uint bt_level;
+  uint failed_bt_level;
 
   vector<uint> actions; ///< Chosen actions.
   Set<uint> inferredActions; ///< Inferred actions.
@@ -72,20 +106,28 @@ public:
   PF backReachPF; ///< Backwards reachable from invariant.
   PF hi_invariant;
 
+  Cx::PFmla csp_pfmla;
+
 public:
-  StabilitySynLvl() :
-    bt_dbog( false )
+  StabilitySynLvl(StabilitySyn* _ctx) :
+    ctx( _ctx )
+    , bt_dbog( false )
     , bt_level( 0 )
+    , failed_bt_level( 0 )
     , hi_invariant( false )
   {}
 
   /// Deadlocks ranked by how many candidate actions can resolve them.
   vector<DeadlockConstraint> mcvDeadlocks;
 
-  void reviseActions(const Xn::Sys& sys, Set<uint> adds, Set<uint> dels,
-                     bool forcePrune=false);
+  bool check_forward(const Xn::Sys& sys);
+  bool revise_actions(const Xn::Sys& sys, Set<uint> adds, Set<uint> dels);
 };
 
+bool
+candidate_actions(vector<uint>& candidates, const Xn::Sys& sys);
+bool
+coexist_ck(const Xn::ActSymm& a, const Xn::ActSymm& b);
 void
 RankDeadlocksMCV(vector<DeadlockConstraint>& dlsets,
                  const Xn::Net& topo,

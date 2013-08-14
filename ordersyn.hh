@@ -7,11 +7,11 @@ namespace Xn {
   class ActSymm;
   class Sys;
 }
+class AddConvergenceOpt;
 
 bool
-candidate_actions(vector<uint>& candidates, const Xn::Sys& sys);
-bool
-coexist_ck(const Xn::ActSymm& a, const Xn::ActSymm& b);
+flat_backtrack_synthesis(vector<uint>& ret_actions, const char* infile_path,
+                         const AddConvergenceOpt& global_opt);
 bool
 ordering_synthesis(vector<uint>& ret_actions, const char* infile_path);
 

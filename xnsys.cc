@@ -17,22 +17,26 @@ Net::commit_initialization()
   uint ntotal = 0;
   for (uint i = 0; i < pc_symms.sz(); ++i) {
     Xn::PcSymm& pc = pc_symms[i];
-    uint n = 1;
     pc.act_idx_offset = ntotal;
+    pc.pre_dom_offset = total_pre_domsz;
 
+    pc.pre_domsz = 1;
     for (uint j = 0; j < pc.rvbl_symms.sz(); ++j) {
       uint domsz = pc.rvbl_symms[j]->domsz;
       pc.doms.push(domsz);
-      n *= domsz;
+      pc.pre_domsz *= domsz;
     }
+
+    pc.img_domsz = 1;
     for (uint j = 0; j < pc.wvbl_symms.sz(); ++j) {
       uint domsz = pc.wvbl_symms[j]->domsz;
       pc.doms.push(domsz);
-      n *= domsz;
+      pc.img_domsz *= domsz;
     }
 
-    pc.n_possible_acts = n;
-    ntotal += n;
+    total_pre_domsz += pc.pre_domsz;
+    pc.n_possible_acts = (pc.pre_domsz * pc.img_domsz);
+    ntotal += pc.n_possible_acts;
   }
 
   act_pfmlas.resize(ntotal);
@@ -119,18 +123,44 @@ Net::action_pcsymm_index(uint actidx) const
   return pc_symms.sz() - 1;
 }
 
+static
   void
-Net::action(ActSymm& act, uint actidx) const
+swap_pre_img (uint* vals, const Xn::PcSymm& pc_symm)
 {
-  uint pcidx = this->action_pcsymm_index(actidx);
-  act.pc_symm = &pc_symms[pcidx];
-  const Xn::PcSymm& pc = *act.pc_symm;
+  uint off = pc_symm.rvbl_symms.sz();
+  for (uint i = 0; i < pc_symm.wmap.sz(); ++i) {
+    uint* pre_x = &vals[pc_symm.wmap[i]];
+    uint* img_x = &vals[off + i];
+    uint tmp = *img_x;
+    *img_x = *pre_x;
+    *pre_x = tmp;
+  }
+}
 
-  actidx -= pc.act_idx_offset;
+  void
+PcSymm::action(ActSymm& act, uint actidx) const
+{
+  act.pc_symm = this;
+  const Xn::PcSymm& pc = *this;
+
+  act.pre_idx = actidx / pc.img_domsz;
+  act.img_idx = actidx % pc.img_domsz;
 
   act.vals.resize(pc.rvbl_symms.sz() + pc.wvbl_symms.sz());
   Cx::state_of_index (&act.vals[0], actidx, pc.doms);
 
+  swap_pre_img (&act.vals[0], pc);
+  act.pre_idx_of_img =
+    index_of_state (&act.vals[0], &pc.doms[0], pc.rvbl_symms.sz());
+  swap_pre_img (&act.vals[0], pc);
+}
+
+  void
+Net::action(ActSymm& act, uint actidx) const
+{
+  const Xn::PcSymm& pc =
+    this->pc_symms[this->action_pcsymm_index(actidx)];
+  pc.action(act, actidx - pc.act_idx_offset);
 }
 
   uint
@@ -140,6 +170,25 @@ Net::action_index(const Xn::ActSymm& act) const
   return pc.act_idx_offset +
     Cx::index_of_state (&act.vals[0], pc.doms);
 
+}
+
+  uint
+Net::action_pre_index(uint actidx) const
+{
+  uint pcidx = this->action_pcsymm_index(actidx);
+  const Xn::PcSymm& pc_symm = pc_symms[pcidx];
+  actidx -= pc_symm.act_idx_offset;
+  actidx /= pc_symm.img_domsz;
+  return actidx + pc_symm.pre_dom_offset;
+}
+
+  uint
+Net::action_img_index(uint actidx) const
+{
+  uint pcidx = this->action_pcsymm_index(actidx);
+  const Xn::PcSymm& pc_symm = pc_symms[pcidx];
+  actidx -= pc_symm.act_idx_offset;
+  return actidx % pc_symm.img_domsz;
 }
 
   ostream&
@@ -159,7 +208,7 @@ Net::oput(ostream& of,
 
   ostream&
 Net::oput_pfmla(ostream& of, Cx::PFmla pf,
-                Signum pre_or_img, bool just_one) const
+                Sign pre_or_img, bool just_one) const
 {
   Cx::Table<uint> state_pre(this->vbls.sz(), 0);
   Cx::Table<uint> state_img(this->vbls.sz(), 0);
@@ -291,8 +340,8 @@ Sys::integrityCk() const
 
 }
 
-  ostream&
-OPut(ostream& of, const Xn::ActSymm& act)
+  Cx::OFile&
+OPut(Cx::OFile& of, const Xn::ActSymm& act)
 {
   const Xn::PcSymm& pc = *act.pc_symm;
   of << "/*" << pc.name << "[i]" << "*/ ";
