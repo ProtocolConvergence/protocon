@@ -28,14 +28,9 @@ AddConvergence(vector<uint>& retActions,
     if (tape.ctx->solution_found && *tape.ctx->solution_found)
       return false;
 
-    if (!WeakConvergenceCk(sys, tape.hiXnRel, tape.hi_invariant)) {
-      DBog0("No weak!");
-      return false;
-    }
-
     // Pick the action.
-    uint actId = 0;
-    if (!PickActionMCV(actId, sys, tape, opt)) {
+    uint actidx = 0;
+    if (!PickActionMCV(actidx, sys, tape, opt)) {
       DBog0("Cannot resolve all deadlocks!");
       return false;
     }
@@ -43,7 +38,10 @@ AddConvergence(vector<uint>& retActions,
     StabilitySynLvl next( tape );
     next.bt_dbog = (tape.bt_dbog && (true || tape.bt_level < 18));
     next.bt_level = tape.bt_level + 1;
-    if (next.revise_actions(sys, Set<uint>(actId), Set<uint>()))
+
+    Set<uint> next_add_set( actidx );
+    Set<uint> next_del_set;
+    while (next.revise_actions(sys, next_add_set, next_del_set))
     {
       bool found =
         AddConvergence(retActions, sys, next, opt);
@@ -53,6 +51,34 @@ AddConvergence(vector<uint>& retActions,
         }
         return true;
       }
+      if (next.conflict_set.empty())
+        break;
+
+      bool back_up = true;
+      for (uint i = tape.actions.size(); i < next.actions.size(); ++i)
+      {
+        if (next.conflict_set.elem_ck(next.actions[i])) {
+          back_up = false;
+          break;
+        }
+      }
+      if (back_up) {
+        tape.conflict_set = next.conflict_set;
+        return false;
+      }
+
+      next.failed_bt_level = tape.failed_bt_level + 1;
+      for (uint i = 0; i < next.candidates.size(); ++i) {
+        if (next.conflict_set.elem_ck(next.candidates[i])) {
+          next_del_set |= next.candidates[i];
+        }
+      }
+      next = tape;
+    }
+    if (!next.conflict_set.empty())
+    {
+      tape.conflict_set = next.conflict_set;
+      return false;
     }
 
     if (next.failed_bt_level > tape.failed_bt_level) {
@@ -73,7 +99,7 @@ AddConvergence(vector<uint>& retActions,
       }
       break;
     }
-    if (!tape.revise_actions(sys, Set<uint>(), Set<uint>(actId)))
+    if (!tape.revise_actions(sys, Set<uint>(), Set<uint>(actidx)))
     {
       if (tape.bt_dbog) {
         DBog0("giveup");
@@ -103,14 +129,6 @@ AddConvergence(vector<uint>& retActions,
   }
   return false;
 }
-
-/**
- * Add convergence to a system.
- * The system will therefore be self-stabilizing.
- *
- * \param sys  System definition. It is modified if convergence is added.
- * \return  True iff convergence could be added.
- */
 
 /**
  * Initialize synthesis structures.
@@ -198,7 +216,13 @@ InitStabilitySyn(StabilitySyn& synctx,
   return good;
 }
 
-
+ /**
+ * Add convergence to a system.
+ * The system will therefore be self-stabilizing.
+ *
+ * \param sys  System definition. It is modified if convergence is added.
+ * \return  True iff convergence could be added.
+ */
   bool
 AddConvergence(Xn::Sys& sys, const AddConvergenceOpt& opt)
 {
@@ -233,6 +257,7 @@ int main(int argc, char** argv)
   const char* infile_path = 0;
   const char* outfile_path = 0;
   bool use_random_method = false;
+  bool use_rank_shuffle_method = false;
 
   // Use to disable picking only actions which resolve deadlocks
   // by making them backwards reachable from the invariant.
@@ -256,12 +281,23 @@ int main(int argc, char** argv)
     else if (eq_cstr (arg, "-random")) {
       use_random_method = true;
     }
+    else if (eq_cstr (arg, "-rankshuffle")) {
+      use_rank_shuffle_method = true;
+    }
     else if (eq_cstr (arg, "-test")) {
       DBog0( "Running tests..." );
       Test();
       DBog0( "Done." );
       lose_sysCx ();
       return 0;
+    }
+    else if (eq_cstr (arg, "-def")) {
+      if (argi + 2 >= argc) {
+        failout_sysCx("2 arguments needed for -def.\n");
+      }
+      const char* key = argv[argi++];
+      const char* val = argv[argi++];
+      // TODO: Pass these down to the file read.
     }
     else if (eq_cstr (arg, "-x")) {
       DBog0("Problem: From File");
@@ -363,7 +399,13 @@ int main(int argc, char** argv)
     }
     found =
       flat_backtrack_synthesis(sys.actions, infile_path, opt);
-    // ordering_synthesis(sys.actions, infile_path);
+  }
+  else if (use_rank_shuffle_method) {
+    if (!infile_path) {
+      failout_sysCx ("Need to use input file with rank shuffle method!");
+    }
+    found =
+      ordering_synthesis(sys.actions, infile_path);
   }
   else {
     found = AddConvergence(sys, opt);

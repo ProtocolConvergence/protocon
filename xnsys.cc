@@ -206,8 +206,8 @@ Net::oput(ostream& of,
   return of;
 }
 
-  ostream&
-Net::oput_pfmla(ostream& of, Cx::PFmla pf,
+  Cx::OFile&
+Net::oput_pfmla(Cx::OFile& of, Cx::PFmla pf,
                 Sign pre_or_img, bool just_one) const
 {
   Cx::Table<uint> state_pre(this->vbls.sz(), 0);
@@ -252,20 +252,20 @@ Net::oput_pfmla(ostream& of, Cx::PFmla pf,
 }
 
 
-  ostream&
-Net::oput_one_xn(ostream& of, const Cx::PFmla& pf) const
+  Cx::OFile&
+Net::oput_one_xn(Cx::OFile& of, const Cx::PFmla& pf) const
 {
   return this->oput_pfmla(of, pf, 0, true);
 }
 
-  ostream&
-Net::oput_all_xn(ostream& of, const Cx::PFmla& pf) const
+  Cx::OFile&
+Net::oput_all_xn(Cx::OFile& of, const Cx::PFmla& pf) const
 {
   return this->oput_pfmla(of, pf, 0, false);
 }
 
-  ostream&
-Net::oput_all_pf(ostream& of, const Cx::PFmla& pf) const
+  Cx::OFile&
+Net::oput_all_pf(Cx::OFile& of, const Cx::PFmla& pf) const
 {
   return this->oput_pfmla(of, pf, -1, false);
 }
@@ -332,7 +332,8 @@ Sys::integrityCk() const
     good = false;
 
     Cx::PFmla bad_xn = this->shadow_pfmla & this->invariant & (~this->invariant).as_img();
-    topo.oput_one_xn(std::cerr, bad_xn);
+    Cx::OFile of( stderr_OFile () );
+    topo.oput_one_xn(of, bad_xn);
   }
 
   return good;

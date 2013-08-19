@@ -609,6 +609,29 @@ count_actions_in_cycle (const Cx::PFmla& scc, Cx::PFmla edg,
   return n;
 }
 
+#if 0
+/** Detect cycles added by new action when we have the transitive
+ * closure of all actions so far. This is a fast check, but computing
+ * the transitive closure takes a long time since it a set of transitions
+ * rather than just states.
+ */
+static
+  bool
+reach_cycle_ck (const Cx::PFmla& reach, const Cx::PFmla& act_pf, const Cx::PFmla& state_pf)
+{
+  const Cx::PFmla& trim_reach = act_pf.img() & act_pf.pre().as_img() & reach;
+
+  Cx::PFmla next( state_pf & trim_reach.img() );
+  Cx::PFmla pf( false );
+  while (!pf.equiv_ck(next))
+  {
+    pf = next;
+    next &= trim_reach.img(act_pf.img(next));
+  }
+  return pf.sat_ck();
+}
+#endif
+
 /** Infer and prune actions from candidate list.**/
   bool
 StabilitySynLvl::check_forward(const Xn::Sys& sys)
@@ -662,23 +685,6 @@ StabilitySynLvl::check_forward(const Xn::Sys& sys)
         dels |= actidx;
         continue;
       }
-      Cx::PFmla scc;
-      if (CycleCk(&scc, this->loXnRel | act_pf, ~pf)) {
-        DBog0("CYCLE PRUNED!");
-        //uint n = count_actions_in_cycle(scc, act_pf, this->actions, topo);
-        //DBog1("scc actions: %u", n);
-        dels |= actidx;
-        continue;
-      }
-    }
-    else {
-      Cx::PFmla scc;
-      if (CycleCk(&scc, this->loXnRel | act_pf, ~invariant)) {
-        //uint n = count_actions_in_cycle(scc, act_pf, this->actions, topo);
-        //DBog1("scc actions: %u", n);
-        dels |= actidx;
-        continue;
-      }
     }
 
     if (false && sys.shadow_puppet_synthesis_ck()) {
@@ -691,7 +697,6 @@ StabilitySynLvl::check_forward(const Xn::Sys& sys)
     }
   }
   if (!adds.empty() || !dels.empty()) {
-    this->inferredActions |= adds;
     return this->revise_actions(sys, adds, dels);
   }
   return true;
@@ -709,7 +714,6 @@ StabilitySynLvl::revise_actions(const Xn::Sys& sys,
   const bool use_csp = false;
 
   adds |= this->mcvDeadlocks[1].candidates;
-  this->inferredActions |= this->mcvDeadlocks[1].candidates;
 
   PF addActPF( false );
   for (it = adds.begin(); it != adds.end(); ++it) {
@@ -727,7 +731,15 @@ StabilitySynLvl::revise_actions(const Xn::Sys& sys,
   }
 
   if (!(adds & dels).empty()) {
-    DBog0( "Tried to add conflicting actions... this is not good!!!" );
+    if ((adds & dels) <= this->mcvDeadlocks[1].candidates)
+    {
+      if (this->bt_dbog)
+        DBog0( "Conflicting add from MCV." );
+    }
+    else
+    {
+      DBog0( "Tried to add conflicting actions... this is not good!!!" );
+    }
     return false;
   }
 
@@ -766,7 +778,7 @@ StabilitySynLvl::revise_actions(const Xn::Sys& sys,
       LegitInvariant(sys, this->loXnRel, this->hiXnRel);
     if (this->hi_invariant.tautology_ck(false)) {
       if (this->bt_dbog) {
-        DBogOF << "LEGIT";
+        DBogOF << "LEGIT\n";
       }
       return false;
     }
@@ -775,16 +787,26 @@ StabilitySynLvl::revise_actions(const Xn::Sys& sys,
     this->hi_invariant = sys.invariant;
   }
 
-  if (CycleCk(this->loXnRel, ~this->hi_invariant)) {
+  Cx::PFmla scc;
+  if (CycleCk(&scc, this->loXnRel, ~this->hi_invariant)) {
+    //uint n = count_actions_in_cycle(scc, act_pf, this->actions, topo);
+    //DBog1("scc actions: %u", n);
     if (this->bt_dbog) {
-      DBogOF << "CYCLE";
+      DBogOF << "CYCLE\n";
+    }
+    this->conflict_set.clear();
+    for (uint i = 0; i < this->actions.size(); ++i) {
+      uint actidx = this->actions[i];
+      if (scc.overlap_ck(topo.action_pfmla(actidx))) {
+        this->conflict_set |= actidx;
+      }
     }
     return false;
   }
 
   if (!WeakConvergenceCk(sys, this->hiXnRel, this->hi_invariant)) {
     if (this->bt_dbog) {
-      DBogOF << "REACH";
+      DBogOF << "REACH\n";
     }
     return false;
   }

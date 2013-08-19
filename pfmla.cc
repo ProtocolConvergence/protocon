@@ -350,6 +350,19 @@ UndirectedReachability(const Cx::PFmla& xn, const Cx::PFmla& pf)
   return visit;
 }
 
+  Cx::PFmla
+transitive_closure(const Cx::PFmla& xn)
+{
+  Cx::PFmla reach( false );
+  Cx::PFmla next( xn );
+  while (!reach.equiv_ck (next))
+  {
+    reach = next;
+    next |= reach.dotjoin(reach);
+  }
+  return reach;
+}
+
 /**
  * Check for cycles within some state predicate.
  *

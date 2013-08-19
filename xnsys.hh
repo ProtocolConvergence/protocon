@@ -227,11 +227,11 @@ public:
                 const String& pfx,
                 const String& sfx) const;
 
-  ostream& oput_pfmla(ostream& of, Cx::PFmla pf,
-                      Sign pre_or_img, bool just_one) const;
-  ostream& oput_one_xn(ostream& of, const Cx::PFmla& pf) const;
-  ostream& oput_all_xn(ostream& of, const Cx::PFmla& pf) const;
-  ostream& oput_all_pf(ostream& of, const Cx::PFmla& pf) const;
+  Cx::OFile& oput_pfmla(Cx::OFile& of, Cx::PFmla pf,
+                        Sign pre_or_img, bool just_one) const;
+  Cx::OFile& oput_one_xn(Cx::OFile& of, const Cx::PFmla& pf) const;
+  Cx::OFile& oput_all_xn(Cx::OFile& of, const Cx::PFmla& pf) const;
+  Cx::OFile& oput_all_pf(Cx::OFile& of, const Cx::PFmla& pf) const;
 
 private:
   void make_action_pfmla(uint actid);

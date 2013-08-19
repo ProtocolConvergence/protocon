@@ -84,11 +84,16 @@ public:
     return *this;
   }
 
+  bool sat_ck() const
+  {
+    return sat_ck_PFmla (this->g);
+  }
+
   /// Check if this is a tautology.
   bool tautology_ck(bool t = true) const
   {
     if (t)  return tautology_ck_PFmla (g);
-    return unsat_ck_PFmla (g);
+    return !this->sat_ck();
   }
 
   bool equiv_ck(const PFmla& pf) const
@@ -235,6 +240,13 @@ public:
     return dst;
   }
 
+  PFmla img_as_img() const
+  {
+    PFmla dst;
+    img_as_img_PFmla (&dst.g, this->g);
+    return dst;
+  }
+
   PFmla img(const PFmla& pre_arg) const
   {
     PFmla dst;
@@ -246,6 +258,20 @@ public:
   {
     PFmla dst;
     img_PFmla (&dst.g, this->g);
+    return dst;
+  }
+
+  PFmla dotjoin(const PFmla& b) const
+  {
+    PFmla dst;
+    dotjoin_PFmla (&dst.g, this->g, b.g);
+    return dst;
+  }
+
+  PFmla inverse() const
+  {
+    PFmla dst;
+    inverse_PFmla (&dst.g, this->g);
     return dst;
   }
 
@@ -505,6 +531,8 @@ PF
 BackwardReachability(const PF& xnRel, const PF& pf);
 Cx::PFmla
 UndirectedReachability(const Cx::PFmla& xn, const Cx::PFmla& pf);
+Cx::PFmla
+transitive_closure(const Cx::PFmla& xn);
 bool
 CycleCk(PF* scc, const PF& xnRel, const PF& pf);
 bool

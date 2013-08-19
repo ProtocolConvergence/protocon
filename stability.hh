@@ -98,8 +98,8 @@ public:
   uint failed_bt_level;
 
   vector<uint> actions; ///< Chosen actions.
-  Set<uint> inferredActions; ///< Inferred actions.
   vector<uint> candidates; ///< Candidate actions.
+  Cx::Set<uint> conflict_set; ///< Conflict set for backjumping.
   PF deadlockPF; ///< Current deadlocks.
   PF loXnRel; ///< Under-approximation of the transition function.
   PF hiXnRel; ///< Over-approximation of the transition function.

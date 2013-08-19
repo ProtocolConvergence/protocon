@@ -254,14 +254,14 @@ tautology_ck_PFmla (const PFmla g)
 }
 
   bool
-unsat_ck_PFmla (const PFmla g)
+sat_ck_PFmla (const PFmla g)
 {
   Trit phase = phase_of_PFmla (g);
   if (phase != May)
-    return phase == Nil;
+    return phase == Yes;
 
-  if (g->ctx->vt->unsat_ck_fn)
-    return g->ctx->vt->unsat_ck_fn (g->ctx, g);
+  if (g->ctx->vt->sat_ck_fn)
+    return g->ctx->vt->sat_ck_fn (g->ctx, g);
 
   Claim( g->ctx->vt->tautology_ck_fn );
   {
@@ -270,7 +270,7 @@ unsat_ck_PFmla (const PFmla g)
     g->ctx->vt->op2_fn (g->ctx, &c, BitOp_NOT0, g, g);
     ret = g->ctx->vt->tautology_ck_fn (g->ctx, c);
     lose_PFmla (&c);
-    return ret;
+    return !ret;
   }
 }
 
@@ -285,14 +285,14 @@ equiv_ck_PFmla (const PFmla a, const PFmla b)
     if (phase_a == Yes)
       return tautology_ck_PFmla (b);
     else
-      return unsat_ck_PFmla (b);
+      return !sat_ck_PFmla (b);
   }
   if (phase_b != May)
   {
     if (phase_b == Yes)
       return tautology_ck_PFmla (a);
     else
-      return unsat_ck_PFmla (a);
+      return !sat_ck_PFmla (a);
   }
 
   Claim2( a->ctx ,==, b->ctx );
@@ -319,13 +319,13 @@ overlap_ck_PFmla (const PFmla a, const PFmla b)
   if (phase_a != May)
   {
     if (phase_a == Yes)
-      return !unsat_ck_PFmla (b);
+      return sat_ck_PFmla (b);
     return false;
   }
   if (phase_b != May)
   {
     if (phase_b == Yes)
-      return !unsat_ck_PFmla (a);
+      return sat_ck_PFmla (a);
     return false;
   }
 
@@ -337,7 +337,7 @@ overlap_ck_PFmla (const PFmla a, const PFmla b)
     PFmla c = dflt_PFmla ();
     bool ret;
     and_PFmla (&c, a, b);
-    ret = !unsat_ck_PFmla (c);
+    ret = sat_ck_PFmla (c);
     lose_PFmla (&c);
     return ret;
   }
@@ -359,7 +359,7 @@ subseteq_ck_PFmla (const PFmla a, const PFmla b)
   {
     if (phase_b == Yes)
       return true;
-    return unsat_ck_PFmla (a);
+    return !sat_ck_PFmla (a);
   }
 
   Claim2( a->ctx ,==, b->ctx );
@@ -452,6 +452,21 @@ pre1_PFmla (PFmla* dst, const PFmla a, const PFmla b)
 }
 
   void
+img_as_img_PFmla (PFmla* dst, const PFmla a)
+{
+  Trit phase = phase_of_PFmla (a);
+  if (phase != May)
+  {
+    wipe1_PFmla (dst, phase == Yes);
+  }
+  else
+  {
+    pre_op2_PFmla (dst, a, a);
+    a->ctx->vt->img_as_img_fn (a->ctx, dst, a);
+  }
+}
+
+  void
 img_PFmla (PFmla* dst, const PFmla a)
 {
   Trit phase = phase_of_PFmla (a);
@@ -486,6 +501,47 @@ img1_PFmla (PFmla* dst, const PFmla a, const PFmla b)
   {
     pre_op2_PFmla (dst, a, b);
     a->ctx->vt->img1_fn (a->ctx, dst, a, b);
+  }
+}
+
+  void
+dotjoin_PFmla (PFmla* dst, const PFmla a, const PFmla b)
+{
+  Trit phase_a = phase_of_PFmla (a);
+  Trit phase_b = phase_of_PFmla (b);
+  if (phase_b != May)
+  {
+    if (phase_b == Yes)
+      pre_PFmla (dst, a);
+    else
+      wipe1_PFmla (dst, false);
+  }
+  else if (phase_a != May)
+  {
+    if (phase_a == Yes)
+      img_as_img_PFmla (dst, b);
+    else
+      wipe1_PFmla (dst, false);
+  }
+  else
+  {
+    pre_op2_PFmla (dst, a, b);
+    a->ctx->vt->dotjoin_fn (a->ctx, dst, a, b);
+  }
+}
+
+  void
+inverse_PFmla (PFmla* dst, const PFmla a)
+{
+  Trit phase = phase_of_PFmla (a);
+  if (phase != May)
+  {
+    wipe1_PFmla (dst, phase == Yes);
+  }
+  else
+  {
+    pre_op1_PFmla (dst, a);
+    a->ctx->vt->inverse_fn (a->ctx, dst, a);
   }
 }
 
@@ -672,6 +728,8 @@ add_vbl_PFmlaCtx (PFmlaCtx* ctx, const char* name, uint domsz)
   x->name = cons1_AlphaTab (name);
   x->img_name = cons1_AlphaTab (name);
   cat_cstr_AlphaTab (&x->img_name, "'");
+  x->aux_name = cons1_AlphaTab (name);
+  cat_cstr_AlphaTab (&x->aux_name, "''");
   x->id = id;
   x->domsz = domsz;
   x->list_id = add_vbl_list_PFmlaCtx (ctx);

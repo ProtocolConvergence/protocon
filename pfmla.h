@@ -25,6 +25,7 @@ struct PFmlaVbl
   uint id;
   AlphaTab name;
   AlphaTab img_name;
+  AlphaTab aux_name;
   uint list_id;
 };
 
@@ -41,17 +42,18 @@ struct PFmlaOpVT
   void (*op2_fn) (PFmlaCtx*, PFmla*, BitOp, const PFmla, const PFmla);
 
   void (*smooth_vbls_fn) (PFmlaCtx*, PFmla*, const PFmla, uint, Sign);
-  void (*smooth_pre_vbls_fn) (PFmlaCtx*, PFmla*, const PFmla, uint);
-  void (*smooth_img_vbls_fn) (PFmlaCtx*, PFmla*, const PFmla, uint);
   void (*subst_vbls_fn) (PFmlaCtx*, PFmla*, const PFmla, uint, uint);
   void (*pre_fn) (PFmlaCtx*, PFmla*, const PFmla);
   void (*pre1_fn) (PFmlaCtx*, PFmla*, const PFmla, const PFmla);
+  void (*img_as_img_fn) (PFmlaCtx*, PFmla*, const PFmla);
   void (*img_fn) (PFmlaCtx*, PFmla*, const PFmla);
   void (*img1_fn) (PFmlaCtx*, PFmla*, const PFmla, const PFmla);
+  void (*dotjoin_fn) (PFmlaCtx*, PFmla*, const PFmla, const PFmla);
+  void (*inverse_fn) (PFmlaCtx*, PFmla*, const PFmla);
   void (*as_img_fn) (PFmlaCtx*, PFmla*, const PFmla);
   void (*pick_pre_fn) (PFmlaCtx*, PFmla*, const PFmla);
   bool (*tautology_ck_fn) (PFmlaCtx*, const PFmla);
-  bool (*unsat_ck_fn) (PFmlaCtx*, const PFmla);
+  bool (*sat_ck_fn) (PFmlaCtx*, const PFmla);
   bool (*equiv_ck_fn) (PFmlaCtx*, const PFmla, const PFmla);
   bool (*overlap_ck_fn) (PFmlaCtx*, const PFmla, const PFmla);
   bool (*subseteq_ck_fn) (PFmlaCtx*, const PFmla, const PFmla);
@@ -99,7 +101,7 @@ xor_PFmla (PFmla* c, const PFmla a, const PFmla b);
 bool
 tautology_ck_PFmla (const PFmla g);
 bool
-unsat_ck_PFmla (const PFmla g);
+sat_ck_PFmla (const PFmla g);
 bool
 equiv_ck_PFmla (const PFmla a, const PFmla b);
 bool
@@ -117,9 +119,15 @@ pre_PFmla (PFmla* dst, const PFmla a);
 void
 pre1_PFmla (PFmla* dst, const PFmla a, const PFmla b);
 void
+img_as_img_PFmla (PFmla* dst, const PFmla a);
+void
 img_PFmla (PFmla* dst, const PFmla a);
 void
 img1_PFmla (PFmla* dst, const PFmla a, const PFmla b);
+void
+dotjoin_PFmla (PFmla* dst, const PFmla a, const PFmla b);
+void
+inverse_PFmla (PFmla* dst, const PFmla a);
 void
 as_img_PFmla (PFmla* dst, const PFmla a);
 void
@@ -213,6 +221,7 @@ lose_PFmlaVbl (PFmlaVbl* x)
 {
   lose_AlphaTab (&x->name);
   lose_AlphaTab (&x->img_name);
+  lose_AlphaTab (&x->aux_name);
 }
 
 qual_inline
