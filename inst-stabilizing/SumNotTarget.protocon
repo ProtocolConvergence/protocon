@@ -5,13 +5,13 @@ constant N := 5;
 constant M := 3;
 constant Target := M-1;
 
-variable x[Int % N] : Int % M;
+variable x[Int % N] <- Int % M;
 
-process P[i : Int % N]
+process P[i <- Int % N]
 {
   read:  x[i-1];
   write: x[i];
   act: ( x[i-1] + x[i] == Target --> x[i] := Target + 1 - x[i-1]; );
-  invariant: x[i-1] + x[i] != Target;
+  legit: x[i-1] + x[i] != Target;
 }
 

@@ -76,6 +76,7 @@ public:
   Cx::URandom urandom;
   AddConvergenceOpt opt;
   volatile bool* solution_found;
+  Cx::LgTable< Set<uint> > conflict_sets;
 
   StabilitySyn()
     : csp_base_pfmla(true)
@@ -86,6 +87,7 @@ public:
     , urandom(pcidx, npcs)
     , solution_found(0)
   {}
+  void add_conflict_set(const Set<uint>& conflict_set);
 };
 
 // Decision level for synthesis.
@@ -99,7 +101,6 @@ public:
 
   vector<uint> actions; ///< Chosen actions.
   vector<uint> candidates; ///< Candidate actions.
-  Cx::Set<uint> conflict_set; ///< Conflict set for backjumping.
   PF deadlockPF; ///< Current deadlocks.
   PF loXnRel; ///< Under-approximation of the transition function.
   PF hiXnRel; ///< Over-approximation of the transition function.

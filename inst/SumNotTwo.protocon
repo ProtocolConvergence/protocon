@@ -3,12 +3,12 @@ protocol SumNotTwo;
 
 constant N := 5;
 
-variable x[Int % N] : Int % 3;
+variable x[Int % N] <- Int % 3;
 
-process P[i : Int % N]
+process P[i <- Int % N]
 {
   read:  x[i-1];
   write: x[i];
-  invariant: x[i] + x[i-1] != 2;
+  legit: x[i] + x[i-1] != 2;
 }
 

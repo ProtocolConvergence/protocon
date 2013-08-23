@@ -268,7 +268,7 @@ vbl_lookup_PFmlaCtx (PFmlaCtx* ctx, const char* s)
 {
   AlphaTab alpha = dflt1_AlphaTab (s);
   Assoc* assoc = lookup_Associa (&ctx->vbl_map, &alpha);
-  return *(PFmlaVbl**) val_of_Assoc (assoc);
+  return *(PFmlaVbl**) val_of_Assoc (&ctx->vbl_map, assoc);
 }
 
 #endif

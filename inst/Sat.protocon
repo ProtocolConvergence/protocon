@@ -19,11 +19,11 @@ protocol Sat;
 // Number of variables in 3-SAT formula.
 constant M := 3;
 
-variable x[Nat % 3] : Nat % M;
-variable y[Nat % 3] : Nat % 2;
-variable sat[Nat % 1] : Nat % 2;
+variable x[Nat % 3] <- Nat % M;
+variable y[Nat % 3] <- Nat % 2;
+variable sat[Nat % 1] <- Nat % 2;
 
-process P[i : Nat % 3]
+process P[i <- Nat % 3]
 {
   read: sat[0];
   read: x[i];
@@ -32,21 +32,21 @@ process P[i : Nat % 3]
 
 // Uncomment these instead if you don't want symmetry.
 // (Hint: They will still be symmetric!)
-//process P0[i : Nat % 1] { read: sat[0], x[0]; write: y[0]; }
-//process P1[i : Nat % 1] { read: sat[0], x[1]; write: y[1]; }
-//process P2[i : Nat % 1] { read: sat[0], x[2]; write: y[2]; }
+//process P0[i <- Nat % 1] { read: sat[0], x[0]; write: y[0]; }
+//process P1[i <- Nat % 1] { read: sat[0], x[1]; write: y[1]; }
+//process P2[i <- Nat % 1] { read: sat[0], x[2]; write: y[2]; }
 
 
-process P3[i : Nat % 1]
+process P3[i <- Nat % 1]
 {
   read: x[0], x[1], x[2];
   read: y[0], y[1], y[2];
   write: sat[0];
 }
 
-invariant:
-  (forall i : Nat % 3 :
-   (forall j : Nat % 3 :
+legit:
+  (forall i <- Nat % 3 :
+   (forall j <- Nat % 3 :
     (x[i] != x[j]) || (y[i] == y[j])))
   &&
   (sat[0] == 1)

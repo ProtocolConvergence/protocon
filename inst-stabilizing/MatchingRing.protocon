@@ -3,9 +3,9 @@ protocol MatchingRing;
 
 constant N := 7;
 
-variable x[Int % N] : Int % 3;
+variable x[Int % N] <- Int % 3;
 
-process P[i : Int % N]
+process P[i <- Int % N]
 {
   read:  x[i-1];
   write: x[i];
@@ -16,7 +16,7 @@ process P[i : Int % N]
   act: ( x[i-1]!=1 && x[i]!=1 && x[i+1]==2 --> x[i]:=1; );
   act: ( x[i-1]==1 && x[i]!=2 && x[i+1]!=2 --> x[i]:=2; );
 
-  invariant:
+  legit:
     (   x[i-1] == 2 && x[i] == 1
      || x[i-1] == 1 && x[i] == 0 && x[i+1] == 2
      ||                x[i] == 2 && x[i+1] == 1

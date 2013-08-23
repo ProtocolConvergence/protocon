@@ -3,10 +3,10 @@ protocol DijkstraFourState;
 
 constant N := 7;
 
-variable up[Int % N] : Int % 2;
-variable z[Int % N] : Int % 2;
+variable up[Int % N] <- Int % 2;
+variable z[Int % N] <- Int % 2;
 
-process Bot[i : Int % 1]
+process Bot[i <- Int % 1]
 {
   write: up[i], z[i];
   read:  up[i+1], z[i+1];
@@ -18,7 +18,7 @@ process Bot[i : Int % 1]
        );
 }
 
-process P[j : Int % (N-2)]
+process P[j <- Int % (N-2)]
 {
   let i := j+1;
   read: z[i-1];
@@ -28,7 +28,7 @@ process P[j : Int % (N-2)]
   act: ( z[i-1]==z[i] && up[i]==1 && (up[i+1]==0 && z[i-1]==z[i+1]) --> up[i] := 0; );
 }
 
-process Top[j : Int % 1]
+process Top[j <- Int % 1]
 {
   let i := N-1;
   read: z[i-1];
@@ -40,12 +40,12 @@ process Top[j : Int % 1]
        );
 }
 
-invariant:
+legit:
   // The bottom and top processes have fixed up values.
   up[0] == 1 && up[N-1] == 0 &&
   // Some process is enabled.
   // This condition should be subsumed by the next condition that one process has a token.
-  (exists i : Int % N :
+  (exists i <- Int % N :
    (   (i == 0 &&
         (up[i] == 0) || (up[i+1] == 0 && z[i] == z[i+1]))
     || (i != 0 && i != N-1 &&
@@ -58,7 +58,7 @@ invariant:
   )
   &&
   // One process has a token.
-  (unique i : Int % N :
+  (unique i <- Int % N :
    (   (i == 0 &&
         up[i+1] == 0 && z[i] == z[i+1])
     || (i != 0 && i != N-1 &&

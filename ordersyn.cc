@@ -28,10 +28,13 @@ flat_backtrack_synthesis(vector<uint>& ret_actions, const char* infile_path,
   bool done = false;
   bool solution_found = false;
   uint NPcs = 0; 
+  Cx::LgTable< Set<uint> > conflict_sets;
+
 #ifdef _OPENMP
-#pragma omp parallel shared(done,NPcs,solution_found)
+#pragma omp parallel shared(done,NPcs,solution_found,conflict_sets)
 #endif
   {
+  Sign good = 1;
   AddConvergenceOpt opt(global_opt);
   uint PcIdx;
 #ifdef _OPENMP
@@ -42,9 +45,6 @@ flat_backtrack_synthesis(vector<uint>& ret_actions, const char* infile_path,
     ++ NPcs;
   }
 
-  Xn::Sys sys;
-  ReadProtoconFile(sys, infile_path);
-
 #ifdef _OPENMP
 #pragma omp barrier
 #endif
@@ -53,18 +53,35 @@ flat_backtrack_synthesis(vector<uint>& ret_actions, const char* infile_path,
   opt.random_one_shot = true;
   opt.bt_dbog = false;
 
+  Xn::Sys sys;
+  DoLegit(good, "reading file")
+    good =
+    ReadProtoconFile(sys, infile_path);
+
   StabilitySyn synctx( PcIdx, NPcs );
   StabilitySynLvl synlvl( &synctx );
-  InitStabilitySyn(synctx, synlvl, sys, opt);
+
+  DoLegit(good, "initialization")
+    good =
+    InitStabilitySyn(synctx, synlvl, sys, opt);
+
   synctx.solution_found = &solution_found;
 
-  for (uint i = 0; !done && i < ntrials; ++i)
+  if (!good)
+  {
+#ifdef _OPENMP
+#pragma omp critical
+#endif
+    done = true;
+  }
+
+  for (uint trialidx = 0; !done && trialidx < ntrials; ++trialidx)
   {
 #ifdef _OPENMP
 #pragma omp critical
 #endif
     {
-    DBog2( "trial %u %u", PcIdx, i+1 );
+    DBog2( "trial %u %u", PcIdx, trialidx+1 );
     }
 
 
@@ -72,17 +89,24 @@ flat_backtrack_synthesis(vector<uint>& ret_actions, const char* infile_path,
     bool found =
       AddConvergence(actions, sys, synlvl, opt);
 
-    if (found)
-    {
 #ifdef _OPENMP
 #pragma omp critical
 #endif
-      {
+    {
+    if (found)
+    {
       done = true;
       ret_actions = actions;
       solution_found = true;
       DBog0("SOLUTION FOUND!");
-      }
+    }
+    else
+    {
+      for (ujint i = conflict_sets.begidx(); i != Max_ujint; i = conflict_sets.nextidx(i))
+        synctx.add_conflict_set(conflict_sets[i]);
+
+      conflict_sets = synctx.conflict_sets;
+    }
     }
   }
   }
@@ -193,10 +217,14 @@ ordering_synthesis(vector<uint>& ret_actions, const char* infile_path)
   bool done = false;
   bool solution_found = false;
   uint NPcs = 0; 
+  Cx::LgTable< Set<uint> > conflict_sets;
+
 #ifdef _OPENMP
-#pragma omp parallel shared(done,NPcs,solution_found)
+#pragma omp parallel shared(done,NPcs,solution_found,conflict_sets)
 #endif
   {
+  Sign good = 1;
+  AddConvergenceOpt opt;
   uint PcIdx;
 #ifdef _OPENMP
 #pragma omp critical
@@ -209,35 +237,38 @@ ordering_synthesis(vector<uint>& ret_actions, const char* infile_path)
 #ifdef _OPENMP
 #pragma omp barrier
 #endif
-
-  Xn::Sys sys;
-  ReadProtoconFile(sys, infile_path);
-
-  StabilitySyn synctx( PcIdx, NPcs );
-  StabilitySynLvl synlvl( &synctx );
-  AddConvergenceOpt opt;
   opt.sys_pcidx = PcIdx;
   opt.sys_npcs = NPcs;
   opt.bt_dbog = false;
-  bool good =
+
+  Xn::Sys sys;
+  DoLegit(good, "reading file")
+    good =
+    ReadProtoconFile(sys, infile_path);
+
+  StabilitySyn synctx( PcIdx, NPcs );
+  StabilitySynLvl synlvl( &synctx );
+
+  DoLegit(good, "initialization")
+    good =
     InitStabilitySyn(synctx, synlvl, sys, opt);
+
   synctx.solution_found = &solution_found;
 
   Cx::Table< Cx::Table<uint> > act_layers;
-  good = good &&
+  DoLegit(good, "ranking actions")
+    good =
     rank_actions (act_layers, sys.topology,
                   synlvl.candidates,
                   synlvl.hiXnRel,
                   synlvl.hi_invariant);
 
+  if (!good)
+  {
 #ifdef _OPENMP
 #pragma omp critical
 #endif
-  {
-    if (!good)
-    {
       done = true;
-    }
   }
 
   vector<uint> actions;
@@ -273,17 +304,24 @@ ordering_synthesis(vector<uint>& ret_actions, const char* infile_path)
       }
     }
 
-    if (found)
-    {
 #ifdef _OPENMP
 #pragma omp critical
 #endif
-      {
+    {
+    if (found && !solution_found)
+    {
       solution_found = true;
       done = true;
       ret_actions = actions;
       DBog0("SOLUTION FOUND!");
-      }
+    }
+    else
+    {
+      for (ujint i = conflict_sets.begidx(); i != Max_ujint; i = conflict_sets.nextidx(i))
+        synctx.add_conflict_set(conflict_sets[i]);
+
+      conflict_sets = synctx.conflict_sets;
+    }
     }
   }
   }

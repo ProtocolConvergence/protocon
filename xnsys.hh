@@ -5,6 +5,7 @@
 #include "cx/set.hh"
 #include "cx/synhax.hh"
 #include "cx/table.hh"
+#include "cx/lgtable.hh"
 #include "cx/alphatab.hh"
 #include "cx/ofile.hh"
 #include "cx/map.hh"

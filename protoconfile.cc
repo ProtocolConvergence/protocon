@@ -331,6 +331,7 @@ ProtoconFile::expression_chunks(Cx::Table<Cx::String>& chunks, Sesp a, const Cx:
   }
   else if (eq_cstr (key, "&&") ||
            eq_cstr (key, "||") ||
+           eq_cstr (key, "=>") ||
            eq_cstr (key, "==") ||
            eq_cstr (key, "!=") ||
            eq_cstr (key, "+") ||
@@ -340,7 +341,8 @@ ProtoconFile::expression_chunks(Cx::Table<Cx::String>& chunks, Sesp a, const Cx:
            eq_cstr (key, "%")) {
     bool pad =
       (eq_cstr (key, "&&") ||
-       eq_cstr (key, "||"));
+       eq_cstr (key, "||") ||
+       eq_cstr (key, "=>"));
     expression_chunks (chunks, cadr_of_Sesp (a), idx_name);
     if (pad)  chunks.top() += " ";
     chunks.top() += key;
@@ -434,6 +436,13 @@ ProtoconFile::eval(Cx::PFmla& pf, Sesp a)
     if (LegitCk( eval(pf, b), good, "" )) {
       if (LegitCk( eval(pf_c, c), good, "" )) {
         pf |= pf_c;
+      }
+    }
+  }
+  else if (eq_cstr (key, "=>")) {
+    if (LegitCk( eval(pf, b), good, "" )) {
+      if (LegitCk( eval(pf_c, c), good, "" )) {
+        pf = ~pf | pf_c;
       }
     }
   }
@@ -671,7 +680,7 @@ ProtoconFile::eval(Cx::IntPFmla& ipf, Sesp a)
   }
   else if (eq_cstr (key, "NatDom")) {
     uint domsz = 0;
-    if (LegitCk(uint_of_Sesp (b, &domsz), good, "")) {
+    if (LegitCk(eval_gtz (&domsz, b), good, "")) {
       ipf = Cx::IntPFmla( 1, 0, domsz );
     }
   }

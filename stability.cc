@@ -569,6 +569,42 @@ QuickTrim(Set<uint>& delSet,
   }
 }
 
+  void
+small_cycle_conflict (Set<uint>& conflict_set,
+                      const Cx::PFmla& scc,
+                      const vector<uint>& actions,
+                      const Xn::Net& topo)
+{
+  conflict_set.clear();
+
+  Cx::PFmla edg( false );
+  Cx::Table<uint> scc_actidcs;
+  for (uint i = 0; i < actions.size(); ++i) {
+    uint actidx = actions[i];
+    const Cx::PFmla& act_pfmla = topo.action_pfmla(actidx);
+    if (scc.overlap_ck(act_pfmla)) {
+      if (scc.overlap_ck(act_pfmla.img())) {
+        edg |= act_pfmla;
+        scc_actidcs.push(actidx);
+      }
+    }
+  }
+
+  // Go in reverse so actions chosen at earlier levels are more likely
+  // to be used in conflict set.
+  for (uint i = scc_actidcs.sz(); i > 0;) {
+    i -= 1;
+    uint actidx = scc_actidcs[i];
+    const Cx::PFmla& act_pfmla = topo.action_pfmla(actidx);
+    if (CycleCk(edg - act_pfmla, scc)) {
+        edg -= act_pfmla;
+    }
+    else {
+      conflict_set |= actidx;
+    }
+  }
+  //Claim( CycleCk(edg, scc) );
+}
 
   uint
 count_actions_in_cycle (const Cx::PFmla& scc, Cx::PFmla edg,
@@ -607,6 +643,21 @@ count_actions_in_cycle (const Cx::PFmla& scc, Cx::PFmla edg,
   DBog1("needed:%u", nneed);
   DBog1("nmin:%u", nmin);
   return n;
+}
+
+  void
+StabilitySyn::add_conflict_set(const Set<uint>& a)
+{
+  for (ujint i = this->conflict_sets.begidx();
+       i != Max_ujint;
+       i = this->conflict_sets.nextidx(i))
+  {
+    if (a.subseteq_ck(this->conflict_sets[i])) {
+      //DBog0("pruning!");
+      this->conflict_sets.giveidx(i);
+    }
+  }
+  this->conflict_sets[this->conflict_sets.takeidx()] = a;
 }
 
 #if 0
@@ -649,6 +700,9 @@ StabilitySynLvl::check_forward(const Xn::Sys& sys)
   Set<uint> dels;
   adds |= this->mcvDeadlocks[1].candidates;
 
+  Set<uint> action_set( this->actions );
+  action_set |= adds;
+
   for (uint i = 0; i < this->candidates.size(); ++i) {
     uint actidx = this->candidates[i];
     if (dels.elem_ck(actidx))  continue;
@@ -669,6 +723,24 @@ StabilitySynLvl::check_forward(const Xn::Sys& sys)
       }
       dels |= actidx;
       continue;
+    }
+
+    action_set |= actidx;
+    bool conflict_found = false;
+    for (ujint conflict_idx = this->ctx->conflict_sets.begidx();
+         conflict_idx != Max_ujint;
+         conflict_idx = this->ctx->conflict_sets.nextidx(conflict_idx))
+    {
+      const Set<uint>& conflict_set = this->ctx->conflict_sets[conflict_idx];
+      if (conflict_set.subseteq_ck(action_set)) {
+        dels |= actidx;
+        conflict_found = true;
+        break;
+      }
+    }
+    action_set -= Set<uint>(actidx);
+    if (conflict_found) {
+      break;
     }
 
     if (this->ctx->opt.random_one_shot)
@@ -794,13 +866,9 @@ StabilitySynLvl::revise_actions(const Xn::Sys& sys,
     if (this->bt_dbog) {
       DBogOF << "CYCLE\n";
     }
-    this->conflict_set.clear();
-    for (uint i = 0; i < this->actions.size(); ++i) {
-      uint actidx = this->actions[i];
-      if (scc.overlap_ck(topo.action_pfmla(actidx))) {
-        this->conflict_set |= actidx;
-      }
-    }
+    Set<uint> conflict_set;
+    small_cycle_conflict (conflict_set, scc, this->actions, topo);
+    this->ctx->add_conflict_set(conflict_set);
     return false;
   }
 

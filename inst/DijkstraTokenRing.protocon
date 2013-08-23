@@ -1,30 +1,30 @@
 
-protocol DijkstraTokenRing;
+// Dijkstra's self-stabilizing token ring.
 
 constant N := 6;
 constant M := N;
 
-variable x[Nat % N] : Nat % M;
+variable x[Nat % N] <- Nat % M;
 
-process Bot[i : Nat % 1]
+process Bot[i <- Nat % 1]
 {
   read:  x[i-1];
   write: x[i];
   act: ( x[i-1] == x[i] --> x[i] := x[i] + 1; );
-  invariant: x[i-1] == x[i] || x[i-1] == (x[i] - 1) % M;
+  legit: x[i-1] == x[i] || x[i-1] == (x[i] - 1) % M;
 }
 
-process P[j : Nat % (N-1)]
+process P[j <- Nat % (N-1)]
 {
   let i := j+1;
   read:  x[i-1];
   write: x[i];
   act: ( x[i-1] == (x[i] + 1) % M --> x[i] := x[i] + 1; );
-  invariant: x[i-1] == (x[i] + 1) % M || x[i-1] == x[i];
+  legit: x[i-1] == (x[i] + 1) % M || x[i-1] == x[i];
 }
 
-invariant:
-  (unique i : Nat % N :
+legit:
+  (unique i <- Nat % N :
    i == 0 && x[i-1] == x[i] ||
    i != 0 && x[i-1] == (x[i] + 1) % M
   )

@@ -720,7 +720,7 @@ add_XnRule (FMem_synsearch* tape, const XnRule* g)
 
 static
     int
-cmp_XnSz (const void* pa, const void* pb)
+cmpi_XnSz (const void* pa, const void* pb)
 {
     const XnSz a = *(XnSz*) pa;
     const XnSz b = *(XnSz*) pb;
@@ -733,9 +733,9 @@ cmp_XnSz (const void* pa, const void* pb)
 /** Only sort by the first member.**/
 static
     int
-cmp_XnSz2 (const void* pa, const void* pb)
+cmpi_XnSz2 (const void* pa, const void* pb)
 {
-    return cmp_XnSz (&((XnSz2*)pa)->i, &((XnSz2*)pb)->i);
+    return cmpi_XnSz (&((XnSz2*)pa)->i, &((XnSz2*)pb)->i);
 }
 #endif
 
@@ -828,7 +828,7 @@ set_may_rules (FMem_synsearch* tape, TableT(XnSz)* may_rules, XnRule* g)
                 elt = (XnSz*)
                     bsearch (&s0, tape->legit_states.s,
                              tape->legit_states.sz, sizeof(XnSz),
-                             cmp_XnSz);
+                             cmpi_XnSz);
 
                 legit_idx = IdxEltTable( tape->legit_states, elt );
 
@@ -837,7 +837,7 @@ set_may_rules (FMem_synsearch* tape, TableT(XnSz)* may_rules, XnRule* g)
                              tape->legit_xns.s[legit_idx].s,
                              tape->legit_xns.s[legit_idx].sz,
                              sizeof(XnSz),
-                             cmp_XnSz);
+                             cmpi_XnSz);
 
                 if (!elt)
                     add = false;
@@ -1056,7 +1056,7 @@ synsearch_trim (FMem_synsearch* tape)
         qsort (tape->influence_order.s,
                tape->influence_order.sz,
                sizeof(*tape->influence_order.s),
-               cmp_XnSz2);
+               cmpi_XnSz2);
         {:for (i ; tape->influence_order.sz)
             /* XnSz idx = tape->influence_order.sz - 1 - i; */
             XnSz idx = i;
@@ -1380,19 +1380,19 @@ testfn_detect_livelock ()
 #include "inst-dijkstra.c"
 #include "inst-dijkstra4state.c"
 
-    Trit
-swapped_XnSz (const XnSz* a, const XnSz* b)
+  Sign
+cmp_XnSz (const XnSz* a, const XnSz* b)
 {
-    return (*a < *b ? Nil : (*a > *b ? Yes : May));
+  return (*a < *b ? -1 : (*a > *b ? 1 : 0));
 }
 
-    Trit
-swapped_XnSz2 (const XnSz2* a, const XnSz2* b)
+  Sign
+cmp_XnSz2 (const XnSz2* a, const XnSz2* b)
 {
-    const Trit swapped = swapped_XnSz (&a->i, &b->i);
-    return (swapped == May
-            ? swapped_XnSz (&a->j, &b->j)
-            : swapped);
+  const Sign si = cmp_XnSz (&a->i, &b->i);
+  return (si == 0
+          ? cmp_XnSz (&a->j, &b->j)
+          : si);
 }
 
 /**
@@ -1421,9 +1421,9 @@ synsearch_sat (FMem_synsearch* tape)
     TableT(XnSz)* may_rules;
     Assoc* assoc;
 
-    InitAssocia( XnSz, TableT(ujint), *lstate_map, swapped_XnSz );
-    InitAssocia( XnSz2, ujint, *xnmap, swapped_XnSz2 );
-    InitAssocia( XnSz2, ujint, *pathmap, swapped_XnSz2 );
+    InitAssocia( XnSz, TableT(ujint), *lstate_map, cmp_XnSz );
+    InitAssocia( XnSz2, ujint, *xnmap, cmp_XnSz2 );
+    InitAssocia( XnSz2, ujint, *pathmap, cmp_XnSz2 );
 
     g = grow1_rules_synsearch (tape);
     may_rules = grow1_may_rules_synsearch (tape);
@@ -1489,7 +1489,7 @@ synsearch_sat (FMem_synsearch* tape)
             if (added)
             {
                 ujint idx = xns.sz;
-                val_fo_Assoc (assoc, &idx);
+                val_fo_Assoc (xnmap, assoc, &idx);
                 xn = Grow1Table( xns );
                 xn->idx = fmla->nvbls ++;
                 xn->impl = dflt_CnfDisj ();
@@ -1499,7 +1499,7 @@ synsearch_sat (FMem_synsearch* tape)
             }
             else
             {
-                ujint idx = *(ujint*) val_of_Assoc (assoc);
+                ujint idx = *(ujint*) val_of_Assoc (xnmap, assoc);
                 xn = &xns.s[idx];
             }
             app_CnfDisj (&xn->impl, true, i);
@@ -1519,7 +1519,7 @@ synsearch_sat (FMem_synsearch* tape)
             XnSz step = step_XnRule (g, sys);
             bool added = false;
             Assoc* assoc = ensure1_Associa (lstate_map, &step, &added);
-            TableT(ujint)* rules = (TableT(ujint)*) val_of_Assoc (assoc);
+            TableT(ujint)* rules = (TableT(ujint)*) val_of_Assoc (lstate_map, assoc);
             if (added)  InitTable( *rules );
             PushTable( *rules, i );
         }
@@ -1535,7 +1535,7 @@ synsearch_sat (FMem_synsearch* tape)
          assoc;
          assoc = next_Assoc (assoc))
     {
-        TableT(ujint)* rules = val_of_Assoc (assoc);
+        TableT(ujint)* rules = val_of_Assoc (lstate_map, assoc);
         {:for (i ; rules->sz)
             {:for (j ; i)
                 clause->lits.sz = 0;
@@ -1566,7 +1566,7 @@ synsearch_sat (FMem_synsearch* tape)
                 t.j = state->to.s[j];
                 assoc = lookup_Associa (xnmap, &t);
                 Claim( assoc );
-                idx = xns.s[*(ujint*) val_of_Assoc (assoc)].idx;
+                idx = xns.s[*(ujint*) val_of_Assoc (xnmap, assoc)].idx;
                 app_CnfDisj (clause, true, idx);
             }
 
@@ -1598,8 +1598,8 @@ synsearch_sat (FMem_synsearch* tape)
     {
         DecloStack1( CnfDisj, path_clause, dflt_CnfDisj () );
 
-        XnSz2 p = *(XnSz2*) key_of_Assoc (assoc);
-        ujint p_ij = *(ujint*) val_of_Assoc (assoc);
+        XnSz2 p = *(XnSz2*) key_of_Assoc (pathmap, assoc);
+        ujint p_ij = *(ujint*) val_of_Assoc (pathmap, assoc);
         TableElT(State) state = states.s[p.j];
 
         app_CnfDisj (path_clause, false, p_ij);
@@ -1613,7 +1613,7 @@ synsearch_sat (FMem_synsearch* tape)
                 /* In this case, just let q_{ikj} = t_{ij}.*/
                 assoc = lookup_Associa (xnmap, &p);
                 Claim( assoc );
-                q_ikj = xns.s[*(ujint*) val_of_Assoc (assoc)].idx;
+                q_ikj = xns.s[*(ujint*) val_of_Assoc (xnmap, assoc)].idx;
             }
             else
             {
@@ -1624,13 +1624,13 @@ synsearch_sat (FMem_synsearch* tape)
                 xn.j = k;
                 assoc = lookup_Associa (pathmap, &xn);
                 if (!assoc)  continue;
-                p_ik = *(ujint*) val_of_Assoc (assoc);
+                p_ik = *(ujint*) val_of_Assoc (pathmap, assoc);
 
                 xn.i = k;
                 xn.j = p.j;
                 assoc = lookup_Associa (xnmap, &xn);
                 Claim( assoc );
-                t_kj = xns.s[*(ujint*) val_of_Assoc (assoc)].idx;
+                t_kj = xns.s[*(ujint*) val_of_Assoc (xnmap, assoc)].idx;
 
                 q_ikj = fmla->nvbls ++;
                 /* We wish for (q_{ikj} == p_{ik} && t_{kj}).*/

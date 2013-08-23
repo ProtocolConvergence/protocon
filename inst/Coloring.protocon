@@ -1,15 +1,16 @@
 
-protocol Coloring;
+// 3-coloring protocol
+// We want no two adjacent colors to be the same.
 
 constant N := 5;
 
-variable c[Int % N] : Int % 3;
+variable c[Int % N] <- Int % 3;
 
-process P[i : Int % N]
+process P[i <- Int % N]
 {
   read:  c[i-1];
   write: c[i];
   read:  c[i+1];
-  invariant: (c[i] != c[i-1]) && (c[i] != c[i+1]);
+  legit: (c[i] != c[i-1]) && (c[i] != c[i+1]);
 }
 

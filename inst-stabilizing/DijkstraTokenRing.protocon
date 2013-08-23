@@ -4,16 +4,16 @@ protocol DijkstraTokenRing;
 constant N := 5;
 constant M := N;
 
-variable x[Int % N] : Int % M;
+variable x[Int % N] <- Int % M;
 
-process Bot[i : Int % 1]
+process Bot[i <- Int % 1]
 {
   read:  x[i-1];
   write: x[i];
   act: ( x[i-1] == x[i] --> x[i] := x[i-1] + 1; );
 }
 
-process P[j : Int % (N-1)]
+process P[j <- Int % (N-1)]
 {
   let i := j+1;
   read:  x[i-1];
@@ -21,8 +21,8 @@ process P[j : Int % (N-1)]
   act: ( x[i-1] != x[i] --> x[i] := x[i-1]; );
 }
 
-invariant:
-  unique i : Int % N :
+legit:
+  unique i <- Int % N :
   (   i == 0 && x[i-1] == x[i]
    || i != 0 && x[i-1] != x[i]
   );

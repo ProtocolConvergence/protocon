@@ -23,6 +23,13 @@ AddConvergence(vector<uint>& retActions,
                StabilitySynLvl& tape,
                const AddConvergenceOpt& opt)
 {
+#if 0
+  for (uint i = 0; i < tape.actions.size(); ++i) {
+    DBogOF << ' ' << tape.actions[i];
+  }
+  DBogOF << '\n';
+#endif
+
   tape.failed_bt_level = tape.bt_level;
   while (!tape.candidates.empty()) {
     if (tape.ctx->solution_found && *tape.ctx->solution_found)
@@ -41,7 +48,7 @@ AddConvergence(vector<uint>& retActions,
 
     Set<uint> next_add_set( actidx );
     Set<uint> next_del_set;
-    while (next.revise_actions(sys, next_add_set, next_del_set))
+    if (next.revise_actions(sys, next_add_set, next_del_set))
     {
       bool found =
         AddConvergence(retActions, sys, next, opt);
@@ -51,34 +58,6 @@ AddConvergence(vector<uint>& retActions,
         }
         return true;
       }
-      if (next.conflict_set.empty())
-        break;
-
-      bool back_up = true;
-      for (uint i = tape.actions.size(); i < next.actions.size(); ++i)
-      {
-        if (next.conflict_set.elem_ck(next.actions[i])) {
-          back_up = false;
-          break;
-        }
-      }
-      if (back_up) {
-        tape.conflict_set = next.conflict_set;
-        return false;
-      }
-
-      next.failed_bt_level = tape.failed_bt_level + 1;
-      for (uint i = 0; i < next.candidates.size(); ++i) {
-        if (next.conflict_set.elem_ck(next.candidates[i])) {
-          next_del_set |= next.candidates[i];
-        }
-      }
-      next = tape;
-    }
-    if (!next.conflict_set.empty())
-    {
-      tape.conflict_set = next.conflict_set;
-      return false;
     }
 
     if (next.failed_bt_level > tape.failed_bt_level) {
@@ -228,7 +207,8 @@ AddConvergence(Xn::Sys& sys, const AddConvergenceOpt& opt)
 {
   StabilitySyn synctx;
   StabilitySynLvl tape( &synctx );
-  InitStabilitySyn(synctx, tape, sys, opt);
+  if (!InitStabilitySyn(synctx, tape, sys, opt))
+    return false;
 
   vector<uint> retActions;
   bool found = AddConvergence(retActions, sys, tape, opt);

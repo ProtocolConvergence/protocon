@@ -3,11 +3,11 @@ protocol ThreeBitTokenRing;
 
 constant N := 5;
 
-variable e[Int % N] : Int % 2;
-variable t[Int % N] : Int % 2;
-variable ready[Int % N] : Int % 2;
+variable e[Int % N] <- Int % 2;
+variable t[Int % N] <- Int % 2;
+variable ready[Int % N] <- Int % 2;
 
-process Bot[i : Int % 1]
+process Bot[i <- Int % 1]
 {
   read:  e[i-1], t[i-1];
   write: e[i], t[i], ready[i];
@@ -22,7 +22,7 @@ process Bot[i : Int % 1]
        );
 }
 
-process P[j : Int % (N-1)]
+process P[j <- Int % (N-1)]
 {
   let i := j+1;
   read:  e[i-1], t[i-1];
@@ -38,15 +38,15 @@ process P[j : Int % (N-1)]
        );
 }
 
-invariant:
+legit:
   // Some process is enabled.
-  (exists i : Int % N :
+  (exists i <- Int % N :
       i == 0 && e[i-1] == e[i]
    || i != 0 && e[i-1] != e[i]
   )
   &&
   // One process has the token.
-  (unique i : Int % N :
+  (unique i <- Int % N :
       i == 0 && t[i-1] == t[i]
    || i != 0 && t[i-1] != t[i]
   );

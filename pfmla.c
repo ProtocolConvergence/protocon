@@ -6,7 +6,7 @@
 init1_PFmlaCtx (PFmlaCtx* ctx, const PFmlaOpVT* vt)
 {
   ctx->vbls = dflt1_LgTable (sizeof(PFmlaVbl));
-  InitAssocia( AlphaTab, PFmlaVbl*, ctx->vbl_map, swapped_AlphaTab );
+  InitAssocia( AlphaTab, PFmlaVbl*, ctx->vbl_map, cmp_AlphaTab );
   InitTable( ctx->vbl_lists );
   ctx->vt = vt;
 }
@@ -742,7 +742,7 @@ add_vbl_PFmlaCtx (PFmlaCtx* ctx, const char* name, uint domsz)
     giveidx_LgTable (&ctx->vbls, id);
     return 0;
   }
-  *(PFmlaVbl**) val_of_Assoc (assoc) = x;
+  *(PFmlaVbl**) val_of_Assoc (&ctx->vbl_map, assoc) = x;
 
   ctx->vt->ctx_add_vbl_fn (ctx, id);
 

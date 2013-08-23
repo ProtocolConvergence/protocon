@@ -4,14 +4,14 @@ protocol Agreement;
 constant N := 5;
 constant M := N;
 
-variable x[Int % N] : Int % M;
+variable x[Int % N] <- Int % M;
 
-process P[i : Int % N]
+process P[i <- Int % N]
 {
   read:  x[i-1];
   write: x[i];
   read: x[i+1];
-  invariant: (x[i-1] - x[i]) % M == (x[i] - x[i+1]) % M;
-  //invariant: (x[i-1] == x[i]);
+  legit: (x[i-1] - x[i]) % M == (x[i] - x[i+1]) % M;
+  //legit: (x[i-1] == x[i]);
 }
 

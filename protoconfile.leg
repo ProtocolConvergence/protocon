@@ -27,8 +27,10 @@ ProtoconFile =
   (WS? ProcDecl)+
   (WS? GlobalLegit)?
   WS? END_OF_FILE
+  ;
 
 Protocol = 'protocol' WS name:ID WS? ';' {}
+  ;
 
 ConstDecl =
   'constant' WS name:ID WS? ':=' WS? v:ConstExpr WS? ';'
@@ -41,6 +43,7 @@ ConstDecl =
       }
     }
   }
+  ;
 
 OptionalShadowPuppetRole =
   {$$.sp = 0;}
@@ -48,6 +51,7 @@ OptionalShadowPuppetRole =
    | 'puppet' WS {$$.sp = make_ccstr_Sesp (yy->st->spctx, "puppet");}
    | 'direct' WS
   )?
+  ;
 
 VarDecl =
   r:OptionalShadowPuppetRole 'variable'
@@ -63,6 +67,7 @@ VarDecl =
     if (r.sp)  lose_Sesp (r.sp);
     yy->st->add_variables(a.sp, b.sp, c.sp, role);
   }
+  ;
 
 ProcDecl =
   'process' WS pc_name:ID '[' WS? idx_name:ID WS? IN WS? npcs:NatDom WS? ']'
@@ -86,17 +91,20 @@ ProcDecl =
     ')' WS? ';' WS?
     {yy->st->add_action (act.sp, idx_name.sp);}
   )*
-  ( INVARIANT WS? legit:Expr WS? ';' WS?
+  ( LEGIT WS? legit:Expr WS? ';' WS?
     {yy->st->add_legit(legit.sp, idx_name.sp);}
   )?
   {yy->st->let_map.clear();}
   '}'
+  ;
 
 GlobalLegit =
-  INVARIANT WS? a:Expr WS? ';'
+  LEGIT WS? a:Expr WS? ';'
   {yy->st->add_legit(a.sp);}
+  ;
 
 ConstExpr = a:ConstSum {$$ = a;}
+  ;
 
 ConstSum =
   a:ConstProduct
@@ -104,6 +112,7 @@ ConstSum =
    | (WS? '-' WS? b:ConstProduct {a.sp = list3_ccstr_Sesp ("-", a.sp, b.sp);  a.int_ck = 1;} )
   )*
   {$$ = a;}
+  ;
 
 ConstProduct =
   a:ConstNeg
@@ -112,10 +121,12 @@ ConstProduct =
    | (WS? '%' WS? b:ConstNeg {a.sp = list3_ccstr_Sesp ("%", a.sp, b.sp);  a.int_ck = 1;} )
   )*
   {$$ = a;}
+  ;
 
 OptionalArithNeg =
   {$$.sp = 0;}
   ( '-' WS? {$$.sp = make_ccstr_Sesp (yy->st->spctx, "negate");} )?
+  ;
 
 ConstNeg =
   pfx:OptionalArithNeg a:ConstValue
@@ -124,6 +135,7 @@ ConstNeg =
     if (pfx.sp)
       $$.sp = list2_Sesp (pfx.sp, $$.sp);
   }
+  ;
 
 ConstValue =
     a:NAT {$$ = a;}
@@ -133,11 +145,13 @@ ConstValue =
       $$.sp = list2_ccstr_Sesp ("(int)", a.sp);
       $$.int_ck = a.int_ck;
     }
+  ;
 
 
 Expr =
     a:Quantify {$$ = a;}
-  | a:Disjunction {$$ = a;}
+  | a:Implication {$$ = a;}
+  ;
 
 Quantify =
     'forall' WS a:ID WS? IN WS? b:NatDom WS? ':' WS? c:Expr
@@ -155,16 +169,25 @@ Quantify =
       $$.sp = list4_ccstr_Sesp ("unique", a.sp, b.sp, c.sp);
       $$.int_ck = 0;
     }
+  ;
+
+Implication =
+  a:Disjunction
+  (WS? '=>' WS? b:Disjunction {a.sp = list3_ccstr_Sesp ("=>", a.sp, b.sp);  a.int_ck = 0;} )*
+  {$$ = a;}
+  ;
 
 Disjunction =
   a:Conjunction
   (WS? '||' WS? b:Conjunction {a.sp = list3_ccstr_Sesp ("||", a.sp, b.sp);  a.int_ck = 0;} )*
   {$$ = a;}
+  ;
 
 Conjunction =
   a:Comparison
   (WS? '&&' WS? b:Comparison {a.sp = list3_ccstr_Sesp ("&&", a.sp, b.sp);  a.int_ck = 0;} )*
   {$$ = a;}
+  ;
 
 Comparison =
   a:Sum
@@ -172,6 +195,7 @@ Comparison =
    | (WS? '!=' WS? b:Sum {a.sp = list3_ccstr_Sesp ((b.int_ck ? "!=" :  "xor"), a.sp, b.sp);  a.int_ck = 0;} )
   )?
   {$$ = a;}
+  ;
 
 Sum =
   a:Product
@@ -179,6 +203,7 @@ Sum =
    | (WS? '-' WS? b:Product {a.sp = list3_ccstr_Sesp ("-", a.sp, b.sp);  a.int_ck = 1;} )
   )*
   {$$ = a;}
+  ;
 
 Product =
   a:Neg
@@ -187,12 +212,14 @@ Product =
    | (WS? '%' WS? b:Neg {a.sp = list3_ccstr_Sesp ("%", a.sp, b.sp);  a.int_ck = 1;} )
   )*
   {$$ = a;}
+  ;
 
 OptionalNeg =
   {$$.sp = 0;}
   (   '-' WS? {$$.sp = make_ccstr_Sesp (yy->st->spctx, "negate");}
     | '!' WS? {$$.sp = make_ccstr_Sesp (yy->st->spctx, "!");}
   )?
+  ;
 
 Neg =
   pfx:OptionalNeg a:Value
@@ -210,6 +237,7 @@ Value =
       $$.sp = list2_ccstr_Sesp (a.int_ck ? "(int)" : "(bool)", a.sp);
       $$.int_ck = a.int_ck;
     }
+  ;
 
 VblRef =
   a:ID
@@ -220,6 +248,7 @@ VblRef =
     $$ = a;
     $$.int_ck = 1;
   }
+  ;
 
 NatDom =
   ('Int' | 'Nat') WS? '%' WS? a:ConstValue
@@ -227,6 +256,7 @@ NatDom =
     $$.sp = list2_ccstr_Sesp ("NatDom", a.sp);
     $$.int_ck = 1;
   }
+  ;
 
 NAT = < [0-9]+ >
   {
@@ -235,10 +265,22 @@ NAT = < [0-9]+ >
     $$.sp = make_Nat_Sesp (yy->st->spctx, u);
     $$.int_ck = 1;
   }
+  ;
 
-IN = ':'
+IN = '<-'
+  ;
 
-INVARIANT = 'invariant:'
+
+EVENTUALLY_ALWAYS = 'eventually' WS 'always'
+  ;
+
+EVENTUALLY_AND_INVARIANT =
+  'eventually' WS? '&' WS? 'invariant'
+  ;
+
+LEGIT =
+  'legit:'
+  ;
 
 ID = < [A-Za-z][0-9A-Za-z]* >
   {
@@ -251,9 +293,13 @@ ID = < [A-Za-z][0-9A-Za-z]* >
     }
     $$.int_ck = 1;
   }
+  ;
 LINE_COMMENT = '//' [^\n]* [\n] {}
+  ;
 WS = ([ \t\r\n]+ | LINE_COMMENT)+ {}
+  ;
 END_OF_FILE = !.
+  ;
 
 %%
 
