@@ -289,10 +289,12 @@ void TestProtoconFile(bool agreement)
 
   Cx::PFmla pf;
 
+  ProtoconFileOpt infile_opt;
   if (agreement)
-    ReadProtoconFile(sys_f, "inst/Agreement.protocon");
-  else 
-    ReadProtoconFile(sys_f, "inst/SumNotTwo.protocon");
+    infile_opt.file_path = "inst/Agreement.protocon";
+  else
+    infile_opt.file_path = "inst/SumNotTwo.protocon";
+  ReadProtoconFile(sys_f, infile_opt);
 
   uint npcs = topo_f.pcs.sz();
   Claim2( npcs ,>=, 3 );

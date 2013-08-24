@@ -20,7 +20,8 @@ InitStabilitySyn(StabilitySyn& synctx,
 
 
   bool
-flat_backtrack_synthesis(vector<uint>& ret_actions, const char* infile_path,
+flat_backtrack_synthesis(vector<uint>& ret_actions,
+                         const ProtoconFileOpt& infile_opt,
                          const AddConvergenceOpt& global_opt)
 {
   const uint ntrials = 300;
@@ -56,7 +57,7 @@ flat_backtrack_synthesis(vector<uint>& ret_actions, const char* infile_path,
   Xn::Sys sys;
   DoLegit(good, "reading file")
     good =
-    ReadProtoconFile(sys, infile_path);
+    ReadProtoconFile(sys, infile_opt);
 
   StabilitySyn synctx( PcIdx, NPcs );
   StabilitySynLvl synlvl( &synctx );
@@ -69,35 +70,32 @@ flat_backtrack_synthesis(vector<uint>& ret_actions, const char* infile_path,
 
   if (!good)
   {
-#ifdef _OPENMP
-#pragma omp critical
-#endif
     done = true;
+#ifdef _OPENMP
+#pragma omp flush (done)
+#endif
   }
 
   for (uint trialidx = 0; !done && trialidx < ntrials; ++trialidx)
   {
 #ifdef _OPENMP
-#pragma omp critical
+#pragma omp critical (DBog)
 #endif
-    {
     DBog2( "trial %u %u", PcIdx, trialidx+1 );
-    }
-
 
     vector<uint> actions;
     bool found =
       AddConvergence(actions, sys, synlvl, opt);
 
 #ifdef _OPENMP
-#pragma omp critical
+#pragma omp critical (DBog)
 #endif
     {
     if (found)
     {
       done = true;
-      ret_actions = actions;
       solution_found = true;
+      ret_actions = actions;
       DBog0("SOLUTION FOUND!");
     }
     else
@@ -210,7 +208,8 @@ rank_actions (Cx::Table< Cx::Table<uint> >& act_layers,
 }
 
   bool
-ordering_synthesis(vector<uint>& ret_actions, const char* infile_path)
+ordering_synthesis(vector<uint>& ret_actions,
+                   const ProtoconFileOpt& infile_opt)
 {
   const uint ntrials = 300;
 
@@ -244,7 +243,7 @@ ordering_synthesis(vector<uint>& ret_actions, const char* infile_path)
   Xn::Sys sys;
   DoLegit(good, "reading file")
     good =
-    ReadProtoconFile(sys, infile_path);
+    ReadProtoconFile(sys, infile_opt);
 
   StabilitySyn synctx( PcIdx, NPcs );
   StabilitySynLvl synlvl( &synctx );
@@ -265,10 +264,10 @@ ordering_synthesis(vector<uint>& ret_actions, const char* infile_path)
 
   if (!good)
   {
-#ifdef _OPENMP
-#pragma omp critical
-#endif
       done = true;
+#ifdef _OPENMP
+#pragma omp flush (done)
+#endif
   }
 
   vector<uint> actions;
@@ -285,29 +284,20 @@ ordering_synthesis(vector<uint>& ret_actions, const char* infile_path)
     }
 
 #ifdef _OPENMP
-#pragma omp critical
+#pragma omp critical (DBog)
 #endif
-    {
-      DBog2( "trial %u %u", PcIdx, trial_idx+1 );
-    }
+    DBog2( "trial %u %u", PcIdx, trial_idx+1 );
 
     bool found =
       try_order_synthesis(actions, sys, synlvl);
 
+#ifdef _OPENMP
+#pragma omp critical (DBog)
+#endif
+    {
     if (!solution_found)
-    {
-#ifdef _OPENMP
-#pragma omp critical
-#endif
-      {
       DBog2("pcidx:%u depth:%u", PcIdx, actions.size());
-      }
-    }
 
-#ifdef _OPENMP
-#pragma omp critical
-#endif
-    {
     if (found && !solution_found)
     {
       solution_found = true;

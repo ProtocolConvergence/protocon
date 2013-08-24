@@ -35,12 +35,18 @@ Protocol = 'protocol' WS name:ID WS? ';' {}
 ConstDecl =
   'constant' WS name:ID WS? ':=' WS? v:ConstExpr WS? ';'
   {
-    bool legit = true;
+    Sign good = 1;
     int x = 0;
-    if (LegitCk( yy->st->eval_int (&x, v.sp), legit, "" )) {
-      if (LegitCk( x >= 0, legit, "" )) {
-        yy->st->constant_map[ccstr_of_Sesp (name.sp)] = (uint) x;
-      }
+    DoLegit(good, "evaluating int")
+      good = yy->st->eval_int (&x, v.sp);
+    DoLegit(good, "nonnegative")
+      good = (x >= 0);
+    DoLegit(good, "")
+    {
+      const char* name_cstr = ccstr_of_Sesp (name.sp);
+      Claim( name_cstr );
+      if (!yy->st->constant_map[name_cstr])
+        yy->st->constant_map[name_cstr] = (uint) x;
     }
   }
   ;
@@ -139,9 +145,23 @@ ConstNeg =
 
 ConstValue =
     a:NAT {$$ = a;}
-  | a:ID {$$ = a;}
-  | '(' WS? a:ConstExpr WS? ')'
+  | a:ID
     {
+      const char* name = ccstr_of_Sesp (a.sp);
+      const uint* x = yy->st->constant_map.lookup(name);
+      if (x) {
+        $$.sp = make_Nat_Sesp (yy->st->spctx, *x);
+      }
+      else {
+        $$.sp = a.sp;
+        //yy->st->allgood = false;
+        //DBog1( "No constant value with name: %s", name );
+      }
+      $$.int_ck = 1;
+      //lose_Sesp (a.sp);
+    }
+  | '(' WS? a:ConstExpr WS? ')'
+    {        
       $$.sp = list2_ccstr_Sesp ("(int)", a.sp);
       $$.int_ck = a.int_ck;
     }
@@ -241,6 +261,12 @@ Value =
 
 VblRef =
   a:ID
+  {
+    const uint* x = yy->st->constant_map.lookup(ccstr_of_Sesp (a.sp));
+    if (x) {
+      a.sp = make_Nat_Sesp (yy->st->spctx, *x);
+    }
+  }
   ('[' WS? b:Expr WS? ']'
    {a.sp = list3_ccstr_Sesp ("aref", a.sp, b.sp);}
   )?
@@ -284,13 +310,7 @@ LEGIT =
 
 ID = < [A-Za-z][0-9A-Za-z]* >
   {
-    const uint* x = yy->st->constant_map.lookup(yytext);
-    if (x) {
-      $$.sp = make_Nat_Sesp (yy->st->spctx, *x);
-    }
-    else {
-      $$.sp = make_cstr_Sesp (yy->st->spctx, yytext);
-    }
+    $$.sp = make_cstr_Sesp (yy->st->spctx, yytext);
     $$.int_ck = 1;
   }
   ;
@@ -303,16 +323,19 @@ END_OF_FILE = !.
 
 %%
 
-bool ReadProtoconFile(Xn::Sys& sys, const char* fname)
+  bool
+ReadProtoconFile(Xn::Sys& sys, const ProtoconFileOpt& opt)
 {
   bool good = true;
   yycontext yyctx;
   memset (&yyctx, 0, sizeof (yyctx));
-  yyctx.infile = fopen(fname, "rb");
+  Claim(opt.file_path);
+  yyctx.infile = fopen(opt.file_path, "rb");
   yyctx.st = new ProtoconFile(&sys);
+  yyctx.st->constant_map = opt.constant_map;
   if (!yyparse(&yyctx) || !yyctx.st->allgood) {
     good = false;
-    DBog1( "Error parsing the file: %s", fname );
+    DBog1( "Error parsing the file: %s", opt.file_path );
   }
   delete yyctx.st;
   fclose(yyctx.infile);

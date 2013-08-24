@@ -8,7 +8,18 @@ extern "C" {
 }
 #include "xnsys.hh"
 
-bool ReadProtoconFile(Xn::Sys& sys, const char* fname);
+class ProtoconFileOpt
+{
+public:
+  const char* file_path;
+  Map< Cx::String, uint > constant_map;
+
+  ProtoconFileOpt()
+    : file_path(0)
+  {}
+};
+
+bool ReadProtoconFile(Xn::Sys& sys, const ProtoconFileOpt& opt);
 
 struct FinMeta
 {

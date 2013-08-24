@@ -234,7 +234,7 @@ int main(int argc, char** argv)
   uint npcs = 4;
   AddConvergenceOpt opt;
   const char* modelFilePath = 0;
-  const char* infile_path = 0;
+  ProtoconFileOpt infile_opt;
   const char* outfile_path = 0;
   bool use_random_method = false;
   bool use_rank_shuffle_method = false;
@@ -277,13 +277,16 @@ int main(int argc, char** argv)
       }
       const char* key = argv[argi++];
       const char* val = argv[argi++];
-      // TODO: Pass these down to the file read.
+      uint x = 0;
+      if (!xget_uint_cstr (&x, val))
+        failout_sysCx("Usage: -def KEY VAL\nWhere VAL is an unsigned integer!");
+      infile_opt.constant_map[key] = x;
     }
     else if (eq_cstr (arg, "-x")) {
       DBog0("Problem: From File");
       problem = FromFileInstance;
-      infile_path = argv[argi++];
-      if (!infile_path) {
+      infile_opt.file_path = argv[argi++];
+      if (!infile_opt.file_path) {
         failout_sysCx("Not enuff arguments.\n");
       }
     }
@@ -348,7 +351,7 @@ int main(int argc, char** argv)
   Xn::Sys sys;
   switch(problem){
     case FromFileInstance:
-      if (!ReadProtoconFile(sys, infile_path))
+      if (!ReadProtoconFile(sys, infile_opt))
         failout_sysCx ("");
       break;
     case ThreeColoringRingInstance:
@@ -374,18 +377,18 @@ int main(int argc, char** argv)
   bool found = false;
   // Run the algorithm.
   if (use_random_method) {
-    if (!infile_path) {
+    if (!infile_opt.file_path) {
       failout_sysCx ("Need to use input file with random method!");
     }
     found =
-      flat_backtrack_synthesis(sys.actions, infile_path, opt);
+      flat_backtrack_synthesis(sys.actions, infile_opt, opt);
   }
   else if (use_rank_shuffle_method) {
-    if (!infile_path) {
+    if (!infile_opt.file_path) {
       failout_sysCx ("Need to use input file with rank shuffle method!");
     }
     found =
-      ordering_synthesis(sys.actions, infile_path);
+      ordering_synthesis(sys.actions, infile_opt);
   }
   else {
     found = AddConvergence(sys, opt);

@@ -377,7 +377,7 @@ ProtoconFile::expression_chunks(Cx::Table<Cx::String>& chunks, Sesp a, const Cx:
     chunks.top() += key;
     chunks.top() += " ";
     chunks.top() += ccstr_of_Sesp (cadr_of_Sesp (a));
-    chunks.top() += " : ";
+    chunks.top() += " <- ";
     expression_chunks (chunks, caddr_of_Sesp (a), idx_name);
     chunks.top() += " : ";
     expression_chunks (chunks, cadddr_of_Sesp (a), idx_name);
@@ -782,13 +782,15 @@ ProtoconFile::lookup_int(int* ret, const Cx::String& name)
     return true;
   }
 
-  bool legit = true;
+  Sign good = 1;
   Sesp* sp = let_map.lookup(name);
-  if (LegitCk( sp, legit, "let_map.lookup()" )) {
-    if (LegitCk( eval_int(ret, *sp), legit, "" )) {}
-  }
-  if (LegitCk( legit, allgood, "" )) {}
-  return legit;
+  DoLegit(good, "let_map.lookup()")
+    good = !!sp;
+  DoLegit(good, "eval_int()")
+    good = eval_int(ret, *sp);
+  DoLegit(allgood, "")
+    allgood = good;
+  return good;
 }
 
 

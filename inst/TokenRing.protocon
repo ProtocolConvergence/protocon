@@ -2,23 +2,27 @@
 protocol TokenRing;
 
 constant N := 4;
-constant M := N;
+constant M := 4;
 
 shadow variable b[Int % N] <- Int % 2;
 puppet variable x[Int % N] <- Int % M;
 
 process Bot[i <- Int % 1]
 {
-  read:  b[i-1], x[i-1];
-  write: b[i],   x[i];
+  read:  b[i-1];
+  write: b[i];
+  read: x[i-1];
+  write: x[i];
   act: ( b[i-1] == b[i] --> b[i] := 1 - b[i]; );
 }
 
 process P[j <- Int % (N-1)]
 {
   let i := j+1;
-  read:  b[i-1], x[i-1];
-  write: b[i],   x[i];
+  read:  b[i-1];
+  write: b[i];
+  read: x[i-1];
+  write: x[i];
   act: ( b[i-1] != b[i] --> b[i] := 1 - b[i]; );
 }
 

@@ -8,12 +8,15 @@ namespace Xn {
   class Sys;
 }
 class AddConvergenceOpt;
+class ProtoconFileOpt;
 
 bool
-flat_backtrack_synthesis(vector<uint>& ret_actions, const char* infile_path,
+flat_backtrack_synthesis(vector<uint>& ret_actions,
+                         const ProtoconFileOpt& infile_opt,
                          const AddConvergenceOpt& global_opt);
 bool
-ordering_synthesis(vector<uint>& ret_actions, const char* infile_path);
+ordering_synthesis(vector<uint>& ret_actions,
+                   const ProtoconFileOpt& infile_opt);
 
 #endif
 

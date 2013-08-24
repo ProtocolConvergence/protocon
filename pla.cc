@@ -204,7 +204,7 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys)
     const Xn::VblSymm& vbl_symm = topo.vbl_symms[i];
     of << "variable " << vbl_symm.name
       << "[Nat % " << vbl_symm.membs.sz()
-      << "] : Nat % " << vbl_symm.domsz << ";\n";
+      << "] <- Nat % " << vbl_symm.domsz << ";\n";
   }
 
   Cx::Table<Xn::ActSymm> acts( sys.actions.size() );
@@ -215,7 +215,7 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys)
   for (uint i = 0; i < topo.pc_symms.sz(); ++i) {
     const Xn::PcSymm& pc_symm = topo.pc_symms[i];
     of << "process " << pc_symm.name
-      << "[" << idxname << " : Nat % " << pc_symm.membs.sz() << "]\n";
+      << "[" << idxname << " <- Nat % " << pc_symm.membs.sz() << "]\n";
     of << "{\n";
     oput_protocon_pc_vbls (of, pc_symm, idxname);
     DoLegit(good, "output actions")
@@ -223,7 +223,7 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys)
     of << "}\n";
   }
 
-  of << "invariant:\n  " << sys.invariant_expression << "\n  ;\n";
+  of << "legit:\n  " << sys.invariant_expression << "\n  ;\n";
 
   lose_OSPc (ospc);
   return good;
