@@ -12,6 +12,8 @@
 #include "pfmla.hh"
 #include "tuple.hh"
 
+extern Cx::OFile DBogOF;
+
 namespace Xn {
 using Cx::String;
 

@@ -25,12 +25,14 @@ list (APPEND HFiles
 list (APPEND CCFiles
 	pfmla.cc xnsys.cc test.cc ordersyn.cc main.cc inst.cc
   promela.cc pla.cc
+  conflictfamily.cc
   stability.cc
 	protoconfile.cc
   )
 list (APPEND HHFiles
 	pfmla.hh xnsys.hh test.hh ordersyn.hh main.hh inst.hh
   promela.hh pla.hh
+  conflictfamily.hh
   stability.hh
 	protoconfile.hh tuple.hh
   )
@@ -56,6 +58,7 @@ addbinexe (protocon
   pfmla.cc xnsys.cc test.cc ordersyn.cc main.cc inst.cc
   promela.cc pla.cc
   stability.cc
+  conflictfamily.cc
   protoconfile.cc protoconfile.leg.cc
   pfmla.c pfmla-glu.c pfmla-bittable.c
   )

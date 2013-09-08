@@ -11,8 +11,10 @@
 #include "xnsys.hh"
 #include <fstream>
 #include "protoconfile.hh"
+#include "conflictfamily.hh"
 
-extern Cx::OFile DBogOF;
+class StabilitySyn;
+class StabilitySynLvl;
 
 //static const bool DBog_PruneCycles = false;
 static const bool DBog_RankDeadlocksMCV = false;
@@ -45,8 +47,15 @@ public:
     EndNice,
     NNicePolicies
   };
+  enum SearchMethod {
+    BacktrackSearch,
+    RankShuffleSearch,
+    RandomBacktrackSearch,
+    NSearchMethods
+  };
 
   PickActionHeuristic pickMethod;
+  SearchMethod search_method;
   NicePolicy nicePolicy;
   bool pickBackReach;
   bool bt_dbog;
@@ -59,6 +68,7 @@ public:
 
   AddConvergenceOpt() :
     pickMethod( GreedyPick )
+    , search_method( BacktrackSearch )
     , nicePolicy( EndNice )
     , pickBackReach( false )
     , bt_dbog( true )
@@ -75,19 +85,19 @@ public:
   Cx::PFmla csp_base_pfmla;
   Cx::URandom urandom;
   AddConvergenceOpt opt;
-  volatile bool* solution_found;
-  Cx::LgTable< Set<uint> > conflict_sets;
+  volatile bool* done;
+  ConflictFamily conflicts;
+  StabilitySynLvl* base_lvl;
 
   StabilitySyn()
     : csp_base_pfmla(true)
-    , solution_found(0)
+    , done(0)
   {}
   StabilitySyn(uint pcidx, uint npcs)
     : csp_base_pfmla(true)
     , urandom(pcidx, npcs)
-    , solution_found(0)
+    , done(0)
   {}
-  void add_conflict_set(const Set<uint>& conflict_set);
 };
 
 // Decision level for synthesis.
@@ -98,8 +108,11 @@ public:
   bool bt_dbog;
   uint bt_level;
   uint failed_bt_level;
+  bool directly_add_conflicts;
+  bool noconflicts;
 
   vector<uint> actions; ///< Chosen actions.
+  Cx::Table<uint> picks; ///< Chosen actions, no inferred ones.
   vector<uint> candidates; ///< Candidate actions.
   PF deadlockPF; ///< Current deadlocks.
   PF loXnRel; ///< Under-approximation of the transition function.
@@ -115,14 +128,18 @@ public:
     , bt_dbog( false )
     , bt_level( 0 )
     , failed_bt_level( 0 )
+    , directly_add_conflicts( false )
+    , noconflicts( false )
     , hi_invariant( false )
   {}
 
   /// Deadlocks ranked by how many candidate actions can resolve them.
   vector<DeadlockConstraint> mcvDeadlocks;
 
+  void add_small_conflict_set(const Xn::Sys& sys, const Cx::Table<uint>& delpicks);
   bool check_forward(const Xn::Sys& sys);
   bool revise_actions(const Xn::Sys& sys, Set<uint> adds, Set<uint> dels);
+  bool pick_action(const Xn::Sys& sys, uint act_idx);
 };
 
 bool

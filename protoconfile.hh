@@ -5,6 +5,7 @@
 #include "cx/synhax.hh"
 extern "C" {
 #include "cx/sesp.h"
+#include "cx/xfile.h"
 }
 #include "xnsys.hh"
 
@@ -23,9 +24,9 @@ bool ReadProtoconFile(Xn::Sys& sys, const ProtoconFileOpt& opt);
 
 struct FinMeta
 {
-  //uint line;
   Sesp sp;
   Bit int_ck;
+  //uint text_lineno;
 };
 
 class ProtoconFile {
@@ -36,6 +37,9 @@ private:
 public:
 
   bool allgood;
+  uint text_nlines;
+  XFile xf;
+
   Map< Cx::String, uint > constant_map;
   Map< Cx::String, Sesp > let_map;
   Map< Cx::String, int > index_map;
@@ -43,12 +47,16 @@ public:
   Xn::Sys* sys;
   SespCtx* spctx;
 
-  ProtoconFile(Xn::Sys* sys)
+  ProtoconFile(Xn::Sys* sys, XFile* xf)
     : allgood( true )
+    , text_nlines(0)
   {
     this->sys = sys;
     this->sys->invariant = true;
     spctx = make_SespCtx ();
+    xget_XFile (xf);
+    xf->off = xf->buf.sz-1;
+    olay_txt_XFile (&this->xf, xf, 0);
   }
 
   ~ProtoconFile() {

@@ -107,10 +107,12 @@ public:
     return overlap_ck_PFmla (g, pf.g);
   }
 
-  bool operator<=(const PFmla& pf) const
+  bool subseteq_ck(const PFmla& pf) const
   {
     return subseteq_ck_PFmla (g, pf.g);
   }
+  bool operator<=(const PFmla& pf) const
+  { return this->subseteq_ck(pf); }
 
   PFmla operator~() const
   {

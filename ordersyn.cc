@@ -4,6 +4,7 @@
 #include <algorithm>
 
 #include "cx/urandom.h"
+#include "cx/fileb.hh"
 #include "protoconfile.hh"
 #include "stability.hh"
 
@@ -18,105 +19,30 @@ InitStabilitySyn(StabilitySyn& synctx,
                  const Xn::Sys& sys,
                  const AddConvergenceOpt& opt);
 
-
-  bool
-flat_backtrack_synthesis(vector<uint>& ret_actions,
-                         const ProtoconFileOpt& infile_opt,
-                         const AddConvergenceOpt& global_opt)
+  void
+check_conflict_sets(const Cx::LgTable< Set<uint> >& conflict_sets)
 {
-  const uint ntrials = 300;
-
-  bool done = false;
-  bool solution_found = false;
-  uint NPcs = 0; 
-  Cx::LgTable< Set<uint> > conflict_sets;
-
-#ifdef _OPENMP
-#pragma omp parallel shared(done,NPcs,solution_found,conflict_sets)
-#endif
+  for (ujint i = conflict_sets.begidx();
+       i != Max_ujint;
+       i = conflict_sets.nextidx(i))
   {
-  Sign good = 1;
-  AddConvergenceOpt opt(global_opt);
-  uint PcIdx;
-#ifdef _OPENMP
-#pragma omp critical
-#endif
-  {
-    PcIdx = NPcs;
-    ++ NPcs;
-  }
-
-#ifdef _OPENMP
-#pragma omp barrier
-#endif
-  opt.sys_pcidx = PcIdx;
-  opt.sys_npcs = NPcs;
-  opt.random_one_shot = true;
-  opt.bt_dbog = false;
-
-  Xn::Sys sys;
-  DoLegit(good, "reading file")
-    good =
-    ReadProtoconFile(sys, infile_opt);
-
-  StabilitySyn synctx( PcIdx, NPcs );
-  StabilitySynLvl synlvl( &synctx );
-
-  DoLegit(good, "initialization")
-    good =
-    InitStabilitySyn(synctx, synlvl, sys, opt);
-
-  synctx.solution_found = &solution_found;
-
-  if (!good)
-  {
-    done = true;
-#ifdef _OPENMP
-#pragma omp flush (done)
-#endif
-  }
-
-  for (uint trialidx = 0; !done && trialidx < ntrials; ++trialidx)
-  {
-#ifdef _OPENMP
-#pragma omp critical (DBog)
-#endif
-    DBog2( "trial %u %u", PcIdx, trialidx+1 );
-
-    vector<uint> actions;
-    bool found =
-      AddConvergence(actions, sys, synlvl, opt);
-
-#ifdef _OPENMP
-#pragma omp critical (DBog)
-#endif
+    const Set<uint>& a = conflict_sets[i];
+    for (ujint j = conflict_sets.nextidx(i);
+         j != Max_ujint;
+         j = conflict_sets.nextidx(j))
     {
-    if (found)
-    {
-      done = true;
-      solution_found = true;
-      ret_actions = actions;
-      DBog0("SOLUTION FOUND!");
-    }
-    else
-    {
-      for (ujint i = conflict_sets.begidx(); i != Max_ujint; i = conflict_sets.nextidx(i))
-        synctx.add_conflict_set(conflict_sets[i]);
-
-      conflict_sets = synctx.conflict_sets;
-    }
+      const Set<uint>& b = conflict_sets[j];
+      Claim( !a.subseteq_ck(b) );
+      Claim( !b.subseteq_ck(a) );
     }
   }
-  }
-
-  return solution_found;
 }
 
 static
   bool
 try_order_synthesis(vector<uint>& ret_actions,
                     const Xn::Sys& sys,
-                    StabilitySynLvl tape)
+                    StabilitySynLvl& tape)
 {
   ret_actions.clear();
 
@@ -124,13 +50,13 @@ try_order_synthesis(vector<uint>& ret_actions,
   {
     uint actidx = tape.candidates[0];
     StabilitySynLvl next( tape );
-    if (next.revise_actions(sys, Set<uint>(actidx), Set<uint>()))
+    if (next.pick_action(sys, actidx))
     {
       tape = next;
     }
     else
     {
-      if (*tape.ctx->solution_found)
+      if (tape.ctx->done && *tape.ctx->done)
         return false;
 
       if (!tape.revise_actions(sys, Set<uint>(), Set<uint>(actidx)))
@@ -139,7 +65,7 @@ try_order_synthesis(vector<uint>& ret_actions,
         return false;
       }
     }
-    if (*tape.ctx->solution_found)
+    if (tape.ctx->done && *tape.ctx->done)
       return false;
   }
 
@@ -158,6 +84,7 @@ try_order_synthesis(vector<uint>& ret_actions,
   ret_actions = tape.actions;
   return true;
 }
+
 
 static
   bool
@@ -208,22 +135,31 @@ rank_actions (Cx::Table< Cx::Table<uint> >& act_layers,
 }
 
   bool
-ordering_synthesis(vector<uint>& ret_actions,
-                   const ProtoconFileOpt& infile_opt)
+flat_backtrack_synthesis(vector<uint>& ret_actions,
+                         const ProtoconFileOpt& infile_opt,
+                         const AddConvergenceOpt& global_opt)
 {
   const uint ntrials = 300;
 
   bool done = false;
   bool solution_found = false;
   uint NPcs = 0; 
-  Cx::LgTable< Set<uint> > conflict_sets;
+  ConflictFamily conflicts;
+
+  if (false)
+  {
+    Cx::XFileB conflicts_xf;
+    conflicts_xf.open("saved_working_conflicts");
+    conflicts_xf >> conflicts;
+    conflicts.oput_conflict_sizes(DBogOF);
+  }
 
 #ifdef _OPENMP
-#pragma omp parallel shared(done,NPcs,solution_found,conflict_sets)
+#pragma omp parallel shared(done,NPcs,solution_found,ret_actions,conflicts)
 #endif
   {
   Sign good = 1;
-  AddConvergenceOpt opt;
+  AddConvergenceOpt opt(global_opt);
   uint PcIdx;
 #ifdef _OPENMP
 #pragma omp critical
@@ -238,7 +174,9 @@ ordering_synthesis(vector<uint>& ret_actions,
 #endif
   opt.sys_pcidx = PcIdx;
   opt.sys_npcs = NPcs;
+  opt.random_one_shot = true;
   opt.bt_dbog = false;
+  //opt.bt_dbog = true;
 
   Xn::Sys sys;
   DoLegit(good, "reading file")
@@ -252,67 +190,101 @@ ordering_synthesis(vector<uint>& ret_actions,
     good =
     InitStabilitySyn(synctx, synlvl, sys, opt);
 
-  synctx.solution_found = &solution_found;
+  synctx.done = &done;
 
   Cx::Table< Cx::Table<uint> > act_layers;
-  DoLegit(good, "ranking actions")
-    good =
-    rank_actions (act_layers, sys.topology,
-                  synlvl.candidates,
-                  synlvl.hiXnRel,
-                  synlvl.hi_invariant);
+  if (opt.search_method == opt.RankShuffleSearch)
+  {
+    DoLegit(good, "ranking actions")
+      good =
+      rank_actions (act_layers, sys.topology,
+                    synlvl.candidates,
+                    synlvl.hiXnRel,
+                    synlvl.hi_invariant);
+  }
 
   if (!good)
   {
-      done = true;
+    done = true;
 #ifdef _OPENMP
 #pragma omp flush (done)
 #endif
   }
 
+#ifdef _OPENMP
+#pragma omp critical (DBog)
+#endif
+  DBog1( "BEGIN! %u", PcIdx );
+
+  ConflictFamily working_conflicts;
+  {
+    synctx.conflicts = conflicts;
+
+    Set<uint> impossible( synctx.conflicts.impossible_set );
+    impossible &= Set<uint>(synlvl.candidates);
+    if (!impossible.empty())
+      synlvl.revise_actions(sys, Set<uint>(), impossible);
+  }
+
   vector<uint> actions;
   for (uint trial_idx = 0; !done && trial_idx < ntrials; ++trial_idx)
   {
-    vector<uint>& candidates = synlvl.candidates;
-    candidates.clear();
-    for (uint i = 0; i < act_layers.sz(); ++i) {
-      uint off = candidates.size();
-      for (uint j = 0; j < act_layers[i].sz(); ++j) {
-        candidates.push_back(act_layers[i][j]);
+    bool found = false;
+    if (opt.search_method == opt.RankShuffleSearch)
+    {
+      StabilitySynLvl tape( synlvl );
+      vector<uint>& candidates = tape.candidates;
+      candidates.clear();
+      for (uint i = 0; i < act_layers.sz(); ++i) {
+        uint off = candidates.size();
+        for (uint j = 0; j < act_layers[i].sz(); ++j) {
+          candidates.push_back(act_layers[i][j]);
+        }
+        synctx.urandom.shuffle(&candidates[off], act_layers[i].sz());
       }
-      synctx.urandom.shuffle(&candidates[off], act_layers[i].sz());
-    }
-
-#ifdef _OPENMP
-#pragma omp critical (DBog)
-#endif
-    DBog2( "trial %u %u", PcIdx, trial_idx+1 );
-
-    bool found =
-      try_order_synthesis(actions, sys, synlvl);
-
-#ifdef _OPENMP
-#pragma omp critical (DBog)
-#endif
-    {
-    if (!solution_found)
-      DBog2("pcidx:%u depth:%u", PcIdx, actions.size());
-
-    if (found && !solution_found)
-    {
-      solution_found = true;
-      done = true;
-      ret_actions = actions;
-      DBog0("SOLUTION FOUND!");
+      found = try_order_synthesis(actions, sys, tape);
     }
     else
     {
-      for (ujint i = conflict_sets.begidx(); i != Max_ujint; i = conflict_sets.nextidx(i))
-        synctx.add_conflict_set(conflict_sets[i]);
+      found = AddConvergence(actions, sys, synlvl, opt);
+    }
 
-      conflict_sets = synctx.conflict_sets;
+#ifdef _OPENMP
+#pragma omp critical (DBog)
+#endif
+    {
+    if (done)
+    {}
+    else if (found)
+    {
+      done = true;
+      solution_found = true;
+      ret_actions = actions;
+      DBog0("SOLUTION FOUND!");
+
+    }
+    else
+    {
+      synctx.conflicts.add_conflicts(conflicts);
+
+      conflicts = synctx.conflicts;
+      conflicts.oput_conflict_sizes(DBogOF);
+
+      if (opt.search_method == opt.RankShuffleSearch)
+        DBog3("pcidx:%u trial:%u actions:%u", PcIdx, trial_idx+1, actions.size());
+      else
+        DBog3("pcidx:%u trial:%u depth:%u", PcIdx, trial_idx+1, synlvl.failed_bt_level);
     }
     }
+
+    if (!done) {
+      Set<uint> impossible( synctx.conflicts.impossible_set );
+      impossible &= Set<uint>(synlvl.candidates);
+      if (!impossible.empty())
+        synlvl.revise_actions(sys, Set<uint>(), impossible);
+    }
+
+    //check_conflict_sets(conflict_sets);
   }
   }
 

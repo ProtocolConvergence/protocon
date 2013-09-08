@@ -14,9 +14,6 @@ bool
 flat_backtrack_synthesis(vector<uint>& ret_actions,
                          const ProtoconFileOpt& infile_opt,
                          const AddConvergenceOpt& global_opt);
-bool
-ordering_synthesis(vector<uint>& ret_actions,
-                   const ProtoconFileOpt& infile_opt);
 
 #endif
 

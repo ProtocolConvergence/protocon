@@ -10,13 +10,14 @@ extern "C" {
 #define YYSTYPE FinMeta
 #define YY_CTX_LOCAL
 #define YY_CTX_MEMBERS \
-  FILE* infile; \
   ProtoconFile* st;
+
+//  int yyc = fgetc(yy->infile);
+//  result= (EOF == yyc) ? 0 : (*(buf) = yyc, 1);
 
 #define YY_INPUT(yy, buf, result, max_size) \
 { \
-  int yyc = fgetc(yy->infile); \
-  result= (EOF == yyc) ? 0 : (*(buf) = yyc, 1); \
+  result = xget_char_XFile (&yy->st->xf, buf) ? 1 : 0; \
 }
 %}
 
@@ -314,9 +315,11 @@ ID = < [A-Za-z][0-9A-Za-z]* >
     $$.int_ck = 1;
   }
   ;
-LINE_COMMENT = '//' [^\n]* [\n] {}
+LINE_COMMENT = '//' [^\n]* [\n] { yy->st->text_nlines += 1; }
   ;
-WS = ([ \t\r\n]+ | LINE_COMMENT)+ {}
+WHITE_SPACE = ( [ \t\r] | [\n] { yy->st->text_nlines += 1; } )+
+  ;
+WS = (WHITE_SPACE | LINE_COMMENT)+ {}
   ;
 END_OF_FILE = !.
   ;
@@ -330,15 +333,18 @@ ReadProtoconFile(Xn::Sys& sys, const ProtoconFileOpt& opt)
   yycontext yyctx;
   memset (&yyctx, 0, sizeof (yyctx));
   Claim(opt.file_path);
-  yyctx.infile = fopen(opt.file_path, "rb");
-  yyctx.st = new ProtoconFile(&sys);
+  XFileB xfb;
+  init_XFileB (&xfb);
+  open_FileB (&xfb.fb, 0, opt.file_path);
+  //yyctx.infile = fopen(opt.file_path, "rb");
+  yyctx.st = new ProtoconFile(&sys, &xfb.xf);
   yyctx.st->constant_map = opt.constant_map;
   if (!yyparse(&yyctx) || !yyctx.st->allgood) {
     good = false;
     DBog1( "Error parsing the file: %s", opt.file_path );
   }
+  lose_XFileB (&xfb);
   delete yyctx.st;
-  fclose(yyctx.infile);
   yyrelease(&yyctx);
   sys.commit_initialization();
   return good;

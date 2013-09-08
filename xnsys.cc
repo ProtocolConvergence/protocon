@@ -1,6 +1,9 @@
 
 #include "xnsys.hh"
 
+Cx::OFile DBogOF( stderr_OFile () );
+
+
 namespace Xn {
 
 /**
@@ -425,51 +428,10 @@ LegitInvariant(const Xn::Sys& sys, const PF& lo_xn_rel, const PF& hi_xn_rel)
     return PF(false);
   }
 
-  //if (CycleCk(lo_xn_rel, ~hi_invariant)) {
-  if (CycleCk(lo_xn_rel, shadow_invariant - hi_invariant)) {
-    return PF(false);
-  }
-
-#if 0
-  Cx::PFmla shadow_live = shadow_protocol & shadow_invariant;
-  Cx::PFmla hi_live = hi_protocol & hi_invariant & hi_invariant.as_img();
-
-  while (!shadow_live.tautology_ck(false))
-  {
-    bool found = false;
-
-    Cx::PFmla shadow_seed = shadow_live.pick_pre();
-    Cx::PFmla shadow_reach = UndirectedReachability(shadow_live, shadow_seed);
-    shadow_live -= shadow_reach;
-
-    Cx::PFmla hi_reach_set = hi_invariant & shadow_reach;
-
-    while (!hi_reach_set.tautology_ck(false))
-    {
-      Cx::PFmla hi_seed = hi_reach_set & shadow_reach;
-      Cx::PFmla hi_reach = UndirectedReachability(hi_live, hi_seed);
-
-      hi_reach_set -= hi_reach;
-
-      if (shadow_reach.equiv_ck(sys.smooth_pure_puppet_vbls(hi_reach))) {
-        found = true;
-      }
-      else {
-        hi_invariant -= hi_reach;
-      }
-    }
-
-    if (!found) {
-      return Cx::PFmla(false);
-    }
-  }
-#endif
-
   const Cx::PFmla& lhs =
     sys.smooth_pure_puppet_vbls(shadow_live);
   const Cx::PFmla& rhs =
     sys.smooth_pure_puppet_vbls(hi_live);
-
 #if 0
   Claim( lhs.equiv_ck(rhs) );
 #else
@@ -487,6 +449,23 @@ LegitInvariant(const Xn::Sys& sys, const PF& lo_xn_rel, const PF& hi_xn_rel)
     return PF(false);
   }
 #endif
+
+  Cx::PFmla legit_protocol = hi_xn_rel & (shadow_protocol | shadow_self);
+  legit_protocol &= shadow_invariant;
+  legit_protocol &= shadow_invariant.as_img();
+
+  hi_invariant = BackwardReachability(legit_protocol, hi_invariant);
+  hi_invariant = ClosedSubset(lo_xn_rel, hi_invariant);
+
+  //if (CycleCk(lo_xn_rel, ~hi_invariant)) {
+  if (CycleCk(lo_xn_rel, shadow_invariant - hi_invariant)) {
+    return PF(false);
+  }
+
+  // TODO: We shouldn't do this all the time.
+  if (!hi_invariant.equiv_ck(shadow_invariant))
+    return PF(false);
+
   return hi_invariant;
 }
 

@@ -230,7 +230,7 @@ ProtoconFile::add_legit(Sesp legit_sp, Sesp pc_idx_sp)
       }
 
       sys->invariant_expression += Cx::String("(forall ")
-        + idx_name + " : Nat % " + pc_symm.membs.sz() + " : ";
+        + idx_name + " <- Nat % " + pc_symm.membs.sz() + " : ";
       sys->invariant_expression += invariant_expression;;
       sys->invariant_expression += ")";
     }

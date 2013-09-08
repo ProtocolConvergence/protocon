@@ -1,8 +1,6 @@
 
 #include "stability.hh"
 
-Cx::OFile DBogOF( stderr_OFile () );
-
   bool
 candidate_actions(vector<uint>& candidates, const Xn::Sys& sys)
 {
@@ -570,7 +568,7 @@ QuickTrim(Set<uint>& delSet,
 }
 
   void
-small_cycle_conflict (Set<uint>& conflict_set,
+small_cycle_conflict (Cx::Table<uint>& conflict_set,
                       const Cx::PFmla& scc,
                       const vector<uint>& actions,
                       const Xn::Net& topo)
@@ -600,7 +598,7 @@ small_cycle_conflict (Set<uint>& conflict_set,
         edg -= act_pfmla;
     }
     else {
-      conflict_set |= actidx;
+      conflict_set.push(actidx);
     }
   }
   //Claim( CycleCk(edg, scc) );
@@ -646,18 +644,22 @@ count_actions_in_cycle (const Cx::PFmla& scc, Cx::PFmla edg,
 }
 
   void
-StabilitySyn::add_conflict_set(const Set<uint>& a)
+StabilitySynLvl::add_small_conflict_set(const Xn::Sys& sys,
+                                        const Cx::Table<uint>& delpicks)
 {
-  for (ujint i = this->conflict_sets.begidx();
-       i != Max_ujint;
-       i = this->conflict_sets.nextidx(i))
-  {
-    if (a.subseteq_ck(this->conflict_sets[i])) {
-      //DBog0("pruning!");
-      this->conflict_sets.giveidx(i);
-    }
+  if (noconflicts)  return;
+  if (false || directly_add_conflicts) {
+    this->ctx->conflicts.add_conflict(delpicks);
+    return;
   }
-  this->conflict_sets[this->conflict_sets.takeidx()] = a;
+  StabilitySynLvl lvl( *this->ctx->base_lvl );
+  lvl.bt_dbog = false;
+  lvl.directly_add_conflicts = true;
+  for (uint i = delpicks.sz(); i > 0;) {
+    i -= 1;
+    if (!lvl.pick_action(sys, delpicks[i]))
+      break;
+  }
 }
 
 #if 0
@@ -704,6 +706,9 @@ StabilitySynLvl::check_forward(const Xn::Sys& sys)
   action_set |= adds;
 
   for (uint i = 0; i < this->candidates.size(); ++i) {
+    if  (ctx->done && *ctx->done)
+      return true;
+
     uint actidx = this->candidates[i];
     if (dels.elem_ck(actidx))  continue;
 
@@ -726,20 +731,11 @@ StabilitySynLvl::check_forward(const Xn::Sys& sys)
     }
 
     action_set |= actidx;
-    bool conflict_found = false;
-    for (ujint conflict_idx = this->ctx->conflict_sets.begidx();
-         conflict_idx != Max_ujint;
-         conflict_idx = this->ctx->conflict_sets.nextidx(conflict_idx))
-    {
-      const Set<uint>& conflict_set = this->ctx->conflict_sets[conflict_idx];
-      if (conflict_set.subseteq_ck(action_set)) {
-        dels |= actidx;
-        conflict_found = true;
-        break;
-      }
-    }
+    bool conflict_found =
+      this->ctx->conflicts.conflict_ck(FlatSet<uint>(action_set));
     action_set -= Set<uint>(actidx);
     if (conflict_found) {
+      dels |= actidx;
       break;
     }
 
@@ -769,6 +765,17 @@ StabilitySynLvl::check_forward(const Xn::Sys& sys)
     }
   }
   if (!adds.empty() || !dels.empty()) {
+#if 0
+    Cx::Table<uint> delpicks( this->picks );
+    Set<uint>::const_iterator it = dels.begin();
+    for (;it != dels.end(); ++it)
+    {
+      delpicks.push(*it);
+      this->add_small_conflict_set(sys, delpicks);
+      delpicks.mpop(1);
+    }
+#endif
+
     return this->revise_actions(sys, adds, dels);
   }
   return true;
@@ -796,7 +803,10 @@ StabilitySynLvl::revise_actions(const Xn::Sys& sys,
         == topo.action_img_index(actId);
     }
 
-    Remove1(this->candidates, actId);
+    if (!Remove1(this->candidates, actId)) {
+      // Not applicable.
+      return false;
+    }
     this->actions.push_back(actId);
     QuickTrim(dels, this->candidates, topo, actId);
     addActPF |= topo.action_pfmla(actId);
@@ -848,7 +858,7 @@ StabilitySynLvl::revise_actions(const Xn::Sys& sys,
   if (sys.shadow_puppet_synthesis_ck()) {
     this->hi_invariant =
       LegitInvariant(sys, this->loXnRel, this->hiXnRel);
-    if (this->hi_invariant.tautology_ck(false)) {
+    if (!this->hi_invariant.sat_ck()) {
       if (this->bt_dbog) {
         DBogOF << "LEGIT\n";
       }
@@ -866,9 +876,9 @@ StabilitySynLvl::revise_actions(const Xn::Sys& sys,
     if (this->bt_dbog) {
       DBogOF << "CYCLE\n";
     }
-    Set<uint> conflict_set;
+    Cx::Table<uint> conflict_set;
     small_cycle_conflict (conflict_set, scc, this->actions, topo);
-    this->ctx->add_conflict_set(conflict_set);
+    this->ctx->conflicts.add_conflict(conflict_set);
     return false;
   }
 
@@ -891,10 +901,22 @@ StabilitySynLvl::revise_actions(const Xn::Sys& sys,
                      this->deadlockPF);
     revise = false;
   }
+
   if (revise) {
     ReviseDeadlocksMCV(this->mcvDeadlocks, topo, adds, dels);
   }
 
   return this->check_forward(sys);
+}
+
+  bool
+StabilitySynLvl::pick_action(const Xn::Sys& sys, uint act_idx)
+{
+  this->picks.push(act_idx);
+  if (!this->revise_actions(sys, Set<uint>(act_idx), Set<uint>())) {
+    this->add_small_conflict_set(sys, this->picks);
+    return false;
+  }
+  return true;
 }
 

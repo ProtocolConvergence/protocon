@@ -32,7 +32,7 @@ AddConvergence(vector<uint>& retActions,
 
   tape.failed_bt_level = tape.bt_level;
   while (!tape.candidates.empty()) {
-    if (tape.ctx->solution_found && *tape.ctx->solution_found)
+    if (tape.ctx->done && *tape.ctx->done)
       return false;
 
     // Pick the action.
@@ -46,16 +46,11 @@ AddConvergence(vector<uint>& retActions,
     next.bt_dbog = (tape.bt_dbog && (true || tape.bt_level < 18));
     next.bt_level = tape.bt_level + 1;
 
-    Set<uint> next_add_set( actidx );
-    Set<uint> next_del_set;
-    if (next.revise_actions(sys, next_add_set, next_del_set))
+    if (next.pick_action(sys, actidx))
     {
       bool found =
         AddConvergence(retActions, sys, next, opt);
       if (found) {
-        if (tape.ctx->solution_found) {
-          *tape.ctx->solution_found = true;
-        }
         return true;
       }
     }
@@ -64,15 +59,11 @@ AddConvergence(vector<uint>& retActions,
       tape.failed_bt_level = next.failed_bt_level;
     }
 
-    if (tape.ctx->solution_found && *tape.ctx->solution_found)
+    if (tape.ctx->done && *tape.ctx->done)
       return false;
 
     if (opt.random_one_shot && opt.bt_depth + tape.bt_level <= tape.failed_bt_level)
     {
-      if (opt.bt_depth + tape.bt_level == tape.failed_bt_level)
-      {
-        DBog1("Got to depth: %u", tape.failed_bt_level);
-      }
       if (!tape.deadlockPF.tautology_ck(false)) {
         return false;
       }
@@ -83,6 +74,7 @@ AddConvergence(vector<uint>& retActions,
       if (tape.bt_dbog) {
         DBog0("giveup");
       }
+      tape.add_small_conflict_set(sys, tape.picks);
       return false;
     }
   }
@@ -101,9 +93,6 @@ AddConvergence(vector<uint>& retActions,
       return false;
     }
     retActions = tape.actions;
-    if (tape.ctx->solution_found) {
-      *tape.ctx->solution_found = true;
-    }
     return true;
   }
   return false;
@@ -120,6 +109,7 @@ InitStabilitySyn(StabilitySyn& synctx,
 {
   const Xn::Net& topo = sys.topology;
   synctx.opt = opt;
+  synctx.base_lvl = &tape;
 
   for (uint pcidx = 0; pcidx < topo.pc_symms.sz(); ++pcidx)
   {
@@ -236,8 +226,6 @@ int main(int argc, char** argv)
   const char* modelFilePath = 0;
   ProtoconFileOpt infile_opt;
   const char* outfile_path = 0;
-  bool use_random_method = false;
-  bool use_rank_shuffle_method = false;
 
   // Use to disable picking only actions which resolve deadlocks
   // by making them backwards reachable from the invariant.
@@ -259,10 +247,10 @@ int main(int argc, char** argv)
       }
     }
     else if (eq_cstr (arg, "-random")) {
-      use_random_method = true;
+      opt.search_method = opt.RandomBacktrackSearch;
     }
     else if (eq_cstr (arg, "-rankshuffle")) {
-      use_rank_shuffle_method = true;
+      opt.search_method = opt.RankShuffleSearch;
     }
     else if (eq_cstr (arg, "-test")) {
       DBog0( "Running tests..." );
@@ -376,19 +364,12 @@ int main(int argc, char** argv)
 
   bool found = false;
   // Run the algorithm.
-  if (use_random_method) {
+  if (opt.search_method != opt.BacktrackSearch) {
     if (!infile_opt.file_path) {
-      failout_sysCx ("Need to use input file with random method!");
+      failout_sysCx ("Need to use input file with random or rank/shuffle method!");
     }
     found =
       flat_backtrack_synthesis(sys.actions, infile_opt, opt);
-  }
-  else if (use_rank_shuffle_method) {
-    if (!infile_opt.file_path) {
-      failout_sysCx ("Need to use input file with rank shuffle method!");
-    }
-    found =
-      ordering_synthesis(sys.actions, infile_opt);
   }
   else {
     found = AddConvergence(sys, opt);
@@ -400,6 +381,7 @@ int main(int argc, char** argv)
       const Xn::Net& topo = sys.topology;
       Xn::ActSymm act;
       topo.action(act, sys.actions[i]);
+      //DBogOF << sys.actions[i] << ' ';
       OPut(DBogOF, act) << '\n';
     }
     if (modelFilePath)  {
