@@ -76,6 +76,24 @@ VarDecl =
   }
   ;
 
+ActionExpr =
+  '(' WS?
+   act:Expr WS? '-->' WS?  {act.sp = list2_ccstr_Sesp ("-->", act.sp);}
+   ( vbl:VblRef WS? ':=' WS? val:Expr WS? ';' WS?
+     {pushlast_Sesp (act.sp, list3_ccstr_Sesp (":=", vbl.sp, val.sp));}
+   )+
+   ')'
+   {$$ = act;}
+   ;
+
+ShadowActionDef =
+  'shadow' (WS ACTION | ':') WS? act:ActionExpr WS? ';' {$$ = act;}
+  ;
+
+DirectActionDef =
+  ('direct:' | ('direct' WS)? ACTION) WS? act:ActionExpr WS? ';' {$$ = act;}
+  ;
+
 ProcDecl =
   'process' WS pc_name:ID '[' WS? idx_name:ID WS? IN WS? npcs:NatDom WS? ']'
   {yy->st->add_processes(pc_name.sp, idx_name.sp, npcs.sp);}
@@ -90,13 +108,8 @@ ProcDecl =
     )
     WS? ';' WS?
   )+
-  ( 'act:' WS?  '(' WS?
-    act:Expr WS? '-->' WS?  {act.sp = list2_ccstr_Sesp ("-->", act.sp);}
-    ( vbl:VblRef WS? ':=' WS? val:Expr WS? ';' WS?
-      {pushlast_Sesp (act.sp, list3_ccstr_Sesp (":=", vbl.sp, val.sp));}
-    )+
-    ')' WS? ';' WS?
-    {yy->st->add_action (act.sp, idx_name.sp);}
+  (  act:ShadowActionDef WS? {yy->st->add_action (act.sp, idx_name.sp, false);}
+   | act:DirectActionDef WS? {yy->st->add_action (act.sp, idx_name.sp, true);}
   )*
   ( LEGIT WS? legit:Expr WS? ';' WS?
     {yy->st->add_legit(legit.sp, idx_name.sp);}
@@ -106,7 +119,11 @@ ProcDecl =
   ;
 
 GlobalLegit =
-  LEGIT WS? a:Expr WS? ';'
+  (  'shadow' (WS LEGIT | ':') {yy->st->sys->direct_invariant_flag = false;}
+   | 'direct' (WS LEGIT | ':')
+   | LEGIT
+  )
+  WS? a:Expr WS? ';'
   {yy->st->add_legit(a.sp);}
   ;
 
@@ -162,7 +179,7 @@ ConstValue =
       //lose_Sesp (a.sp);
     }
   | '(' WS? a:ConstExpr WS? ')'
-    {        
+    {
       $$.sp = list2_ccstr_Sesp ("(int)", a.sp);
       $$.int_ck = a.int_ck;
     }
@@ -306,8 +323,10 @@ EVENTUALLY_AND_INVARIANT =
   ;
 
 LEGIT =
-  'legit:'
+  'legit:' | 'invariant:'
   ;
+
+ACTION = 'act:' | 'action:' ;
 
 ID = < [A-Za-z][0-9A-Za-z]* >
   {

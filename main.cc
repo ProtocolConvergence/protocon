@@ -267,7 +267,7 @@ int main(int argc, char** argv)
       const char* val = argv[argi++];
       uint x = 0;
       if (!xget_uint_cstr (&x, val))
-        failout_sysCx("Usage: -def KEY VAL\nWhere VAL is an unsigned integer!");
+        failout_sysCx("Argument Usage: -def KEY VAL\nWhere VAL is an unsigned integer!");
       infile_opt.constant_map[key] = x;
     }
     else if (eq_cstr (arg, "-x")) {
@@ -282,6 +282,40 @@ int main(int argc, char** argv)
       outfile_path = argv[argi++];
       if (!outfile_path) {
         failout_sysCx("Not enuff arguments.\n");
+      }
+    }
+    else if (eq_cstr (arg, "-ntrials")) {
+      if (!xget_uint_cstr (&opt.ntrials, argv[argi++])) {
+        failout_sysCx("Argument Usage: -ntrials N");
+      }
+    }
+    else if (eq_cstr (arg, "-try-all")) {
+      opt.try_all = true;
+    }
+    else if (eq_cstr (arg, "-x-conflicts")) {
+      opt.conflicts_xfilename = argv[argi++];
+    }
+    else if (eq_cstr (arg, "-o-conflicts")) {
+      opt.conflicts_ofilename = argv[argi++];
+    }
+    else if (eq_cstr (arg, "-max-conflict")) {
+      if (!xget_uint_cstr (&opt.max_conflict_sz, argv[argi++])) {
+        failout_sysCx("Argument Usage: -max-conflict N");
+      }
+    }
+    else if (eq_cstr (arg, "-pick")) {
+      const char* method = argv[argi++];
+      if (eq_cstr (method, "greedy")) {
+        opt.pickMethod = opt.GreedyPick;
+      }
+      else if (eq_cstr (method, "lcv")) {
+        opt.pickMethod = opt.LCVLitePick;
+      }
+      else if (eq_cstr (method, "quick")) {
+        opt.pickMethod = opt.QuickPick;
+      }
+      else {
+        failout_sysCx("Argument Usage: -pick [greedy|lcv|quick]");
       }
     }
     else {

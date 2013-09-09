@@ -462,9 +462,10 @@ LegitInvariant(const Xn::Sys& sys, const PF& lo_xn_rel, const PF& hi_xn_rel)
     return PF(false);
   }
 
-  // TODO: We shouldn't do this all the time.
-  if (!hi_invariant.equiv_ck(shadow_invariant))
-    return PF(false);
+  if (sys.direct_invariant_ck()) {
+    if (!hi_invariant.equiv_ck(shadow_invariant))
+      return PF(false);
+  }
 
   return hi_invariant;
 }

@@ -78,6 +78,21 @@ ConflictFamily::add_conflicts(const ConflictFamily& fam)
 }
 
   void
+ConflictFamily::trim(uint max_sz)
+{
+  if (max_sz == 0)  return;
+  Set< Cx::FlatSet<uint> > dels;
+  FOR_EACH( it, conflict_sets )
+  {
+    uint sz = (*it).sz();
+    if (sz > max_sz) {
+      dels |= *it;
+    }
+  }
+  conflict_sets -= dels;
+}
+
+  void
 ConflictFamily::conflict_sizes(Cx::Table<uint>& a) const {
   a.clear();
   FOR_EACH( it, conflict_sets )

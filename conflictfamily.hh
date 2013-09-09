@@ -25,6 +25,7 @@ public:
   void add_conflict(const Cx::Table<uint>& b);
   void add_conflict(const Cx::Set<uint>& b);
   void add_conflicts(const ConflictFamily& fam);
+  void trim(uint max_sz);
   void conflict_sizes(Cx::Table<uint>& a) const;
 
   void oput_conflict_sizes(Cx::OFile& of) const;

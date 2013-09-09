@@ -77,7 +77,7 @@ oput_protocon_pc_act (Cx::OFile& of, XFile* xf,
 {
   Sign good = 1;
   bool clause = false;
-  of << "  act:( ";
+  of << "  direct:( ";
   for (uint i = 0;
        good && i < (guard_vbls.sz() + assign_vbls.sz());
        ++i)
@@ -202,6 +202,11 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys)
   const Xn::Net& topo = sys.topology;
   for (uint i = 0; i < topo.vbl_symms.sz(); ++i) {
     const Xn::VblSymm& vbl_symm = topo.vbl_symms[i];
+    if (vbl_symm.shadow_puppet_role == Xn::Vbl::Shadow)
+      of << "shadow\n";
+    if (vbl_symm.shadow_puppet_role == Xn::Vbl::Puppet)
+      of << "puppet\n";
+
     of << "variable " << vbl_symm.name
       << "[Nat % " << vbl_symm.membs.sz()
       << "] <- Nat % " << vbl_symm.domsz << ";\n";
@@ -223,7 +228,12 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys)
     of << "}\n";
   }
 
-  of << "legit:\n  " << sys.invariant_expression << "\n  ;\n";
+  if (sys.direct_invariant_ck())
+    of << "direct";
+  else
+    of << "shadow";
+
+  of << " invariant:\n  " << sys.invariant_expression << "\n  ;\n";
 
   lose_OSPc (ospc);
   return good;

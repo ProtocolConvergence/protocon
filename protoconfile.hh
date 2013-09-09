@@ -63,6 +63,7 @@ public:
     free_SespCtx (this->spctx);
   }
 
+  bool update_allgood(bool good);
   bool add_variables(Sesp vbl_name_sp, Sesp vbl_nmembs_sp, Sesp vbl_dom_sp,
                      Xn::Vbl::ShadowPuppetRole role);
 
@@ -72,7 +73,7 @@ public:
 
   bool add_access(Sesp vbl_sp, Sesp pc_idx_sp, Bit write);
 
-  bool add_action(Sesp act_sp, Sesp pc_idx_sp);
+  bool add_action(Sesp act_sp, Sesp pc_idx_sp, bool direct);
 
   bool add_legit(Sesp legit_sp, Sesp pc_idx_sp);
 

@@ -258,6 +258,7 @@ public:
   bool shadow_puppet_synthesis;
   bool puppet_vbl_exists;
   bool pure_puppet_vbl_exists;
+  bool direct_invariant_flag;
   Cx::PFmla shadow_pfmla;
   Cx::PFmla direct_pfmla;
   /// Self-loops in the invariant.
@@ -275,6 +276,7 @@ public:
     , shadow_puppet_synthesis(false)
     , puppet_vbl_exists(false)
     , pure_puppet_vbl_exists(false)
+    , direct_invariant_flag(true)
     , shadow_pfmla(false)
     , direct_pfmla(false)
   {
@@ -294,6 +296,9 @@ public:
   /// Do the shadow puppet synthesis
   bool shadow_puppet_synthesis_ck() const {
     return this->shadow_puppet_synthesis;
+  }
+  bool direct_invariant_ck() const {
+    return this->direct_invariant_flag;
   }
   Cx::PFmla smooth_shadow_vbls(const Cx::PFmla& pf) const {
     return pf.smooth(shadow_pfmla_list_id);

@@ -139,18 +139,21 @@ flat_backtrack_synthesis(vector<uint>& ret_actions,
                          const ProtoconFileOpt& infile_opt,
                          const AddConvergenceOpt& global_opt)
 {
-  const uint ntrials = 300;
-
   bool done = false;
   bool solution_found = false;
   uint NPcs = 0; 
   ConflictFamily conflicts;
 
-  if (false)
+  if (global_opt.conflicts_xfilename)
   {
     Cx::XFileB conflicts_xf;
-    conflicts_xf.open("saved_working_conflicts");
+    conflicts_xf.open(global_opt.conflicts_xfilename);
     conflicts_xf >> conflicts;
+    if (!conflicts_xf.good()) {
+      DBog1( "Bad read from conflicts file: %s", global_opt.conflicts_xfilename );
+      return false;
+    }
+    conflicts.trim(global_opt.max_conflict_sz);
     conflicts.oput_conflict_sizes(DBogOF);
   }
 
@@ -227,7 +230,7 @@ flat_backtrack_synthesis(vector<uint>& ret_actions,
   }
 
   vector<uint> actions;
-  for (uint trial_idx = 0; !done && trial_idx < ntrials; ++trial_idx)
+  for (uint trial_idx = 0; !done && trial_idx < opt.ntrials; ++trial_idx)
   {
     bool found = false;
     if (opt.search_method == opt.RankShuffleSearch)
@@ -257,15 +260,17 @@ flat_backtrack_synthesis(vector<uint>& ret_actions,
     {}
     else if (found)
     {
-      done = true;
+      if (!global_opt.try_all)
+        done = true;
       solution_found = true;
       ret_actions = actions;
       DBog0("SOLUTION FOUND!");
 
     }
-    else
+    if (!done || global_opt.conflicts_ofilename)
     {
       synctx.conflicts.add_conflicts(conflicts);
+      synctx.conflicts.trim(global_opt.max_conflict_sz);
 
       conflicts = synctx.conflicts;
       conflicts.oput_conflict_sizes(DBogOF);
@@ -286,6 +291,14 @@ flat_backtrack_synthesis(vector<uint>& ret_actions,
 
     //check_conflict_sets(conflict_sets);
   }
+  }
+
+  if (global_opt.conflicts_ofilename)
+  {
+    Cx::OFileB conflicts_of;
+    conflicts_of.open(global_opt.conflicts_ofilename);
+    conflicts.trim(global_opt.max_conflict_sz);
+    conflicts_of << conflicts;
   }
 
   return solution_found;

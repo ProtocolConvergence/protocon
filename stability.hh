@@ -65,6 +65,11 @@ public:
   uint bt_depth;
   uint sys_pcidx;
   uint sys_npcs;
+  uint ntrials;
+  bool try_all;
+  uint max_conflict_sz;
+  const char* conflicts_xfilename;
+  const char* conflicts_ofilename;
 
   AddConvergenceOpt() :
     pickMethod( GreedyPick )
@@ -76,6 +81,11 @@ public:
     , bt_depth( 3 )
     , sys_pcidx( 0 )
     , sys_npcs( 1 )
+    , ntrials( 300 )
+    , try_all( false )
+    , max_conflict_sz( 0 )
+    , conflicts_xfilename( 0 )
+    , conflicts_ofilename( 0 )
   {}
 };
 
