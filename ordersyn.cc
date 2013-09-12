@@ -71,7 +71,7 @@ try_order_synthesis(vector<uint>& ret_actions,
 
   Claim( !tape.deadlockPF.sat_ck() );
   const Cx::PFmla& invariant = tape.hi_invariant;
-  if (CycleCk(tape.loXnRel, ~invariant)) {
+  if (cycle_ck(tape.loXnRel, ~invariant)) {
     DBog0( "Why are there cycles?" );
     return false;
   }

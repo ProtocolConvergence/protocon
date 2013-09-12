@@ -1,25 +1,29 @@
 
-protocol ThreeBitTokenRing;
-
 constant N := 5;
 
-variable e[Int % N] <- Int % 2;
-variable t[Int % N] <- Int % 2;
-variable ready[Int % N] <- Int % 2;
+puppet variable e[Int % N] <- Int % 2;
+direct variable t[Int % N] <- Int % 2;
+puppet variable ready[Int % N] <- Int % 2;
 
 process Bot[i <- Int % 1]
 {
   read:  e[i-1], t[i-1];
   write: e[i], t[i], ready[i];
-  act: ( e[i-1] == e[i] && t[i-1] != t[i]
-         --> e[i] := 1-e[i-1]; ready[i] := 0;
-       );
-  act: ( e[i-1] == e[i] && t[i-1] == t[i] && !(t[i] == 1 || ready[i] == 1)
-         --> e[i] := 1-e[i-1]; ready[i] := 1;
-       );
-  act: ( e[i-1] == e[i] && t[i-1] == t[i] &&  (t[i] == 1 || ready[i] == 1)
-         --> e[i] := 1-e[i-1]; t[i] := 1-t[i-1]; ready[i] := 0;
-       );
+  // Enforce this behavior within the invariant:
+  shadow action:( t[i-1] == t[i] --> t[i] := 1 - t[i-1]; );
+  // Use these actions:
+  puppet action:
+    ( e[i-1] == e[i] && t[i-1] != t[i]
+      --> e[i] := 1-e[i-1]; ready[i] := 0;
+    );
+  puppet action:
+    ( e[i-1] == e[i] && t[i-1] == t[i] && !(t[i] == 1 || ready[i] == 1)
+      --> e[i] := 1-e[i-1]; ready[i] := 1;
+    );
+  puppet action:
+    ( e[i-1] == e[i] && t[i-1] == t[i] &&  (t[i] == 1 || ready[i] == 1)
+      --> e[i] := 1-e[i-1]; t[i] := 1-t[i-1]; ready[i] := 0;
+    );
 }
 
 process P[j <- Int % (N-1)]
@@ -27,27 +31,36 @@ process P[j <- Int % (N-1)]
   let i := j+1;
   read:  e[i-1], t[i-1];
   write: e[i], t[i], ready[i];
-  act: ( e[i-1] != e[i] && t[i-1] == t[i]
-         --> e[i] := e[i-1]; ready[i] := 0;
-       );
-  act: ( e[i-1] != e[i] && t[i-1] != t[i] && !(t[i] == 1 || ready[i] == 1)
-         --> e[i] := e[i-1]; ready[i] := 1;
-       );
-  act: ( e[i-1] != e[i] && t[i-1] != t[i] &&  (t[i] == 1 || ready[i] == 1)
-         --> e[i] := e[i-1]; t[i] := t[i-1]; ready[i] := 0;
-       );
+  // Enforce this behavior within the invariant:
+  shadow action:( t[i-1] != t[i] --> t[i] := t[i-1]; );
+  // Use these actions:
+  puppet action:
+    ( e[i-1] != e[i] && t[i-1] == t[i]
+      --> e[i] := e[i-1]; ready[i] := 0;
+    );
+  puppet action:
+    ( e[i-1] != e[i] && t[i-1] != t[i] && !(t[i] == 1 || ready[i] == 1)
+      --> e[i] := e[i-1]; ready[i] := 1;
+    );
+  puppet action:
+    ( e[i-1] != e[i] && t[i-1] != t[i] &&  (t[i] == 1 || ready[i] == 1)
+      --> e[i] := e[i-1]; t[i] := t[i-1]; ready[i] := 0;
+    );
 }
 
-legit:
-  // Some process is enabled.
-  (exists i <- Int % N :
-      i == 0 && e[i-1] == e[i]
-   || i != 0 && e[i-1] != e[i]
-  )
-  &&
+// Make the invariant exactly this, no smoothing over puppet variables is allowed.
+direct invariant:
   // One process has the token.
   (unique i <- Int % N :
       i == 0 && t[i-1] == t[i]
    || i != 0 && t[i-1] != t[i]
-  );
+  )
+  //&&
+  //// Some process is enabled.
+  //// This (and the token-passing behavior) is enforced by the shadow actions.
+  //(exists i <- Int % N :
+  //    i == 0 && e[i-1] == e[i]
+  // || i != 0 && e[i-1] != e[i]
+  //)
+  ;
 

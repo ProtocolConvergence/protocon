@@ -186,12 +186,26 @@ public:
   uint total_pre_domsz;
   Cx::PFmla identity_pfmla;
 
+  bool puppet_vbl_exists;
+  bool pure_puppet_vbl_exists;
+
+private:
+  uint shadow_pfmla_list_id;
+  uint puppet_pfmla_list_id;
+  uint pure_puppet_pfmla_list_id;
+
 public:
   Net()
     : n_possible_acts(0)
     , total_pre_domsz(0)
     , identity_pfmla(true)
-  {}
+    , puppet_vbl_exists(false)
+    , pure_puppet_vbl_exists(false)
+  {
+    this->shadow_pfmla_list_id = this->pfmla_ctx.add_vbl_list();
+    this->puppet_pfmla_list_id = this->pfmla_ctx.add_vbl_list();
+    this->pure_puppet_pfmla_list_id = this->pfmla_ctx.add_vbl_list();
+  }
 
   void commit_initialization();
 
@@ -225,6 +239,28 @@ public:
     return this->pfmla_ctx.vbl(x.pfmla_idx);
   }
 
+  Cx::PFmla smooth_shadow_vbls(const Cx::PFmla& pf) const {
+    return pf.smooth(shadow_pfmla_list_id);
+  }
+  Cx::PFmla smooth_puppet_vbls(const Cx::PFmla& pf) const {
+    if (!puppet_vbl_exists) {
+      return pf;
+    }
+    return pf.smooth(puppet_pfmla_list_id);
+  }
+  Cx::PFmla smooth_pure_puppet_vbls(const Cx::PFmla& pf) const {
+    if (!pure_puppet_vbl_exists) {
+      return pf;
+    }
+    return pf.smooth(pure_puppet_pfmla_list_id);
+  }
+  Cx::PFmla smooth_pure_puppet_img_vbls(const Cx::PFmla& pf) const {
+    if (!pure_puppet_vbl_exists) {
+      return pf;
+    }
+    return pf.smooth_img(pure_puppet_pfmla_list_id);
+  }
+
   ostream& oput(ostream& of,
                 const Cx::PFmla& pf,
                 const String& pfx,
@@ -256,8 +292,6 @@ public:
   //Set< Cx::Tuple<uint,2> > puppet_vbls;
   /// Transition relation within the invariant.
   bool shadow_puppet_synthesis;
-  bool puppet_vbl_exists;
-  bool pure_puppet_vbl_exists;
   bool direct_invariant_flag;
   Cx::PFmla shadow_pfmla;
   Cx::PFmla direct_pfmla;
@@ -266,23 +300,15 @@ public:
 
 private:
   Map<uint,uint> niceIdcs; ///< Niceness for process symmetries, used in search.
-  uint shadow_pfmla_list_id;
-  uint puppet_pfmla_list_id;
-  uint pure_puppet_pfmla_list_id;
 
 public:
   Sys()
     : invariant( true )
     , shadow_puppet_synthesis(false)
-    , puppet_vbl_exists(false)
-    , pure_puppet_vbl_exists(false)
     , direct_invariant_flag(true)
     , shadow_pfmla(false)
     , direct_pfmla(false)
   {
-    this->shadow_pfmla_list_id = this->topology.pfmla_ctx.add_vbl_list();
-    this->puppet_pfmla_list_id = this->topology.pfmla_ctx.add_vbl_list();
-    this->pure_puppet_pfmla_list_id = this->topology.pfmla_ctx.add_vbl_list();
   }
 
 
@@ -299,27 +325,6 @@ public:
   }
   bool direct_invariant_ck() const {
     return this->direct_invariant_flag;
-  }
-  Cx::PFmla smooth_shadow_vbls(const Cx::PFmla& pf) const {
-    return pf.smooth(shadow_pfmla_list_id);
-  }
-  Cx::PFmla smooth_puppet_vbls(const Cx::PFmla& pf) const {
-    if (!puppet_vbl_exists) {
-      return pf;
-    }
-    return pf.smooth(puppet_pfmla_list_id);
-  }
-  Cx::PFmla smooth_pure_puppet_vbls(const Cx::PFmla& pf) const {
-    if (!pure_puppet_vbl_exists) {
-      return pf;
-    }
-    return pf.smooth(pure_puppet_pfmla_list_id);
-  }
-  Cx::PFmla smooth_pure_puppet_img_vbls(const Cx::PFmla& pf) const {
-    if (!pure_puppet_vbl_exists) {
-      return pf;
-    }
-    return pf.smooth_img(pure_puppet_pfmla_list_id);
   }
 
   void niceIdxFo(uint pcIdx, uint niceIdx) {
@@ -350,7 +355,8 @@ public:
 Cx::OFile&
 OPut(Cx::OFile& of, const Xn::ActSymm& act);
 PF
-LegitInvariant(const Xn::Sys& sys, const PF& loXnRel, const PF& hiXnRel);
+LegitInvariant(const Xn::Sys& sys, const PF& loXnRel, const PF& hiXnRel,
+               const Cx::PFmla* scc=0);
 bool
 WeakConvergenceCk(const Xn::Sys& sys, const PF& xnRel, const PF& invariant);
 bool

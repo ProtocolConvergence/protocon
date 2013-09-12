@@ -122,7 +122,8 @@ ProtoconFile::add_access(Sesp vbl_sp, Sesp pc_idx_sp, Bit write)
 }
 
   bool
-ProtoconFile::add_action(Sesp act_sp, Sesp pc_idx_sp, bool direct)
+ProtoconFile::add_action(Sesp act_sp, Sesp pc_idx_sp,
+                         Xn::Vbl::ShadowPuppetRole role)
 {
   Sign good = 1;
   Xn::Net& topo = sys->topology;
@@ -149,12 +150,14 @@ ProtoconFile::add_action(Sesp act_sp, Sesp pc_idx_sp, bool direct)
     Cx::PFmla assign_pf( topo.identity_pfmla );
     Sesp assign_sp = cddr_of_Sesp (act_sp);
 
+#if 0
     for (uint j = 0; j < pc.wvbls.sz(); ++j) {
       const Xn::Vbl& vbl = *pc.wvbls[j];
-      if (vbl.symm->pure_puppet_ck()) {
+      if (vbl.symm->pure_puppet_ck() && role == Xn::Vbl::Shadow) {
         assign_pf = assign_pf.smooth(topo.pfmla_vbl(vbl));
       }
     }
+#endif
 
     while (!nil_ck_Sesp (assign_sp)) {
       Sesp sp = car_of_Sesp (assign_sp);
@@ -185,30 +188,16 @@ ProtoconFile::add_action(Sesp act_sp, Sesp pc_idx_sp, bool direct)
 
   DoLegit(good, "")
   {
-    pc_symm.shadow_pfmla |= act_pf;
-    sys->shadow_pfmla |= act_pf;
-
-    const Cx::PFmla& pre_pf = act_pf.pre();
-    const Cx::PFmla& img_pf = act_pf.img();
-    bool fully_defined = true;
-
-    for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
-      const Xn::VblSymm& vbl_symm = *pc_symm.rvbl_symms[i];
-      if (direct || !vbl_symm.pure_puppet_ck())
-        continue;
-      if (!pre_pf.equiv_ck(pre_pf.smooth(vbl_symm.pfmla_list_id)))
-        continue;
-
-      if (pc_symm.write_flags[i]) {
-        if (!img_pf.equiv_ck(img_pf.smooth(vbl_symm.pfmla_list_id)))
-          continue;
-      }
-
-      fully_defined = false;
-      break;
+    if (role != Xn::Vbl::Puppet) {
+      const Cx::PFmla& shadow_act_pf =
+        (topo.smooth_pure_puppet_vbls(act_pf) -
+         topo.smooth_pure_puppet_vbls(topo.identity_pfmla));
+      pc_symm.shadow_pfmla |= shadow_act_pf;
+      sys->shadow_pfmla |= shadow_act_pf;
     }
 
-    if (fully_defined) {
+
+    if (role != Xn::Vbl::Shadow) {
       pc_symm.direct_pfmla |= act_pf;
       sys->direct_pfmla |= act_pf;
     }

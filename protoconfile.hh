@@ -73,7 +73,8 @@ public:
 
   bool add_access(Sesp vbl_sp, Sesp pc_idx_sp, Bit write);
 
-  bool add_action(Sesp act_sp, Sesp pc_idx_sp, bool direct);
+  bool add_action(Sesp act_sp, Sesp pc_idx_sp,
+                  Xn::Vbl::ShadowPuppetRole role);
 
   bool add_legit(Sesp legit_sp, Sesp pc_idx_sp);
 

@@ -67,7 +67,20 @@ Net::add_variables(const String& name, uint nmembs, uint domsz,
 
     const Cx::PFmlaVbl& pf_vbl = this->pfmla_vbl(*vbl);
     this->identity_pfmla &= pf_vbl.img_eq(pf_vbl);
+
+    if (symm.pure_puppet_ck()) {
+      pure_puppet_vbl_exists = true;
+      pfmla_ctx.add_to_vbl_list (pure_puppet_pfmla_list_id, vbl->pfmla_idx);
+    }
+    if (symm.shadow_ck()) {
+      pfmla_ctx.add_to_vbl_list (shadow_pfmla_list_id, vbl->pfmla_idx);
+    }
+    if (symm.puppet_ck()) {
+      puppet_vbl_exists = true;
+      pfmla_ctx.add_to_vbl_list (puppet_pfmla_list_id, vbl->pfmla_idx);
+    }
   }
+
   return &symm;
 }
 
@@ -289,17 +302,10 @@ Sys::commit_initialization()
     }
     if (vbl.symm->pure_puppet_ck()) {
       shadow_puppet_synthesis = true;
-      pure_puppet_vbl_exists = true;
-      topo.pfmla_ctx.add_to_vbl_list (pure_puppet_pfmla_list_id, vbl.pfmla_idx);
     }
     if (vbl.symm->shadow_ck()) {
-      topo.pfmla_ctx.add_to_vbl_list (shadow_pfmla_list_id, vbl.pfmla_idx);
       const Cx::PFmlaVbl& x = topo.pfmla_ctx.vbl(vbl.pfmla_idx);
       shadow_self &= (x.img_eq(x));
-    }
-    if (vbl.symm->puppet_ck()) {
-      puppet_vbl_exists = true;
-      topo.pfmla_ctx.add_to_vbl_list (puppet_pfmla_list_id, vbl.pfmla_idx);
     }
   }
 
@@ -320,12 +326,20 @@ Sys::integrityCk() const
   bool good = true;
   const Net& topo = this->topology;
 
-  if (this->invariant.tautology_ck(false)) {
+  Claim(topo.identity_pfmla.sat_ck());
+  Claim(topo.identity_pfmla.subseteq_ck(this->shadow_self));
+  Claim(topo.smooth_pure_puppet_vbls(topo.identity_pfmla).equiv_ck(this->shadow_self));
+
+  if (this->shadow_pfmla.overlap_ck(this->shadow_self)) {
+    DBog0( "Error: Shadow protocol contains self-loops!" );
+    good = false;
+  }
+  if (!this->invariant.sat_ck()) {
     DBog0( "Error: Invariant is empty!" );
     good = false;
   }
 
-  if (!this->invariant.smooth(this->shadow_pfmla_list_id).tautology_ck(true)) {
+  if (!topo.smooth_shadow_vbls(invariant).tautology_ck()) {
     DBog0( "Error: Invariant includes non-shadow variables." );
     good = false;
   }
@@ -365,18 +379,20 @@ OPut(Cx::OFile& of, const Xn::ActSymm& act)
 }
 
   PF
-LegitInvariant(const Xn::Sys& sys, const PF& lo_xn_rel, const PF& hi_xn_rel)
+LegitInvariant(const Xn::Sys& sys, const PF& lo_xn_rel, const PF& hi_xn_rel,
+               const Cx::PFmla* scc)
 {
   if (!sys.shadow_puppet_synthesis_ck())  return sys.invariant;
 
+  const Xn::Net& topo = sys.topology;
   const Cx::PFmla& shadow_invariant = sys.invariant;
   const Cx::PFmla& shadow_protocol = sys.shadow_pfmla;
   const Cx::PFmla& shadow_self = sys.shadow_self;
   const Cx::PFmla& shadow_live = shadow_invariant & shadow_protocol;
 
   // There shouldn't be non-progress cycles.
-  if (CycleCk(lo_xn_rel & shadow_self & shadow_protocol.pre(), shadow_invariant)) {
-    return PF(false);
+  if (cycle_ck(lo_xn_rel & shadow_self & shadow_protocol.pre(), shadow_invariant)) {
+    return Cx::PFmla(false);
   }
 
   // Invariant states with no transitions to them.
@@ -403,12 +419,12 @@ LegitInvariant(const Xn::Sys& sys, const PF& lo_xn_rel, const PF& hi_xn_rel)
     const Cx::PFmla old_invariant = hi_invariant;
     const Cx::PFmla& hi_img = hi_invariant.as_img();
 
-    hi_self &= hi_invariant;         
+    hi_self &= hi_invariant;
     hi_self &= hi_img;
 
     hi_live &= hi_invariant;
     hi_live &= hi_img;
-    hi_live -= (shadow_live - sys.smooth_pure_puppet_img_vbls(hi_live)).pre();
+    hi_live -= (shadow_live - topo.smooth_pure_puppet_img_vbls(hi_live)).pre();
 
     const Cx::PFmla& hi_beg = hi_invariant & shadow_beg;
     const Cx::PFmla& hi_end = hi_invariant & shadow_end;
@@ -424,14 +440,18 @@ LegitInvariant(const Xn::Sys& sys, const PF& lo_xn_rel, const PF& hi_xn_rel)
     }
   }
 
-  if (!shadow_invariant.equiv_ck(sys.smooth_pure_puppet_vbls(hi_invariant))) {
+  if (!shadow_invariant.equiv_ck(topo.smooth_pure_puppet_vbls(hi_invariant))) {
+    return PF(false);
+  }
+
+  if (!(lo_xn_rel & hi_invariant).subseteq_ck(hi_live | hi_self)) {
     return PF(false);
   }
 
   const Cx::PFmla& lhs =
-    sys.smooth_pure_puppet_vbls(shadow_live);
+    topo.smooth_pure_puppet_vbls(shadow_live);
   const Cx::PFmla& rhs =
-    sys.smooth_pure_puppet_vbls(hi_live);
+    topo.smooth_pure_puppet_vbls(hi_live);
 #if 0
   Claim( lhs.equiv_ck(rhs) );
 #else
@@ -450,6 +470,17 @@ LegitInvariant(const Xn::Sys& sys, const PF& lo_xn_rel, const PF& hi_xn_rel)
   }
 #endif
 
+  if (scc) {
+    if (!scc->subseteq_ck(hi_invariant)) {
+      return Cx::PFmla(false);
+    }
+  }
+  else {
+    if (cycle_ck(lo_xn_rel, shadow_invariant - hi_invariant)) {
+      return Cx::PFmla(false);
+    }
+  }
+
   Cx::PFmla legit_protocol = hi_xn_rel & (shadow_protocol | shadow_self);
   legit_protocol &= shadow_invariant;
   legit_protocol &= shadow_invariant.as_img();
@@ -457,14 +488,10 @@ LegitInvariant(const Xn::Sys& sys, const PF& lo_xn_rel, const PF& hi_xn_rel)
   hi_invariant = BackwardReachability(legit_protocol, hi_invariant);
   hi_invariant = ClosedSubset(lo_xn_rel, hi_invariant);
 
-  //if (CycleCk(lo_xn_rel, ~hi_invariant)) {
-  if (CycleCk(lo_xn_rel, shadow_invariant - hi_invariant)) {
-    return PF(false);
-  }
-
   if (sys.direct_invariant_ck()) {
-    if (!hi_invariant.equiv_ck(shadow_invariant))
+    if (!hi_invariant.equiv_ck(shadow_invariant)) {
       return PF(false);
+    }
   }
 
   return hi_invariant;
@@ -476,17 +503,8 @@ LegitInvariant(const Xn::Sys& sys, const PF& lo_xn_rel, const PF& hi_xn_rel)
   bool
 WeakConvergenceCk(const Xn::Sys& sys, const PF& xnRel, const PF& invariant)
 {
-  //if (sys.shadow_puppet_synthesis_ck()) {
-  //  const PF& shadow_pfmla =
-  //    sys.smooth_pure_puppet_vbls(xnRel & invariant & invariant.as_img())
-  //    - sys.shadow_self;
-  //  if (!shadow_pfmla.equiv_ck(sys.shadow_pfmla & sys.invariant)) {
-  //    return false;
-  //  }
-  //}
-
   PF span0( invariant );
-  while (!span0.tautology_ck(true)) {
+  while (!span0.tautology_ck()) {
     const Cx::PFmla& span1 = span0 | xnRel.pre(span0);
     if (span1.equiv_ck(span0))  return false;
     span0 = span1;

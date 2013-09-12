@@ -259,7 +259,7 @@ TestXnSys()
        (topo.pfmla_vbl(1) == 1) &
        (topo.pfmla_vbl(0).img_eq(1)));
     cyclePF &= topo.pcs[0].act_unchanged_pfmla;
-    Claim( !CycleCk(cyclePF, ~sys.invariant) );
+    Claim( !cycle_ck(cyclePF, ~sys.invariant) );
 
     Claim( !SCC_Find(0, cyclePF, ~sys.invariant) );
 
@@ -271,7 +271,7 @@ TestXnSys()
       & topo.pcs[0].act_unchanged_pfmla;
     // All states in the cycle are illegitimate,
     // it should be found.
-    Claim( CycleCk(cyclePF, ~sys.invariant) );
+    Claim( cycle_ck(cyclePF, ~sys.invariant) );
 
     Claim( SCC_Find(0, cyclePF, ~sys.invariant) );
   }

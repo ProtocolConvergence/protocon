@@ -309,7 +309,7 @@ ForwardReachability(const Cx::PFmla& xn, const Cx::PFmla& pf)
 {
   Cx::PFmla visit( pf );
   Cx::PFmla layer( xn.img(pf) - visit );
-  while (!layer.tautology_ck(false)) {
+  while (layer.sat_ck()) {
     visit |= layer;
     layer = xn.img(layer) - visit;
   }
@@ -326,7 +326,7 @@ BackwardReachability(const PF& xnRel, const PF& pf)
 {
   PF visitPF( pf );
   PF layerPF( xnRel.pre(pf) - visitPF );
-  while (!layerPF.tautology_ck(false)) {
+  while (layerPF.sat_ck()) {
     visitPF |= layerPF;
     layerPF = xnRel.pre(layerPF) - visitPF;
   }
@@ -343,7 +343,7 @@ UndirectedReachability(const Cx::PFmla& xn, const Cx::PFmla& pf)
 {
   Cx::PFmla visit( pf );
   Cx::PFmla layer( (xn.pre(pf) | xn.img(pf)) - visit );
-  while (!layer.tautology_ck(false)) {
+  while (layer.sat_ck()) {
     visit |= layer;
     layer = (xn.pre(layer) | xn.img(layer)) - visit;
   }
@@ -363,6 +363,29 @@ transitive_closure(const Cx::PFmla& xn)
   return reach;
 }
 
+  bool
+cycle_ck (Cx::PFmla* scc, const Cx::PFmla& xn)
+{
+  Cx::PFmla span0( true );
+
+  while (true) {
+    const Cx::PFmla& span1 = xn.img(span0);
+    if (span0.equiv_ck(span1))  break;
+    span0 = span1;
+  }
+
+  while (true) {
+    const Cx::PFmla& span1 = span0 & xn.pre(span0);
+    if (span0.equiv_ck(span1))  break;
+    span0 = span1;
+  }
+
+  if (scc)
+    *scc = span0;
+
+  return span0.sat_ck();
+}
+
 /**
  * Check for cycles within some state predicate.
  *
@@ -371,12 +394,21 @@ transitive_closure(const Cx::PFmla& xn)
  * iteratively computing the image until it does not change.
  */
   bool
-CycleCk(PF* scc, const PF& xnRel, const PF& pf)
+cycle_ck(PF* scc, const PF& xn, const PF& pf)
 {
   PF span0( true );
 
   while (true) {
-    const PF& span1 = xnRel.img(span0);
+    const PF& span1 = xn.img(span0);
+
+    if (!pf.overlap_ck(span1))  return false;
+    if (span0.equiv_ck(span1))  break;
+
+    span0 = span1;
+  }
+
+  while (true) {
+    const PF& span1 = span0 & xn.pre(span0);
 
     if (!pf.overlap_ck(span1))  return false;
     if (span0.equiv_ck(span1))  break;
@@ -394,12 +426,12 @@ CycleCk(PF* scc, const PF& xnRel, const PF& pf)
  * Check for cycles within some state predicate.
  */
   bool
-CycleCk(const PF& xnRel, const PF& pf)
+cycle_ck(const PF& xn, const PF& pf)
 {
 #if 0
-  return SCC_Find(0, xnRel, pf);
+  return SCC_Find(0, xn, pf);
 #else
-  return CycleCk(0, xnRel, pf);
+  return cycle_ck(0, xn, pf);
 #endif
 }
 
@@ -417,7 +449,7 @@ Skel_Forward(const Cx::PFmla& V, const Cx::PFmla& E, const Cx::PFmla& NODE,
   FW = false;
 
   // Compute the forward set and push onto /stack/.
-  while (!level.tautology_ck(false))
+  while (level.sat_ck())
   {
     stack.push(level);
     FW |= level;
@@ -442,14 +474,15 @@ SCC_Find(Cx::PFmla* ret_cycles,
          const Cx::PFmla& V, const Cx::PFmla& E,
          const Cx::PFmla& S, const Cx::PFmla& NODE)
 {
+  const bool only_one_cycle = false;
   using Cx::PFmla;
 
-  if (V.tautology_ck(false))
+  if (!V.sat_ck())
     return false;
 
   // Determine the node for which the SCC is computed.
   PFmla scc;
-  if (S.tautology_ck(false))
+  if (!S.sat_ck())
     scc = V.pick_pre();
   else
     scc = NODE;
@@ -464,7 +497,7 @@ SCC_Find(Cx::PFmla* ret_cycles,
   // Determine the SCC containing NODE.
   bool found = false;
   for (PFmla pf = (E.pre(scc) & FW);
-       !(pf - scc).tautology_ck(false);
+       (pf - scc).sat_ck();
        pf = (E.pre(scc) & FW))
   {
     if (!ret_cycles)  return true;
@@ -476,6 +509,8 @@ SCC_Find(Cx::PFmla* ret_cycles,
   if (found)
     *ret_cycles |= scc;
 
+  if (found && only_one_cycle)  return true;
+
   // First recursive call: Computation of the SCCs in V - FW.
   {
     const PFmla& V1 = V - FW;
@@ -484,11 +519,13 @@ SCC_Find(Cx::PFmla* ret_cycles,
     //const PFmla& E1 = (E & V1) & V1.as_img();
     const PFmla& S1 = S - scc;
     const PFmla& NODE1 = E.pre(scc | S) & (S - scc);
-    found = found ||
+    const bool just_found =
       SCC_Find(ret_cycles, V1, E, S1, NODE1);
 
+    found = found || just_found;
     if (found && !ret_cycles)
       return true;
+    if (found && only_one_cycle)  return true;
   }
 
   // Second recursive call: Computation of the SCCs in FW - SCC
@@ -499,8 +536,10 @@ SCC_Find(Cx::PFmla* ret_cycles,
     //const PFmla& E1 = (E & V1) & V1.as_img();
     const PFmla& S1 = NewS - scc;
     const PFmla& NODE1 = NewNODE - scc;
-    found = found ||
+    const bool just_found =
       SCC_Find(ret_cycles, V1, E, S1, NODE1);
+
+    found = found || just_found;
   }
 
   return found;
@@ -521,8 +560,8 @@ SCC_Find(Cx::PFmla* ret_cycles, const Cx::PFmla& E, const Cx::PFmla& pf)
 {
   Cx::PFmla tmp_E = E;
   Cx::PFmla tmp_pf = pf;
-  Cx::PFmla tmp_S( false );;
-  Cx::PFmla tmp_NODE( false );;
+  Cx::PFmla tmp_S( false );
+  Cx::PFmla tmp_NODE( false );
   fill_ctx (tmp_E, tmp_pf);
   fill_ctx (tmp_E, tmp_S);
   fill_ctx (tmp_E, tmp_NODE);

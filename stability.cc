@@ -571,7 +571,8 @@ QuickTrim(Set<uint>& delSet,
 small_cycle_conflict (Cx::Table<uint>& conflict_set,
                       const Cx::PFmla& scc,
                       const vector<uint>& actions,
-                      const Xn::Net& topo)
+                      const Xn::Net& topo,
+                      const Cx::PFmla& invariant)
 {
   conflict_set.clear();
 
@@ -594,14 +595,18 @@ small_cycle_conflict (Cx::Table<uint>& conflict_set,
     i -= 1;
     uint actidx = scc_actidcs[i];
     const Cx::PFmla& act_pfmla = topo.action_pfmla(actidx);
-    if (CycleCk(edg - act_pfmla, scc)) {
+    Cx::PFmla next_scc(false);
+    if (cycle_ck(&next_scc, edg - act_pfmla, scc)
+        && invariant.overlap_ck(next_scc))
+    {
         edg -= act_pfmla;
     }
-    else {
+    else
+    {
       conflict_set.push(actidx);
     }
   }
-  //Claim( CycleCk(edg, scc) );
+  //Claim( cycle_ck(edg, scc) );
 }
 
   uint
@@ -625,12 +630,12 @@ count_actions_in_cycle (const Cx::PFmla& scc, Cx::PFmla edg,
   Cx::PFmla min_edg = edg;
   for (uint i = 0; i < scc_actidcs.size(); ++i) {
     const Cx::PFmla& act_pfmla = topo.action_pfmla(scc_actidcs[i]);
-    if (!CycleCk(edg - act_pfmla, scc)) {
+    if (!cycle_ck(edg - act_pfmla, scc)) {
       ++ nneed;
       ++ nmin;
     }
     else {
-      if (CycleCk(min_edg - act_pfmla, min_edg)) {
+      if (cycle_ck(min_edg - act_pfmla, min_edg)) {
         min_edg -= act_pfmla;
       }
       else {
@@ -855,9 +860,23 @@ StabilitySynLvl::revise_actions(const Xn::Sys& sys,
     }
   }
 
+  Cx::PFmla scc(false);
+  cycle_ck(&scc, this->loXnRel);
+  if (!scc.subseteq_ck(sys.invariant)) {
+    //uint n = count_actions_in_cycle(scc, act_pf, this->actions, topo);
+    //DBog1("scc actions: %u", n);
+    if (this->bt_dbog) {
+      DBogOF << "CYCLE\n";
+    }
+    Cx::Table<uint> conflict_set;
+    small_cycle_conflict (conflict_set, scc, this->actions, topo, sys.invariant);
+    this->ctx->conflicts.add_conflict(conflict_set);
+    return false;
+  }
+
   if (sys.shadow_puppet_synthesis_ck()) {
     this->hi_invariant =
-      LegitInvariant(sys, this->loXnRel, this->hiXnRel);
+      LegitInvariant(sys, this->loXnRel, this->hiXnRel, &scc);
     if (!this->hi_invariant.sat_ck()) {
       if (this->bt_dbog) {
         DBogOF << "LEGIT\n";
@@ -867,19 +886,6 @@ StabilitySynLvl::revise_actions(const Xn::Sys& sys,
   }
   else {
     this->hi_invariant = sys.invariant;
-  }
-
-  Cx::PFmla scc;
-  if (CycleCk(&scc, this->loXnRel, ~this->hi_invariant)) {
-    //uint n = count_actions_in_cycle(scc, act_pf, this->actions, topo);
-    //DBog1("scc actions: %u", n);
-    if (this->bt_dbog) {
-      DBogOF << "CYCLE\n";
-    }
-    Cx::Table<uint> conflict_set;
-    small_cycle_conflict (conflict_set, scc, this->actions, topo);
-    this->ctx->conflicts.add_conflict(conflict_set);
-    return false;
   }
 
   if (!WeakConvergenceCk(sys, this->hiXnRel, this->hi_invariant)) {

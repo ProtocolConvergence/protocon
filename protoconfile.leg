@@ -94,6 +94,10 @@ DirectActionDef =
   ('direct:' | ('direct' WS)? ACTION) WS? act:ActionExpr WS? ';' {$$ = act;}
   ;
 
+PuppetActionDef =
+  'puppet' (WS ACTION | ':') WS? act:ActionExpr WS? ';' {$$ = act;}
+  ;
+
 ProcDecl =
   'process' WS pc_name:ID '[' WS? idx_name:ID WS? IN WS? npcs:NatDom WS? ']'
   {yy->st->add_processes(pc_name.sp, idx_name.sp, npcs.sp);}
@@ -108,8 +112,9 @@ ProcDecl =
     )
     WS? ';' WS?
   )+
-  (  act:ShadowActionDef WS? {yy->st->add_action (act.sp, idx_name.sp, false);}
-   | act:DirectActionDef WS? {yy->st->add_action (act.sp, idx_name.sp, true);}
+  (  act:ShadowActionDef WS? {yy->st->add_action (act.sp, idx_name.sp, Xn::Vbl::Shadow);}
+   | act:DirectActionDef WS? {yy->st->add_action (act.sp, idx_name.sp, Xn::Vbl::Direct);}
+   | act:PuppetActionDef WS? {yy->st->add_action (act.sp, idx_name.sp, Xn::Vbl::Puppet);}
   )*
   ( LEGIT WS? legit:Expr WS? ';' WS?
     {yy->st->add_legit(legit.sp, idx_name.sp);}

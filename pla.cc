@@ -77,7 +77,7 @@ oput_protocon_pc_act (Cx::OFile& of, XFile* xf,
 {
   Sign good = 1;
   bool clause = false;
-  of << "  direct:( ";
+  of << "  puppet action:\n    ( ";
   for (uint i = 0;
        good && i < (guard_vbls.sz() + assign_vbls.sz());
        ++i)

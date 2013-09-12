@@ -536,9 +536,11 @@ UndirectedReachability(const Cx::PFmla& xn, const Cx::PFmla& pf);
 Cx::PFmla
 transitive_closure(const Cx::PFmla& xn);
 bool
-CycleCk(PF* scc, const PF& xnRel, const PF& pf);
+cycle_ck (Cx::PFmla* scc, const Cx::PFmla& xn);
 bool
-CycleCk(const PF& xnRel, const PF& pf);
+cycle_ck(PF* scc, const PF& xn, const PF& pf);
+bool
+cycle_ck(const PF& xn, const PF& pf);
 bool
 SCC_Find(Cx::PFmla* ret_cycles, const Cx::PFmla& E, const Cx::PFmla& pf);
 

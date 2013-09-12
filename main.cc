@@ -8,6 +8,77 @@ extern "C" {
 #include "cx/fileb.hh"
 #include "ordersyn.hh"
 
+static
+  bool
+VerifyStabilization(const Xn::Sys& sys, const vector<uint>& actions)
+{
+  Cx::OFile& of = DBogOF;
+  const Xn::Net& topo = sys.topology;
+  Cx::PFmla xn( false );
+  of << "Building transition relation...\n";
+  of.flush();
+  for (uint i = 0; i < actions.size(); ++i) {
+    xn |= topo.action_pfmla(actions[i]);
+  }
+  of << "Checking for deadlocks...\n";
+  of.flush();
+  if (!(~sys.invariant).subseteq_ck(xn.pre())) {
+    of << "Deadlock found.\n";
+    of.flush();
+    return false;
+  }
+  of << "Finding SCCs...\n";
+  of.flush();
+  Cx::PFmla scc( false );
+  cycle_ck(&scc, xn);
+  if (!scc.subseteq_ck(sys.invariant)) {
+    of << "Livelock found.\n";
+    of.flush();
+    return false;
+  }
+  of << "Calculating invariant...\n";
+  of.flush();
+  const Cx::PFmla& invariant =
+    LegitInvariant(sys, xn, xn, &scc);
+  if (!invariant.sat_ck()) {
+    of << "Invariant not valid, given the protocol and behavior.\n";
+    of.flush();
+    return false;
+  }
+  of << "Checking for deadlocks in new invariant...\n";
+  of.flush();
+  if (!(~invariant).subseteq_ck(xn.pre())) {
+    of << "Deadlock found.\n";
+    of.flush();
+    return false;
+  }
+  of << "Checking for weak convergence...\n";
+  of.flush();
+  if (!WeakConvergenceCk(sys, xn, invariant)) {
+    of << "Weak convergence does not hold...\n";
+    of.flush();
+    return false;
+  }
+#if 0
+  of << "Checking for cycles using SCC_Find...\n";
+  of.flush();
+  if (SCC_Find(&scc, xn, ~invariant)) {
+    of << "Livelock found.\n";
+    topo.oput_all_pf(of, scc);
+    of.flush();
+    return false;
+  }
+#endif
+  return true;
+}
+
+static
+  bool
+VerifyStabilization(const Xn::Sys& sys)
+{
+  return VerifyStabilization(sys, sys.actions);
+}
+
 
 /**
  * Add convergence to a system.
@@ -72,7 +143,7 @@ AddConvergence(vector<uint>& retActions,
     if (!tape.revise_actions(sys, Set<uint>(), Set<uint>(actidx)))
     {
       if (tape.bt_dbog) {
-        DBog0("giveup");
+        DBog1("backtrack from lvl %u", tape.bt_level);
       }
       tape.add_small_conflict_set(sys, tape.picks);
       return false;
@@ -80,21 +151,12 @@ AddConvergence(vector<uint>& retActions,
   }
 
   Claim(tape.deadlockPF.tautology_ck(false));
-  if (tape.deadlockPF.tautology_ck(false)) {
-    const PF& invariant = sys.shadow_puppet_synthesis_ck() ? tape.hi_invariant : sys.invariant;
-    if (CycleCk(tape.loXnRel, ~invariant)) {
-      DBog0( "Why are there cycles?" );
-      return false;
-    }
-    if (!WeakConvergenceCk(sys, tape.loXnRel, invariant)) {
-      if (!invariant.tautology_ck(false)) {
-        DBog0( "Why does weak convergence not hold?" );
-      }
-      return false;
-    }
+  DBog0( "Verifying solution..." );
+  if (VerifyStabilization(sys, tape.actions)) {
     retActions = tape.actions;
     return true;
   }
+  DBog0( "Solution was NOT self-stabilizing." );
   return false;
 }
 
@@ -126,7 +188,6 @@ InitStabilitySyn(StabilitySyn& synctx,
     // Enforce self-disabling actions.
     if (false)
     for (uint actidx = 0; actidx < pc_symm.n_possible_acts; ++actidx) {
-      DBog2("fuuuu %u %u", actidx, pc_symm.n_possible_acts);
       pc_symm.action(act, actidx);
       synctx.csp_base_pfmla &=
         (synctx.csp_pfmla_ctx.vbl(act.pre_idx) != act.img_idx)
@@ -226,6 +287,7 @@ int main(int argc, char** argv)
   const char* modelFilePath = 0;
   ProtoconFileOpt infile_opt;
   const char* outfile_path = 0;
+  bool verify = false;
 
   // Use to disable picking only actions which resolve deadlocks
   // by making them backwards reachable from the invariant.
@@ -260,7 +322,7 @@ int main(int argc, char** argv)
       return 0;
     }
     else if (eq_cstr (arg, "-def")) {
-      if (argi + 2 >= argc) {
+      if (argi + 1 >= argc) {
         failout_sysCx("2 arguments needed for -def.\n");
       }
       const char* key = argv[argi++];
@@ -302,6 +364,9 @@ int main(int argc, char** argv)
       if (!xget_uint_cstr (&opt.max_conflict_sz, argv[argi++])) {
         failout_sysCx("Argument Usage: -max-conflict N");
       }
+    }
+    else if (eq_cstr (arg, "-verify")) {
+      verify = true;
     }
     else if (eq_cstr (arg, "-pick")) {
       const char* method = argv[argi++];
@@ -397,8 +462,10 @@ int main(int argc, char** argv)
   }
 
   bool found = false;
-  // Run the algorithm.
-  if (opt.search_method != opt.BacktrackSearch) {
+  if (verify) {
+    found = VerifyStabilization(sys);
+  }
+  else if (opt.search_method != opt.BacktrackSearch) {
     if (!infile_opt.file_path) {
       failout_sysCx ("Need to use input file with random or rank/shuffle method!");
     }
@@ -409,7 +476,15 @@ int main(int argc, char** argv)
     found = AddConvergence(sys, opt);
   }
 
-  if (found) {
+  if (verify) {
+    if (found) {
+      DBog0( "Protocol is self-stabilizing!" );
+    }
+    else {
+      DBog0( "Protocol is NOT self-stabilizing... :(" );
+    }
+  }
+  else if (found) {
     DBog0("Solution found!");
     for (uint i = 0; i < sys.actions.size(); ++i) {
       const Xn::Net& topo = sys.topology;
@@ -418,6 +493,12 @@ int main(int argc, char** argv)
       //DBogOF << sys.actions[i] << ' ';
       OPut(DBogOF, act) << '\n';
     }
+  }
+  else {
+    DBog0("No solution found...");
+  }
+
+  if (found) {
     if (modelFilePath)  {
       std::fstream of(modelFilePath,
                       std::ios::binary |
@@ -435,12 +516,9 @@ int main(int argc, char** argv)
       oput_protocon_file (ofb, sys);
     }
   }
-  else {
-    DBog0("No solution found...");
-  }
   DBogOF.flush();
 
   lose_sysCx ();
-  return 0;
+  return found ? 0 : 2;
 }
 
