@@ -18,13 +18,13 @@ candidate_actions(vector<uint>& candidates, const Xn::Sys& sys)
     }
   }
 
-  for (uint i = 0; i < topo.n_possible_acts; ++i) {
+  for (uint actidx = 0; actidx < topo.n_possible_acts; ++actidx) {
     bool add = true;
 
     Xn::ActSymm act;
-    topo.action(act, i);
+    topo.action(act, actidx);
     const Xn::PcSymm& pc_symm = *act.pc_symm;
-    const PF& actPF = topo.action_pfmla(i);
+    const Cx::PFmla& act_pf = topo.action_pfmla(actidx);
 
     // Check for self-loops.
     if (add) {
@@ -36,20 +36,27 @@ candidate_actions(vector<uint>& candidates, const Xn::Sys& sys)
       }
       add = !selfloop;
       if (false && selfloop) {
-        OPut((DBogOF << "Action " << i << " is a self-loop: "), act) << '\n';
+        OPut((DBogOF << "Action " << actidx << " is a self-loop: "), act) << '\n';
       }
     }
 
-    if (add && !(sys.shadow_puppet_synthesis_ck() || actPF <= sys.direct_pfmla)
-        && sys.invariant.overlap_ck(actPF)) {
-      add = false;
-      if (false) {
-        OPut((DBogOF << "Action " << i << " exists in the invariant: "), act) << '\n';
+    if (add && sys.direct_invariant_ck()) {
+      if (!act_pf.img(sys.invariant).subseteq_ck(sys.invariant)) {
+        add = false;
+        if (false) {
+          OPut((DBogOF << "Action " << actidx << " breaks closure: "), act) << '\n';
+        }
+      }
+      else if (!(act_pf & sys.invariant).subseteq_ck(sys.shadow_pfmla | sys.shadow_self)) {
+        add = false;
+        if (false) {
+          OPut((DBogOF << "Action " << actidx << " breaks shadow protocol: "), act) << '\n';
+        }
       }
     }
 
     if (add) {
-      candidates.push_back(i);
+      candidates.push_back(actidx);
     }
   }
   if (candidates.size() == 0) {

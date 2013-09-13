@@ -5,6 +5,7 @@
 #include "pfmla-glu.h"
 
 typedef struct GluPFmla GluPFmla;
+typedef struct GluPFmlaVbl GluPFmlaVbl;
 typedef struct GluPFmlaCtx GluPFmlaCtx;
 DeclTableT( array_t_memloc, array_t* );
 
@@ -12,6 +13,16 @@ struct GluPFmla
 {
   PFmlaBase base;
   mdd_t* mdd;
+};
+
+struct GluPFmlaVbl
+{
+  PFmlaVbl base;
+  AlphaTab img_name;
+  AlphaTab aux_name;
+  uint pre_id;
+  uint img_id;
+  uint aux_id;
 };
 
 struct GluPFmlaCtx
@@ -42,31 +53,18 @@ castup_as_GluPFmla (PFmla g)
 }
 
 static
+  GluPFmlaVbl*
+vbl_of_GluPFmlaCtx (GluPFmlaCtx* ctx, uint id)
+{
+  PFmlaVbl* x = vbl_of_PFmlaCtx (&ctx->fmlactx, id);
+  return CastUp( GluPFmlaVbl, base, x );
+}
+
+static
   GluPFmlaCtx*
 castup_as_GluPFmlaCtx (PFmlaCtx* fmlactx)
 {
   return CastUp( GluPFmlaCtx, fmlactx, fmlactx );
-}
-
-static
-  uint
-id_of_pre (uint id)
-{
-  return id * 3 + 2;
-}
-
-static
-  uint
-id_of_img (uint id)
-{
-  return id * 3 + 1;
-}
-
- static
-  uint
-id_of_aux (uint id)
-{
-  return id * 3;
 }
 
 static
@@ -374,12 +372,22 @@ free_GluPFmla (PFmlaCtx* ctx, PFmla base_a)
 
 static
   void
+lose_GluPFmlaVbl (PFmlaVbl* base)
+{
+  GluPFmlaVbl* x = CastUp( GluPFmlaVbl, base, base );
+  lose_AlphaTab (&x->img_name);
+  lose_AlphaTab (&x->aux_name);
+}
+
+static
+  void
 vbl_eqc_GluPFmla (PFmlaCtx* fmlactx, PFmla* base_dst, uint vbl_id, uint x)
 {
   GluPFmlaCtx* ctx = castup_as_GluPFmlaCtx (fmlactx);
+  const GluPFmlaVbl* vbl = vbl_of_GluPFmlaCtx (ctx, vbl_id);
   GluPFmla* dst = castup_as_GluPFmla (*base_dst);
   if (dst->mdd)  mdd_free (dst->mdd);
-  dst->mdd = mdd_eq_c (ctx->ctx, id_of_pre (vbl_id), x);
+  dst->mdd = mdd_eq_c (ctx->ctx, vbl->pre_id, x);
 }
 
 static
@@ -387,9 +395,10 @@ static
 vbl_img_eqc_GluPFmla (PFmlaCtx* fmlactx, PFmla* base_dst, uint vbl_id, uint x)
 {
   GluPFmlaCtx* ctx = castup_as_GluPFmlaCtx (fmlactx);
+  const GluPFmlaVbl* vbl = vbl_of_GluPFmlaCtx (ctx, vbl_id);
   GluPFmla* dst = castup_as_GluPFmla (*base_dst);
   if (dst->mdd)  mdd_free (dst->mdd);
-  dst->mdd = mdd_eq_c (ctx->ctx, id_of_img (vbl_id), x);
+  dst->mdd = mdd_eq_c (ctx->ctx, vbl->img_id, x);
 }
 
 static
@@ -425,18 +434,31 @@ add_vbl_GluPFmlaCtx (PFmlaCtx* fmlactx, uint id)
   GluPFmlaCtx* ctx = castup_as_GluPFmlaCtx (fmlactx);
   array_t* doms = array_alloc(uint, 0);
   array_t* names = array_alloc(char*, 0);
-  PFmlaVbl* vbl = (PFmlaVbl*) elt_LgTable (&fmlactx->vbls, id);
+  PFmlaVbl* vbl = vbl_of_PFmlaCtx (fmlactx, id);
+  GluPFmlaVbl* x = CastUp( GluPFmlaVbl, base, vbl );
+
+  x->img_name = dflt_AlphaTab ();
+  cat_AlphaTab (&x->img_name, &vbl->name);
+  cat_cstr_AlphaTab (&x->img_name, "'");
+
+  x->aux_name = dflt_AlphaTab ();
+  cat_AlphaTab (&x->aux_name, &vbl->name);
+  cat_cstr_AlphaTab (&x->aux_name, "''");
+
+  x->pre_id = vbl->id * 3 + 2;
+  x->img_id = vbl->id * 3 + 1;
+  x->aux_id = vbl->id * 3;
 
   array_insert_last(uint, doms, vbl->domsz);
   array_insert_last(uint, doms, vbl->domsz);
   array_insert_last(uint, doms, vbl->domsz);
   // Notice that the actual variables are added in the order: aux, img, pre.
-  array_insert_last(const char*, names, cstr_of_AlphaTab (&vbl->aux_name));
-  array_insert_last(const char*, names, cstr_of_AlphaTab (&vbl->img_name));
+  array_insert_last(const char*, names, cstr_of_AlphaTab (&x->aux_name));
+  array_insert_last(const char*, names, cstr_of_AlphaTab (&x->img_name));
   array_insert_last(const char*, names, cstr_of_AlphaTab (&vbl->name));
-  array_insert_last(uint, ctx->aux_vbl_list, id_of_aux (id));
-  array_insert_last(uint, ctx->img_vbl_list, id_of_img (id));
-  array_insert_last(uint, ctx->pre_vbl_list, id_of_pre (id));
+  array_insert_last(uint, ctx->aux_vbl_list, x->aux_id);
+  array_insert_last(uint, ctx->img_vbl_list, x->img_id);
+  array_insert_last(uint, ctx->pre_vbl_list, x->pre_id);
 
   mdd_create_variables(ctx->ctx, doms, names, 0);
   array_free(doms);
@@ -460,24 +482,27 @@ static
 add_to_vbl_list_GluPFmlaCtx (PFmlaCtx* fmlactx, uint listid, uint vblid)
 {
   GluPFmlaCtx* ctx = castup_as_GluPFmlaCtx (fmlactx);
-  array_insert_last(uint, ctx->vbl_lists.s[listid], id_of_aux (vblid));
-  array_insert_last(uint, ctx->vbl_lists.s[listid], id_of_img (vblid));
-  array_insert_last(uint, ctx->vbl_lists.s[listid], id_of_pre (vblid));
-  array_insert_last(uint, ctx->pre_vbl_lists.s[listid], id_of_pre (vblid));
-  array_insert_last(uint, ctx->img_vbl_lists.s[listid], id_of_img (vblid));
-  array_insert_last(uint, ctx->aux_vbl_lists.s[listid], id_of_aux (vblid));
+  const GluPFmlaVbl* vbl = vbl_of_GluPFmlaCtx (ctx, vblid);
+  array_insert_last(uint, ctx->vbl_lists.s[listid], vbl->aux_id);
+  array_insert_last(uint, ctx->vbl_lists.s[listid], vbl->img_id);
+  array_insert_last(uint, ctx->vbl_lists.s[listid], vbl->pre_id);
+  array_insert_last(uint, ctx->pre_vbl_lists.s[listid], vbl->pre_id);
+  array_insert_last(uint, ctx->img_vbl_lists.s[listid], vbl->img_id);
+  array_insert_last(uint, ctx->aux_vbl_lists.s[listid], vbl->aux_id);
 }
 
   PFmlaCtx*
 make_GluPFmlaCtx ()
 {
   static bool vt_initialized = false;
-  static PFmlaOpVT vt;
+  static PFmlaVT vt;
   GluPFmlaCtx* ctx = AllocT( GluPFmlaCtx, 1 );
   if (!vt_initialized)
   {
     vt_initialized = true;
     memset (&vt, 0, sizeof (vt));
+    vt.vbl_base_offset = offsetof(GluPFmlaVbl, base);
+    vt.vbl_size        = sizeof(GluPFmlaVbl);
     vt.op2_fn          =          op2_GluPFmla;
     vt.smooth_vbls_fn  =  smooth_vbls_GluPFmla;
     vt.subst_vbls_fn   =   subst_vbls_GluPFmla;
@@ -497,6 +522,7 @@ make_GluPFmlaCtx ()
     vt.make_fn         =         make_GluPFmla;
     vt.make1_fn        =        make1_GluPFmla;
     vt.free_fn         =         free_GluPFmla;
+    vt.vbl_lose_fn     =      lose_GluPFmlaVbl;
     vt.vbl_eqc_fn      =      vbl_eqc_GluPFmla;
     vt.vbl_img_eqc_fn  =  vbl_img_eqc_GluPFmla;
     vt.ctx_lose_fn     =      lose_GluPFmlaCtx;

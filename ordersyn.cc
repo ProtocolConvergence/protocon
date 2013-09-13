@@ -7,6 +7,7 @@
 #include "cx/fileb.hh"
 #include "protoconfile.hh"
 #include "stability.hh"
+#include <signal.h>
 
 bool
 AddConvergence(vector<uint>& retActions,
@@ -45,6 +46,7 @@ try_order_synthesis(vector<uint>& ret_actions,
                     StabilitySynLvl& tape)
 {
   ret_actions.clear();
+  //tape.directly_add_conflicts = true;
 
   while (tape.candidates.size() > 0)
   {
@@ -134,6 +136,16 @@ rank_actions (Cx::Table< Cx::Table<uint> >& act_layers,
   return true;
 }
 
+static volatile bool* done_flag = false;
+
+  void
+set_done_flag (int sig)
+{
+  (void) sig;
+  if (done_flag)
+    *done_flag = true;
+}
+
   bool
 flat_backtrack_synthesis(vector<uint>& ret_actions,
                          const ProtoconFileOpt& infile_opt,
@@ -141,8 +153,12 @@ flat_backtrack_synthesis(vector<uint>& ret_actions,
 {
   bool done = false;
   bool solution_found = false;
-  uint NPcs = 0; 
+  uint NPcs = 0;
   ConflictFamily conflicts;
+
+  done_flag = &done;
+  signal(SIGINT, set_done_flag);
+  signal(SIGTERM, set_done_flag);
 
   if (global_opt.conflicts_xfilename)
   {
@@ -178,8 +194,10 @@ flat_backtrack_synthesis(vector<uint>& ret_actions,
   opt.sys_pcidx = PcIdx;
   opt.sys_npcs = NPcs;
   opt.random_one_shot = true;
-  opt.bt_dbog = false;
+  if (NPcs > 1)
+    opt.bt_dbog = false;
   //opt.bt_dbog = true;
+  opt.verify_found = false;
 
   Xn::Sys sys;
   DoLegit(good, "reading file")

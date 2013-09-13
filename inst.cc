@@ -8,22 +8,6 @@
 #include "xnsys.hh"
 #include <stdio.h>
 
-/** Increment followed by modulo.**/
-static
-  uint
-incmod(uint i, uint by, uint n)
-{
-  return (i + by) % n;
-}
-
-/** Decrement followed by modulo.**/
-static
-  uint
-decmod(uint i, uint by, uint n)
-{
-  return (i + n - (by % n)) % n;
-}
-
 /** Create a unidirectional ring topology.**/
   void
 UnidirectionalRing(Xn::Net& topo, uint npcs, uint domsz,

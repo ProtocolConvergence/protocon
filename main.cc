@@ -91,19 +91,22 @@ VerifyStabilization(const Xn::Sys& sys)
   bool
 AddConvergence(vector<uint>& retActions,
                const Xn::Sys& sys,
-               StabilitySynLvl& tape,
+               StabilitySynLvl& base_lvl,
                const AddConvergenceOpt& opt)
 {
-#if 0
-  for (uint i = 0; i < tape.actions.size(); ++i) {
-    DBogOF << ' ' << tape.actions[i];
-  }
-  DBogOF << '\n';
-#endif
+  Cx::LgTable<StabilitySynLvl> bt_stack;
+  StabilitySyn& synctx = *base_lvl.ctx;
 
-  tape.failed_bt_level = tape.bt_level;
-  while (!tape.candidates.empty()) {
-    if (tape.ctx->done && *tape.ctx->done)
+  base_lvl.bt_level = 0;
+  base_lvl.failed_bt_level = 0;
+  bt_stack.push(base_lvl);
+  uint stack_idx = 0;
+
+  while (true) {
+    StabilitySynLvl& tape = bt_stack[stack_idx];
+    if (tape.candidates.empty())
+      break;
+    if (synctx.done && *synctx.done)
       return false;
 
     // Pick the action.
@@ -113,51 +116,57 @@ AddConvergence(vector<uint>& retActions,
       return false;
     }
 
-    StabilitySynLvl next( tape );
-    next.bt_dbog = (tape.bt_dbog && (true || tape.bt_level < 18));
-    next.bt_level = tape.bt_level + 1;
+    uint next_idx;
+    if (!opt.random_one_shot || bt_stack.sz() < opt.bt_depth) {
+      next_idx = stack_idx + 1;
+      if (next_idx == bt_stack.sz())
+        bt_stack.push(StabilitySynLvl(&synctx));
+    }
+    else {
+      next_idx = incmod(stack_idx, 1, bt_stack.sz());
+    }
+    StabilitySynLvl& next = bt_stack[next_idx];
+    next = tape;
+    next.bt_level += 1;
+    next.failed_bt_level = next.bt_level;
 
     if (next.pick_action(sys, actidx))
     {
-      bool found =
-        AddConvergence(retActions, sys, next, opt);
-      if (found) {
-        return true;
-      }
+      stack_idx = next_idx;
+      continue;
     }
 
-    if (next.failed_bt_level > tape.failed_bt_level) {
-      tape.failed_bt_level = next.failed_bt_level;
-    }
-
-    if (tape.ctx->done && *tape.ctx->done)
+    if (synctx.done && *synctx.done)
       return false;
 
-    if (opt.random_one_shot && opt.bt_depth + tape.bt_level <= tape.failed_bt_level)
-    {
-      if (!tape.deadlockPF.tautology_ck(false)) {
-        return false;
-      }
-      break;
+    if (tape.revise_actions(sys, Set<uint>(), Set<uint>(actidx)))
+      continue;
+
+    if (tape.bt_dbog) {
+      DBog1("backtrack from lvl %u", tape.bt_level);
     }
-    if (!tape.revise_actions(sys, Set<uint>(), Set<uint>(actidx)))
-    {
-      if (tape.bt_dbog) {
-        DBog1("backtrack from lvl %u", tape.bt_level);
-      }
-      tape.add_small_conflict_set(sys, tape.picks);
+    tape.add_small_conflict_set(sys, tape.picks);
+
+    stack_idx = decmod(stack_idx, 1, bt_stack.sz());
+
+    if (bt_stack[stack_idx].bt_level >= tape.bt_level) {
+      base_lvl.failed_bt_level = bt_stack[stack_idx].bt_level;
       return false;
     }
   }
 
-  Claim(tape.deadlockPF.tautology_ck(false));
-  DBog0( "Verifying solution..." );
-  if (VerifyStabilization(sys, tape.actions)) {
-    retActions = tape.actions;
-    return true;
+  StabilitySynLvl& tape = bt_stack[stack_idx];
+  Claim(!tape.deadlockPF.sat_ck());
+
+  if (opt.verify_found) {
+    DBog0( "Verifying solution..." );
+    if (!VerifyStabilization(sys, tape.actions)) {
+      DBog0( "Solution was NOT self-stabilizing." );
+      return false;
+    }
   }
-  DBog0( "Solution was NOT self-stabilizing." );
-  return false;
+  retActions = tape.actions;
+  return true;
 }
 
 /**
@@ -311,7 +320,7 @@ int main(int argc, char** argv)
     else if (eq_cstr (arg, "-random")) {
       opt.search_method = opt.RandomBacktrackSearch;
     }
-    else if (eq_cstr (arg, "-rankshuffle")) {
+    else if (eq_cstr (arg, "-rankshuffle") || eq_cstr (arg, "-rank-shuffle")) {
       opt.search_method = opt.RankShuffleSearch;
     }
     else if (eq_cstr (arg, "-test")) {

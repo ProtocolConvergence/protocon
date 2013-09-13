@@ -81,12 +81,6 @@ TestFlatSet()
   }
 }
 
-static uint
-decmod(uint i, uint by, uint n)
-{
-  return (i + n - (by % n)) % n;
-}
-
 static void
 TestPFmla()
 {

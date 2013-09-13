@@ -11,7 +11,7 @@ typedef PFmlaBase* PFmla;
 typedef struct XnPFmla XnPFmla;
 typedef struct PFmlaVbl PFmlaVbl;
 typedef struct PFmlaCtx PFmlaCtx;
-typedef struct PFmlaOpVT PFmlaOpVT;
+typedef struct PFmlaVT PFmlaVT;
 
 struct PFmlaBase
 {
@@ -24,8 +24,6 @@ struct PFmlaVbl
   uint domsz;
   uint id;
   AlphaTab name;
-  AlphaTab img_name;
-  AlphaTab aux_name;
   uint list_id;
 };
 
@@ -34,11 +32,14 @@ struct PFmlaCtx
   LgTable vbls;
   Associa vbl_map;
   TableT( TableT_uint ) vbl_lists;
-  const PFmlaOpVT* vt;
+  const PFmlaVT* vt;
 };
 
-struct PFmlaOpVT
+struct PFmlaVT
 {
+  size_t vbl_base_offset;
+  size_t vbl_size;
+
   void (*op2_fn) (PFmlaCtx*, PFmla*, BitOp, const PFmla, const PFmla);
 
   void (*smooth_vbls_fn) (PFmlaCtx*, PFmla*, const PFmla, uint, Sign);
@@ -62,6 +63,7 @@ struct PFmlaOpVT
   PFmla (*make1_fn) (PFmlaCtx*, bool);
   void (*free_fn) (PFmlaCtx*, PFmla);
 
+  void (*vbl_lose_fn) (PFmlaVbl*);
   void (*vbl_eq_fn) (PFmlaCtx*, PFmla*, uint, uint);
   void (*vbl_eqc_fn) (PFmlaCtx*, PFmla*, uint, uint);
   void (*vbl_img_eq_fn) (PFmlaCtx*, PFmla*, uint, uint);
@@ -75,7 +77,7 @@ struct PFmlaOpVT
 
 
 void
-init1_PFmlaCtx (PFmlaCtx* ctx, const PFmlaOpVT* vt);
+init1_PFmlaCtx (PFmlaCtx* ctx, const PFmlaVT* vt);
 void
 free_PFmlaCtx (PFmlaCtx* ctx);
 
@@ -219,9 +221,10 @@ qual_inline
   void
 lose_PFmlaVbl (PFmlaVbl* x)
 {
+  if (x->ctx->vt->vbl_lose_fn) {
+    x->ctx->vt->vbl_lose_fn (x);
+  }
   lose_AlphaTab (&x->name);
-  lose_AlphaTab (&x->img_name);
-  lose_AlphaTab (&x->aux_name);
 }
 
 qual_inline
@@ -259,7 +262,8 @@ qual_inline
   PFmlaVbl*
 vbl_of_PFmlaCtx (PFmlaCtx* ctx, uint id)
 {
-  return (PFmlaVbl*) elt_LgTable (&ctx->vbls, id);
+  return CastOff( PFmlaVbl, elt_LgTable (&ctx->vbls, id)
+                  ,+, ctx->vt->vbl_base_offset );
 }
 
 qual_inline

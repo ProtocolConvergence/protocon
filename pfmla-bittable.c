@@ -2,12 +2,18 @@
 #include "pfmla-bittable.h"
 
 typedef struct BitTablePFmla BitTablePFmla;
+typedef struct BitTablePFmlaVbl BitTablePFmlaVbl;
 typedef struct BitTablePFmlaCtx BitTablePFmlaCtx;
 
 struct BitTablePFmla
 {
   PFmlaBase base;
   BitTable bt;
+};
+
+struct BitTablePFmlaVbl
+{
+  PFmlaVbl base;
 };
 
 struct BitTablePFmlaCtx
@@ -90,12 +96,14 @@ lose_BitTablePFmlaCtx (PFmlaCtx* fmlactx)
 make_BitTablePFmlaCtx ()
 {
   static bool vt_initialized = false;
-  static PFmlaOpVT vt;
+  static PFmlaVT vt;
   BitTablePFmlaCtx* ctx = AllocT( BitTablePFmlaCtx, 1 );
   if (!vt_initialized)
   {
     vt_initialized = true;
     memset (&vt, 0, sizeof (vt));
+    vt.vbl_base_offset = offsetof(BitTablePFmlaVbl, base);
+    vt.vbl_size        = sizeof(BitTablePFmlaVbl);
     vt.op2_fn          =          op2_BitTablePFmla;
     //vt.exist_set_fn    =    exist_set_BitTablePFmla;
     //vt.subst_set_fn    =    subst_set_BitTablePFmla;

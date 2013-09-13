@@ -59,6 +59,7 @@ public:
   NicePolicy nicePolicy;
   bool pickBackReach;
   bool bt_dbog;
+  bool verify_found;
 
   // For parallel algorithms.
   bool random_one_shot;
@@ -77,6 +78,7 @@ public:
     , nicePolicy( EndNice )
     , pickBackReach( false )
     , bt_dbog( true )
+    , verify_found( true )
     , random_one_shot( false )
     , bt_depth( 3 )
     , sys_pcidx( 0 )

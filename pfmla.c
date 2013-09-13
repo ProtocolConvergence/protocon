@@ -3,9 +3,9 @@
 #include "cx/fileb.h"
 
   void
-init1_PFmlaCtx (PFmlaCtx* ctx, const PFmlaOpVT* vt)
+init1_PFmlaCtx (PFmlaCtx* ctx, const PFmlaVT* vt)
 {
-  ctx->vbls = dflt1_LgTable (sizeof(PFmlaVbl));
+  ctx->vbls = dflt1_LgTable (vt->vbl_size);
   InitAssocia( AlphaTab, PFmlaVbl*, ctx->vbl_map, cmp_AlphaTab );
   InitTable( ctx->vbl_lists );
   ctx->vt = vt;
@@ -22,7 +22,7 @@ free_PFmlaCtx (PFmlaCtx* ctx)
        i != Max_ujint;
        i = nextidx_LgTable (&ctx->vbls, i))
   {
-    PFmlaVbl* x = (PFmlaVbl*) elt_LgTable (&ctx->vbls, i);
+    PFmlaVbl* x = vbl_of_PFmlaCtx (ctx, i);
     lose_PFmlaVbl (x);
   }
   lose_LgTable (&ctx->vbls);
@@ -582,7 +582,7 @@ pick_pre_PFmla (PFmla* dst, const PFmla a)
     PFmla tmp_conj = dflt_PFmla ();
 
     for (uint i = 0; i < ctx->vbls.sz; ++i) {
-      const PFmlaVbl* vbl = (PFmlaVbl*) elt_LgTable (&ctx->vbls, i);
+      const PFmlaVbl* vbl = vbl_of_PFmlaCtx (ctx, i);
       bool found = false;
       for (uint val = 0; !found && val < vbl->domsz-1; ++val) {
         eqc_PFmlaVbl (&eq, vbl, val);
@@ -619,7 +619,7 @@ state_of_PFmla (uint* state, const PFmla a, const uint* indices, uint n)
     PFmla tmp_conj = dflt_PFmla ();
 
     for (i ; n) {
-      const PFmlaVbl* vbl = (PFmlaVbl*) elt_LgTable (&ctx->vbls, indices[i]);
+      const PFmlaVbl* vbl = vbl_of_PFmlaCtx (ctx, indices[i]);
       bool found = false;
       for (val ; vbl->domsz-1) {
         eqc_PFmlaVbl (&eq, vbl, val);
@@ -720,31 +720,29 @@ add_vbl_PFmlaCtx (PFmlaCtx* ctx, const char* name, uint domsz)
   bool added = false;
   PFmlaVbl* x;
   uint id;
+  AlphaTab key = cons1_AlphaTab (name);
   Assoc* assoc;
 
+  assoc = ensure1_Associa (&ctx->vbl_map, &key, &added);
+  if (!added) {
+    DBog1( "There already exists a variable with name: %s", name );
+    lose_AlphaTab (&key);
+    return 0;
+  }
+
   id = takeidx_LgTable (&ctx->vbls);
-  x = elt_LgTable (&ctx->vbls, id);
+  x = vbl_of_PFmlaCtx (ctx, id);
+  *(PFmlaVbl**) val_of_Assoc (&ctx->vbl_map, assoc) = x;
+
   x->ctx = ctx;
-  x->name = cons1_AlphaTab (name);
-  x->img_name = cons1_AlphaTab (name);
-  cat_cstr_AlphaTab (&x->img_name, "'");
-  x->aux_name = cons1_AlphaTab (name);
-  cat_cstr_AlphaTab (&x->aux_name, "''");
+  x->name = key;
   x->id = id;
   x->domsz = domsz;
   x->list_id = add_vbl_list_PFmlaCtx (ctx);
-  add_to_vbl_list_PFmlaCtx (ctx, x->list_id, x->id);
-
-  assoc = ensure1_Associa (&ctx->vbl_map, &x->name, &added);
-  if (!added) {
-    DBog1( "There already exists a variable with name: %s", name );
-    lose_PFmlaVbl (x);
-    giveidx_LgTable (&ctx->vbls, id);
-    return 0;
-  }
-  *(PFmlaVbl**) val_of_Assoc (&ctx->vbl_map, assoc) = x;
 
   ctx->vt->ctx_add_vbl_fn (ctx, id);
+
+  add_to_vbl_list_PFmlaCtx (ctx, x->list_id, x->id);
 
   return id;
 }

@@ -1,7 +1,7 @@
 
 protocol Leader;
 
-constant N := 5;
+constant N := 3;
 constant M := 5;
 
 direct variable d[Int % N] <- Int % 2;
@@ -14,6 +14,6 @@ process P[i <- Int % N]
   read:  d[i+1], x[i+1];
 }
 
-direct invariant:
+shadow invariant:
   (unique i <- Int % N : d[i] == 1);
 
