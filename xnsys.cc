@@ -56,6 +56,8 @@ Net::add_variables(const String& name, uint nmembs, uint domsz,
   VblSymm& symm = vbl_symms.grow1();
   symm.name = name;
   symm.domsz = domsz;
+  symm.domsz_expression = domsz;
+  symm.nmembs_expression = nmembs;
   symm.pfmla_list_id = pfmla_ctx.add_vbl_list();
   symm.shadow_puppet_role = role;
 
@@ -89,6 +91,7 @@ Net::add_processes(const String& name, uint nmembs)
 {
   PcSymm& symm = pc_symms.grow1();
   symm.name = name;
+  symm.nmembs_expression = nmembs;
   for (uint i = 0; i < nmembs; ++i) {
     Pc& pc = pcs.push(Pc(&symm, i));
     symm.membs.push(&pc);
@@ -362,17 +365,17 @@ Sys::integrityCk() const
 OPut(Cx::OFile& of, const Xn::ActSymm& act)
 {
   const Xn::PcSymm& pc = *act.pc_symm;
-  of << "/*" << pc.name << "[i]" << "*/ ";
+  of << "/*" << pc.name << "[" << pc.idx_name << "]" << "*/ ";
   for (uint i = 0; i < pc.rvbl_symms.sz(); ++i) {
     if (i != 0)  of << " && ";
     of << pc.rvbl_symms[i]->name
-      << "[" << pc.rindices[i].expression("i") << "]"
+      << "[" << pc.rindices[i].expression << "]"
       << "==" << act.guard(i);
   }
   of << " -->";
   for (uint i = 0; i < pc.wvbl_symms.sz(); ++i) {
     of << ' ' << pc.wvbl_symms[i]->name
-      << "[" << pc.windices[i].expression("i") << "]"
+      << "[" << pc.windices[i].expression << "]"
       << ":=" << act.assign(i) << ';';
   }
   return of;

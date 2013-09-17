@@ -11,13 +11,13 @@ OPutPromelaAction(ostream& of, const Xn::ActSymm& act)
   for (uint i = 0; i < pc.rvbl_symms.sz(); ++i) {
     if (i != 0)  of << " && ";
     of << pc.rvbl_symms[i]->name
-      << "[" << pc.rindices[i].expression("i") << "]"
+      << "[" <<  pc.rindices[i].expression << "]"
       << "==" << act.guard(i);
   }
   of << " ->";
   for (uint i = 0; i < pc.wvbl_symms.sz(); ++i) {
     of << ' ' << pc.wvbl_symms[i]->name
-      << "[" << pc.windices[i].expression("i") << "]"
+      << "[" << pc.windices[i].expression << "]"
       << "=" << act.assign(i) << ';';
   }
   return of;

@@ -60,12 +60,35 @@ oput_pla_pc_acts (Cx::OFile& of, const Xn::PcSymm& pc_symm,
   of << ".e\n";
 }
 
+static
   void
-oput_protocon_pc_vbls (Cx::OFile& of, const Xn::PcSymm& pc_symm, const Cx::String& idxname)
+oput_protocon_constants (Cx::OFile& of, const Xn::Net& topo)
+{
+  for (uint i = 0; i < topo.constant_map.keys.sz(); ++i) {
+    of << "constant " << topo.constant_map.keys[i];
+    of << " := " << topo.constant_map.vals[i].expression;
+    of << ";\n";
+  }
+}
+
+static
+  void
+oput_protocon_pc_lets (Cx::OFile& of, const Xn::PcSymm& pc_symm)
+{
+  for (uint i = 0; i < pc_symm.let_map.keys.sz(); ++i) {
+    of << "  let " << pc_symm.let_map.keys[i];
+    of << " := " << pc_symm.let_map.vals[i].expression;
+    of << ";\n";
+  }
+}
+
+static
+  void
+oput_protocon_pc_vbls (Cx::OFile& of, const Xn::PcSymm& pc_symm)
 {
   for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
     of << "  " << (pc_symm.write_flags[i] ? "write" : "read") << ": ";
-    of << pc_symm.vbl_name(i, idxname);
+    of << pc_symm.vbl_name(i);
     of << ";\n";
   }
 }
@@ -135,20 +158,23 @@ oput_protocon_pc_act (Cx::OFile& of, XFile* xf,
 
   bool
 oput_protocon_pc_acts (Cx::OFile& of, const Xn::PcSymm& pc_symm,
-                       const Cx::String& idxname,
                        const Cx::Table<Xn::ActSymm>& acts,
                        OSPc* ospc)
 {
   Sign good = 1;
+  for (uint i = 0; i < pc_symm.shadow_act_strings.sz(); ++i) {
+    of << "  shadow action:\n";
+    of << "    ( " << pc_symm.shadow_act_strings[i] << " );\n";
+  }
 
   // Names for variables.
   Cx::Table<Cx::String> guard_vbls( pc_symm.rvbl_symms.sz() );
   Cx::Table<Cx::String> assign_vbls( pc_symm.wmap.sz() );
   for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
-    guard_vbls[i] = pc_symm.vbl_name(i, idxname);
+    guard_vbls[i] = pc_symm.vbl_name(i);
   }
   for (uint i = 0; i < pc_symm.wvbl_symms.sz(); ++i) {
-    assign_vbls[i] = pc_symm.vbl_name(pc_symm.wmap[i], idxname);
+    assign_vbls[i] = pc_symm.vbl_name(pc_symm.wmap[i]);
   }
 
   DoLegit(good, "spawn process")
@@ -197,9 +223,8 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys)
   stdopipe_OSPc (ospc);
   ospc->cmd = cons1_AlphaTab ("espresso");
 
-  const Cx::String idxname( "i" );
-
   const Xn::Net& topo = sys.topology;
+  oput_protocon_constants (of, topo);
   for (uint i = 0; i < topo.vbl_symms.sz(); ++i) {
     const Xn::VblSymm& vbl_symm = topo.vbl_symms[i];
     if (vbl_symm.shadow_puppet_role == Xn::Vbl::Shadow)
@@ -208,8 +233,8 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys)
       of << "puppet\n";
 
     of << "variable " << vbl_symm.name
-      << "[Nat % " << vbl_symm.membs.sz()
-      << "] <- Nat % " << vbl_symm.domsz << ";\n";
+      << "[Nat % " << vbl_symm.nmembs_expression
+      << "] <- Nat % " << vbl_symm.domsz_expression << ";\n";
   }
 
   Cx::Table<Xn::ActSymm> acts( sys.actions.size() );
@@ -220,11 +245,12 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys)
   for (uint i = 0; i < topo.pc_symms.sz(); ++i) {
     const Xn::PcSymm& pc_symm = topo.pc_symms[i];
     of << "process " << pc_symm.name
-      << "[" << idxname << " <- Nat % " << pc_symm.membs.sz() << "]\n";
+      << "[" << pc_symm.idx_name << " <- Nat % " << pc_symm.nmembs_expression << "]\n";
     of << "{\n";
-    oput_protocon_pc_vbls (of, pc_symm, idxname);
+    oput_protocon_pc_lets (of, pc_symm);
+    oput_protocon_pc_vbls (of, pc_symm);
     DoLegit(good, "output actions")
-      good = oput_protocon_pc_acts (of, pc_symm, idxname, acts, ospc);
+      good = oput_protocon_pc_acts (of, pc_symm, acts, ospc);
     of << "}\n";
   }
 

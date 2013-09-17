@@ -518,7 +518,7 @@ SCC_Find(Cx::PFmla* ret_cycles,
     // of E.img() or E.pre() with the vertex set V (or subsets of it).
     //const PFmla& E1 = (E & V1) & V1.as_img();
     const PFmla& S1 = S - scc;
-    const PFmla& NODE1 = E.pre(scc | S) & (S - scc);
+    const PFmla& NODE1 = E.pre(scc & S) & S1;
     const bool just_found =
       SCC_Find(ret_cycles, V1, E, S1, NODE1);
 

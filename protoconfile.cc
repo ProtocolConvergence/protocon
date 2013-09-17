@@ -31,6 +31,10 @@ ProtoconFile::add_variables(Sesp vbl_name_sp, Sesp vbl_nmembs_sp, Sesp vbl_dom_s
   {
     Xn::VblSymm* symm = sys->topology.add_variables(name, nmembs, domsz, role);
     vbl_map[name] = symm;
+    symm->domsz_expression = "";
+    string_expression (symm->domsz_expression, cadr_of_Sesp (vbl_dom_sp));
+    symm->nmembs_expression = "";
+    string_expression (symm->nmembs_expression, cadr_of_Sesp (vbl_nmembs_sp));
   }
   return update_allgood (good);
 }
@@ -45,40 +49,73 @@ ProtoconFile::add_processes(Sesp pc_name, Sesp idx_name, Sesp npcs)
   if (LegitCk(name_a && name_b, good, "")) {
     uint domsz = 0;
     if (LegitCk(eval_gtz (&domsz, cadr_of_Sesp (npcs)), good, "")) {
-      sys->topology.add_processes(name_a, (uint) domsz);
+      this->pc_symm =
+        sys->topology.add_processes(name_a, (uint) domsz);
+      this->pc_symm->idx_name = name_b;
+      pc_symm->nmembs_expression = "";
+      string_expression (pc_symm->nmembs_expression, cadr_of_Sesp (npcs));
     }
   }
+  if (good) {
+  }
+  return update_allgood (good);
+}
+
+  bool
+ProtoconFile::add_constant(Sesp name_sp, Sesp val_sp)
+{
+  Sign good = 1;
+  Xn::Net& topo = sys->topology;
+
+  const char* name = ccstr_of_Sesp (name_sp);
+  DoLegit( good, "" )
+    good = !!name;
+  Xn::NatMap val(1);
+  DoLegit(good, "evaluating int")
+    good = eval_int (&val.membs[0], val_sp);
+  DoLegit( good, "finding expression" )
+    good = string_expression (val.expression, val_sp);
+  DoLegit( good, "" )
+    if (!topo.constant_map.key_ck(name))
+      topo.constant_map.add(name, val);
+
   return update_allgood (good);
 }
 
   bool
 ProtoconFile::add_let(Sesp name_sp, Sesp val_sp)
 {
-  bool legit = true;
+  Sign good = 1;
   const char* name = ccstr_of_Sesp (name_sp);
-  if (LegitCk(name, legit, "")) {
-    let_map[name] = val_sp;
+  DoLegit(  good, "" )
+    good = !!name;
+
+  const Cx::String& idx_name = pc_symm->idx_name;
+  Xn::NatMap let_vals( pc_symm->membs.sz() );
+  for (uint i = 0; good && i < pc_symm->membs.sz(); ++i) {
+    index_map[idx_name] = i;
+    DoLegit( good, "" )
+      good = eval_int (&let_vals.membs[i], val_sp);
   }
-  return update_allgood (legit);
+  index_map.erase(idx_name);
+  DoLegit( good, "finding expression" )
+    good = string_expression (let_vals.expression, val_sp);
+  DoLegit( good, "" )
+    pc_symm->let_map.add(name, let_vals);
+  return update_allgood (good);
 }
 
   bool
-ProtoconFile::add_access(Sesp vbl_sp, Sesp pc_idx_sp, Bit write)
+ProtoconFile::add_access(Sesp vbl_sp, Bit write)
 {
   bool legit = true;
-  const char* idx_name = 0;
   const char* vbl_name = 0;
   Sesp vbl_idx_sp = 0;
   Xn::Net& topo = sys->topology;
   const Xn::VblSymm* vbl_symm = 0;
 
-  idx_name = ccstr_of_Sesp (pc_idx_sp);
-
-  if (LegitCk( idx_name, legit, "" ))
-  {
-    // (aref vbl_name vbl_idx)
-    vbl_name = ccstr_of_Sesp (cadr_of_Sesp (vbl_sp));
-  }
+  // (aref vbl_name vbl_idx)
+  vbl_name = ccstr_of_Sesp (cadr_of_Sesp (vbl_sp));
   if (LegitCk( vbl_name, legit, "" ))
   {
     const Xn::VblSymm** tmp = 0;
@@ -93,27 +130,27 @@ ProtoconFile::add_access(Sesp vbl_sp, Sesp pc_idx_sp, Bit write)
   if (LegitCk( topo.pc_symms.sz() > 0, legit, "" ))
   {
     Cx::IntPFmla ipf;
-    Xn::PcSymm& pc_symm = topo.pc_symms.top();
-    Xn::NatMap indices( pc_symm.membs.sz() );
+    const Cx::String& idx_name = pc_symm->idx_name;
+    Xn::NatMap indices( pc_symm->membs.sz() );
 
-    for (uint i = 0; i < pc_symm.membs.sz(); ++i) {
+    for (uint i = 0; i < pc_symm->membs.sz(); ++i) {
       index_map[idx_name] = i;
       if (LegitCk( eval_int (&indices.membs[i], vbl_idx_sp), legit, "" )) {}
     }
     index_map.erase(idx_name);
 
     if (legit) {
-      bool bstat = expression_chunks(indices.expression_chunks, vbl_idx_sp, idx_name);
-      if (LegitCk(bstat, legit, "expression_chunks()"))
+      bool bstat = string_expression(indices.expression, vbl_idx_sp);
+      if (LegitCk(bstat, legit, "string_expression()"))
       {}
     }
 
     if (legit) {
       if (write) {
-        topo.add_write_access(&pc_symm, vbl_symm, indices);
+        topo.add_write_access(pc_symm, vbl_symm, indices);
       }
       else {
-        topo.add_read_access(&pc_symm, vbl_symm, indices);
+        topo.add_read_access(pc_symm, vbl_symm, indices);
       }
     }
   }
@@ -122,25 +159,30 @@ ProtoconFile::add_access(Sesp vbl_sp, Sesp pc_idx_sp, Bit write)
 }
 
   bool
-ProtoconFile::add_action(Sesp act_sp, Sesp pc_idx_sp,
-                         Xn::Vbl::ShadowPuppetRole role)
+ProtoconFile::add_action(Sesp act_sp, Xn::Vbl::ShadowPuppetRole role)
 {
   Sign good = 1;
   Xn::Net& topo = sys->topology;
 
-  if (topo.pc_symms.sz() == 0) {
+  if (!pc_symm) {
     allgood = false;
     return false;
   }
   Cx::PFmla act_pf( false );
-  Xn::PcSymm& pc_symm = topo.pc_symms.top();
+  const Cx::String& idx_name = pc_symm->idx_name;
+  DoLegit( good, "" )
+  {
+    if (role != Xn::Vbl::Puppet) {
+      Cx::String act_expression;
+      good = string_expression (act_expression, act_sp);
+      if (good) {
+        pc_symm->shadow_act_strings.push(act_expression);
+      }
+    }
+  }
 
-  const char* idx_name = ccstr_of_Sesp (pc_idx_sp);
-  DoLegit( good, "index name" )
-    good = !!idx_name;
-
-  for (uint i = 0; good && i < pc_symm.membs.sz(); ++i) {
-    Xn::Pc& pc = *pc_symm.membs[i];
+  for (uint i = 0; good && i < pc_symm->membs.sz(); ++i) {
+    //Xn::Pc& pc = *pc_symm->membs[i];
     index_map[idx_name] = i;
     Cx::PFmla guard_pf;
     DoLegit( good, "eval guard" )
@@ -192,13 +234,13 @@ ProtoconFile::add_action(Sesp act_sp, Sesp pc_idx_sp,
       const Cx::PFmla& shadow_act_pf =
         (topo.smooth_pure_puppet_vbls(act_pf) -
          topo.smooth_pure_puppet_vbls(topo.identity_pfmla));
-      pc_symm.shadow_pfmla |= shadow_act_pf;
+      pc_symm->shadow_pfmla |= shadow_act_pf;
       sys->shadow_pfmla |= shadow_act_pf;
     }
 
 
     if (role != Xn::Vbl::Shadow) {
-      pc_symm.direct_pfmla |= act_pf;
+      pc_symm->direct_pfmla |= act_pf;
       sys->direct_pfmla |= act_pf;
     }
   }
@@ -207,20 +249,17 @@ ProtoconFile::add_action(Sesp act_sp, Sesp pc_idx_sp,
 }
 
   bool
-ProtoconFile::add_legit(Sesp legit_sp, Sesp pc_idx_sp)
+ProtoconFile::add_pc_legit(Sesp legit_sp)
 {
   bool good = true;
   Xn::Net& topo = sys->topology;
-  const char* idx_name = ccstr_of_Sesp (pc_idx_sp);
 
-  if (LegitCk( idx_name, good, "" ))
-  {}
   if (LegitCk( topo.pc_symms.sz() > 0, good, "" ))
   {
-    Xn::PcSymm& pc_symm = topo.pc_symms.top();
+    const Cx::String& idx_name = pc_symm->idx_name;
     Cx::PFmla pf;
 
-    for (uint i = 0; i < pc_symm.membs.sz(); ++i) {
+    for (uint i = 0; i < pc_symm->membs.sz(); ++i) {
       index_map[idx_name] = i;
       if (LegitCk( eval(pf, legit_sp), good, "" ))
       {
@@ -228,14 +267,14 @@ ProtoconFile::add_legit(Sesp legit_sp, Sesp pc_idx_sp)
       }
     }
     Cx::String invariant_expression;
-    if (LegitCk( expression(invariant_expression, legit_sp), good, "" )) {
+    if (LegitCk( string_expression(invariant_expression, legit_sp), good, "" )) {
       if (sys->invariant_expression != "") {
         sys->invariant_expression =
           Cx::String("(") + sys->invariant_expression + ")\n  &&\n  ";
       }
 
       sys->invariant_expression += Cx::String("(forall ")
-        + idx_name + " <- Nat % " + pc_symm.membs.sz() + " : ";
+        + idx_name + " <- Nat % " + pc_symm->membs.sz() + " : ";
       sys->invariant_expression += invariant_expression;;
       sys->invariant_expression += ")";
     }
@@ -254,7 +293,7 @@ ProtoconFile::add_legit(Sesp legit_sp)
     sys->invariant &= pf;
 
   Cx::String invariant_expression;
-  if (LegitCk( expression(invariant_expression, legit_sp), good, "" )) {
+  if (LegitCk( string_expression(invariant_expression, legit_sp), good, "" )) {
     if (sys->invariant_expression != "") {
       sys->invariant_expression =
         Cx::String("(") + sys->invariant_expression + ")\n  &&\n  ";
@@ -266,77 +305,59 @@ ProtoconFile::add_legit(Sesp legit_sp)
 }
 
   bool
-ProtoconFile::expression(Cx::String& expression, Sesp a)
+ProtoconFile::string_expression(Cx::String& ss, Sesp a)
 {
-  Cx::Table<Cx::String> chunks(1);
-  bool good = expression_chunks(chunks, a, "");
-  Claim2( chunks.sz() ,==, 1 );
-  expression = chunks[0];
-  return good;
-}
-
-  bool
-ProtoconFile::expression_chunks(Cx::Table<Cx::String>& chunks, Sesp a, const Cx::String& idx_name)
-{
-  if (chunks.sz() == 0) {
-    chunks.push("");
-  }
-
-  bool good = true;
+  Sign good = 1;
 
   const char* key = 0;
 
-  if (LegitCk( a, good, "" )) {
+  DoLegit( good, "" )
+    good = !!a;
+
+  DoLegit( good, "" )
+  {
     const char* name = ccstr_of_Sesp (a);
     if (name)
     {
-      if (idx_name == name) {
-        chunks.push("");
-        return good;
-      }
-      Sesp* sp = let_map.lookup(name);
-      if (sp) {
-        return expression_chunks (chunks, *sp, idx_name);
-      }
-      chunks.top() += name;
+      ss += name;
       return good;
     }
 
     uint u = 0;
     if (uint_of_Sesp (a, &u))
     {
-      chunks.top() += u;
+      ss += u;
       return good;
     }
-
 
     key = ccstr_of_Sesp (car_of_Sesp (a));
   }
 
-  if (LegitCk(key, good, "ccstr_of_Sesp()"))
-  {}
+  DoLegit( good, "ccstr_of_Sesp()" )
+    good = !!key;
 
   if (!good) {
   }
   else if (eq_cstr (key, "(bool)") ||
            eq_cstr (key, "(int)")) {
-    chunks.top() += "(";
-    expression_chunks (chunks, cadr_of_Sesp (a), idx_name);
-    chunks.top() += ")";
+    ss += "(";
+    string_expression(ss, cadr_of_Sesp (a));
+    ss += ")";
   }
   else if (eq_cstr (key, "!")) {
-    chunks.top() += "!";
-    expression_chunks (chunks, cadr_of_Sesp (a), idx_name);
+    ss += "!";
+    string_expression (ss, cadr_of_Sesp (a));
   }
   else if (eq_cstr (key, "negate")) {
-    chunks.top() += "-";
-    expression_chunks (chunks, cadr_of_Sesp (a), idx_name);
+    ss += "-";
+    string_expression (ss, cadr_of_Sesp (a));
   }
   else if (eq_cstr (key, "&&") ||
            eq_cstr (key, "||") ||
            eq_cstr (key, "=>") ||
            eq_cstr (key, "==") ||
            eq_cstr (key, "!=") ||
+           eq_cstr (key, ":=") ||
            eq_cstr (key, "+") ||
            eq_cstr (key, "-") ||
            eq_cstr (key, "*") ||
@@ -346,44 +367,53 @@ ProtoconFile::expression_chunks(Cx::Table<Cx::String>& chunks, Sesp a, const Cx:
       (eq_cstr (key, "&&") ||
        eq_cstr (key, "||") ||
        eq_cstr (key, "=>"));
-    expression_chunks (chunks, cadr_of_Sesp (a), idx_name);
-    if (pad)  chunks.top() += " ";
-    chunks.top() += key;
-    if (pad)  chunks.top() += " ";
-    expression_chunks (chunks, caddr_of_Sesp (a), idx_name);
+    string_expression (ss, cadr_of_Sesp (a));
+    if (pad)  ss += " ";
+    ss += key;
+    if (pad)  ss += " ";
+    string_expression (ss, caddr_of_Sesp (a));
   }
   else if (eq_cstr (key, "xnor")) {
-    expression_chunks (chunks, cadr_of_Sesp (a), idx_name);
-    chunks.top() += "==";
-    expression_chunks (chunks, caddr_of_Sesp (a), idx_name);
+    string_expression (ss, cadr_of_Sesp (a));
+    ss += "==";
+    string_expression (ss, caddr_of_Sesp (a));
   }
   else if (eq_cstr (key, "xor")) {
-    expression_chunks (chunks, cadr_of_Sesp (a), idx_name);
-    chunks.top() += "!=";
-    expression_chunks (chunks, caddr_of_Sesp (a), idx_name);
+    string_expression (ss, cadr_of_Sesp (a));
+    ss += "!=";
+    string_expression (ss, caddr_of_Sesp (a));
+  }
+  else if (eq_cstr (key, "-->")) {
+    string_expression (ss, cadr_of_Sesp (a));
+    ss += " -->";
+    for (Sesp b = cddr_of_Sesp (a); !nil_ck_Sesp (b); b = cdr_of_Sesp (b)) {
+      ss += " ";
+      string_expression (ss, car_of_Sesp (b));
+      ss += ";";
+    }
   }
   else if (eq_cstr (key, "NatDom")) {
-    chunks.top() += "Nat % ";
-    expression_chunks (chunks, cadr_of_Sesp (a), idx_name);
+    ss += "Nat % ";
+    string_expression (ss, cadr_of_Sesp (a));
   }
   else if (eq_cstr (key, "aref")) {
-    chunks.top() += ccstr_of_Sesp (cadr_of_Sesp (a));
-    chunks.top() += "[";
-    expression_chunks (chunks, caddr_of_Sesp (a), idx_name);
-    chunks.top() += "]";
+    ss += ccstr_of_Sesp (cadr_of_Sesp (a));
+    ss += "[";
+    string_expression (ss, caddr_of_Sesp (a));
+    ss += "]";
   }
   else if (eq_cstr (key, "forall") ||
            eq_cstr (key, "exists") ||
            eq_cstr (key, "unique")
           )
   {
-    chunks.top() += key;
-    chunks.top() += " ";
-    chunks.top() += ccstr_of_Sesp (cadr_of_Sesp (a));
-    chunks.top() += " <- ";
-    expression_chunks (chunks, caddr_of_Sesp (a), idx_name);
-    chunks.top() += " : ";
-    expression_chunks (chunks, cadddr_of_Sesp (a), idx_name);
+    ss += key;
+    ss += " ";
+    ss += ccstr_of_Sesp (cadr_of_Sesp (a));
+    ss += " <- ";
+    string_expression (ss, caddr_of_Sesp (a));
+    ss += " : ";
+    string_expression (ss, cadddr_of_Sesp (a));
   }
   else {
     good = false;
@@ -780,13 +810,21 @@ ProtoconFile::lookup_int(int* ret, const Cx::String& name)
     return true;
   }
 
-  Sign good = 1;
-  Sesp* sp = let_map.lookup(name);
-  DoLegit(good, "let_map.lookup()")
-    good = !!sp;
-  DoLegit(good, "eval_int()")
-    good = eval_int(ret, *sp);
-  return update_allgood (good);
+  if (sys->topology.constant_map.key_ck(name)) {
+    *ret = sys->topology.constant_map.lookup(name)->membs[0];
+    return true;
+  }
+  if (pc_symm) {
+    const int* pcidx = index_map.lookup(pc_symm->idx_name);
+    if (pcidx) {
+      Xn::NatMap* vals = pc_symm->let_map.lookup(name);
+      if (vals) {
+        *ret = vals->eval(*pcidx);
+        return true;
+      }
+    }
+  }
+  return update_allgood (false);
 }
 
 

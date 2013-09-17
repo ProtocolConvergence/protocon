@@ -30,25 +30,13 @@ ProtoconFile =
   WS? END_OF_FILE
   ;
 
-Protocol = 'protocol' WS name:ID WS? ';' {}
+Protocol = 'protocol' WS name:ID END_STMT {}
   ;
 
 ConstDecl =
-  'constant' WS name:ID WS? ':=' WS? v:ConstExpr WS? ';'
+  'constant' WS name:ID WS? ':=' WS? v:ConstExpr END_STMT
   {
-    Sign good = 1;
-    int x = 0;
-    DoLegit(good, "evaluating int")
-      good = yy->st->eval_int (&x, v.sp);
-    DoLegit(good, "nonnegative")
-      good = (x >= 0);
-    DoLegit(good, "")
-    {
-      const char* name_cstr = ccstr_of_Sesp (name.sp);
-      Claim( name_cstr );
-      if (!yy->st->constant_map[name_cstr])
-        yy->st->constant_map[name_cstr] = (uint) x;
-    }
+    yy->st->add_constant(name.sp, v.sp);
   }
   ;
 
@@ -62,7 +50,7 @@ OptionalShadowPuppetRole =
 
 VarDecl =
   r:OptionalShadowPuppetRole 'variable'
-  WS a:ID '[' WS? b:NatDom WS? ']' WS? IN WS? c:NatDom WS? ';'
+  WS a:ID '[' WS? b:NatDom WS? ']' WS? IN WS? c:NatDom END_STMT
   {
     Xn::Vbl::ShadowPuppetRole role = Xn::Vbl::Direct;
     if (pfxeq_cstr ("shadow", ccstr_of_Sesp (r.sp))) {
@@ -79,7 +67,7 @@ VarDecl =
 ActionExpr =
   '(' WS?
    act:Expr WS? '-->' WS?  {act.sp = list2_ccstr_Sesp ("-->", act.sp);}
-   ( vbl:VblRef WS? ':=' WS? val:Expr WS? ';' WS?
+   ( vbl:VblRef WS? ':=' WS? val:Expr END_STMT WS?
      {pushlast_Sesp (act.sp, list3_ccstr_Sesp (":=", vbl.sp, val.sp));}
    )+
    ')'
@@ -87,39 +75,39 @@ ActionExpr =
    ;
 
 ShadowActionDef =
-  'shadow' (WS ACTION | ':') WS? act:ActionExpr WS? ';' {$$ = act;}
+  'shadow' (WS ACTION | ':') WS? act:ActionExpr END_STMT {$$ = act;}
   ;
 
 DirectActionDef =
-  ('direct:' | ('direct' WS)? ACTION) WS? act:ActionExpr WS? ';' {$$ = act;}
+  ('direct:' | ('direct' WS)? ACTION) WS? act:ActionExpr END_STMT {$$ = act;}
   ;
 
 PuppetActionDef =
-  'puppet' (WS ACTION | ':') WS? act:ActionExpr WS? ';' {$$ = act;}
+  'puppet' (WS ACTION | ':') WS? act:ActionExpr END_STMT {$$ = act;}
   ;
 
 ProcDecl =
   'process' WS pc_name:ID '[' WS? idx_name:ID WS? IN WS? npcs:NatDom WS? ']'
   {yy->st->add_processes(pc_name.sp, idx_name.sp, npcs.sp);}
   WS? '{' WS?
-  ( 'let' WS let_name:ID WS? ':=' WS? let_val:Expr WS? ';' WS?
+  ( 'let' WS let_name:ID WS? ':=' WS? let_val:Expr END_STMT WS?
     {yy->st->add_let(let_name.sp, let_val.sp);}
   )*
-  ( (  'read:'  WS?  u:VblRef  {yy->st->add_access(u.sp, idx_name.sp, 0);}
-       (WS? ',' WS? v:VblRef  {yy->st->add_access(v.sp, idx_name.sp, 0);} )*
-     | 'write:' WS?  u:VblRef  {yy->st->add_access(u.sp, idx_name.sp, 1);}
-       (WS? ',' WS? v:VblRef  {yy->st->add_access(v.sp, idx_name.sp, 1);} )*
+  ( (  'read:'  WS?  u:VblRef  {yy->st->add_access(u.sp, 0);}
+       (WS? ',' WS? v:VblRef  {yy->st->add_access(v.sp, 0);} )*
+     | 'write:' WS?  u:VblRef  {yy->st->add_access(u.sp, 1);}
+       (WS? ',' WS? v:VblRef  {yy->st->add_access(v.sp, 1);} )*
     )
-    WS? ';' WS?
+    END_STMT WS?
   )+
-  (  act:ShadowActionDef WS? {yy->st->add_action (act.sp, idx_name.sp, Xn::Vbl::Shadow);}
-   | act:DirectActionDef WS? {yy->st->add_action (act.sp, idx_name.sp, Xn::Vbl::Direct);}
-   | act:PuppetActionDef WS? {yy->st->add_action (act.sp, idx_name.sp, Xn::Vbl::Puppet);}
+  (  act:ShadowActionDef WS? {yy->st->add_action (act.sp, Xn::Vbl::Shadow);}
+   | act:DirectActionDef WS? {yy->st->add_action (act.sp, Xn::Vbl::Direct);}
+   | act:PuppetActionDef WS? {yy->st->add_action (act.sp, Xn::Vbl::Puppet);}
   )*
-  ( LEGIT WS? legit:Expr WS? ';' WS?
-    {yy->st->add_legit(legit.sp, idx_name.sp);}
+  ( LEGIT WS? legit:Expr END_STMT WS?
+    {yy->st->add_pc_legit(legit.sp);}
   )?
-  {yy->st->let_map.clear();}
+  {yy->st->pc_symm = 0;}
   '}'
   ;
 
@@ -128,7 +116,7 @@ GlobalLegit =
    | 'direct' (WS LEGIT | ':')
    | LEGIT
   )
-  WS? a:Expr WS? ';'
+  WS? a:Expr END_STMT
   {yy->st->add_legit(a.sp);}
   ;
 
@@ -168,21 +156,7 @@ ConstNeg =
 
 ConstValue =
     a:NAT {$$ = a;}
-  | a:ID
-    {
-      const char* name = ccstr_of_Sesp (a.sp);
-      const uint* x = yy->st->constant_map.lookup(name);
-      if (x) {
-        $$.sp = make_Nat_Sesp (yy->st->spctx, *x);
-      }
-      else {
-        $$.sp = a.sp;
-        //yy->st->allgood = false;
-        //DBog1( "No constant value with name: %s", name );
-      }
-      $$.int_ck = 1;
-      //lose_Sesp (a.sp);
-    }
+  | a:ID {$$ = a; }
   | '(' WS? a:ConstExpr WS? ')'
     {
       $$.sp = list2_ccstr_Sesp ("(int)", a.sp);
@@ -284,12 +258,6 @@ Value =
 
 VblRef =
   a:ID
-  {
-    const uint* x = yy->st->constant_map.lookup(ccstr_of_Sesp (a.sp));
-    if (x) {
-      a.sp = make_Nat_Sesp (yy->st->spctx, *x);
-    }
-  }
   ('[' WS? b:Expr WS? ']'
    {a.sp = list3_ccstr_Sesp ("aref", a.sp, b.sp);}
   )?
@@ -333,6 +301,8 @@ LEGIT =
 
 ACTION = 'act:' | 'action:' ;
 
+END_STMT = WS? ';' ;
+
 ID = < [A-Za-z][0-9A-Za-z]* >
   {
     $$.sp = make_cstr_Sesp (yy->st->spctx, yytext);
@@ -362,7 +332,15 @@ ReadProtoconFile(Xn::Sys& sys, const ProtoconFileOpt& opt)
   open_FileB (&xfb.fb, 0, opt.file_path);
   //yyctx.infile = fopen(opt.file_path, "rb");
   yyctx.st = new ProtoconFile(&sys, &xfb.xf);
-  yyctx.st->constant_map = opt.constant_map;
+  for (Cx::Map<Cx::String,uint>::const_iterator itr = opt.constant_map.begin();
+       itr != opt.constant_map.end();
+       ++itr)
+  {
+    Xn::NatMap x(1);
+    x.membs[0] = itr->second;
+    x.expression = x.membs[0];
+    yyctx.st->sys->topology.constant_map.add(itr->first, x);
+  }
   if (!yyparse(&yyctx) || !yyctx.st->allgood) {
     good = false;
     DBog1( "Error parsing the file: %s", opt.file_path );

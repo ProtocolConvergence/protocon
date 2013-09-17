@@ -24,13 +24,14 @@ UnidirectionalRing(Xn::Net& topo, uint npcs, uint domsz,
 
   if (symmetric) {
     Xn::PcSymm* pc_symm = topo.add_processes("P", npcs);
+    pc_symm->idx_name = "i";
 
     // Make this f(i) = i-1
     Xn::NatMap indices(npcs);
     for (uint i = 0; i < npcs; ++i) {
       indices.membs[i] = (int)i - 1;
     }
-    indices.expression_chunks.push("-1");
+    indices.expression = "i-1";
     topo.add_read_access(pc_symm, vbl_symm, indices);
 
     // Now make this f(i) = i
@@ -38,23 +39,24 @@ UnidirectionalRing(Xn::Net& topo, uint npcs, uint domsz,
     for (uint i = 0; i < npcs; ++i) {
       indices.membs[i] = (int)i;
     }
-    indices.expression_chunks.push("");
+    indices.expression = "i";
     topo.add_write_access(pc_symm, vbl_symm, indices);
   }
   else {
     // Create a new symmetry for each process.
     for (uint i = 0; i < npcs; ++i) {
       Xn::PcSymm* pc_symm = topo.add_processes(Xn::String("P") + i, 1);
+      pc_symm->idx_name = "i";
 
       // Make this f(j) = i-1
       Xn::NatMap indices(1);
       indices.membs[0] = (int)i - 1;
-      indices.expression_chunks[0] = indices.membs[0];
+      indices.expression = indices.membs[0];
       topo.add_read_access(pc_symm, vbl_symm, indices);
 
       // Now make this f(j) = i
       indices.membs[0] = (int)i;
-      indices.expression_chunks[0] = indices.membs[0];
+      indices.expression = indices.membs[0];
       topo.add_write_access(pc_symm, vbl_symm, indices);
     }
   }
@@ -66,11 +68,11 @@ UnidirectionalRing(Xn::Net& topo, uint npcs, uint domsz,
 
     Xn::NatMap indices(1);
     indices.membs[0] = (int)npcs - 2;
-    indices.expression_chunks[0] = indices.membs[0];
+    indices.expression = indices.membs[0];
     topo.add_read_access(pc_symm, vbl_symm, indices);
 
     indices.membs[0] = (int)npcs - 1;
-    indices.expression_chunks[0] = indices.membs[0];
+    indices.expression = indices.membs[0];
     topo.add_write_access(pc_symm, vbl_symm, indices);
   }
 }
@@ -88,13 +90,14 @@ BidirectionalRing(Xn::Net& topo, uint npcs, uint domsz,
 
   if (symmetric) {
     Xn::PcSymm* pc_symm = &topo.pc_symms[0];
+    pc_symm->idx_name = "i";
 
     // Make this f(i) = i+1
     Xn::NatMap indices(npcs);
     for (uint i = 0; i < npcs; ++i) {
       indices.membs[i] = (int)i + 1;
     }
-    indices.expression_chunks.push("+1");
+    indices.expression = "i+1";
     topo.add_read_access(pc_symm, &topo.vbl_symms[0], indices);
   }
   else {
@@ -103,7 +106,7 @@ BidirectionalRing(Xn::Net& topo, uint npcs, uint domsz,
       // Make this f(j) = i+1
       Xn::NatMap indices(1);
       indices.membs[0] = (int)i + 1;
-      indices.expression_chunks[0] = indices.membs[0];
+      indices.expression = indices.membs[0];
       topo.add_read_access(pc_symm, &topo.vbl_symms[0], indices);
     }
   }

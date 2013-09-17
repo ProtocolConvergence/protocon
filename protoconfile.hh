@@ -29,27 +29,39 @@ struct FinMeta
   //uint text_lineno;
 };
 
+
+struct ProtoconFilePcSymm {
+  Cx::Table<Sesp> shadow_sps;
+  Cx::Table<Sesp> puppet_sps;
+  Cx::Table<Sesp> direct_sps;
+  Sesp invariant_sp;
+  ProtoconFilePcSymm()
+    : invariant_sp( 0 )
+  {}
+};
+
 class ProtoconFile {
 private:
   ProtoconFile(const ProtoconFile&);
   ProtoconFile& operator=(const ProtoconFile&);
 
 public:
-
   bool allgood;
   uint text_nlines;
   XFile xf;
+  // TODO:
+  //Cx::Table<ProtoconFilePcSymm> pcsymm_fmlas;
 
-  Map< Cx::String, uint > constant_map;
-  Map< Cx::String, Sesp > let_map;
   Map< Cx::String, int > index_map;
   Map< Cx::String, const Xn::VblSymm* > vbl_map;
   Xn::Sys* sys;
   SespCtx* spctx;
+  Xn::PcSymm* pc_symm;
 
   ProtoconFile(Xn::Sys* sys, XFile* xf)
     : allgood( true )
     , text_nlines(0)
+    , pc_symm(0)
   {
     this->sys = sys;
     this->sys->invariant = true;
@@ -69,19 +81,19 @@ public:
 
   bool add_processes(Sesp pc_name, Sesp idx_name, Sesp npcs);
 
+  bool add_constant(Sesp name_sp, Sesp val_sp);
+
   bool add_let(Sesp name_sp, Sesp val_sp);
 
-  bool add_access(Sesp vbl_sp, Sesp pc_idx_sp, Bit write);
+  bool add_access(Sesp vbl_sp, Bit write);
 
-  bool add_action(Sesp act_sp, Sesp pc_idx_sp,
-                  Xn::Vbl::ShadowPuppetRole role);
+  bool add_action(Sesp act_sp, Xn::Vbl::ShadowPuppetRole role);
 
-  bool add_legit(Sesp legit_sp, Sesp pc_idx_sp);
+  bool add_pc_legit(Sesp legit_sp);
 
   bool add_legit(Sesp legit_sp);
 
-  bool expression(Cx::String& expression, Sesp a);
-  bool expression_chunks(Cx::Table<Cx::String>& chunks, Sesp a, const Cx::String& idx_name);
+  bool string_expression(Cx::String& ss, Sesp a);
 
   bool eval(Cx::PFmla& pf, Sesp a);
 
