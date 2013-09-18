@@ -300,6 +300,16 @@ flat_backtrack_synthesis(vector<uint>& ret_actions,
     }
     }
 
+    if (global_opt.snapshot_conflicts && global_opt.conflicts_ofilename)
+    {
+      Cx::String ofilename( global_opt.conflicts_ofilename );
+      ofilename += PcIdx;
+      Cx::OFileB conflicts_of;
+      conflicts_of.open(ofilename.cstr());
+      conflicts.trim(global_opt.max_conflict_sz);
+      conflicts_of << conflicts;
+    }
+
     if (!done) {
       Set<uint> impossible( synctx.conflicts.impossible_set );
       impossible &= Set<uint>(synlvl.candidates);
@@ -317,6 +327,14 @@ flat_backtrack_synthesis(vector<uint>& ret_actions,
     conflicts_of.open(global_opt.conflicts_ofilename);
     conflicts.trim(global_opt.max_conflict_sz);
     conflicts_of << conflicts;
+  }
+  if (global_opt.snapshot_conflicts && global_opt.conflicts_ofilename)
+  {
+    for (uint i = 0; i < NPcs; ++i) {
+      Cx::String ofilename( global_opt.conflicts_ofilename );
+      ofilename += i;
+      remove(ofilename.cstr());
+    }
   }
 
   return solution_found;

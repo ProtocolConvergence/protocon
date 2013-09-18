@@ -369,6 +369,9 @@ int main(int argc, char** argv)
     else if (eq_cstr (arg, "-o-conflicts")) {
       opt.conflicts_ofilename = argv[argi++];
     }
+    else if (eq_cstr (arg, "-snapshot-conflicts")) {
+      opt.snapshot_conflicts = true;
+    }
     else if (eq_cstr (arg, "-max-conflict")) {
       if (!xget_uint_cstr (&opt.max_conflict_sz, argv[argi++])) {
         failout_sysCx("Argument Usage: -max-conflict N");

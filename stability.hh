@@ -71,6 +71,7 @@ public:
   uint max_conflict_sz;
   const char* conflicts_xfilename;
   const char* conflicts_ofilename;
+  bool snapshot_conflicts;
 
   AddConvergenceOpt() :
     pickMethod( GreedyPick )
@@ -88,6 +89,7 @@ public:
     , max_conflict_sz( 0 )
     , conflicts_xfilename( 0 )
     , conflicts_ofilename( 0 )
+    , snapshot_conflicts( false )
   {}
 };
 
