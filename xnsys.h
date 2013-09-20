@@ -115,7 +115,7 @@ struct XnSys
     TableT(XnPcSymm) pcsymms; /**< Process symmetries.**/
     TableT(XnPc) pcs; /**< Process instances.**/
     TableT(XnVbl) vbls;
-    BitTable legit; 
+    BitTable legit;
     TableT(XnRule) legit_rules;
     XnSz nstates; /**< Same as /legit.sz/.**/
     XnSz n_rule_steps;

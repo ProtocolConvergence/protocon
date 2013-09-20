@@ -27,6 +27,11 @@ public:
   void add_conflicts(const ConflictFamily& fam);
   void trim(uint max_sz);
   void conflict_sizes(Cx::Table<uint>& a) const;
+  void superset_membs(FlatSet<uint>& ret_membs,
+                      const FlatSet<uint>& test_set,
+                      const FlatSet<uint>& count_set) const;
+  void all_conflicts(Cx::Table< FlatSet<uint> >& ret) const;
+  void clear();
 
   void oput_conflict_sizes(Cx::OFile& of) const;
   void oput(Cx::OFile& of) const;

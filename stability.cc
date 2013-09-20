@@ -258,7 +258,7 @@ ReviseDeadlocksMCV(vector<DeadlockConstraint>& dlsets,
  * Pick the next candidate action to use.
  * The most constrained variable (MCV) heuristic may be used.
  *
- * \param ret_actId  Return value. Action to use.
+ * \param ret_actidx  Return value. Action to use.
  * \param dlsets  Deadlock sets ordered by number of
  *   resolving candidate actions.
  * \param backReachPF  Backwards reachability from invariant.
@@ -266,18 +266,24 @@ ReviseDeadlocksMCV(vector<DeadlockConstraint>& dlsets,
  *   true unless you're doing it wrong).
  */
   bool
-PickActionMCV(uint& ret_actId,
+PickActionMCV(uint& ret_actidx,
               const Xn::Sys& sys,
               const StabilitySynLvl& tape,
               const AddConvergenceOpt& opt)
 {
   typedef AddConvergenceOpt Opt;
-  const Opt::PickActionHeuristic& pickMethod = opt.pickMethod;
+  const Opt::PickActionHeuristic& pick_method = opt.pick_method;
   const Opt::NicePolicy& nicePolicy = opt.nicePolicy;
 
   const Xn::Net& topo = sys.topology;
   const vector<DeadlockConstraint>& dlsets = tape.mcvDeadlocks;
   uint dlsetIdx = 0;
+
+  if (pick_method == Opt::RandomPick) {
+    uint idx = tape.ctx->urandom.pick(tape.candidates.size());
+    ret_actidx = tape.candidates[idx];
+    return true;
+  }
 
   Set<uint> candidates;
   Set<uint>::const_iterator it;
@@ -339,7 +345,7 @@ PickActionMCV(uint& ret_actId,
     candidates = candidates_1;
   }
 
-  if (pickMethod == Opt::GreedyPick || pickMethod == Opt::GreedySlowPick) {
+  if (pick_method == Opt::GreedyPick || pick_method == Opt::GreedySlowPick) {
     biasToMax = true;
 
     Map< uint, uint > resolveMap;
@@ -349,7 +355,7 @@ PickActionMCV(uint& ret_actId,
         const uint actId = *it;
 
         uint w = 0; // Weight.
-        if (pickMethod != Opt::GreedySlowPick) {
+        if (pick_method != Opt::GreedySlowPick) {
           w = j;
         }
         else {
@@ -393,7 +399,7 @@ PickActionMCV(uint& ret_actId,
       biasMap[n] |= actId;
     }
   }
-  else if (pickMethod == Opt::LCVLitePick) {
+  else if (pick_method == Opt::LCVLitePick) {
     biasToMax = false;
 
     for (it = candidates.begin(); it != candidates.end(); ++it) {
@@ -408,7 +414,7 @@ PickActionMCV(uint& ret_actId,
       biasMap[n] |= actId;
     }
   }
-  else if (pickMethod == Opt::LCVHeavyPick) {
+  else if (pick_method == Opt::LCVHeavyPick) {
     biasToMax = false;
 
     for (it = candidates.begin(); it != candidates.end(); ++it) {
@@ -430,7 +436,7 @@ PickActionMCV(uint& ret_actId,
       biasMap[n] |= actId;
     }
   }
-  else if (pickMethod == Opt::LCVJankPick) {
+  else if (pick_method == Opt::LCVJankPick) {
     biasToMax = true;
     Map< uint, Set<uint> > overlapSets;
 
@@ -486,7 +492,25 @@ PickActionMCV(uint& ret_actId,
       biasMap[n] |= actId;
     }
   }
-  else if (pickMethod == Opt::QuickPick) {
+  else if (pick_method == Opt::ConflictPick) {
+    biasToMax = false;
+    FlatSet<uint> membs;
+    tape.ctx->conflicts.superset_membs(membs, FlatSet<uint>(tape.picks),
+                                       FlatSet<uint>(tape.candidates));
+    if (membs.overlap_ck(candidates)) {
+      biasMap[0] = (candidates & Set<uint>(membs));
+    }
+#if 0
+    else if (membs.sz() > 0) {
+      uint idx = tape.ctx->urandom.pick(membs.sz());
+      biasMap[0] |= membs[idx];
+    }
+#endif
+    else {
+      biasMap[0] |= candidates;
+    }
+  }
+  else if (pick_method == Opt::QuickPick) {
     biasToMax = false;
     const PF& backReachPF = tape.backReachPF;
     for (it = candidates.begin(); it != candidates.end(); ++it) {
@@ -527,7 +551,7 @@ PickActionMCV(uint& ret_actId,
     vector<uint> candidates_vec;
     candidates.fill(candidates_vec);
     uint idx = tape.ctx->urandom.pick(candidates_vec.size());
-    ret_actId = candidates_vec[idx];
+    ret_actidx = candidates_vec[idx];
   }
   else if (nicePolicy == Opt::EndNice) {
     bool have = false;
@@ -544,10 +568,10 @@ PickActionMCV(uint& ret_actId,
         extremeActId = actId;
       }
     }
-    ret_actId = extremeActId;
+    ret_actidx = extremeActId;
   }
   else {
-    ret_actId = candidates.elem();
+    ret_actidx = candidates.elem();
   }
   return true;
 }
@@ -655,23 +679,27 @@ count_actions_in_cycle (const Cx::PFmla& scc, Cx::PFmla edg,
   return n;
 }
 
-  void
+  uint
 StabilitySynLvl::add_small_conflict_set(const Xn::Sys& sys,
                                         const Cx::Table<uint>& delpicks)
 {
-  if (noconflicts)  return;
+  if (noconflicts)  return 0;
   if (false || directly_add_conflicts) {
     this->ctx->conflicts.add_conflict(delpicks);
-    return;
+    return 0;
   }
-  StabilitySynLvl lvl( *this->ctx->base_lvl );
-  lvl.bt_dbog = false;
-  lvl.directly_add_conflicts = true;
-  for (uint i = delpicks.sz(); i > 0;) {
-    i -= 1;
-    if (!lvl.pick_action(sys, delpicks[i]))
-      break;
+  Set<uint> delpick_set( delpicks );
+  for (uint i = 0; i < delpicks.sz(); ++i) {
+    StabilitySynLvl lvl( *this->ctx->base_lvl );
+    lvl.bt_dbog = false;
+    lvl.noconflicts = true;
+    delpick_set -= delpicks[i];
+    if (lvl.revise_actions(sys, delpick_set, Set<uint>())) {
+      delpick_set |= delpicks[i];
+    }
   }
+  this->ctx->conflicts.add_conflict(delpick_set);
+  return delpick_set.sz();
 }
 
 #if 0
@@ -875,9 +903,11 @@ StabilitySynLvl::revise_actions(const Xn::Sys& sys,
     if (this->bt_dbog) {
       DBogOF << "CYCLE\n";
     }
-    Cx::Table<uint> conflict_set;
-    small_cycle_conflict (conflict_set, scc, this->actions, topo, sys.invariant);
-    this->ctx->conflicts.add_conflict(conflict_set);
+    if (!this->noconflicts) {
+      Cx::Table<uint> conflict_set;
+      small_cycle_conflict (conflict_set, scc, this->actions, topo, sys.invariant);
+      this->ctx->conflicts.add_conflict(conflict_set);
+    }
     return false;
   }
 

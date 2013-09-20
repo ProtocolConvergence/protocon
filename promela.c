@@ -131,7 +131,6 @@ oput_promela_pc (OFile* of, const XnPc* pc, const XnSys* sys,
     }
     oput_cstr_OFile (of, "od;\n");
     oput_cstr_OFile (of, "}\n\n");
-    
 }
 
     void

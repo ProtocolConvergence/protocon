@@ -136,6 +136,21 @@ rank_actions (Cx::Table< Cx::Table<uint> >& act_layers,
   return true;
 }
 
+  void
+oput_conflicts (const ConflictFamily& conflicts, const Cx::String& ofilename)
+{
+  Cx::OFileB conflicts_of;
+  conflicts_of.open(ofilename.cstr());
+  conflicts_of << conflicts;
+}
+
+  void
+oput_conflicts (const ConflictFamily& conflicts, Cx::String ofilename, uint pcidx)
+{
+  ofilename += pcidx;
+  oput_conflicts(conflicts, ofilename);
+}
+
 static volatile bool* done_flag = false;
 
   void
@@ -149,6 +164,7 @@ set_done_flag (int sig)
   bool
 flat_backtrack_synthesis(vector<uint>& ret_actions,
                          const ProtoconFileOpt& infile_opt,
+                         const ProtoconOpt& exec_opt,
                          const AddConvergenceOpt& global_opt)
 {
   bool done = false;
@@ -173,13 +189,19 @@ flat_backtrack_synthesis(vector<uint>& ret_actions,
     conflicts.oput_conflict_sizes(DBogOF);
   }
 
+  Cx::Table< FlatSet<uint> > flat_conflicts;
+  if (exec_opt.task == ProtoconOpt::MinimizeConflictsTask) {
+    conflicts.all_conflicts(flat_conflicts);
+  }
+
 #ifdef _OPENMP
-#pragma omp parallel shared(done,NPcs,solution_found,ret_actions,conflicts)
+#pragma omp parallel shared(done,NPcs,solution_found,ret_actions,conflicts,flat_conflicts)
 #endif
   {
   Sign good = 1;
   AddConvergenceOpt opt(global_opt);
   uint PcIdx;
+  ConflictFamily working_conflicts = conflicts;
 #ifdef _OPENMP
 #pragma omp critical
 #endif
@@ -237,17 +259,49 @@ flat_backtrack_synthesis(vector<uint>& ret_actions,
 #endif
   DBog1( "BEGIN! %u", PcIdx );
 
-  ConflictFamily working_conflicts;
+  synctx.conflicts = working_conflicts;
+  working_conflicts.clear();
   {
-    synctx.conflicts = conflicts;
-
     Set<uint> impossible( synctx.conflicts.impossible_set );
     impossible &= Set<uint>(synlvl.candidates);
     if (!impossible.empty())
       synlvl.revise_actions(sys, Set<uint>(), impossible);
   }
 
+  if (exec_opt.task == ProtoconOpt::MinimizeConflictsTask)
+  {
+#ifdef _OPENMP
+#pragma omp for schedule(dynamic)
+#endif
+    for (uint conflict_idx = 0; conflict_idx < flat_conflicts.sz(); ++conflict_idx) {
+      uint old_sz = flat_conflicts[conflict_idx].sz();
+      if (!done && old_sz > 1) {
+#pragma omp critical (DBog)
+        DBog4( "pcidx:%u conflict:%u/%u sz:%u", PcIdx, conflict_idx,
+               (uint)flat_conflicts.sz(), old_sz
+             );
+
+        uint new_sz =
+          synlvl.add_small_conflict_set(sys, flat_conflicts[conflict_idx]);
+
+#pragma omp critical (DBog)
+        DBog5( "DONE: pcidx:%u conflict:%u/%u old_sz:%u new_sz:%u", PcIdx, conflict_idx,
+               (uint)flat_conflicts.sz(), old_sz, new_sz
+             );
+      }
+    }
+
+#ifdef _OPENMP
+#pragma omp critical (DBog)
+#endif
+    {
+      conflicts.add_conflicts(synctx.conflicts);
+      conflicts.oput_conflict_sizes(DBogOF);
+    }
+  }
+
   vector<uint> actions;
+  if (exec_opt.task == ProtoconOpt::SearchTask)
   for (uint trial_idx = 0; !done && trial_idx < opt.ntrials; ++trial_idx)
   {
     bool found = false;
@@ -301,14 +355,7 @@ flat_backtrack_synthesis(vector<uint>& ret_actions,
     }
 
     if (global_opt.snapshot_conflicts && global_opt.conflicts_ofilename)
-    {
-      Cx::String ofilename( global_opt.conflicts_ofilename );
-      ofilename += PcIdx;
-      Cx::OFileB conflicts_of;
-      conflicts_of.open(ofilename.cstr());
-      conflicts.trim(global_opt.max_conflict_sz);
-      conflicts_of << conflicts;
-    }
+      oput_conflicts (synctx.conflicts, global_opt.conflicts_ofilename, PcIdx);
 
     if (!done) {
       Set<uint> impossible( synctx.conflicts.impossible_set );
@@ -321,13 +368,10 @@ flat_backtrack_synthesis(vector<uint>& ret_actions,
   }
   }
 
+  conflicts.trim(global_opt.max_conflict_sz);
   if (global_opt.conflicts_ofilename)
-  {
-    Cx::OFileB conflicts_of;
-    conflicts_of.open(global_opt.conflicts_ofilename);
-    conflicts.trim(global_opt.max_conflict_sz);
-    conflicts_of << conflicts;
-  }
+    oput_conflicts (conflicts, global_opt.conflicts_ofilename);
+
   if (global_opt.snapshot_conflicts && global_opt.conflicts_ofilename)
   {
     for (uint i = 0; i < NPcs; ++i) {

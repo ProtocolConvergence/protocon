@@ -52,7 +52,7 @@ xget_dimacs_result (XFile* xf, bool* sat, BitTable evs)
     }
 }
 
-/** 
+/**
  * Use an external SAT solver to solve /fmla/.
  * If /\ref SatSolve_Z3==true/, use Z3.
  * Otherwise, use MiniSat.

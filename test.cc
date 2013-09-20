@@ -257,7 +257,7 @@ TestXnSys()
 
     Claim( !SCC_Find(0, cyclePF, ~sys.invariant) );
 
-    cyclePF |= 
+    cyclePF |=
       ((topo.pfmla_vbl(0) == 0) &
        (topo.pfmla_vbl(2) == 2) &
        (topo.pfmla_vbl(1) == 1) &
@@ -366,4 +366,4 @@ void Test()
   TestProtoconFile(true);
   TestProtoconFile(false);
 }
- 
+

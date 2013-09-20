@@ -1510,7 +1510,7 @@ synsearch_sat (FMem_synsearch* tape)
             app_CnfFmla (fmla, clause);
         }
         back1_Xn (&tape->xns, &tape->xn_stk);
-        
+
         {:for (qi ; g->q.sz)
             g->q.s[qi] = 0;
         }

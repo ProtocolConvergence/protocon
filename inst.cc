@@ -156,12 +156,12 @@ SingleTokenPFmla(const vector<Cx::PFmla>& tokenPFs)
       if (j == i) {
         // Process pcIdx has the only token
         // in the /singleToken[j]/ formula.
-        singleToken[j] &= tokenPFs[i]; 
+        singleToken[j] &= tokenPFs[i];
       }
       else {
         // Process pcIdx does not have a token
         // in the /singleToken[j]/ formula.
-        singleToken[j] -= tokenPFs[i]; 
+        singleToken[j] -= tokenPFs[i];
       }
     }
   }

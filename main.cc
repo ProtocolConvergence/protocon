@@ -106,8 +106,15 @@ AddConvergence(vector<uint>& retActions,
     StabilitySynLvl& tape = bt_stack[stack_idx];
     if (tape.candidates.empty())
       break;
-    if (synctx.done && *synctx.done)
+    if (synctx.done && *synctx.done) {
+      base_lvl.failed_bt_level = tape.failed_bt_level;
       return false;
+    }
+
+    if (opt.max_depth > 0 && tape.bt_level >= opt.max_depth) {
+      base_lvl.failed_bt_level = opt.max_depth;
+      return false;
+    }
 
     // Pick the action.
     uint actidx = 0;
@@ -136,8 +143,10 @@ AddConvergence(vector<uint>& retActions,
       continue;
     }
 
-    if (synctx.done && *synctx.done)
+    if (synctx.done && *synctx.done) {
+      base_lvl.failed_bt_level = tape.failed_bt_level;
       return false;
+    }
 
     if (tape.revise_actions(sys, Set<uint>(), Set<uint>(actidx)))
       continue;
@@ -296,18 +305,13 @@ int main(int argc, char** argv)
   const char* modelFilePath = 0;
   ProtoconFileOpt infile_opt;
   const char* outfile_path = 0;
-  bool verify = false;
+  ProtoconOpt exec_opt;
 
   // Use to disable picking only actions which resolve deadlocks
   // by making them backwards reachable from the invariant.
   opt.pickBackReach = false;
   // Use to disable process ordering.
   //opt.nicePolicy = opt.NilNice;
-  // Use to change picking method.
-  //opt.pickMethod = opt.GreedyPick;
-  //opt.pickMethod = opt.QuickPick;
-  //opt.pickMethod = opt.LCVHeavyPick;
-  opt.pickMethod = opt.LCVLitePick;
 
   while (pfxeq_cstr ("-", argv[argi])) {
     const char* arg = argv[argi++];
@@ -329,6 +333,12 @@ int main(int argc, char** argv)
       DBog0( "Done." );
       lose_sysCx ();
       return 0;
+    }
+    else if (eq_cstr (arg, "-verify")) {
+      exec_opt.task = ProtoconOpt::VerifyTask;
+    }
+    else if (eq_cstr (arg, "-minimize-conflicts")) {
+      exec_opt.task = ProtoconOpt::MinimizeConflictsTask;
     }
     else if (eq_cstr (arg, "-def")) {
       if (argi + 1 >= argc) {
@@ -377,19 +387,27 @@ int main(int argc, char** argv)
         failout_sysCx("Argument Usage: -max-conflict N");
       }
     }
-    else if (eq_cstr (arg, "-verify")) {
-      verify = true;
+    else if (eq_cstr (arg, "-max-depth")) {
+      if (!xget_uint_cstr (&opt.max_depth, argv[argi++])) {
+        failout_sysCx("Argument Usage: -max-depth N");
+      }
     }
     else if (eq_cstr (arg, "-pick")) {
       const char* method = argv[argi++];
       if (eq_cstr (method, "greedy")) {
-        opt.pickMethod = opt.GreedyPick;
+        opt.pick_method = opt.GreedyPick;
       }
       else if (eq_cstr (method, "lcv")) {
-        opt.pickMethod = opt.LCVLitePick;
+        opt.pick_method = opt.LCVLitePick;
       }
       else if (eq_cstr (method, "quick")) {
-        opt.pickMethod = opt.QuickPick;
+        opt.pick_method = opt.QuickPick;
+      }
+      else if (eq_cstr (method, "random")) {
+        opt.pick_method = opt.RandomPick;
+      }
+      else if (eq_cstr (method, "conflict")) {
+        opt.pick_method = opt.ConflictPick;
       }
       else {
         failout_sysCx("Argument Usage: -pick [greedy|lcv|quick]");
@@ -474,21 +492,27 @@ int main(int argc, char** argv)
   }
 
   bool found = false;
-  if (verify) {
+  if (exec_opt.task == ProtoconOpt::VerifyTask) {
     found = VerifyStabilization(sys);
+  }
+  else if (exec_opt.task == ProtoconOpt::MinimizeConflictsTask) {
+    if (!infile_opt.file_path) {
+      failout_sysCx ("Need to use input file with random or -minimize-conflicts method!");
+    }
+    flat_backtrack_synthesis(sys.actions, infile_opt, exec_opt, opt);
   }
   else if (opt.search_method != opt.BacktrackSearch) {
     if (!infile_opt.file_path) {
       failout_sysCx ("Need to use input file with random or rank/shuffle method!");
     }
     found =
-      flat_backtrack_synthesis(sys.actions, infile_opt, opt);
+      flat_backtrack_synthesis(sys.actions, infile_opt, exec_opt, opt);
   }
   else {
     found = AddConvergence(sys, opt);
   }
 
-  if (verify) {
+  if (exec_opt.task == ProtoconOpt::VerifyTask) {
     if (found) {
       DBog0( "Protocol is self-stabilizing!" );
     }

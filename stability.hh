@@ -39,6 +39,8 @@ public:
     LCVHeavyPick,
     LCVJankPick,
     QuickPick,
+    RandomPick,
+    ConflictPick,
     NPickMethods
   };
   enum NicePolicy {
@@ -54,7 +56,7 @@ public:
     NSearchMethods
   };
 
-  PickActionHeuristic pickMethod;
+  PickActionHeuristic pick_method;
   SearchMethod search_method;
   NicePolicy nicePolicy;
   bool pickBackReach;
@@ -63,6 +65,7 @@ public:
 
   // For parallel algorithms.
   bool random_one_shot;
+  uint max_depth;
   uint bt_depth;
   uint sys_pcidx;
   uint sys_npcs;
@@ -74,13 +77,14 @@ public:
   bool snapshot_conflicts;
 
   AddConvergenceOpt() :
-    pickMethod( GreedyPick )
+    pick_method( LCVLitePick )
     , search_method( BacktrackSearch )
     , nicePolicy( EndNice )
     , pickBackReach( false )
     , bt_dbog( true )
     , verify_found( true )
     , random_one_shot( false )
+    , max_depth( 0 )
     , bt_depth( 3 )
     , sys_pcidx( 0 )
     , sys_npcs( 1 )
@@ -150,7 +154,7 @@ public:
   /// Deadlocks ranked by how many candidate actions can resolve them.
   vector<DeadlockConstraint> mcvDeadlocks;
 
-  void add_small_conflict_set(const Xn::Sys& sys, const Cx::Table<uint>& delpicks);
+  uint add_small_conflict_set(const Xn::Sys& sys, const Cx::Table<uint>& delpicks);
   bool check_forward(const Xn::Sys& sys);
   bool revise_actions(const Xn::Sys& sys, Set<uint> adds, Set<uint> dels);
   bool pick_action(const Xn::Sys& sys, uint act_idx);

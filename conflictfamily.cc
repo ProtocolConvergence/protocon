@@ -106,6 +106,51 @@ ConflictFamily::conflict_sizes(Cx::Table<uint>& a) const {
 }
 
   void
+ConflictFamily::superset_membs(FlatSet<uint>& ret_membs,
+                               const FlatSet<uint>& test_set,
+                               const FlatSet<uint>& count_set) const
+{
+  Set<uint> membs;
+  FOR_EACH( it, conflict_sets )
+  {
+    const FlatSet<uint>& conflict_set = *it;
+    if (!test_set.subseteq_ck(conflict_set))
+      continue;
+    uint i = 0;
+    uint j = 0;
+    while (j < conflict_set.sz()) {
+      const uint elem = conflict_set[j];
+      if (i >= test_set.sz() || test_set[i] != elem) {
+        j += 1;
+        if (count_set.elem_ck(elem))
+          membs |= elem;
+      }
+      else {
+        i += 1;
+        j += 1;
+      }
+    }
+  }
+  ret_membs = FlatSet<uint>(membs);
+}
+
+  void
+ConflictFamily::all_conflicts(Cx::Table< FlatSet<uint> >& ret) const
+{
+  FOR_EACH( it, conflict_sets )
+  {
+    ret.push(*it);
+  }
+}
+
+  void
+ConflictFamily::clear()
+{
+  conflict_sets.clear();
+  impossible_set.clear();
+}
+
+  void
 ConflictFamily::oput_conflict_sizes(Cx::OFile& of) const
 {
   Cx::Table<uint> t;
