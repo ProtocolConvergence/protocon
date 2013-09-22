@@ -299,16 +299,11 @@ private:
 class Sys {
 public:
   Xn::Net topology;
-  //XnNet topology;
   vector<uint> actions; ///< Force use of these actions.
 
   /// Invariant to which we should converge.
   Cx::PFmla invariant;
   Cx::String invariant_expression;
-  /// Variables defining the original protocol.
-  //Set< Cx::Tuple<uint,2> > shadow_vbls;
-  /// Variables used to add convergence.
-  //Set< Cx::Tuple<uint,2> > puppet_vbls;
   /// Transition relation within the invariant.
   bool shadow_puppet_synthesis;
   bool direct_invariant_flag;
@@ -330,10 +325,6 @@ public:
   {
   }
 
-
-  //void markShadowVbl(uint pcIdx, uint vblIdx) {
-  //  shadow_vbls |= Cx::Tuple<uint,2>( pcIdx, vblIdx );
-  //}
   void commit_initialization();
 
   bool integrityCk() const;
@@ -357,19 +348,13 @@ public:
     return *niceIdx;
   }
 };
-}
 
-#if 0
-class ActSet {
+class ManySys : public Cx::LgTable<Sys>
+{
 public:
-  Set<uint> ids; ///< Action ids which make up this set.
-  PF pfmla; ///< Formula representing the transitions.
-
-  /// Indices of other action sets which this one conflicts with.
-  Set<uint> conflicts;
-  PF conflict_pfmla; ///< Formula representing the conflicting actions.
+  ManySys() {}
 };
-#endif
+}
 
 Cx::OFile&
 OPut(Cx::OFile& of, const Xn::ActSymm& act);

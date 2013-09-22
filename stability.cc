@@ -776,33 +776,9 @@ StabilitySynLvl::check_forward(const Xn::Sys& sys)
     action_set -= Set<uint>(actidx);
     if (conflict_found) {
       dels |= actidx;
-      break;
-    }
-
-    if (this->ctx->opt.random_one_shot)
       continue;
-
-    if (sys.shadow_puppet_synthesis_ck() && act_pf.overlap_ck(invariant)) {
-      const PF& pf = LegitInvariant(sys, this->loXnRel | act_pf, this->hiXnRel);
-      if (pf.tautology_ck(false)) {
-        dels |= actidx;
-        continue;
-      }
-      if (false && !WeakConvergenceCk(sys, this->hiXnRel, pf)) {
-        DBog0("WEAK PRUNED!");
-        dels |= actidx;
-        continue;
-      }
     }
 
-    if (false && sys.shadow_puppet_synthesis_ck()) {
-      const PF& pf = LegitInvariant(sys, this->loXnRel, this->hiXnRel - act_pf);
-      if (!WeakConvergenceCk(sys, this->hiXnRel - act_pf, pf)) {
-        DBog1("Need for weak: %u", actidx);
-        adds |= actidx;
-        continue;
-      }
-    }
   }
   if (!adds.empty() || !dels.empty()) {
 #if 0
