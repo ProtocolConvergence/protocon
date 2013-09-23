@@ -194,31 +194,33 @@ flat_backtrack_synthesis(vector<uint>& ret_actions,
     conflicts.all_conflicts(flat_conflicts);
   }
 
-#ifdef _OPENMP
 #pragma omp parallel shared(done,NPcs,solution_found,ret_actions,conflicts,flat_conflicts)
-#endif
   {
   Sign good = 1;
   AddConvergenceOpt opt(global_opt);
   uint PcIdx;
   ConflictFamily working_conflicts = conflicts;
-#ifdef _OPENMP
+  Cx::OFileB log_ofile;
 #pragma omp critical
-#endif
   {
     PcIdx = NPcs;
     ++ NPcs;
   }
 
-#ifdef _OPENMP
 #pragma omp barrier
-#endif
   opt.sys_pcidx = PcIdx;
   opt.sys_npcs = NPcs;
   opt.random_one_shot = true;
-  if (NPcs > 1)
-    opt.bt_dbog = false;
-  //opt.bt_dbog = true;
+  if (exec_opt.log_ofilename) {
+    Cx::String ofilename( exec_opt.log_ofilename );
+    ofilename += PcIdx;
+    log_ofile.open(ofilename);
+    opt.log = &log_ofile;
+  }
+  else if (NPcs > 1) {
+    opt.log = &Cx::OFile::null();
+  }
+  //opt.log = &DBogOF;
   opt.verify_found = false;
 
   Xn::Sys sys;
@@ -249,14 +251,10 @@ flat_backtrack_synthesis(vector<uint>& ret_actions,
   if (!good)
   {
     done = true;
-#ifdef _OPENMP
 #pragma omp flush (done)
-#endif
   }
 
-#ifdef _OPENMP
 #pragma omp critical (DBog)
-#endif
   DBog1( "BEGIN! %u", PcIdx );
 
   synctx.conflicts = working_conflicts;
@@ -270,39 +268,36 @@ flat_backtrack_synthesis(vector<uint>& ret_actions,
 
   if (exec_opt.task == ProtoconOpt::MinimizeConflictsTask)
   {
-#ifdef _OPENMP
 #pragma omp for schedule(dynamic)
-#endif
     for (uint conflict_idx = 0; conflict_idx < flat_conflicts.sz(); ++conflict_idx) {
       uint old_sz = flat_conflicts[conflict_idx].sz();
       if (!done && old_sz > 1) {
-#pragma omp critical (DBog)
-        DBog4( "pcidx:%u conflict:%u/%u sz:%u", PcIdx, conflict_idx,
-               (uint)flat_conflicts.sz(), old_sz
-             );
+        *opt.log
+          << "pcidx:" << PcIdx
+          << " conflict:" << conflict_idx << "/" << flat_conflicts.sz()
+          << " sz:" << old_sz;
+        opt.log->flush();
 
         uint new_sz =
           synlvl.add_small_conflict_set(sys, flat_conflicts[conflict_idx]);
 
-#pragma omp critical (DBog)
-        DBog5( "DONE: pcidx:%u conflict:%u/%u old_sz:%u new_sz:%u", PcIdx, conflict_idx,
-               (uint)flat_conflicts.sz(), old_sz, new_sz
-             );
+        *opt.log
+          << "DONE: pcidx:" << PcIdx
+          << " conflict:" << conflict_idx << "/" << flat_conflicts.sz()
+          << " old_sz:" << old_sz << " new_sz:" << new_sz;
+        opt.log->flush();
       }
     }
 
-#ifdef _OPENMP
 #pragma omp critical (DBog)
-#endif
-    {
-      conflicts.add_conflicts(synctx.conflicts);
-      conflicts.oput_conflict_sizes(DBogOF);
-    }
+    conflicts.add_conflicts(synctx.conflicts);
+
+    conflicts.oput_conflict_sizes(*opt.log);
   }
 
   vector<uint> actions;
   if (exec_opt.task == ProtoconOpt::SearchTask)
-  for (uint trial_idx = 0; !done && trial_idx < opt.ntrials; ++trial_idx)
+  for (uint trial_idx = 0; !done && (opt.ntrials == 0 || trial_idx < opt.ntrials); ++trial_idx)
   {
     bool found = false;
     if (opt.search_method == opt.RankShuffleSearch)
@@ -324,9 +319,7 @@ flat_backtrack_synthesis(vector<uint>& ret_actions,
       found = AddConvergence(actions, sys, synlvl, opt);
     }
 
-#ifdef _OPENMP
 #pragma omp critical (DBog)
-#endif
     {
     if (done)
     {}
@@ -336,7 +329,7 @@ flat_backtrack_synthesis(vector<uint>& ret_actions,
         done = true;
       solution_found = true;
       ret_actions = actions;
-      DBog0("SOLUTION FOUND!");
+      *opt.log << "SOLUTION FOUND!";
 
     }
     if (!done || global_opt.conflicts_ofilename)
@@ -345,14 +338,21 @@ flat_backtrack_synthesis(vector<uint>& ret_actions,
       synctx.conflicts.trim(global_opt.max_conflict_sz);
 
       conflicts = synctx.conflicts;
-      conflicts.oput_conflict_sizes(DBogOF);
 
       if (opt.search_method == opt.RankShuffleSearch)
-        DBog3("pcidx:%u trial:%u actions:%u", PcIdx, trial_idx+1, actions.size());
+        DBogOF << "pcidx:" << PcIdx << " trial:" << trial_idx+1 << " actions:" << actions.size() << '\n';
       else
-        DBog3("pcidx:%u trial:%u depth:%u", PcIdx, trial_idx+1, synlvl.failed_bt_level);
+        DBogOF << "pcidx:" << PcIdx << " trial:" << trial_idx+1 << " depth:" << synlvl.failed_bt_level << '\n';
+      DBogOF.flush();
     }
     }
+
+    synctx.conflicts.oput_conflict_sizes(*opt.log);
+    if (opt.search_method == opt.RankShuffleSearch)
+      *opt.log << "pcidx:" << PcIdx << " trial:" << trial_idx+1 << " actions:" << actions.size() << '\n';
+    else
+      *opt.log << "pcidx:" << PcIdx << " trial:" << trial_idx+1 << " depth:" << synlvl.failed_bt_level << '\n';
+    opt.log->flush();
 
     if (global_opt.snapshot_conflicts && global_opt.conflicts_ofilename)
       oput_conflicts (synctx.conflicts, global_opt.conflicts_ofilename, PcIdx);

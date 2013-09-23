@@ -124,7 +124,7 @@ AddConvergence(vector<uint>& retActions,
     }
 
     uint next_idx;
-    if (!opt.random_one_shot || bt_stack.sz() < opt.bt_depth) {
+    if (!opt.random_one_shot || bt_stack.sz() < opt.max_height) {
       next_idx = stack_idx + 1;
       if (next_idx == bt_stack.sz())
         bt_stack.push(StabilitySynLvl(&synctx));
@@ -151,9 +151,7 @@ AddConvergence(vector<uint>& retActions,
     if (tape.revise_actions(sys, Set<uint>(), Set<uint>(actidx)))
       continue;
 
-    if (tape.bt_dbog) {
-      DBog1("backtrack from lvl %u", tape.bt_level);
-    }
+    *tape.log << "backtrack from lvl" << tape.bt_level << '\n';
     tape.add_small_conflict_set(sys, tape.picks);
 
     stack_idx = decmod(stack_idx, 1, bt_stack.sz());
@@ -248,7 +246,7 @@ InitStabilitySyn(StabilitySyn& synctx,
     return false;
   }
 
-  tape.bt_dbog = opt.bt_dbog;
+  tape.log = opt.log;
   if (!tape.revise_actions(sys, Set<uint>(sys.actions), Set<uint>()))
   {
     DBog0("No actions apply!");
@@ -307,12 +305,6 @@ int main(int argc, char** argv)
   const char* outfile_path = 0;
   ProtoconOpt exec_opt;
 
-  // Use to disable picking only actions which resolve deadlocks
-  // by making them backwards reachable from the invariant.
-  opt.pickBackReach = false;
-  // Use to disable process ordering.
-  //opt.nicePolicy = opt.NilNice;
-
   while (pfxeq_cstr ("-", argv[argi])) {
     const char* arg = argv[argi++];
     if (eq_cstr (arg, "-model")) {
@@ -365,6 +357,12 @@ int main(int argc, char** argv)
         failout_sysCx("Not enuff arguments.\n");
       }
     }
+    else if (eq_cstr (arg, "-o-log")) {
+      exec_opt.log_ofilename = argv[argi++];
+      if (!exec_opt.log_ofilename) {
+        failout_sysCx("Argument Usage: -o-log FILE");
+      }
+    }
     else if (eq_cstr (arg, "-ntrials")) {
       if (!xget_uint_cstr (&opt.ntrials, argv[argi++])) {
         failout_sysCx("Argument Usage: -ntrials N");
@@ -392,9 +390,20 @@ int main(int argc, char** argv)
         failout_sysCx("Argument Usage: -max-depth N");
       }
     }
+    else if (eq_cstr (arg, "-max-height")) {
+      if (!xget_uint_cstr (&opt.max_height, argv[argi++])) {
+        failout_sysCx("Argument Usage: -max-height N");
+      }
+    }
+    else if (eq_cstr (arg, "-pick-reach")) {
+      opt.pick_back_reach = true;
+    }
     else if (eq_cstr (arg, "-pick")) {
       const char* method = argv[argi++];
-      if (eq_cstr (method, "greedy")) {
+      if (eq_cstr (method, "mcv")) {
+        opt.pick_method = opt.MCVLitePick;
+      }
+      else if (eq_cstr (method, "greedy")) {
         opt.pick_method = opt.GreedyPick;
       }
       else if (eq_cstr (method, "lcv")) {
@@ -410,7 +419,7 @@ int main(int argc, char** argv)
         opt.pick_method = opt.ConflictPick;
       }
       else {
-        failout_sysCx("Argument Usage: -pick [greedy|lcv|quick]");
+        failout_sysCx("Argument Usage: -pick [mcv|greedy|lcv|quick]");
       }
     }
     else {

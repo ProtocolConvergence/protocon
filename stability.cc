@@ -295,7 +295,7 @@ PickActionMCV(uint& ret_actidx,
   for (uint i = 0; i < dlsets.size(); ++i) {
     if (!dlsets[i].candidates.empty()) {
       candidates = dlsets[i].candidates;
-      if (opt.pickBackReach) {
+      if (opt.pick_back_reach) {
         Set<uint> candidates_1;
         for (it = candidates.begin(); it != candidates.end(); ++it) {
           const uint actId = *it;
@@ -306,7 +306,9 @@ PickActionMCV(uint& ret_actidx,
           }
         }
         candidates = candidates_1;
-        if (candidates.empty())  continue;
+        if (candidates.empty()) {
+          candidates = dlsets[i].candidates;
+        }
       }
       dlsetIdx = i;
       break;
@@ -314,14 +316,12 @@ PickActionMCV(uint& ret_actidx,
   }
 
 
-  if (tape.bt_dbog) {
-    DBogOF
-      <<" (lvl " << tape.bt_level
-      << ") (mcv " << dlsetIdx
-      << ") (mcv-sz " << candidates.size()
-      << ")\n";
-    DBogOF.flush();
-  }
+  *tape.log
+    <<" (lvl " << tape.bt_level
+    << ") (mcv " << dlsetIdx
+    << ") (mcv-sz " << candidates.size()
+    << ")\n";
+  tape.log->flush();
 
   Map< uint, Set<uint> > biasMap;
   bool biasToMax = true;
@@ -345,7 +345,10 @@ PickActionMCV(uint& ret_actidx,
     candidates = candidates_1;
   }
 
-  if (pick_method == Opt::GreedyPick || pick_method == Opt::GreedySlowPick) {
+  if (pick_method == Opt::MCVLitePick) {
+    biasMap[0] = candidates;
+  }
+  else if (pick_method == Opt::GreedyPick || pick_method == Opt::GreedySlowPick) {
     biasToMax = true;
 
     Map< uint, uint > resolveMap;
@@ -420,7 +423,7 @@ PickActionMCV(uint& ret_actidx,
     for (it = candidates.begin(); it != candidates.end(); ++it) {
       const uint actId = *it;
       StabilitySynLvl next( tape );
-      next.bt_dbog = false;
+      next.log = &Cx::OFile::null();
       uint n = tape.candidates.size();
       if (next.revise_actions(sys, Set<uint>(actId), Set<uint>()))
       {
@@ -480,7 +483,7 @@ PickActionMCV(uint& ret_actidx,
     for (it = minOverlapSet.begin(); it != minOverlapSet.end(); ++it) {
       const uint actId = *it;
       StabilitySynLvl next( tape );
-      next.bt_dbog = false;
+      next.log = &Cx::OFile::null();
       uint n = 0;
       if (next.revise_actions(sys, Set<uint>(actId), Set<uint>()))
         n = next.candidates.size();
@@ -691,7 +694,7 @@ StabilitySynLvl::add_small_conflict_set(const Xn::Sys& sys,
   Set<uint> delpick_set( delpicks );
   for (uint i = 0; i < delpicks.sz(); ++i) {
     StabilitySynLvl lvl( *this->ctx->base_lvl );
-    lvl.bt_dbog = false;
+    lvl.log = &Cx::OFile::null();
     lvl.noconflicts = true;
     delpick_set -= delpicks[i];
     if (lvl.revise_actions(sys, delpick_set, Set<uint>())) {
@@ -730,7 +733,6 @@ reach_cycle_ck (const Cx::PFmla& reach, const Cx::PFmla& act_pf, const Cx::PFmla
 StabilitySynLvl::check_forward(const Xn::Sys& sys)
 {
   const Xn::Net& topo = sys.topology;
-  const Cx::PFmla& invariant = this->hi_invariant;
 
   if (this->mcvDeadlocks.size() <= 1) {
     // This should have been caught if no deadlocks remain.
@@ -754,17 +756,16 @@ StabilitySynLvl::check_forward(const Xn::Sys& sys)
 
     const PF& act_pf = topo.action_pfmla(actidx);
     if (!this->deadlockPF.overlap_ck(act_pf.pre())) {
-      if (false && this->bt_dbog) {
+      if (false) {
         Xn::ActSymm act;
-        DBog0("DEAD PRUNE!");
-        DBogOF
+        *this->log
           << "DEL (lvl " << this->bt_level
           << ") (sz " << this->actions.size()
           << ") (rem " << this->candidates.size()
           << ")  ";
         topo.action(act, actidx);
-        OPut(DBogOF, act) << '\n';
-        DBogOF.flush();
+        OPut(*this->log, act) << '\n';
+        this->log->flush();
       }
       dels |= actidx;
       continue;
@@ -778,20 +779,8 @@ StabilitySynLvl::check_forward(const Xn::Sys& sys)
       dels |= actidx;
       continue;
     }
-
   }
   if (!adds.empty() || !dels.empty()) {
-#if 0
-    Cx::Table<uint> delpicks( this->picks );
-    Set<uint>::const_iterator it = dels.begin();
-    for (;it != dels.end(); ++it)
-    {
-      delpicks.push(*it);
-      this->add_small_conflict_set(sys, delpicks);
-      delpicks.mpop(1);
-    }
-#endif
-
     return this->revise_actions(sys, adds, dels);
   }
   return true;
@@ -820,8 +809,9 @@ StabilitySynLvl::revise_actions(const Xn::Sys& sys,
     }
 
     if (!Remove1(this->candidates, actId)) {
-      // Not applicable.
-      return false;
+      // This action wasn't a candidate,
+      // but that may just mean it introduces nondeterminism
+      // or doesn't resolve any existing deadlocks.
     }
     this->actions.push_back(actId);
     QuickTrim(dels, this->candidates, topo, actId);
@@ -831,12 +821,11 @@ StabilitySynLvl::revise_actions(const Xn::Sys& sys,
   if (!(adds & dels).empty()) {
     if ((adds & dels) <= this->mcvDeadlocks[1].candidates)
     {
-      if (this->bt_dbog)
-        DBog0( "Conflicting add from MCV." );
+      *this->log << "Conflicting add from MCV.";
     }
     else
     {
-      DBog0( "Tried to add conflicting actions... this is not good!!!" );
+      *this->log << "Tried to add conflicting actions... this is not good!!!";
     }
     return false;
   }
@@ -859,16 +848,14 @@ StabilitySynLvl::revise_actions(const Xn::Sys& sys,
 
   for (it = adds.begin(); it != adds.end(); ++it) {
     uint actId = *it;
-    if (this->bt_dbog) {
-      DBogOF
-        << " (lvl " << this->bt_level
-        << ") (sz " << this->actions.size()
-        << ") (rem " << this->candidates.size()
-        << ")  ";
-      topo.action(act, actId);
-      OPut(DBogOF, act) << '\n';
-      DBogOF.flush();
-    }
+    *this->log
+      << " (lvl " << this->bt_level
+      << ") (sz " << this->actions.size()
+      << ") (rem " << this->candidates.size()
+      << ")  ";
+    topo.action(act, actId);
+    OPut(*this->log, act) << '\n';
+    this->log->flush();
   }
 
   Cx::PFmla scc(false);
@@ -876,9 +863,7 @@ StabilitySynLvl::revise_actions(const Xn::Sys& sys,
   if (!scc.subseteq_ck(sys.invariant)) {
     //uint n = count_actions_in_cycle(scc, act_pf, this->actions, topo);
     //DBog1("scc actions: %u", n);
-    if (this->bt_dbog) {
-      DBogOF << "CYCLE\n";
-    }
+    *this->log << "CYCLE\n";
     if (!this->noconflicts) {
       Cx::Table<uint> conflict_set;
       small_cycle_conflict (conflict_set, scc, this->actions, topo, sys.invariant);
@@ -891,9 +876,7 @@ StabilitySynLvl::revise_actions(const Xn::Sys& sys,
     this->hi_invariant =
       LegitInvariant(sys, this->loXnRel, this->hiXnRel, &scc);
     if (!this->hi_invariant.sat_ck()) {
-      if (this->bt_dbog) {
-        DBogOF << "LEGIT\n";
-      }
+      *this->log << "LEGIT\n";
       return false;
     }
   }
@@ -902,9 +885,7 @@ StabilitySynLvl::revise_actions(const Xn::Sys& sys,
   }
 
   if (!WeakConvergenceCk(sys, this->hiXnRel, this->hi_invariant)) {
-    if (this->bt_dbog) {
-      DBogOF << "REACH\n";
-    }
+    *this->log << "REACH\n";
     return false;
   }
 

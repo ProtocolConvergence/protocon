@@ -260,8 +260,7 @@ sat_ck_PFmla (const PFmla g)
   if (phase != May)
     return phase == Yes;
 
-  if (g->ctx->vt->sat_ck_fn)
-    return g->ctx->vt->sat_ck_fn (g->ctx, g);
+  VTCall( g->ctx->vt, return,sat_ck_fn,(g->ctx, g) );
 
   Claim( g->ctx->vt->tautology_ck_fn );
   {
@@ -296,8 +295,7 @@ equiv_ck_PFmla (const PFmla a, const PFmla b)
   }
 
   Claim2( a->ctx ,==, b->ctx );
-  if (a->ctx->vt->equiv_ck_fn)
-    return a->ctx->vt->equiv_ck_fn (a->ctx, a, b);
+  VTCall( a->ctx->vt, return,equiv_ck_fn,(a->ctx, a, b) );
 
   Claim( a->ctx->vt->tautology_ck_fn );
   {
@@ -363,8 +361,7 @@ subseteq_ck_PFmla (const PFmla a, const PFmla b)
   }
 
   Claim2( a->ctx ,==, b->ctx );
-  if (a->ctx->vt->subseteq_ck_fn)
-    return a->ctx->vt->subseteq_ck_fn (a->ctx, a, b);
+  VTCall( a->ctx->vt, return,subseteq_ck_fn,(a->ctx, a, b) );
 
   {
     PFmla c = dflt_PFmla ();

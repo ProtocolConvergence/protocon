@@ -16,9 +16,7 @@
 class StabilitySyn;
 class StabilitySynLvl;
 
-//static const bool DBog_PruneCycles = false;
 static const bool DBog_RankDeadlocksMCV = false;
-static const bool DBog_PickActionMCV = false;
 
 class DeadlockConstraint {
 public:
@@ -33,6 +31,7 @@ public:
 class AddConvergenceOpt {
 public:
   enum PickActionHeuristic {
+    MCVLitePick,
     GreedyPick,
     GreedySlowPick,
     LCVLitePick,
@@ -59,14 +58,14 @@ public:
   PickActionHeuristic pick_method;
   SearchMethod search_method;
   NicePolicy nicePolicy;
-  bool pickBackReach;
-  bool bt_dbog;
+  bool pick_back_reach;
+  Cx::OFile* log;
   bool verify_found;
 
   // For parallel algorithms.
   bool random_one_shot;
   uint max_depth;
-  uint bt_depth;
+  uint max_height;
   uint sys_pcidx;
   uint sys_npcs;
   uint ntrials;
@@ -77,18 +76,18 @@ public:
   bool snapshot_conflicts;
 
   AddConvergenceOpt() :
-    pick_method( LCVLitePick )
+    pick_method( MCVLitePick )
     , search_method( BacktrackSearch )
-    , nicePolicy( EndNice )
-    , pickBackReach( false )
-    , bt_dbog( true )
+    , nicePolicy( NilNice )
+    , pick_back_reach( false )
+    , log( &DBogOF )
     , verify_found( true )
     , random_one_shot( false )
     , max_depth( 0 )
-    , bt_depth( 3 )
+    , max_height( 3 )
     , sys_pcidx( 0 )
     , sys_npcs( 1 )
-    , ntrials( 300 )
+    , ntrials( 0 )
     , try_all( false )
     , max_conflict_sz( 0 )
     , conflicts_xfilename( 0 )
@@ -106,10 +105,12 @@ public:
   volatile bool* done;
   ConflictFamily conflicts;
   StabilitySynLvl* base_lvl;
+  Cx::OFile* log;
 
   StabilitySyn()
     : csp_base_pfmla(true)
     , done(0)
+    , log( &Cx::OFile::null() )
   {}
   StabilitySyn(uint pcidx, uint npcs)
     : csp_base_pfmla(true)
@@ -123,7 +124,7 @@ class StabilitySynLvl {
 public:
   StabilitySyn* ctx;
 
-  bool bt_dbog;
+  Cx::OFile* log;
   uint bt_level;
   uint failed_bt_level;
   bool directly_add_conflicts;
@@ -143,7 +144,7 @@ public:
 public:
   StabilitySynLvl(StabilitySyn* _ctx) :
     ctx( _ctx )
-    , bt_dbog( false )
+    , log( &Cx::OFile::null() )
     , bt_level( 0 )
     , failed_bt_level( 0 )
     , directly_add_conflicts( false )

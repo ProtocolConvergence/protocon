@@ -20,9 +20,11 @@ public:
   };
 
   ExecTask task;
+  const char* log_ofilename;
 
   ProtoconOpt()
     : task(SearchTask)
+    , log_ofilename(0)
   {}
 };
 
