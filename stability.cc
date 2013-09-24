@@ -277,7 +277,7 @@ PickActionMCV(uint& ret_actidx,
 
   const Xn::Net& topo = sys.topology;
   const vector<DeadlockConstraint>& dlsets = tape.mcvDeadlocks;
-  uint dlsetIdx = 0;
+  uint dlset_idx = 0;
 
   if (pick_method == Opt::RandomPick) {
     uint idx = tape.ctx->urandom.pick(tape.candidates.size());
@@ -298,11 +298,11 @@ PickActionMCV(uint& ret_actidx,
       if (opt.pick_back_reach) {
         Set<uint> candidates_1;
         for (it = candidates.begin(); it != candidates.end(); ++it) {
-          const uint actId = *it;
-          const PF& resolveImg =
-            topo.action_pfmla(actId).img(dlsets[i].deadlockPF);
-          if (tape.backReachPF.overlap_ck(resolveImg)) {
-            candidates_1 |= actId;
+          const uint actidx = *it;
+          const PF& resolve_img =
+            topo.action_pfmla(actidx).img(dlsets[i].deadlockPF);
+          if (tape.backReachPF.overlap_ck(resolve_img)) {
+            candidates_1 |= actidx;
           }
         }
         candidates = candidates_1;
@@ -310,18 +310,11 @@ PickActionMCV(uint& ret_actidx,
           candidates = dlsets[i].candidates;
         }
       }
-      dlsetIdx = i;
+      dlset_idx = i;
       break;
     }
   }
 
-
-  *tape.log
-    <<" (lvl " << tape.bt_level
-    << ") (mcv " << dlsetIdx
-    << ") (mcv-sz " << candidates.size()
-    << ")\n";
-  tape.log->flush();
 
   Map< uint, Set<uint> > biasMap;
   bool biasToMax = true;
@@ -352,7 +345,7 @@ PickActionMCV(uint& ret_actidx,
     biasToMax = true;
 
     Map< uint, uint > resolveMap;
-    for (uint j = dlsetIdx; j < dlsets.size(); ++j) {
+    for (uint j = dlset_idx; j < dlsets.size(); ++j) {
       const Set<uint>& resolveSet = (candidates & dlsets[j].candidates);
       for (it = resolveSet.begin(); it != resolveSet.end(); ++it) {
         const uint actId = *it;
@@ -411,7 +404,7 @@ PickActionMCV(uint& ret_actidx,
       vector<DeadlockConstraint> tmpDeadlocks( dlsets );
       ReviseDeadlocksMCV(tmpDeadlocks, topo, Set<uint>(actId), Set<uint>());
       for (uint j = 1; j < tmpDeadlocks.size(); ++j) {
-        n += tmpDeadlocks[j].candidates.size();
+        n += j * tmpDeadlocks[j].candidates.size();
       }
 
       biasMap[n] |= actId;
@@ -447,7 +440,7 @@ PickActionMCV(uint& ret_actidx,
       overlapSets[*it] = Set<uint>(*it);
     }
 
-    const PF& deadlockPF = dlsets[dlsetIdx].deadlockPF;
+    const PF& deadlockPF = dlsets[dlset_idx].deadlockPF;
     for (it = candidates.begin(); it != candidates.end(); ++it) {
       uint actId = *it;
       const PF& actPF = topo.action_pfmla(actId);
@@ -544,6 +537,12 @@ PickActionMCV(uint& ret_actidx,
     const std::pair< uint, Set<uint> >& entry =
       (biasToMax ? *biasMap.rbegin() : *biasMap.begin());
     candidates = entry.second;
+    *tape.log
+      <<" (lvl " << tape.bt_level
+      << ") (mcv " << dlset_idx
+      << ") (mcv-sz " << dlsets[dlset_idx].candidates.sz()
+      << ") (rem-sz " << candidates.sz()
+      << ")" << tape.log->endl();
   }
   else {
     DBog0( "Bad News: biasMap is empty!!!" );
@@ -693,6 +692,9 @@ StabilitySynLvl::add_small_conflict_set(const Xn::Sys& sys,
   }
   Set<uint> delpick_set( delpicks );
   for (uint i = 0; i < delpicks.sz(); ++i) {
+    if (this->ctx->done && *this->ctx->done)
+      return delpicks.sz();
+
     StabilitySynLvl lvl( *this->ctx->base_lvl );
     lvl.log = &Cx::OFile::null();
     lvl.noconflicts = true;
@@ -740,13 +742,10 @@ StabilitySynLvl::check_forward(const Xn::Sys& sys)
     this->candidates.clear();
     return true;
   }
-  Set<uint> adds;
+  Set<uint> adds( this->mcvDeadlocks[1].candidates );
   Set<uint> dels;
-  adds |= this->mcvDeadlocks[1].candidates;
 
-  Set<uint> action_set( this->actions );
-  action_set |= adds;
-
+  const Cx::PFmla& lo_xn_pre = this->loXnRel.pre();
   for (uint i = 0; i < this->candidates.size(); ++i) {
     if  (ctx->done && *ctx->done)
       return true;
@@ -754,8 +753,8 @@ StabilitySynLvl::check_forward(const Xn::Sys& sys)
     uint actidx = this->candidates[i];
     if (dels.elem_ck(actidx))  continue;
 
-    const PF& act_pf = topo.action_pfmla(actidx);
-    if (!this->deadlockPF.overlap_ck(act_pf.pre())) {
+    //if (!this->deadlockPF.overlap_ck(topo.action_pfmla(actidx))) {
+    if (topo.action_pfmla(actidx).subseteq_ck(lo_xn_pre)) {
       if (false) {
         Xn::ActSymm act;
         *this->log
@@ -764,22 +763,21 @@ StabilitySynLvl::check_forward(const Xn::Sys& sys)
           << ") (rem " << this->candidates.size()
           << ")  ";
         topo.action(act, actidx);
-        OPut(*this->log, act) << '\n';
-        this->log->flush();
+        OPut(*this->log, act) << this->log->endl();
       }
       dels |= actidx;
       continue;
     }
-
-    action_set |= actidx;
-    bool conflict_found =
-      this->ctx->conflicts.conflict_ck(FlatSet<uint>(action_set));
-    action_set -= Set<uint>(actidx);
-    if (conflict_found) {
-      dels |= actidx;
-      continue;
-    }
   }
+
+  FlatSet<uint> action_set( Set<uint>(this->actions) | adds );
+  FlatSet<uint> candidate_set( Set<uint>(this->candidates) - dels );
+
+  Set<uint> membs;
+  if (!this->ctx->conflicts.conflict_membs(&membs, action_set, candidate_set))
+    return false;
+  dels |= membs;
+
   if (!adds.empty() || !dels.empty()) {
     return this->revise_actions(sys, adds, dels);
   }
@@ -821,11 +819,11 @@ StabilitySynLvl::revise_actions(const Xn::Sys& sys,
   if (!(adds & dels).empty()) {
     if ((adds & dels) <= this->mcvDeadlocks[1].candidates)
     {
-      *this->log << "Conflicting add from MCV.";
+      *this->log << "Conflicting add from MCV." << this->log->endl();
     }
     else
     {
-      *this->log << "Tried to add conflicting actions... this is not good!!!";
+      *this->log << "Tried to add conflicting actions... this is not good!!!" << this->log->endl();
     }
     return false;
   }
@@ -854,8 +852,7 @@ StabilitySynLvl::revise_actions(const Xn::Sys& sys,
       << ") (rem " << this->candidates.size()
       << ")  ";
     topo.action(act, actId);
-    OPut(*this->log, act) << '\n';
-    this->log->flush();
+    OPut(*this->log, act) << this->log->endl();
   }
 
   Cx::PFmla scc(false);
@@ -863,11 +860,12 @@ StabilitySynLvl::revise_actions(const Xn::Sys& sys,
   if (!scc.subseteq_ck(sys.invariant)) {
     //uint n = count_actions_in_cycle(scc, act_pf, this->actions, topo);
     //DBog1("scc actions: %u", n);
-    *this->log << "CYCLE\n";
+    *this->log << "CYCLE" << this->log->endl();
     if (!this->noconflicts) {
       Cx::Table<uint> conflict_set;
       small_cycle_conflict (conflict_set, scc, this->actions, topo, sys.invariant);
       this->ctx->conflicts.add_conflict(conflict_set);
+      *this->log << "cycle conflict size:" << conflict_set.sz() << this->log->endl();
     }
     return false;
   }
@@ -876,7 +874,7 @@ StabilitySynLvl::revise_actions(const Xn::Sys& sys,
     this->hi_invariant =
       LegitInvariant(sys, this->loXnRel, this->hiXnRel, &scc);
     if (!this->hi_invariant.sat_ck()) {
-      *this->log << "LEGIT\n";
+      *this->log << "LEGIT" << this->log->endl();
       return false;
     }
   }
@@ -885,7 +883,7 @@ StabilitySynLvl::revise_actions(const Xn::Sys& sys,
   }
 
   if (!WeakConvergenceCk(sys, this->hiXnRel, this->hi_invariant)) {
-    *this->log << "REACH\n";
+    *this->log << "REACH" << this->log->endl();
     return false;
   }
 
@@ -914,7 +912,9 @@ StabilitySynLvl::pick_action(const Xn::Sys& sys, uint act_idx)
 {
   this->picks.push(act_idx);
   if (!this->revise_actions(sys, Set<uint>(act_idx), Set<uint>())) {
-    this->add_small_conflict_set(sys, this->picks);
+    if (!this->ctx->conflicts.conflict_ck(FlatSet<uint>(this->actions))) {
+      this->add_small_conflict_set(sys, this->picks);
+    }
     return false;
   }
   return true;

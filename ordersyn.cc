@@ -147,6 +147,7 @@ oput_conflicts (const ConflictFamily& conflicts, const Cx::String& ofilename)
   void
 oput_conflicts (const ConflictFamily& conflicts, Cx::String ofilename, uint pcidx)
 {
+  ofilename += ".";
   ofilename += pcidx;
   oput_conflicts(conflicts, ofilename);
 }
@@ -213,6 +214,7 @@ flat_backtrack_synthesis(vector<uint>& ret_actions,
   opt.random_one_shot = true;
   if (exec_opt.log_ofilename) {
     Cx::String ofilename( exec_opt.log_ofilename );
+    ofilename += ".";
     ofilename += PcIdx;
     log_ofile.open(ofilename);
     opt.log = &log_ofile;
@@ -275,8 +277,8 @@ flat_backtrack_synthesis(vector<uint>& ret_actions,
         *opt.log
           << "pcidx:" << PcIdx
           << " conflict:" << conflict_idx << "/" << flat_conflicts.sz()
-          << " sz:" << old_sz;
-        opt.log->flush();
+          << " sz:" << old_sz
+          << opt.log->endl();
 
         uint new_sz =
           synlvl.add_small_conflict_set(sys, flat_conflicts[conflict_idx]);
@@ -284,15 +286,17 @@ flat_backtrack_synthesis(vector<uint>& ret_actions,
         *opt.log
           << "DONE: pcidx:" << PcIdx
           << " conflict:" << conflict_idx << "/" << flat_conflicts.sz()
-          << " old_sz:" << old_sz << " new_sz:" << new_sz;
-        opt.log->flush();
+          << " old_sz:" << old_sz << " new_sz:" << new_sz
+          << opt.log->endl();
       }
     }
 
 #pragma omp critical (DBog)
-    conflicts.add_conflicts(synctx.conflicts);
-
-    conflicts.oput_conflict_sizes(*opt.log);
+    {
+      conflicts.add_conflicts(synctx.conflicts);
+      synctx.conflicts = conflicts;
+    }
+    synctx.conflicts.oput_conflict_sizes(*opt.log);
   }
 
   vector<uint> actions;
@@ -329,7 +333,7 @@ flat_backtrack_synthesis(vector<uint>& ret_actions,
         done = true;
       solution_found = true;
       ret_actions = actions;
-      *opt.log << "SOLUTION FOUND!";
+      *opt.log << "SOLUTION FOUND!" << opt.log->endl();
 
     }
     if (!done || global_opt.conflicts_ofilename)

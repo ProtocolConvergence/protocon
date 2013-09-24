@@ -134,6 +134,24 @@ ConflictFamily::superset_membs(FlatSet<uint>& ret_membs,
   ret_membs = FlatSet<uint>(membs);
 }
 
+  bool
+ConflictFamily::conflict_membs(Set<uint>* ret_membs,
+                               const FlatSet<uint>& test_set,
+                               const FlatSet<uint>& count_set) const
+{
+  Cx::Table<uint> diff;
+  FOR_EACH( it, conflict_sets )
+  {
+    if ((*it).subseteq_fuzz_ck(&diff, test_set, 1)) {
+      if (diff.sz() == 0)
+        return false;
+      if (count_set.elem_ck(diff[0]))
+        *ret_membs |= diff[0];
+    }
+  }
+  return true;
+}
+
   void
 ConflictFamily::all_conflicts(Cx::Table< FlatSet<uint> >& ret) const
 {

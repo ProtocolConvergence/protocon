@@ -151,7 +151,7 @@ AddConvergence(vector<uint>& retActions,
     if (tape.revise_actions(sys, Set<uint>(), Set<uint>(actidx)))
       continue;
 
-    *tape.log << "backtrack from lvl" << tape.bt_level << '\n';
+    *tape.log << "backtrack from lvl:" << tape.bt_level << tape.log->endl();
     tape.add_small_conflict_set(sys, tape.picks);
 
     stack_idx = decmod(stack_idx, 1, bt_stack.sz());

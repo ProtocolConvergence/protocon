@@ -30,6 +30,9 @@ public:
   void superset_membs(FlatSet<uint>& ret_membs,
                       const FlatSet<uint>& test_set,
                       const FlatSet<uint>& count_set) const;
+  bool conflict_membs(Set<uint>* ret_membs,
+                      const FlatSet<uint>& test_set,
+                      const FlatSet<uint>& count_set) const;
   void all_conflicts(Cx::Table< FlatSet<uint> >& ret) const;
   void clear();
 
