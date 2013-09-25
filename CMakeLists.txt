@@ -23,17 +23,19 @@ list (APPEND HFiles
 	pfmla.h pfmla-glu.h pfmla-bittable.h)
 
 list (APPEND CCFiles
-	pfmla.cc xnsys.cc test.cc ordersyn.cc main.cc inst.cc
+	pfmla.cc xnsys.cc test.cc search.cc main.cc inst.cc
   promela.cc pla.cc
   conflictfamily.cc
-  stability.cc
+  stabilization.cc
+  synthesis.cc
 	protoconfile.cc
   )
 list (APPEND HHFiles
-	pfmla.hh xnsys.hh test.hh ordersyn.hh main.hh inst.hh
+	pfmla.hh xnsys.hh test.hh search.hh main.hh inst.hh
   promela.hh pla.hh
   conflictfamily.hh
-  stability.hh
+  stabilization.hh
+  synthesis.hh
 	protoconfile.hh tuple.hh
   )
 
@@ -55,9 +57,10 @@ set_property (SOURCE ${BldPathCXX}/protoconfile.leg.cc
 
 link_directories(${GluPath})
 addbinexe (protocon
-  pfmla.cc xnsys.cc test.cc ordersyn.cc main.cc inst.cc
+  pfmla.cc xnsys.cc test.cc search.cc main.cc inst.cc
   promela.cc pla.cc
-  stability.cc
+  stabilization.cc
+  synthesis.cc
   conflictfamily.cc
   protoconfile.cc protoconfile.leg.cc
   pfmla.c pfmla-glu.c pfmla-bittable.c

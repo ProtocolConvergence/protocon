@@ -9,6 +9,127 @@
 namespace Cx {
 
 /**
+ * Perform backwards reachability.
+ * \param pf  Initial states.
+ */
+  PFmla
+PFmla::pre_reach(const Cx::PFmla& pf) const
+{
+  Cx::PFmla visit( pf );
+  Cx::PFmla layer( this->pre(pf) - visit );
+  while (layer.sat_ck()) {
+    visit |= layer;
+    layer = this->pre(layer) - visit;
+  }
+  return visit;
+}
+
+/**
+ * Perform forward reachability.
+ * \param pf  Initial states.
+ */
+  PFmla
+PFmla::img_reach(const PFmla& pf) const
+{
+  Cx::PFmla visit( pf );
+  Cx::PFmla layer( this->img(pf) - visit );
+  while (layer.sat_ck()) {
+    visit |= layer;
+    layer = this->img(layer) - visit;
+  }
+  return visit;
+}
+
+/**
+ * Compute a closed subset of some set of states.
+ **/
+  PFmla
+PFmla::closure_within(const Cx::PFmla& pf) const
+{
+  return pf - this->pre_reach(~pf);
+}
+
+/**
+ * Check for cycles within the entire state space.
+ *
+ * This uses a variant of the Emerson-Lei algorithm.
+ * It simply computes a fixpoint of the transition relation by
+ * iteratively computing the image until it does not change.
+ */
+  bool
+PFmla::cycle_ck(Cx::PFmla* scc) const
+{
+  Cx::PFmla span0( true );
+
+  while (true) {
+    const Cx::PFmla& span1 = this->img(span0);
+    if (span0.equiv_ck(span1))  break;
+    span0 = span1;
+  }
+
+  while (true) {
+    const Cx::PFmla& span1 = span0 & this->pre(span0);
+    if (span0.equiv_ck(span1))  break;
+    span0 = span1;
+  }
+
+  if (scc)
+    *scc = span0;
+
+  return span0.sat_ck();
+}
+
+/**
+ * Check for cycles within some state predicate.
+ *
+ * This uses a variant of the Emerson-Lei algorithm.
+ * It simply computes a fixpoint of the transition relation by
+ * iteratively computing the image until it does not change.
+ */
+  bool
+PFmla::cycle_ck(Cx::PFmla* scc, const Cx::PFmla& pf) const
+{
+  Cx::PFmla span0( true );
+
+  while (true) {
+    const Cx::PFmla& span1 = this->img(span0);
+
+    if (!pf.overlap_ck(span1))  return false;
+    if (span0.equiv_ck(span1))  break;
+
+    span0 = span1;
+  }
+
+  while (true) {
+    const Cx::PFmla& span1 = span0 & this->pre(span0);
+
+    if (!pf.overlap_ck(span1))  return false;
+    if (span0.equiv_ck(span1))  break;
+
+    span0 = span1;
+  }
+
+  if (scc) {
+    *scc = span0;
+  }
+  return true;
+}
+
+/**
+ * Check for cycles within some state predicate.
+ */
+  bool
+PFmla::cycle_ck(const PFmla& pf) const
+{
+#if 0
+  return SCC_Find(0, *this, pf);
+#else
+  return this->cycle_ck(0, pf);
+#endif
+}
+
+
+/**
  * Output all valuations of variables which satisfy a formula.
  *
  * \param of  Output stream.
@@ -292,47 +413,6 @@ IntPFmla::img_eq(const IntPFmla& b) const
 
 }
 
-
-  PF
-ClosedSubset(const PF& xnRel, const PF& invariant)
-{
-  return invariant - BackwardReachability(xnRel, ~invariant);
-}
-
-/**
- * Perform forward reachability.
- * \param xn  Transition function.
- * \param pf  Initial states.
- */
-  Cx::PFmla
-ForwardReachability(const Cx::PFmla& xn, const Cx::PFmla& pf)
-{
-  Cx::PFmla visit( pf );
-  Cx::PFmla layer( xn.img(pf) - visit );
-  while (layer.sat_ck()) {
-    visit |= layer;
-    layer = xn.img(layer) - visit;
-  }
-  return visit;
-}
-
-/**
- * Perform backwards reachability.
- * \param xnRel  Transition function.
- * \param pf  Initial states.
- */
-  PF
-BackwardReachability(const PF& xnRel, const PF& pf)
-{
-  PF visitPF( pf );
-  PF layerPF( xnRel.pre(pf) - visitPF );
-  while (layerPF.sat_ck()) {
-    visitPF |= layerPF;
-    layerPF = xnRel.pre(layerPF) - visitPF;
-  }
-  return visitPF;
-}
-
 /**
  * Perform forward and backward reachability.
  * \param xn  Transition function.
@@ -361,78 +441,6 @@ transitive_closure(const Cx::PFmla& xn)
     next |= reach.dotjoin(reach);
   }
   return reach;
-}
-
-  bool
-cycle_ck (Cx::PFmla* scc, const Cx::PFmla& xn)
-{
-  Cx::PFmla span0( true );
-
-  while (true) {
-    const Cx::PFmla& span1 = xn.img(span0);
-    if (span0.equiv_ck(span1))  break;
-    span0 = span1;
-  }
-
-  while (true) {
-    const Cx::PFmla& span1 = span0 & xn.pre(span0);
-    if (span0.equiv_ck(span1))  break;
-    span0 = span1;
-  }
-
-  if (scc)
-    *scc = span0;
-
-  return span0.sat_ck();
-}
-
-/**
- * Check for cycles within some state predicate.
- *
- * This uses a variant of the Emerson-Lei algorithm.
- * It simply computes a fixpoint of the transition relation by
- * iteratively computing the image until it does not change.
- */
-  bool
-cycle_ck(PF* scc, const PF& xn, const PF& pf)
-{
-  PF span0( true );
-
-  while (true) {
-    const PF& span1 = xn.img(span0);
-
-    if (!pf.overlap_ck(span1))  return false;
-    if (span0.equiv_ck(span1))  break;
-
-    span0 = span1;
-  }
-
-  while (true) {
-    const PF& span1 = span0 & xn.pre(span0);
-
-    if (!pf.overlap_ck(span1))  return false;
-    if (span0.equiv_ck(span1))  break;
-
-    span0 = span1;
-  }
-
-  if (scc) {
-    *scc = span0;
-  }
-  return true;
-}
-
-/**
- * Check for cycles within some state predicate.
- */
-  bool
-cycle_ck(const PF& xn, const PF& pf)
-{
-#if 0
-  return SCC_Find(0, xn, pf);
-#else
-  return cycle_ck(0, xn, pf);
-#endif
 }
 
 ////// Linear SCC detection

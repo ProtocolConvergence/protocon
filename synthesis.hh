@@ -1,6 +1,6 @@
 
-#ifndef StabilitySynLvl_HH_
-#define StabilitySynLvl_HH_
+#ifndef PartialSynthesis_HH_
+#define PartialSynthesis_HH_
 
 #include "cx/set.hh"
 #include "cx/urandom.hh"
@@ -13,17 +13,17 @@
 #include "protoconfile.hh"
 #include "conflictfamily.hh"
 
-class StabilitySyn;
-class StabilitySynLvl;
+class SynthesisCtx;
+class PartialSynthesis;
 
 static const bool DBog_RankDeadlocksMCV = false;
 
 class DeadlockConstraint {
 public:
-  PF deadlockPF;
+  Cx::PFmla deadlockPF;
   Set<uint> candidates;
 public:
-  explicit DeadlockConstraint(const PF& _deadlockPF) :
+  explicit DeadlockConstraint(const Cx::PFmla& _deadlockPF) :
     deadlockPF(_deadlockPF)
   {}
 };
@@ -96,33 +96,10 @@ public:
   {}
 };
 
-class StabilitySyn {
-public:
-  Cx::PFmlaCtx csp_pfmla_ctx;
-  Cx::PFmla csp_base_pfmla;
-  Cx::URandom urandom;
-  AddConvergenceOpt opt;
-  volatile bool* done;
-  ConflictFamily conflicts;
-  StabilitySynLvl* base_lvl;
-  Cx::OFile* log;
-
-  StabilitySyn()
-    : csp_base_pfmla(true)
-    , done(0)
-    , log( &Cx::OFile::null() )
-  {}
-  StabilitySyn(uint pcidx, uint npcs)
-    : csp_base_pfmla(true)
-    , urandom(pcidx, npcs)
-    , done(0)
-  {}
-};
-
 // Decision level for synthesis.
-class StabilitySynLvl {
+class PartialSynthesis {
 public:
-  StabilitySyn* ctx;
+  SynthesisCtx* ctx;
 
   Cx::OFile* log;
   uint bt_level;
@@ -133,16 +110,16 @@ public:
   vector<uint> actions; ///< Chosen actions.
   Cx::Table<uint> picks; ///< Chosen actions, no inferred ones.
   vector<uint> candidates; ///< Candidate actions.
-  PF deadlockPF; ///< Current deadlocks.
-  PF loXnRel; ///< Under-approximation of the transition function.
-  PF hiXnRel; ///< Over-approximation of the transition function.
-  PF backReachPF; ///< Backwards reachable from invariant.
-  PF hi_invariant;
+  vector<uint> noneeds; ///< Not needed because it doesn't resolve any potential deadlocks.
+  Cx::PFmla deadlockPF; ///< Current deadlocks.
+  Cx::PFmla lo_xn; ///< Under-approximation of the transition function.
+  Cx::PFmla hi_xn; ///< Over-approximation of the transition function.
+  Cx::PFmla hi_invariant;
 
   Cx::PFmla csp_pfmla;
 
 public:
-  StabilitySynLvl(StabilitySyn* _ctx) :
+  explicit PartialSynthesis(SynthesisCtx* _ctx) :
     ctx( _ctx )
     , log( &Cx::OFile::null() )
     , bt_level( 0 )
@@ -161,6 +138,35 @@ public:
   bool pick_action(const Xn::Sys& sys, uint act_idx);
 };
 
+class SynthesisCtx {
+public:
+  PartialSynthesis base_inst;
+  Cx::OFile* log;
+  Cx::PFmlaCtx csp_pfmla_ctx;
+  Cx::PFmla csp_base_pfmla;
+  Cx::URandom urandom;
+  AddConvergenceOpt opt;
+  volatile bool* done;
+  ConflictFamily conflicts;
+  Cx::Table<Xn::Sys*> many_systems;
+
+  SynthesisCtx()
+    : base_inst( this )
+    , log( &Cx::OFile::null() )
+    , csp_base_pfmla(true)
+    , done(0)
+  {}
+  SynthesisCtx(uint pcidx, uint npcs)
+    : base_inst( this )
+    , log( &Cx::OFile::null() )
+    , csp_base_pfmla(true)
+    , urandom(pcidx, npcs)
+    , done(0)
+  {}
+  bool init(const Xn::Sys& sys, const AddConvergenceOpt& opt);
+};
+
+
 bool
 candidate_actions(vector<uint>& candidates, const Xn::Sys& sys);
 bool
@@ -169,11 +175,11 @@ void
 RankDeadlocksMCV(vector<DeadlockConstraint>& dlsets,
                  const Xn::Net& topo,
                  const vector<uint>& actions,
-                 const PF& deadlockPF);
+                 const Cx::PFmla& deadlockPF);
 bool
 PickActionMCV(uint& ret_actId,
               const Xn::Sys& sys,
-              const StabilitySynLvl& tape,
+              const PartialSynthesis& tape,
               const AddConvergenceOpt& opt);
 
 #endif

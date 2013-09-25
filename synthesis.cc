@@ -1,5 +1,9 @@
 
-#include "stability.hh"
+#include "synthesis.hh"
+
+#include "stabilization.hh"
+
+typedef Cx::PFmla PF;
 
   bool
 candidate_actions(vector<uint>& candidates, const Xn::Sys& sys)
@@ -259,16 +263,13 @@ ReviseDeadlocksMCV(vector<DeadlockConstraint>& dlsets,
  * The most constrained variable (MCV) heuristic may be used.
  *
  * \param ret_actidx  Return value. Action to use.
- * \param dlsets  Deadlock sets ordered by number of
- *   resolving candidate actions.
- * \param backReachPF  Backwards reachability from invariant.
  * \return True iff an action was picked. It should return
  *   true unless you're doing it wrong).
  */
   bool
 PickActionMCV(uint& ret_actidx,
               const Xn::Sys& sys,
-              const StabilitySynLvl& tape,
+              const PartialSynthesis& tape,
               const AddConvergenceOpt& opt)
 {
   typedef AddConvergenceOpt Opt;
@@ -288,6 +289,9 @@ PickActionMCV(uint& ret_actidx,
   Set<uint> candidates;
   Set<uint>::const_iterator it;
 
+  const Cx::PFmla& reach_pf =
+    tape.lo_xn.pre_reach(tape.hi_invariant);
+
   // Do most constrained variable (MCV).
   // That is, find an action which resolves a deadlock which
   // can only be resolved by some small number of actions.
@@ -301,7 +305,7 @@ PickActionMCV(uint& ret_actidx,
           const uint actidx = *it;
           const PF& resolve_img =
             topo.action_pfmla(actidx).img(dlsets[i].deadlockPF);
-          if (tape.backReachPF.overlap_ck(resolve_img)) {
+          if (reach_pf.overlap_ck(resolve_img)) {
             candidates_1 |= actidx;
           }
         }
@@ -384,14 +388,6 @@ PickActionMCV(uint& ret_actidx,
     for (it = candidates.begin(); it != candidates.end(); ++it) {
       const uint actId = *it;
       uint n = *resolveMap.lookup(actId);
-#if 0
-      const PF& backReachPF = tape.backReachPF;
-      if (backReachPF.overlap_ck(topo.action_pfmla(actId).img())) {
-        if (!(topo.action_pfmla(actId).pre() <= backReachPF)) {
-          n += dlsets.size() * dlsets.size();
-        }
-      }
-#endif
       biasMap[n] |= actId;
     }
   }
@@ -415,7 +411,7 @@ PickActionMCV(uint& ret_actidx,
 
     for (it = candidates.begin(); it != candidates.end(); ++it) {
       const uint actId = *it;
-      StabilitySynLvl next( tape );
+      PartialSynthesis next( tape );
       next.log = &Cx::OFile::null();
       uint n = tape.candidates.size();
       if (next.revise_actions(sys, Set<uint>(actId), Set<uint>()))
@@ -475,7 +471,7 @@ PickActionMCV(uint& ret_actidx,
 
     for (it = minOverlapSet.begin(); it != minOverlapSet.end(); ++it) {
       const uint actId = *it;
-      StabilitySynLvl next( tape );
+      PartialSynthesis next( tape );
       next.log = &Cx::OFile::null();
       uint n = 0;
       if (next.revise_actions(sys, Set<uint>(actId), Set<uint>()))
@@ -508,12 +504,11 @@ PickActionMCV(uint& ret_actidx,
   }
   else if (pick_method == Opt::QuickPick) {
     biasToMax = false;
-    const PF& backReachPF = tape.backReachPF;
     for (it = candidates.begin(); it != candidates.end(); ++it) {
       uint actId = *it;
-      const PF& actPF = topo.action_pfmla(actId);
+      const PF& act_pf = topo.action_pfmla(actId);
       if (sys.shadow_puppet_synthesis_ck()) {
-        if (!actPF.overlap_ck(tape.hi_invariant)) {
+        if (!act_pf.overlap_ck(tape.hi_invariant)) {
           biasMap[0] |= actId;
         }
         else {
@@ -521,9 +516,9 @@ PickActionMCV(uint& ret_actidx,
         }
         continue;
       }
-      if (backReachPF.overlap_ck(actPF.img())) {
+      if (reach_pf.overlap_ck(act_pf.img())) {
         biasMap[1] |= actId;
-        if (!(actPF.pre() <= backReachPF)) {
+        if (!(act_pf.pre() <= reach_pf)) {
           biasMap[0] |= actId;
         }
       }
@@ -629,7 +624,7 @@ small_cycle_conflict (Cx::Table<uint>& conflict_set,
     uint actidx = scc_actidcs[i];
     const Cx::PFmla& act_pfmla = topo.action_pfmla(actidx);
     Cx::PFmla next_scc(false);
-    if (cycle_ck(&next_scc, edg - act_pfmla, scc)
+    if ((edg - act_pfmla, scc).cycle_ck(&next_scc)
         && invariant.overlap_ck(next_scc))
     {
         edg -= act_pfmla;
@@ -639,7 +634,7 @@ small_cycle_conflict (Cx::Table<uint>& conflict_set,
       conflict_set.push(actidx);
     }
   }
-  //Claim( cycle_ck(edg, scc) );
+  //Claim( edg.cycle_ck(scc) );
 }
 
   uint
@@ -663,12 +658,12 @@ count_actions_in_cycle (const Cx::PFmla& scc, Cx::PFmla edg,
   Cx::PFmla min_edg = edg;
   for (uint i = 0; i < scc_actidcs.size(); ++i) {
     const Cx::PFmla& act_pfmla = topo.action_pfmla(scc_actidcs[i]);
-    if (!cycle_ck(edg - act_pfmla, scc)) {
+    if (!(edg - act_pfmla).cycle_ck(scc)) {
       ++ nneed;
       ++ nmin;
     }
     else {
-      if (cycle_ck(min_edg - act_pfmla, min_edg)) {
+      if ((min_edg - act_pfmla).cycle_ck(min_edg)) {
         min_edg -= act_pfmla;
       }
       else {
@@ -682,8 +677,8 @@ count_actions_in_cycle (const Cx::PFmla& scc, Cx::PFmla edg,
 }
 
   uint
-StabilitySynLvl::add_small_conflict_set(const Xn::Sys& sys,
-                                        const Cx::Table<uint>& delpicks)
+PartialSynthesis::add_small_conflict_set(const Xn::Sys& sys,
+                                         const Cx::Table<uint>& delpicks)
 {
   if (noconflicts)  return 0;
   if (false || directly_add_conflicts) {
@@ -695,7 +690,7 @@ StabilitySynLvl::add_small_conflict_set(const Xn::Sys& sys,
     if (this->ctx->done && *this->ctx->done)
       return delpicks.sz();
 
-    StabilitySynLvl lvl( *this->ctx->base_lvl );
+    PartialSynthesis lvl( this->ctx->base_inst );
     lvl.log = &Cx::OFile::null();
     lvl.noconflicts = true;
     delpick_set -= delpicks[i];
@@ -732,7 +727,7 @@ reach_cycle_ck (const Cx::PFmla& reach, const Cx::PFmla& act_pf, const Cx::PFmla
 
 /** Infer and prune actions from candidate list.**/
   bool
-StabilitySynLvl::check_forward(const Xn::Sys& sys)
+PartialSynthesis::check_forward(const Xn::Sys& sys)
 {
   const Xn::Net& topo = sys.topology;
 
@@ -745,16 +740,16 @@ StabilitySynLvl::check_forward(const Xn::Sys& sys)
   Set<uint> adds( this->mcvDeadlocks[1].candidates );
   Set<uint> dels;
 
-  const Cx::PFmla& lo_xn_pre = this->loXnRel.pre();
+  const Cx::PFmla& lo_xn_pre = this->lo_xn.pre();
   for (uint i = 0; i < this->candidates.size(); ++i) {
-    if  (ctx->done && *ctx->done)
+    if (ctx->done && *ctx->done)
       return true;
 
     uint actidx = this->candidates[i];
     if (dels.elem_ck(actidx))  continue;
 
-    //if (!this->deadlockPF.overlap_ck(topo.action_pfmla(actidx))) {
-    if (topo.action_pfmla(actidx).subseteq_ck(lo_xn_pre)) {
+    if (topo.action_pfmla(actidx).subseteq_ck(lo_xn_pre))
+    {
       if (false) {
         Xn::ActSymm act;
         *this->log
@@ -765,6 +760,7 @@ StabilitySynLvl::check_forward(const Xn::Sys& sys)
         topo.action(act, actidx);
         OPut(*this->log, act) << this->log->endl();
       }
+      this->noneeds.push_back(actidx);
       dels |= actidx;
       continue;
     }
@@ -781,14 +777,26 @@ StabilitySynLvl::check_forward(const Xn::Sys& sys)
   if (!adds.empty() || !dels.empty()) {
     return this->revise_actions(sys, adds, dels);
   }
+  else {
+    // TODO: But... what about some deadlocks which can't be resolved in the other system?
+    //vector<uint> candidates = this->candidates;
+    //candidates.insert(candidates.end(), this->noneeds.begin(), this->noneeds.end());
+    for (uint i = 0; i < this->ctx->many_systems.sz(); ++i) {
+      if (!stabilization_ck(Cx::OFile::null(), *this->ctx->many_systems[i],
+                            this->actions, this->candidates))
+      {
+        return false;
+      }
+    }
+  }
   return true;
 }
 
 /** Add actions to protocol and delete actions from candidate list.**/
   bool
-StabilitySynLvl::revise_actions(const Xn::Sys& sys,
-                                Set<uint> adds,
-                                Set<uint> dels)
+PartialSynthesis::revise_actions(const Xn::Sys& sys,
+                                 Set<uint> adds,
+                                 Set<uint> dels)
 {
   const Xn::Net& topo = sys.topology;
   Xn::ActSymm act;
@@ -828,7 +836,7 @@ StabilitySynLvl::revise_actions(const Xn::Sys& sys,
     return false;
   }
 
-  this->loXnRel |= addActPF;
+  this->lo_xn |= addActPF;
   this->deadlockPF -= addActPF.pre();
 
   PF delActPF( false );
@@ -842,7 +850,7 @@ StabilitySynLvl::revise_actions(const Xn::Sys& sys,
     Remove1(this->candidates, actId);
     delActPF |= topo.action_pfmla(actId);
   }
-  this->hiXnRel -= delActPF;
+  this->hi_xn -= delActPF;
 
   for (it = adds.begin(); it != adds.end(); ++it) {
     uint actId = *it;
@@ -856,7 +864,7 @@ StabilitySynLvl::revise_actions(const Xn::Sys& sys,
   }
 
   Cx::PFmla scc(false);
-  cycle_ck(&scc, this->loXnRel);
+  this->lo_xn.cycle_ck(&scc);
   if (!scc.subseteq_ck(sys.invariant)) {
     //uint n = count_actions_in_cycle(scc, act_pf, this->actions, topo);
     //DBog1("scc actions: %u", n);
@@ -871,10 +879,9 @@ StabilitySynLvl::revise_actions(const Xn::Sys& sys,
   }
 
   if (sys.shadow_puppet_synthesis_ck()) {
-    this->hi_invariant =
-      LegitInvariant(sys, this->loXnRel, this->hiXnRel, &scc);
-    if (!this->hi_invariant.sat_ck()) {
-      *this->log << "LEGIT" << this->log->endl();
+    if (!shadow_ck(&this->hi_invariant, sys, this->lo_xn, this->hi_xn, &scc))
+    {
+      *this->log << "SHADOW" << this->log->endl();
       return false;
     }
   }
@@ -882,13 +889,10 @@ StabilitySynLvl::revise_actions(const Xn::Sys& sys,
     this->hi_invariant = sys.invariant;
   }
 
-  if (!WeakConvergenceCk(sys, this->hiXnRel, this->hi_invariant)) {
+  if (!weak_convergence_ck(this->hi_xn, this->hi_invariant)) {
     *this->log << "REACH" << this->log->endl();
     return false;
   }
-
-  this->backReachPF =
-    BackwardReachability(this->loXnRel, this->hi_invariant);
 
 
   bool revise = true;
@@ -908,7 +912,7 @@ StabilitySynLvl::revise_actions(const Xn::Sys& sys,
 }
 
   bool
-StabilitySynLvl::pick_action(const Xn::Sys& sys, uint act_idx)
+PartialSynthesis::pick_action(const Xn::Sys& sys, uint act_idx)
 {
   this->picks.push(act_idx);
   if (!this->revise_actions(sys, Set<uint>(act_idx), Set<uint>())) {
@@ -918,5 +922,89 @@ StabilitySynLvl::pick_action(const Xn::Sys& sys, uint act_idx)
     return false;
   }
   return true;
+}
+
+/**
+ * Initialize synthesis structures.
+ */
+  bool
+SynthesisCtx::init(const Xn::Sys& sys,
+                   const AddConvergenceOpt& opt)
+{
+  const Xn::Net& topo = sys.topology;
+  SynthesisCtx& synctx = *this;
+  synctx.opt = opt;
+  PartialSynthesis& inst = synctx.base_inst;
+  inst.ctx = &synctx;
+
+  for (uint pcidx = 0; pcidx < topo.pc_symms.sz(); ++pcidx)
+  {
+    const Xn::PcSymm& pc_symm = topo.pc_symms[pcidx];
+    for (uint i = 0; i < pc_symm.pre_domsz; ++i)
+    {
+      Cx::String name = pc_symm.name + "@pre_enum[" + i + "]";
+      uint vbl_idx =
+        synctx.csp_pfmla_ctx.add_vbl(name, pc_symm.img_domsz);
+      Claim2( vbl_idx ,==, pc_symm.pre_dom_offset + i );
+    }
+
+    Xn::ActSymm act;
+    // Enforce self-disabling actions.
+    if (false)
+    for (uint actidx = 0; actidx < pc_symm.n_possible_acts; ++actidx) {
+      pc_symm.action(act, actidx);
+      synctx.csp_base_pfmla &=
+        (synctx.csp_pfmla_ctx.vbl(act.pre_idx) != act.img_idx)
+        |
+        (synctx.csp_pfmla_ctx.vbl(act.pre_idx_of_img) == act.img_idx);
+    }
+  }
+
+  inst.lo_xn = false;
+  inst.hi_xn = false;
+  inst.csp_pfmla = synctx.csp_base_pfmla;
+
+  bool good =
+    candidate_actions(inst.candidates, sys);
+  if (!good) {
+    return false;
+  }
+  if (good && inst.candidates.size() == 0) {
+    return true;
+  }
+
+  for (uint i = 0; i < inst.candidates.size(); ++i) {
+    inst.hi_xn |= topo.action_pfmla(inst.candidates[i]);
+  }
+
+  inst.deadlockPF = ~sys.invariant;
+  if (sys.shadow_puppet_synthesis_ck()) {
+    inst.deadlockPF |= sys.shadow_pfmla.pre();
+  }
+
+  RankDeadlocksMCV(inst.mcvDeadlocks,
+                   sys.topology,
+                   inst.candidates,
+                   inst.deadlockPF);
+
+  if (inst.mcvDeadlocks.size() < 2) {
+    DBog0("Cannot resolve all deadlocks with known actions!");
+    return false;
+  }
+
+  inst.log = opt.log;
+  if (!inst.revise_actions(sys, Set<uint>(sys.actions), Set<uint>()))
+  {
+    DBog0("No actions apply!");
+    return false;
+  }
+
+  if (inst.deadlockPF.tautology_ck(false) &&
+      inst.actions.size() == sys.actions.size() &&
+      inst.candidates.size() == 0)
+  {
+    DBog0("The given protocol is self-stabilizing.");
+  }
+  return good;
 }
 

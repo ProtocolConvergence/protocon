@@ -44,9 +44,10 @@ all: $(ExeList)
 $(BinPath)/protocon: \
 	$(addprefix $(BldPath)/, pfmla.o pfmla-glu.o pfmla-bittable.o) \
 	$(addprefix $(BldPathCXX)/, pfmla.o xnsys.o test.o inst.o) \
+	$(addprefix $(BldPathCXX)/, stabilization.o) \
 	$(addprefix $(BldPathCXX)/, promela.o pla.o) \
 	$(addprefix $(BldPathCXX)/, conflictfamily.o) \
-	$(addprefix $(BldPathCXX)/, ordersyn.o main.o stability.o) \
+	$(addprefix $(BldPathCXX)/, search.o main.o synthesis.o) \
 	$(addprefix $(BldPathCXX)/, protoconfile.o protoconfile.leg.o) \
 	$(CxStdObjs) $(addprefix $(CxBldPath)/, bstree.o sesp.o rbtree.o ospc.o)
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(LXXFLAGS)

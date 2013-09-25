@@ -358,13 +358,6 @@ public:
 
 Cx::OFile&
 OPut(Cx::OFile& of, const Xn::ActSymm& act);
-PF
-LegitInvariant(const Xn::Sys& sys, const PF& loXnRel, const PF& hiXnRel,
-               const Cx::PFmla* scc=0);
-bool
-WeakConvergenceCk(const Xn::Sys& sys, const PF& xnRel, const PF& invariant);
-bool
-WeakConvergenceCk(const Xn::Sys& sys, const PF& xnRel);
 
 #endif
 

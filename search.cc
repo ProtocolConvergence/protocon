@@ -1,24 +1,141 @@
 
-#include "ordersyn.hh"
+#include "search.hh"
 #include "xnsys.hh"
 #include <algorithm>
 
 #include "cx/urandom.h"
 #include "cx/fileb.hh"
 #include "protoconfile.hh"
-#include "stability.hh"
+#include "stabilization.hh"
+#include "synthesis.hh"
 #include <signal.h>
 
-bool
-AddConvergence(vector<uint>& retActions,
+/**
+ * Add convergence to a system.
+ * The system will therefore be self-stabilizing.
+ * This is the recursive function.
+ *
+ * \param sys  System definition. It is modified if convergence is added.
+ * \return  True iff convergence could be added.
+ */
+  bool
+AddConvergence(vector<uint>& ret_actions,
                const Xn::Sys& sys,
-               StabilitySynLvl& tape,
-               const AddConvergenceOpt& opt);
-bool
-InitStabilitySyn(StabilitySyn& synctx,
-                 StabilitySynLvl& tape,
-                 const Xn::Sys& sys,
-                 const AddConvergenceOpt& opt);
+               PartialSynthesis& base_inst,
+               const AddConvergenceOpt& opt)
+{
+  Cx::LgTable<PartialSynthesis> bt_stack;
+  SynthesisCtx& synctx = *base_inst.ctx;
+
+  base_inst.bt_level = 0;
+  base_inst.failed_bt_level = 0;
+  bt_stack.push(base_inst);
+  uint stack_idx = 0;
+
+  while (true) {
+    PartialSynthesis& inst = bt_stack[stack_idx];
+    if (inst.candidates.empty())
+      break;
+    if (synctx.done && *synctx.done) {
+      base_inst.failed_bt_level = inst.failed_bt_level;
+      return false;
+    }
+
+    if (opt.max_depth > 0 && inst.bt_level >= opt.max_depth) {
+      base_inst.failed_bt_level = opt.max_depth;
+      return false;
+    }
+
+    // Pick the action.
+    uint actidx = 0;
+    if (!PickActionMCV(actidx, sys, inst, opt)) {
+      DBog0("Cannot resolve all deadlocks!");
+      return false;
+    }
+
+    uint next_idx;
+    if (!opt.random_one_shot || bt_stack.sz() < opt.max_height) {
+      next_idx = stack_idx + 1;
+      if (next_idx == bt_stack.sz())
+        bt_stack.push(PartialSynthesis(&synctx));
+    }
+    else {
+      next_idx = incmod(stack_idx, 1, bt_stack.sz());
+    }
+    PartialSynthesis& next = bt_stack[next_idx];
+    next = inst;
+    next.bt_level += 1;
+    next.failed_bt_level = next.bt_level;
+
+    if (next.pick_action(sys, actidx))
+    {
+      stack_idx = next_idx;
+      continue;
+    }
+
+    if (synctx.done && *synctx.done) {
+      base_inst.failed_bt_level = inst.failed_bt_level;
+      return false;
+    }
+
+    if (inst.revise_actions(sys, Set<uint>(), Set<uint>(actidx)))
+      continue;
+
+    *inst.log << "backtrack from lvl:" << inst.bt_level << inst.log->endl();
+    inst.add_small_conflict_set(sys, inst.picks);
+
+    stack_idx = decmod(stack_idx, 1, bt_stack.sz());
+
+    if (bt_stack[stack_idx].bt_level >= inst.bt_level) {
+      base_inst.failed_bt_level = bt_stack[stack_idx].bt_level;
+      return false;
+    }
+  }
+
+  PartialSynthesis& inst = bt_stack[stack_idx];
+  Claim(!inst.deadlockPF.sat_ck());
+
+  if (opt.verify_found) {
+    *inst.log << "Verifying solution..." << inst.log->endl();
+    if (!stabilization_ck(*inst.log, sys, inst.actions)) {
+      *inst.log << "Solution was NOT self-stabilizing." << inst.log->endl();
+      return false;
+    }
+    for (uint i = 0; i < inst.ctx->many_systems.sz(); ++i) {
+      *inst.log << "Verifying solution for parameterized system " << i << inst.log->endl();
+      if (!stabilization_ck(*inst.log, *inst.ctx->many_systems[i], inst.actions)) {
+        *inst.log << "Solution was NOT self-stabilizing." << inst.log->endl();
+        return false;
+      }
+    }
+  }
+  ret_actions = inst.actions;
+  return true;
+}
+
+/**
+ * Add convergence to a system.
+ * The system will therefore be self-stabilizing.
+ *
+ * \param sys  System definition. It is modified if convergence is added.
+ * \return  True iff convergence could be added.
+ */
+  bool
+AddConvergence(Xn::Sys& sys, const AddConvergenceOpt& opt)
+{
+  SynthesisCtx synctx;
+  if (!synctx.init(sys, opt))
+    return false;
+  PartialSynthesis& inst = synctx.base_inst;
+
+  vector<uint> ret_actions;
+  bool found = AddConvergence(ret_actions, sys, inst, opt);
+  if (!found)  return false;
+
+  sys.actions = ret_actions;
+  return true;
+}
+
 
   void
 check_conflict_sets(const Cx::LgTable< Set<uint> >& conflict_sets)
@@ -43,7 +160,7 @@ static
   bool
 try_order_synthesis(vector<uint>& ret_actions,
                     const Xn::Sys& sys,
-                    StabilitySynLvl& tape)
+                    PartialSynthesis& tape)
 {
   ret_actions.clear();
   //tape.directly_add_conflicts = true;
@@ -51,7 +168,7 @@ try_order_synthesis(vector<uint>& ret_actions,
   while (tape.candidates.size() > 0)
   {
     uint actidx = tape.candidates[0];
-    StabilitySynLvl next( tape );
+    PartialSynthesis next( tape );
     if (next.pick_action(sys, actidx))
     {
       tape = next;
@@ -72,16 +189,12 @@ try_order_synthesis(vector<uint>& ret_actions,
   }
 
   Claim( !tape.deadlockPF.sat_ck() );
-  const Cx::PFmla& invariant = tape.hi_invariant;
-  if (cycle_ck(tape.loXnRel, ~invariant)) {
-    DBog0( "Why are there cycles?" );
-    return false;
-  }
-  if (!WeakConvergenceCk(sys, tape.loXnRel, invariant)) {
-    if (!invariant.tautology_ck(false)) {
-      DBog0( "Why does weak convergence not hold?" );
+  if (tape.ctx->opt.verify_found) {
+    *tape.log << "Verifying solution..." << tape.log->endl();
+    if (!stabilization_ck(*tape.log, sys, tape.actions)) {
+      *tape.log << "Solution was NOT self-stabilizing." << tape.log->endl();
+      return false;
     }
-    return false;
   }
   ret_actions = tape.actions;
   return true;
@@ -96,8 +209,8 @@ rank_states (Cx::Table<Cx::PFmla>& state_layers,
   state_layers.resize(0);
   state_layers.push(legit);
 
-  PF visit_pf( legit );
-  PF layer_pf( xn.pre(legit) - visit_pf );
+  Cx::PFmla visit_pf( legit );
+  Cx::PFmla layer_pf( xn.pre(legit) - visit_pf );
   while (!layer_pf.tautology_ck(false)) {
     state_layers.push(layer_pf);
     visit_pf |= layer_pf;
@@ -152,7 +265,7 @@ oput_conflicts (const ConflictFamily& conflicts, Cx::String ofilename, uint pcid
   oput_conflicts(conflicts, ofilename);
 }
 
-static volatile bool* done_flag = false;
+static volatile bool* done_flag = 0;
 
   void
 set_done_flag (int sig)
@@ -163,10 +276,10 @@ set_done_flag (int sig)
 }
 
   bool
-flat_backtrack_synthesis(vector<uint>& ret_actions,
-                         const ProtoconFileOpt& infile_opt,
-                         const ProtoconOpt& exec_opt,
-                         const AddConvergenceOpt& global_opt)
+stabilization_search(vector<uint>& ret_actions,
+                     const ProtoconFileOpt& infile_opt,
+                     const ProtoconOpt& exec_opt,
+                     const AddConvergenceOpt& global_opt)
 {
   bool done = false;
   bool solution_found = false;
@@ -223,19 +336,19 @@ flat_backtrack_synthesis(vector<uint>& ret_actions,
     opt.log = &Cx::OFile::null();
   }
   //opt.log = &DBogOF;
-  opt.verify_found = false;
+  //opt.verify_found = false;
 
   Xn::Sys sys;
   DoLegit(good, "reading file")
     good =
     ReadProtoconFile(sys, infile_opt);
 
-  StabilitySyn synctx( PcIdx, NPcs );
-  StabilitySynLvl synlvl( &synctx );
+  SynthesisCtx synctx( PcIdx, NPcs );
 
   DoLegit(good, "initialization")
-    good =
-    InitStabilitySyn(synctx, synlvl, sys, opt);
+    good = synctx.init(sys, opt);
+
+  PartialSynthesis& synlvl = synctx.base_inst;
 
   synctx.done = &done;
 
@@ -246,8 +359,22 @@ flat_backtrack_synthesis(vector<uint>& ret_actions,
       good =
       rank_actions (act_layers, sys.topology,
                     synlvl.candidates,
-                    synlvl.hiXnRel,
+                    synlvl.hi_xn,
                     synlvl.hi_invariant);
+  }
+
+  Cx::LgTable<Xn::Sys> many_systems;
+  for (uint i = 0; good && i < exec_opt.params.sz(); ++i) {
+    ProtoconFileOpt param_infile_opt = infile_opt;
+    const Cx::String& key = exec_opt.params[i].first;
+    const uint& val = exec_opt.params[i].second;
+    param_infile_opt.constant_map[key] = val;
+
+    Xn::Sys& param_sys = many_systems.grow1();
+    DoLegit(good, "reading param file")
+      good = ReadProtoconFile(param_sys, param_infile_opt);
+    if (good)
+      synctx.many_systems.push(&param_sys);
   }
 
   if (!good)
@@ -306,7 +433,7 @@ flat_backtrack_synthesis(vector<uint>& ret_actions,
     bool found = false;
     if (opt.search_method == opt.RankShuffleSearch)
     {
-      StabilitySynLvl tape( synlvl );
+      PartialSynthesis tape( synlvl );
       vector<uint>& candidates = tape.candidates;
       candidates.clear();
       for (uint i = 0; i < act_layers.sz(); ++i) {

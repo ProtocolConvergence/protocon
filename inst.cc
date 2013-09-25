@@ -150,7 +150,7 @@ InstThreeColoringRing(Xn::Sys& sys, uint npcs)
 SingleTokenPFmla(const vector<Cx::PFmla>& tokenPFs)
 {
   const uint n = tokenPFs.size();
-  vector<PF> singleToken(n, PF(true));
+  vector<Cx::PFmla> singleToken(n, Cx::PFmla(true));
   for (uint i = 0; i < n; ++i) {
     for (uint j = 0; j < n; ++j) {
       if (j == i) {
@@ -166,7 +166,7 @@ SingleTokenPFmla(const vector<Cx::PFmla>& tokenPFs)
     }
   }
 
-  PF pf( false );
+  Cx::PFmla pf( false );
   for (uint i = 0; i < n; ++i) {
     pf |= singleToken[i];
   }

@@ -198,7 +198,7 @@ TestXnSys()
     Claim2_uint( act.vals[3] ,==, action.vals[3] );
   }
 
-  PF actPF =
+  Cx::PFmla actPF =
     topo.pcs[1].act_unchanged_pfmla &
     ((topo.pfmla_vbl(0) == 1) &
      (topo.pfmla_vbl(1) == 2) &
@@ -208,11 +208,11 @@ TestXnSys()
   Claim( !topo.action_pfmla(actidx).tautology_ck(false) );
   Claim( actPF.equiv_ck(topo.action_pfmla(actidx)) );
 
-  PF srcPF =
+  Cx::PFmla srcPF =
     ((topo.pfmla_vbl(0) == 1) &
      (topo.pfmla_vbl(1) == 2) &
      (topo.pfmla_vbl(2) == 2));
-  PF dstPF =
+  Cx::PFmla dstPF =
     ((topo.pfmla_vbl(0) == 1) &
      (topo.pfmla_vbl(1) == 0) &
      (topo.pfmla_vbl(2) == 2));
@@ -242,7 +242,7 @@ TestXnSys()
   Claim( (actPF - srcPF).tautology_ck(false) );
 
   {
-    PF cyclePF =
+    Cx::PFmla cyclePF =
       ((topo.pfmla_vbl(0) == 1) &
        (topo.pfmla_vbl(2) == 2) &
        (topo.pfmla_vbl(1) == 1) &
@@ -253,7 +253,7 @@ TestXnSys()
        (topo.pfmla_vbl(1) == 1) &
        (topo.pfmla_vbl(0).img_eq(1)));
     cyclePF &= topo.pcs[0].act_unchanged_pfmla;
-    Claim( !cycle_ck(cyclePF, ~sys.invariant) );
+    Claim( !cyclePF.cycle_ck(~sys.invariant) );
 
     Claim( !SCC_Find(0, cyclePF, ~sys.invariant) );
 
@@ -265,7 +265,7 @@ TestXnSys()
       & topo.pcs[0].act_unchanged_pfmla;
     // All states in the cycle are illegitimate,
     // it should be found.
-    Claim( cycle_ck(cyclePF, ~sys.invariant) );
+    Claim( cyclePF.cycle_ck(~sys.invariant) );
 
     Claim( SCC_Find(0, cyclePF, ~sys.invariant) );
   }
@@ -279,7 +279,7 @@ TestTokenRingClosure()
   const uint npcs = 4;
   UnidirectionalRing(topo, npcs, 2, "b", true, true);
 
-  vector<PF> token_pfmlas(npcs);
+  vector<Cx::PFmla> token_pfmlas(npcs);
 
   for (uint me = 0; me < npcs; ++me) {
     uint pd = (me + npcs - 1) % npcs;

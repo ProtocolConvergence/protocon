@@ -263,6 +263,13 @@ public:
     return dst;
   }
 
+  PFmla pre_reach(const PFmla& pf) const;
+  PFmla img_reach(const PFmla& pf) const;
+  PFmla closure_within(const PFmla& pf) const;
+  bool cycle_ck(PFmla* scc) const;
+  bool cycle_ck(PFmla* scc, const PFmla& pf) const;
+  bool cycle_ck(const PFmla& pf) const;
+
   PFmla dotjoin(const PFmla& b) const
   {
     PFmla dst;
@@ -523,24 +530,10 @@ public:
 };
 }
 
-typedef Cx::PFmla PF;
-
-PF
-ClosedSubset(const PF& xnRel, const PF& invariant);
-Cx::PFmla
-ForwardReachability(const Cx::PFmla& xn, const Cx::PFmla& pf);
-PF
-BackwardReachability(const PF& xnRel, const PF& pf);
 Cx::PFmla
 UndirectedReachability(const Cx::PFmla& xn, const Cx::PFmla& pf);
 Cx::PFmla
 transitive_closure(const Cx::PFmla& xn);
-bool
-cycle_ck (Cx::PFmla* scc, const Cx::PFmla& xn);
-bool
-cycle_ck(PF* scc, const PF& xn, const PF& pf);
-bool
-cycle_ck(const PF& xn, const PF& pf);
 bool
 SCC_Find(Cx::PFmla* ret_cycles, const Cx::PFmla& E, const Cx::PFmla& pf);
 
