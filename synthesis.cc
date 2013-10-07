@@ -10,12 +10,12 @@ candidate_actions(vector<uint>& candidates, const Xn::Sys& sys)
 {
   const Xn::Net& topo = sys.topology;
 
-  if (sys.invariant.tautology_ck(false)) {
+  if (!sys.invariant.sat_ck()) {
     DBog0( "Invariant is empty!" );
     return false;
   }
 
-  if (sys.invariant.tautology_ck(true)) {
+  if (sys.invariant.tautology_ck()) {
     DBog0( "All states are invariant!" );
     if (!sys.shadow_puppet_synthesis_ck()) {
       return true;
@@ -33,12 +33,27 @@ candidate_actions(vector<uint>& candidates, const Xn::Sys& sys)
     // Check for self-loops.
     if (add) {
       bool selfloop = true;
+      bool shadow_exists = false;
+      bool shadow_selfloop = true;
       for (uint j = 0; j < pc_symm.wvbl_symms.sz(); ++j) {
-        if (act.assign(j) != act.aguard(j)) {
-          selfloop = false;
+        if (pc_symm.wvbl_symms[j]->pure_shadow_ck()) {
+          shadow_exists = true;
+          if (act.assign(j) != act.aguard(j)) {
+            shadow_selfloop = false;
+          }
+        }
+        else {
+          if (act.assign(j) != act.aguard(j)) {
+            selfloop = false;
+          }
         }
       }
       add = !selfloop;
+      if (selfloop) {
+        if (shadow_exists && shadow_selfloop) {
+          add = true;
+        }
+      }
       if (false && selfloop) {
         OPut((DBogOF << "Action " << actidx << " is a self-loop: "), act) << '\n';
       }
@@ -81,9 +96,32 @@ coexist_ck(const Xn::ActSymm& a, const Xn::ActSymm& b)
   if (a.pc_symm != b.pc_symm)  return true;
   const Xn::PcSymm& pc = *a.pc_symm;
 
+  bool pure_shadow_img_eql = true;
+  bool puppet_img_eql = true;
+  for (uint i = 0; i < pc.rvbl_symms.sz(); ++i) {
+    if (!pc.write_flags[i] && pc.rvbl_symms[i]->puppet_ck()) {
+      if (a.guard(i) != b.guard(i))
+        puppet_img_eql = false;
+    }
+  }
+  for (uint i = 0; i < pc.wvbl_symms.sz(); ++i) {
+    if (pc.wvbl_symms[i]->puppet_ck()) {
+      if (a.assign(i) != b.assign(i))
+        puppet_img_eql = false;
+    }
+    else {
+      if (a.assign(i) != b.assign(i))
+        pure_shadow_img_eql = false;
+    }
+  }
+  if (puppet_img_eql && !pure_shadow_img_eql)
+    return false;
+
   bool enabling = true;
   bool deterministic = false;
   for (uint j = 0; enabling && j < pc.rvbl_symms.sz(); ++j) {
+    if (pc.rvbl_symms[j]->pure_shadow_ck())
+      continue;
     if (a.guard(j) != b.guard(j)) {
       deterministic = true;
       if (!pc.write_ck(j)) {
@@ -98,6 +136,8 @@ coexist_ck(const Xn::ActSymm& a, const Xn::ActSymm& b)
   bool a_enables = true;
   bool b_enables = true;
   for (uint j = 0; j < pc.wvbl_symms.sz(); ++j) {
+    if (pc.wvbl_symms[j]->pure_shadow_ck())
+      continue;
     if (a.assign(j) != b.aguard(j)) {
       a_enables = false;
     }
@@ -105,7 +145,9 @@ coexist_ck(const Xn::ActSymm& a, const Xn::ActSymm& b)
       b_enables = false;
     }
   }
-  return !(a_enables || b_enables);
+  if (a_enables || b_enables)
+    return false;
+  return true;
 }
 
 /** Rank the deadlocks by how many actions can resolve them.*/
@@ -124,7 +166,7 @@ RankDeadlocksMCV(vector<DeadlockConstraint>& dlsets,
     for (uint j = dlsets.size(); j > 0; --j) {
       PF resolved( dlsets[j-1].deadlockPF & guard );
 
-      if (!resolved.tautology_ck(false)) {
+      if (resolved.sat_ck()) {
         dlsets[j-1].deadlockPF -= resolved;
         if (j == dlsets.size()) {
           dlsets.push_back(DeadlockConstraint(resolved));
@@ -139,7 +181,7 @@ RankDeadlocksMCV(vector<DeadlockConstraint>& dlsets,
   for (uint i = 0; i < actions.size(); ++i) {
     PF guard( topo.action_pfmla(actions[i]).pre() );
     for (uint j = 0; j < dlsets.size(); ++j) {
-      if (!(guard & dlsets[j].deadlockPF).tautology_ck(false)) {
+      if ((guard & dlsets[j].deadlockPF).sat_ck()) {
         dlsets[j].candidates |= actions[i];
       }
     }
@@ -268,22 +310,27 @@ ReviseDeadlocksMCV(vector<DeadlockConstraint>& dlsets,
  */
   bool
 PickActionMCV(uint& ret_actidx,
-              const Xn::Sys& sys,
               const PartialSynthesis& tape,
               const AddConvergenceOpt& opt)
 {
   typedef AddConvergenceOpt Opt;
+  const Xn::Sys& sys = *tape.ctx->systems[tape.sys_idx];
   const Opt::PickActionHeuristic& pick_method = opt.pick_method;
   const Opt::NicePolicy& nicePolicy = opt.nicePolicy;
 
   const Xn::Net& topo = sys.topology;
-  const vector<DeadlockConstraint>& dlsets = tape.mcvDeadlocks;
+  const vector<DeadlockConstraint>& dlsets = tape.mcv_deadlocks;
   uint dlset_idx = 0;
 
   if (pick_method == Opt::RandomPick) {
-    uint idx = tape.ctx->urandom.pick(tape.candidates.size());
-    ret_actidx = tape.candidates[idx];
-    return true;
+    for (uint inst_idx = 0; inst_idx < tape.sz(); ++inst_idx) {
+      if (tape.candidates.size() > 0) {
+        uint idx = tape.ctx->urandom.pick(tape.candidates.size());
+        ret_actidx = tape.candidates[idx];
+        return true;
+      }
+    }
+    return false;
   }
 
   Set<uint> candidates;
@@ -295,27 +342,38 @@ PickActionMCV(uint& ret_actidx,
   // Do most constrained variable (MCV).
   // That is, find an action which resolves a deadlock which
   // can only be resolved by some small number of actions.
-  // Try to choose an action which adds a new path to the invariant.
-  for (uint i = 0; i < dlsets.size(); ++i) {
-    if (!dlsets[i].candidates.empty()) {
-      candidates = dlsets[i].candidates;
-      if (opt.pick_back_reach) {
-        Set<uint> candidates_1;
-        for (it = candidates.begin(); it != candidates.end(); ++it) {
-          const uint actidx = *it;
-          const PF& resolve_img =
-            topo.action_pfmla(actidx).img(dlsets[i].deadlockPF);
-          if (reach_pf.overlap_ck(resolve_img)) {
-            candidates_1 |= actidx;
-          }
-        }
-        candidates = candidates_1;
-        if (candidates.empty()) {
-          candidates = dlsets[i].candidates;
-        }
+  uint mcv_inst_idx = 0;
+  for (uint inst_idx = 0; inst_idx < tape.sz(); ++inst_idx) {
+    for (uint i = 0; i < tape[inst_idx].mcv_deadlocks.size(); ++i) {
+      if (dlset_idx > 0 && i >= dlset_idx) {
+        break;
       }
-      dlset_idx = i;
-      break;
+      if (!tape[inst_idx].mcv_deadlocks[i].candidates.empty()) {
+        dlset_idx = i;
+        mcv_inst_idx = inst_idx;
+        break;
+      }
+    }
+  }
+  if (mcv_inst_idx != 0) {
+    return PickActionMCV(ret_actidx, tape[mcv_inst_idx], opt);
+  }
+  candidates = dlsets[dlset_idx].candidates;
+
+  // Try to choose an action which adds a new path to the invariant.
+  if (opt.pick_back_reach) {
+    Set<uint> candidates_1;
+    for (it = candidates.begin(); it != candidates.end(); ++it) {
+      const uint actidx = *it;
+      const PF& resolve_img =
+        topo.action_pfmla(actidx).img(dlsets[dlset_idx].deadlockPF);
+      if (reach_pf.overlap_ck(resolve_img)) {
+        candidates_1 |= actidx;
+      }
+    }
+    candidates = candidates_1;
+    if (candidates.empty()) {
+      candidates = dlsets[dlset_idx].candidates;
     }
   }
 
@@ -414,15 +472,15 @@ PickActionMCV(uint& ret_actidx,
       PartialSynthesis next( tape );
       next.log = &Cx::OFile::null();
       uint n = tape.candidates.size();
-      if (next.revise_actions(sys, Set<uint>(actId), Set<uint>()))
+      if (next.revise_actions(Set<uint>(actId), Set<uint>()))
       {
         n -= next.candidates.size();
         n /= (next.actions.size() - tape.actions.size());
       }
       //uint n = next.candidates.size() + next.actions.size();
       //uint n = 0;
-      //for (uint j = 1; j < next.mcvDeadlocks.size(); ++j) {
-      //  n += next.mcvDeadlocks[j].candidates.size() / j;
+      //for (uint j = 1; j < next.mcv_deadlocks.size(); ++j) {
+      //  n += next.mcv_deadlocks[j].candidates.size() / j;
       //}
 
       biasMap[n] |= actId;
@@ -474,12 +532,12 @@ PickActionMCV(uint& ret_actidx,
       PartialSynthesis next( tape );
       next.log = &Cx::OFile::null();
       uint n = 0;
-      if (next.revise_actions(sys, Set<uint>(actId), Set<uint>()))
+      if (next.revise_actions(Set<uint>(actId), Set<uint>()))
         n = next.candidates.size();
       //uint n = next.candidates.size() + next.actions.size();
       //uint n = 0;
-      //for (uint j = 1; j < next.mcvDeadlocks.size(); ++j) {
-      //  n += next.mcvDeadlocks[j].candidates.size() / j;
+      //for (uint j = 1; j < next.mcv_deadlocks.size(); ++j) {
+      //  n += next.mcv_deadlocks[j].candidates.size() / j;
       //}
       biasMap[n] |= actId;
     }
@@ -533,7 +591,8 @@ PickActionMCV(uint& ret_actidx,
       (biasToMax ? *biasMap.rbegin() : *biasMap.begin());
     candidates = entry.second;
     *tape.log
-      <<" (lvl " << tape.bt_level
+      << " (lvl " << tape.bt_level
+      << ") (psys " << tape.sys_idx
       << ") (mcv " << dlset_idx
       << ") (mcv-sz " << dlsets[dlset_idx].candidates.sz()
       << ") (rem-sz " << candidates.sz()
@@ -606,32 +665,36 @@ small_cycle_conflict (Cx::Table<uint>& conflict_set,
 
   Cx::PFmla edg( false );
   Cx::Table<uint> scc_actidcs;
+  Cx::Table<Cx::PFmla> xn_pfmlas(1, Cx::PFmla(false));
   for (uint i = 0; i < actions.size(); ++i) {
     uint actidx = actions[i];
     const Cx::PFmla& act_pfmla = topo.action_pfmla(actidx);
     if (scc.overlap_ck(act_pfmla)) {
       if (scc.overlap_ck(act_pfmla.img())) {
-        edg |= act_pfmla;
         scc_actidcs.push(actidx);
+        edg |= act_pfmla;
+        xn_pfmlas.push(edg);
       }
     }
   }
+
+  edg = false;
 
   // Go in reverse so actions chosen at earlier levels are more likely
   // to be used in conflict set.
   for (uint i = scc_actidcs.sz(); i > 0;) {
     i -= 1;
-    uint actidx = scc_actidcs[i];
-    const Cx::PFmla& act_pfmla = topo.action_pfmla(actidx);
     Cx::PFmla next_scc(false);
-    if ((edg - act_pfmla, scc).cycle_ck(&next_scc)
+    if ((edg | xn_pfmlas[i]).cycle_ck(&next_scc, scc)
         && invariant.overlap_ck(next_scc))
     {
-        edg -= act_pfmla;
     }
     else
     {
+      uint actidx = scc_actidcs[i];
+      const Cx::PFmla& act_pfmla = topo.action_pfmla(actidx);
       conflict_set.push(actidx);
+      edg |= act_pfmla;
     }
   }
   //Claim( edg.cycle_ck(scc) );
@@ -677,8 +740,7 @@ count_actions_in_cycle (const Cx::PFmla& scc, Cx::PFmla edg,
 }
 
   uint
-PartialSynthesis::add_small_conflict_set(const Xn::Sys& sys,
-                                         const Cx::Table<uint>& delpicks)
+PartialSynthesis::add_small_conflict_set(const Cx::Table<uint>& delpicks)
 {
   if (noconflicts)  return 0;
   if (false || directly_add_conflicts) {
@@ -690,11 +752,11 @@ PartialSynthesis::add_small_conflict_set(const Xn::Sys& sys,
     if (this->ctx->done && *this->ctx->done)
       return delpicks.sz();
 
-    PartialSynthesis lvl( this->ctx->base_inst );
+    PartialSynthesis lvl( this->ctx->base_inst[this->sys_idx] );
     lvl.log = &Cx::OFile::null();
     lvl.noconflicts = true;
     delpick_set -= delpicks[i];
-    if (lvl.revise_actions(sys, delpick_set, Set<uint>())) {
+    if (lvl.revise_actions(delpick_set, Set<uint>())) {
       delpick_set |= delpicks[i];
     }
   }
@@ -727,18 +789,18 @@ reach_cycle_ck (const Cx::PFmla& reach, const Cx::PFmla& act_pf, const Cx::PFmla
 
 /** Infer and prune actions from candidate list.**/
   bool
-PartialSynthesis::check_forward(const Xn::Sys& sys)
+PartialSynthesis::check_forward(Set<uint>& adds, Set<uint>& dels, Set<uint>& rejs)
 {
+  const Xn::Sys& sys = *this->ctx->systems[this->sys_idx];
   const Xn::Net& topo = sys.topology;
 
-  if (this->mcvDeadlocks.size() <= 1) {
+  if (this->mcv_deadlocks.size() <= 1) {
     // This should have been caught if no deadlocks remain.
-    Claim(this->deadlockPF.tautology_ck(false));
+    Claim(!this->deadlockPF.sat_ck());
     this->candidates.clear();
     return true;
   }
-  Set<uint> adds( this->mcvDeadlocks[1].candidates );
-  Set<uint> dels;
+  adds |= this->mcv_deadlocks[1].candidates;
 
   const Cx::PFmla& lo_xn_pre = this->lo_xn.pre();
   for (uint i = 0; i < this->candidates.size(); ++i) {
@@ -760,7 +822,6 @@ PartialSynthesis::check_forward(const Xn::Sys& sys)
         topo.action(act, actidx);
         OPut(*this->log, act) << this->log->endl();
       }
-      this->noneeds.push_back(actidx);
       dels |= actidx;
       continue;
     }
@@ -773,39 +834,23 @@ PartialSynthesis::check_forward(const Xn::Sys& sys)
   if (!this->ctx->conflicts.conflict_membs(&membs, action_set, candidate_set))
     return false;
   dels |= membs;
+  rejs |= membs;
 
-  if (!adds.empty() || !dels.empty()) {
-    return this->revise_actions(sys, adds, dels);
-  }
-  else {
-    // TODO: But... what about some deadlocks which can't be resolved in the other system?
-    //vector<uint> candidates = this->candidates;
-    //candidates.insert(candidates.end(), this->noneeds.begin(), this->noneeds.end());
-    for (uint i = 0; i < this->ctx->many_systems.sz(); ++i) {
-      if (!stabilization_ck(Cx::OFile::null(), *this->ctx->many_systems[i],
-                            this->actions, this->candidates))
-      {
-        return false;
-      }
-    }
-  }
   return true;
 }
 
 /** Add actions to protocol and delete actions from candidate list.**/
   bool
-PartialSynthesis::revise_actions(const Xn::Sys& sys,
-                                 Set<uint> adds,
-                                 Set<uint> dels)
+PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels, Set<uint>& rejs)
 {
+  const Xn::Sys& sys = *this->ctx->systems[this->sys_idx];
   const Xn::Net& topo = sys.topology;
   Xn::ActSymm act;
   Set<uint>::const_iterator it;
   const bool use_csp = false;
 
-  adds |= this->mcvDeadlocks[1].candidates;
-
-  PF addActPF( false );
+  Cx::PFmla add_act_pfmla( false );
+  Cx::PFmla add_pure_shadow_pfmla( true );
   for (it = adds.begin(); it != adds.end(); ++it) {
     uint actId = *it;
     if (use_csp) {
@@ -819,13 +864,18 @@ PartialSynthesis::revise_actions(const Xn::Sys& sys,
       // but that may just mean it introduces nondeterminism
       // or doesn't resolve any existing deadlocks.
     }
+    Remove1(this->actions, actId); // No duplicates
     this->actions.push_back(actId);
-    QuickTrim(dels, this->candidates, topo, actId);
-    addActPF |= topo.action_pfmla(actId);
+    Set<uint> tmp_dels;
+    QuickTrim(tmp_dels, this->candidates, topo, actId);
+    dels |= tmp_dels;
+    rejs |= tmp_dels;
+    add_act_pfmla |= topo.action_pfmla(actId);
+    add_pure_shadow_pfmla &= topo.pure_shadow_pfmla(actId);
   }
 
   if (!(adds & dels).empty()) {
-    if ((adds & dels) <= this->mcvDeadlocks[1].candidates)
+    if ((adds & dels) <= this->mcv_deadlocks[1].candidates)
     {
       *this->log << "Conflicting add from MCV." << this->log->endl();
     }
@@ -836,10 +886,16 @@ PartialSynthesis::revise_actions(const Xn::Sys& sys,
     return false;
   }
 
-  this->lo_xn |= addActPF;
-  this->deadlockPF -= addActPF.pre();
+  this->lo_puppet_xn |= add_act_pfmla;
+  this->lo_xn = this->lo_puppet_xn;
+  this->lo_pure_shadow_pfmla &= add_pure_shadow_pfmla;
+  if (topo.pure_shadow_vbl_ck()) {
+    this->lo_xn &= this->lo_pure_shadow_pfmla & this->lo_pure_shadow_pfmla.as_img();
+    this->lo_xn |= topo.proj_puppet(topo.identity_xn) &
+      (~this->lo_pure_shadow_pfmla & this->lo_pure_shadow_pfmla.as_img());
+  }
 
-  PF delActPF( false );
+  Cx::PFmla del_act_pfmla( false );
   for (it = dels.begin(); it != dels.end(); ++it) {
     uint actId = *it;
     if (use_csp) {
@@ -848,10 +904,18 @@ PartialSynthesis::revise_actions(const Xn::Sys& sys,
         != topo.action_img_index(actId);
     }
     Remove1(this->candidates, actId);
-    delActPF |= topo.action_pfmla(actId);
+    del_act_pfmla |= topo.action_pfmla(actId);
   }
-  this->hi_xn -= delActPF;
+  this->hi_puppet_xn -= del_act_pfmla;
+  this->hi_xn = this->hi_puppet_xn;
+  this->hi_pure_shadow_pfmla = this->lo_pure_shadow_pfmla;
+  if (topo.pure_shadow_vbl_ck()) {
+    this->hi_xn &= this->hi_pure_shadow_pfmla & this->hi_pure_shadow_pfmla.as_img();
+    this->hi_xn |= topo.proj_puppet(topo.identity_xn) &
+      (~this->hi_pure_shadow_pfmla & this->hi_pure_shadow_pfmla.as_img());
+  }
 
+  if (this->sys_idx == 0)
   for (it = adds.begin(); it != adds.end(); ++it) {
     uint actId = *it;
     *this->log
@@ -866,6 +930,7 @@ PartialSynthesis::revise_actions(const Xn::Sys& sys,
   Cx::PFmla scc(false);
   this->lo_xn.cycle_ck(&scc);
   if (!scc.subseteq_ck(sys.invariant)) {
+    //oput_one_cycle(*this->log, this->lo_xn, scc, topo);
     //uint n = count_actions_in_cycle(scc, act_pf, this->actions, topo);
     //DBog1("scc actions: %u", n);
     *this->log << "CYCLE" << this->log->endl();
@@ -878,26 +943,36 @@ PartialSynthesis::revise_actions(const Xn::Sys& sys,
     return false;
   }
 
-  if (sys.shadow_puppet_synthesis_ck()) {
-    if (!shadow_ck(&this->hi_invariant, sys, this->lo_xn, this->hi_xn, &scc))
-    {
-      *this->log << "SHADOW" << this->log->endl();
-      return false;
-    }
+  if (!shadow_ck(&this->hi_invariant, sys, this->lo_xn, this->hi_xn, &scc))
+  {
+    *this->log << "SHADOW" << this->log->endl();
+    return false;
   }
-  else {
-    this->hi_invariant = sys.invariant;
+
+  this->deadlockPF =
+    ((~this->hi_invariant) | sys.shadow_pfmla.pre())
+    - this->lo_xn.pre();
+
+  if (!this->deadlockPF.subseteq_ck(this->hi_xn.pre())) {
+    *this->log << "DEADLOCK" << this->log->endl();
+    return false;
   }
 
   if (!weak_convergence_ck(this->hi_xn, this->hi_invariant)) {
     *this->log << "REACH" << this->log->endl();
+#if 0
+    Cx::PFmla pf( ~this->hi_xn.pre_reach(this->hi_invariant) );
+    pf = pf.pick_pre();
+    pf = this->hi_xn.img_reach(pf);
+    topo.oput_all_pf(*this->log, pf);
+    topo.oput_all_xn(*this->log, this->hi_xn);
+#endif
     return false;
   }
 
-
   bool revise = true;
   if (sys.shadow_puppet_synthesis_ck()) {
-    RankDeadlocksMCV(this->mcvDeadlocks,
+    RankDeadlocksMCV(this->mcv_deadlocks,
                      sys.topology,
                      this->candidates,
                      this->deadlockPF);
@@ -905,19 +980,63 @@ PartialSynthesis::revise_actions(const Xn::Sys& sys,
   }
 
   if (revise) {
-    ReviseDeadlocksMCV(this->mcvDeadlocks, topo, adds, dels);
+    ReviseDeadlocksMCV(this->mcv_deadlocks, topo, adds, dels);
   }
 
-  return this->check_forward(sys);
+  adds.clear();
+  dels.clear();
+  return this->check_forward(adds, dels, rejs);
 }
 
   bool
-PartialSynthesis::pick_action(const Xn::Sys& sys, uint act_idx)
+PartialSynthesis::revise_actions(Set<uint> adds, Set<uint> dels)
 {
-  this->picks.push(act_idx);
-  if (!this->revise_actions(sys, Set<uint>(act_idx), Set<uint>())) {
+  Cx::Table< Set<uint> > all_adds( this->sz() );
+  Cx::Table< Set<uint> > all_dels( this->sz() );
+  Cx::Table< Set<uint> > all_rejs( this->sz() );
+
+  Set<uint> rejs;
+  bool keep_going = true;
+  while (keep_going) {
+    keep_going = false;
+    for (uint i = 0; i < this->sz(); ++i) {
+      PartialSynthesis& inst = (*this)[i];
+      if (inst.mcv_deadlocks.size() > 1) {
+        adds |= inst.mcv_deadlocks[1].candidates;
+      }
+    }
+    for (uint i = 0; i < this->sz(); ++i) {
+      PartialSynthesis& inst = (*this)[i];
+      all_adds[i] |= adds;
+      all_dels[i] |= dels;
+      all_dels[i] |= (rejs - all_rejs[i]);
+      all_rejs[i] |= rejs;
+      if (!inst.revise_actions_alone(all_adds[i], all_dels[i], all_rejs[i]))
+        return false;
+      adds |= all_adds[i];
+      rejs |= all_rejs[i];
+
+      if (!(all_adds[i].empty() && all_dels[i].empty()))
+        keep_going = true;
+    }
+    adds.clear();
+    dels.clear();
+  }
+  for (uint i = 0; i < this->sz()-1; ++i) {
+    Claim2( (*this)[i].actions.size() ,==, (*this)[i+1].actions.size() );
+  }
+  return true;
+}
+
+  bool
+PartialSynthesis::pick_action(uint act_idx)
+{
+  for (uint i = 0; i < this->sz(); ++i) {
+    (*this)[i].picks.push(act_idx);
+  }
+  if (!this->revise_actions(Set<uint>(act_idx), Set<uint>())) {
     if (!this->ctx->conflicts.conflict_ck(FlatSet<uint>(this->actions))) {
-      this->add_small_conflict_set(sys, this->picks);
+      this->add_small_conflict_set(this->picks);
     }
     return false;
   }
@@ -934,8 +1053,6 @@ SynthesisCtx::init(const Xn::Sys& sys,
   const Xn::Net& topo = sys.topology;
   SynthesisCtx& synctx = *this;
   synctx.opt = opt;
-  PartialSynthesis& inst = synctx.base_inst;
-  inst.ctx = &synctx;
 
   for (uint pcidx = 0; pcidx < topo.pc_symms.sz(); ++pcidx)
   {
@@ -959,9 +1076,22 @@ SynthesisCtx::init(const Xn::Sys& sys,
         (synctx.csp_pfmla_ctx.vbl(act.pre_idx_of_img) == act.img_idx);
     }
   }
+  return synctx.add(sys);
+}
 
-  inst.lo_xn = false;
-  inst.hi_xn = false;
+  bool
+SynthesisCtx::add(const Xn::Sys& sys)
+{
+  const Xn::Net& topo = sys.topology;
+  SynthesisCtx& synctx = *this;
+  if (synctx.systems.sz() > 0) {
+    synctx.base_inst.instances.push( PartialSynthesis(&synctx, synctx.systems.sz()) );
+  }
+  synctx.systems.push(&sys);
+
+  PartialSynthesis& inst = synctx.base_inst[synctx.base_inst.sz()-1];
+  inst.log = synctx.opt.log;
+
   inst.csp_pfmla = synctx.csp_base_pfmla;
 
   bool good =
@@ -974,36 +1104,38 @@ SynthesisCtx::init(const Xn::Sys& sys,
   }
 
   for (uint i = 0; i < inst.candidates.size(); ++i) {
-    inst.hi_xn |= topo.action_pfmla(inst.candidates[i]);
+    inst.hi_puppet_xn |= topo.action_pfmla(inst.candidates[i]);
   }
+  inst.hi_xn = inst.hi_puppet_xn;
 
   inst.deadlockPF = ~sys.invariant;
   if (sys.shadow_puppet_synthesis_ck()) {
     inst.deadlockPF |= sys.shadow_pfmla.pre();
   }
 
-  RankDeadlocksMCV(inst.mcvDeadlocks,
+  RankDeadlocksMCV(inst.mcv_deadlocks,
                    sys.topology,
                    inst.candidates,
                    inst.deadlockPF);
 
-  if (inst.mcvDeadlocks.size() < 2) {
+  if (inst.mcv_deadlocks.size() < 2) {
     DBog0("Cannot resolve all deadlocks with known actions!");
     return false;
   }
 
-  inst.log = opt.log;
-  if (!inst.revise_actions(sys, Set<uint>(sys.actions), Set<uint>()))
-  {
+  Set<uint> act_set(sys.actions);
+  act_set |= Set<uint>(synctx.base_inst.actions);
+
+  if (!synctx.base_inst.revise_actions(act_set, Set<uint>())) {
     DBog0("No actions apply!");
     return false;
   }
 
-  if (inst.deadlockPF.tautology_ck(false) &&
+  if (!inst.deadlockPF.sat_ck() &&
       inst.actions.size() == sys.actions.size() &&
       inst.candidates.size() == 0)
   {
-    DBog0("The given protocol is self-stabilizing.");
+    DBog1("The given protocol is self-stabilizing for system %u.", inst.sys_idx);
   }
   return good;
 }

@@ -168,6 +168,16 @@ ConflictFamily::clear()
   impossible_set.clear();
 }
 
+  bool
+ConflictFamily::sat_ck() const
+{
+  if (conflict_sets.sz() != 1) {
+    return true;
+  }
+  const Cx::FlatSet<uint>& e = conflict_sets.elem();
+  return (e.sz() > 0);
+}
+
   void
 ConflictFamily::oput_conflict_sizes(Cx::OFile& of) const
 {

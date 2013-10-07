@@ -2,12 +2,13 @@
 
 tmpf=tmp
 logf=out.log
+npcs=2
 
 while true
 do
   {
     echo '------------------------------------'
-    for i in `seq 0 11`
+    for i in $(seq 0 $(expr $npcs - 1))
     do
       tail -n3 $logf.$i
       echo -n '\___'

@@ -1,34 +1,35 @@
 
-protocol TokenRing;
-
 constant N := 4;
-constant M := 4;
+constant M := 8;
 
-shadow variable b[Int % N] <- Int % 2;
 puppet variable x[Int % N] <- Int % M;
+shadow variable t[Int % N] <- Int % 2;
 
 process Bot[i <- Int % 1]
 {
-  read:  b[i-1];
-  write: b[i];
-  read: x[i-1];
+  read:  t[i-1];
+  write: t[i];
+  read:  x[i-1];
   write: x[i];
-  act: ( b[i-1] == b[i] --> b[i] := 1 - b[i]; );
+  shadow action:
+    ( t[i-1] == t[i] --> t[i] := 1 - t[i]; );
 }
 
 process P[j <- Int % (N-1)]
 {
   let i := j+1;
-  read:  b[i-1];
-  write: b[i];
-  read: x[i-1];
+  read:  t[i-1];
+  write: t[i];
+  read:  x[i-1];
   write: x[i];
-  act: ( b[i-1] != b[i] --> b[i] := 1 - b[i]; );
+  shadow action:
+    ( t[i-1] != t[i] --> t[i] := 1 - t[i]; );
 }
 
-legit:
+shadow invariant:
   unique i <- Int % N :
-  (   i == 0 && b[i-1] == b[i]
-   || i != 0 && b[i-1] != b[i]
-  );
+  (   i == 0 && t[i-1] == t[i]
+   || i != 0 && t[i-1] != t[i]
+  )
+  ;
 

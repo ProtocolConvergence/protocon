@@ -13,6 +13,7 @@ extern "C" {
 #include "inst.hh"
 #include "xnsys.hh"
 #include "protoconfile.hh"
+#include "stabilization.hh"
 #include <stdio.h>
 
 
@@ -351,6 +352,95 @@ void TestProtoconFile(bool agreement)
   topo_c.pfmla_ctx.nullify_context();
 }
 
+  void
+TestShadowColoring()
+{
+  Cx::OFile& of = Cx::OFile::null();
+  //Cx::OFile& of = DBogOF;
+  Xn::Sys sys;
+  Xn::Net& topo = sys.topology;
+  const uint npcs = 3;
+
+  topo.add_variables("x", npcs, 3, Xn::Vbl::Puppet);
+  topo.add_variables("c", npcs, 3, Xn::Vbl::Shadow);
+  Xn::PcSymm* pc_symm = topo.add_processes("P", npcs);
+  pc_symm->idx_name = "i";
+  Xn::NatMap indices(npcs);
+
+  for (uint i = 0; i < npcs; ++i)
+    indices.membs[i] = (int)i - 1;
+  indices.expression = "i-1";
+  topo.add_read_access(pc_symm, &topo.vbl_symms[0], indices);
+
+  for (uint i = 0; i < npcs; ++i)
+    indices.membs[i] = (int)i;
+  indices.expression = "i";
+  topo.add_write_access(pc_symm, &topo.vbl_symms[0], indices);
+
+  for (uint i = 0; i < npcs; ++i)
+    indices.membs[i] = (int)i + 1;
+  indices.expression = "i+1";
+  topo.add_read_access(pc_symm, &topo.vbl_symms[0], indices);
+
+  for (uint i = 0; i < npcs; ++i)
+    indices.membs[i] = (int)i;
+  indices.expression = "i";
+  topo.add_write_access(pc_symm, &topo.vbl_symms[1], indices);
+
+  sys.direct_invariant_flag = false;
+  sys.commit_initialization();
+  for (uint i = 0; i < npcs; ++i) {
+    sys.invariant &=
+      (topo.pfmla_vbl(*topo.vbl_symms[1].membs[i])
+       !=
+       topo.pfmla_vbl(*topo.vbl_symms[1].membs[umod_int(i+1, npcs)]));
+  }
+
+  static const uint act_vals[][4] = {
+    // x[i-1] x[i] x[i+1] --> x[i]'
+    { 0, 0, 0, 1 },
+    { 0, 0, 1, 1 },
+    { 0, 0, 2, 1 },
+    { 0, 2, 0, 2 },
+    { 0, 2, 1, 2 },
+    { 0, 2, 2, 1 },
+    { 1, 0, 0, 0 },
+    { 1, 1, 0, 2 },
+    { 1, 1, 1, 0 },
+    { 1, 1, 2, 0 },
+    { 1, 2, 1, 2 },
+    { 1, 2, 2, 0 },
+    { 2, 0, 0, 0 },
+    { 2, 0, 1, 0 },
+    { 2, 1, 0, 1 },
+    { 2, 1, 1, 1 },
+    { 2, 1, 2, 1 },
+    { 2, 2, 0, 2 },
+    { 2, 2, 1, 2 },
+    { 2, 2, 2, 0 }
+  };
+
+  for (uint actidx = 0; actidx < topo.n_possible_acts; ++actidx)
+  {
+    Xn::ActSymm act_symm;
+    topo.action(act_symm, actidx);
+    if (act_symm.aguard(0) != act_symm.aguard(1))  continue;
+    if (act_symm.assign(0) != act_symm.assign(1))  continue;
+    for (uint i = 0; i < ArraySz(act_vals); ++i) {
+      if (act_vals[i][0] == act_symm.guard(0) &&
+          act_vals[i][1] == act_symm.guard(1) &&
+          act_vals[i][2] == act_symm.guard(2) &&
+          act_vals[i][3] == act_symm.assign(0))
+      {
+        sys.actions.push_back(actidx);
+      }
+    }
+  }
+  if (!stabilization_ck(of, sys)) {
+    Claim(0);
+  }
+}
+
 /**
  * Test dat code.
  */
@@ -365,5 +455,6 @@ void Test()
   TestTokenRingClosure();
   TestProtoconFile(true);
   TestProtoconFile(false);
+  TestShadowColoring();
 }
 

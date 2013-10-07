@@ -1,0 +1,23 @@
+
+// 3-coloring protocol
+// We want no two adjacent colors to be the same.
+
+constant N := 5;
+
+puppet variable x[Int % N] <- Int % 3;
+shadow variable c[Int % N] <- Int % 3;
+
+process P[i <- Int % N]
+{
+  read:  x[i-1];
+  write: x[i];
+  read:  x[i+1];
+  write: c[i];
+}
+
+shadow invariant:
+  (forall i <- Nat % N :
+   (c[i] != c[i-1]) && (c[i] != c[i+1])
+  )
+  ;
+

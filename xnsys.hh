@@ -201,28 +201,31 @@ public:
 
   LetVblMap constant_map;
   Cx::Table< Cx::PFmla > act_pfmlas;
+  Cx::Table< Cx::PFmla > pure_shadow_pfmlas;
   uint n_possible_acts;
   uint total_pre_domsz;
-  Cx::PFmla identity_pfmla;
+  Cx::PFmla identity_xn;
 
-  bool puppet_vbl_exists;
+  bool pure_shadow_vbl_exists;
   bool pure_puppet_vbl_exists;
 
 private:
   uint shadow_pfmla_list_id;
   uint puppet_pfmla_list_id;
+  uint pure_shadow_pfmla_list_id;
   uint pure_puppet_pfmla_list_id;
 
 public:
   Net()
     : n_possible_acts(0)
     , total_pre_domsz(0)
-    , identity_pfmla(true)
-    , puppet_vbl_exists(false)
+    , identity_xn(true)
+    , pure_shadow_vbl_exists(false)
     , pure_puppet_vbl_exists(false)
   {
     this->shadow_pfmla_list_id = this->pfmla_ctx.add_vbl_list();
     this->puppet_pfmla_list_id = this->pfmla_ctx.add_vbl_list();
+    this->pure_shadow_pfmla_list_id = this->pfmla_ctx.add_vbl_list();
     this->pure_puppet_pfmla_list_id = this->pfmla_ctx.add_vbl_list();
   }
 
@@ -247,6 +250,9 @@ public:
   uint action_pre_index(uint actidx) const;
   uint action_img_index(uint actidx) const;
 
+  const Cx::PFmla& pure_shadow_pfmla(uint i) const {
+    return pure_shadow_pfmlas[i];
+  }
   const Cx::PFmla& action_pfmla(uint i) const {
     return act_pfmlas[i];
   }
@@ -258,15 +264,24 @@ public:
     return this->pfmla_ctx.vbl(x.pfmla_idx);
   }
 
+  bool pure_shadow_vbl_ck() const {
+    return pure_shadow_vbl_exists;
+  }
+
+  Cx::PFmla smooth_pure_shadow_vbls(const Cx::PFmla& pf) const {
+    if (!pure_shadow_vbl_exists) {
+      return pf;
+    }
+    return pf.smooth(pure_shadow_pfmla_list_id);
+  }
   Cx::PFmla smooth_shadow_vbls(const Cx::PFmla& pf) const {
     return pf.smooth(shadow_pfmla_list_id);
   }
+
   Cx::PFmla smooth_puppet_vbls(const Cx::PFmla& pf) const {
-    if (!puppet_vbl_exists) {
-      return pf;
-    }
     return pf.smooth(puppet_pfmla_list_id);
   }
+
   Cx::PFmla smooth_pure_puppet_vbls(const Cx::PFmla& pf) const {
     if (!pure_puppet_vbl_exists) {
       return pf;
@@ -280,6 +295,16 @@ public:
     return pf.smooth_img(pure_puppet_pfmla_list_id);
   }
 
+  Cx::PFmla proj_shadow(const Cx::PFmla& pf) const {
+    return this->smooth_pure_puppet_vbls(pf);
+  }
+  Cx::PFmla proj_img_shadow(const Cx::PFmla& pf) const {
+    return this->smooth_pure_puppet_img_vbls(pf);
+  }
+  Cx::PFmla proj_puppet(const Cx::PFmla& pf) const {
+    return this->smooth_pure_shadow_vbls(pf);
+  }
+
   ostream& oput(ostream& of,
                 const Cx::PFmla& pf,
                 const String& pfx,
@@ -289,6 +314,7 @@ public:
                         Sign pre_or_img, bool just_one) const;
   Cx::OFile& oput_one_xn(Cx::OFile& of, const Cx::PFmla& pf) const;
   Cx::OFile& oput_all_xn(Cx::OFile& of, const Cx::PFmla& pf) const;
+  Cx::OFile& oput_one_pf(Cx::OFile& of, const Cx::PFmla& pf) const;
   Cx::OFile& oput_all_pf(Cx::OFile& of, const Cx::PFmla& pf) const;
 
 private:
@@ -358,6 +384,9 @@ public:
 
 Cx::OFile&
 OPut(Cx::OFile& of, const Xn::ActSymm& act);
+void
+oput_one_cycle(Cx::OFile& of, const Cx::PFmla& xn, const Cx::PFmla& scc, const Xn::Net& topo);
+
 
 #endif
 

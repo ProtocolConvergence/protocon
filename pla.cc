@@ -20,6 +20,8 @@ oput_pla_act (Cx::OFile& of, const Xn::ActSymm& act)
 {
   const Xn::PcSymm& pc_symm = *act.pc_symm;
   for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
+    if (pc_symm.rvbl_symms[i]->pure_shadow_ck() && !pc_symm.write_flags[i])
+      continue;
     of << ' ';
     oput_pla_val (of, act.guard(i), pc_symm.doms[i]);
   }
@@ -35,16 +37,28 @@ oput_pla_pc_acts (Cx::OFile& of, const Xn::PcSymm& pc_symm,
 {
   Claim2( pc_symm.wvbl_symms.sz() ,==, pc_symm.wmap.sz() );
 
-  of << ".mv " << (pc_symm.rvbl_symms.sz() + pc_symm.wmap.sz()) << " 0";
-  for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i)
+  uint nrvbls = 0;
+  for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
+    if (!(pc_symm.rvbl_symms[i]->pure_shadow_ck() && !pc_symm.write_flags[i]))
+      nrvbls += 1;
+  }
+
+  of << ".mv " << (nrvbls + pc_symm.wmap.sz()) << " 0";
+  for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
+    if (pc_symm.rvbl_symms[i]->pure_shadow_ck() && !pc_symm.write_flags[i])
+      continue;
     of << ' ' << pc_symm.doms[i];
+  }
   for (uint i = 0; i < pc_symm.wmap.sz(); ++i)
     of << ' ' << pc_symm.doms[pc_symm.wmap[i]];
   of << '\n';
 
   of << '#';
-  for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i)
+  for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
+    if (pc_symm.rvbl_symms[i]->pure_shadow_ck() && !pc_symm.write_flags[i])
+      continue;
     of << ' ' << pc_symm.vbl_name(i);
+  }
 
   for (uint i = 0; i < pc_symm.wmap.sz(); ++i)
     of << ' ' << pc_symm.vbl_name(pc_symm.wmap[i]) << '\'';
@@ -168,10 +182,12 @@ oput_protocon_pc_acts (Cx::OFile& of, const Xn::PcSymm& pc_symm,
   }
 
   // Names for variables.
-  Cx::Table<Cx::String> guard_vbls( pc_symm.rvbl_symms.sz() );
+  Cx::Table<Cx::String> guard_vbls;
   Cx::Table<Cx::String> assign_vbls( pc_symm.wmap.sz() );
   for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
-    guard_vbls[i] = pc_symm.vbl_name(i);
+    if (pc_symm.rvbl_symms[i]->pure_shadow_ck() && !pc_symm.write_flags[i])
+      continue;
+    guard_vbls.push(pc_symm.vbl_name(i));
   }
   for (uint i = 0; i < pc_symm.wvbl_symms.sz(); ++i) {
     assign_vbls[i] = pc_symm.vbl_name(pc_symm.wmap[i]);
@@ -205,6 +221,7 @@ oput_protocon_pc_acts (Cx::OFile& of, const Xn::PcSymm& pc_symm,
       good = getlined_olay_XFile (olay, ospc->xf, "\n");
 
     DoLegit(good, 0)
+      good =
       oput_protocon_pc_act (of, olay, guard_vbls, assign_vbls);
   }
 

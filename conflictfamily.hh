@@ -35,6 +35,7 @@ public:
                       const FlatSet<uint>& count_set) const;
   void all_conflicts(Cx::Table< FlatSet<uint> >& ret) const;
   void clear();
+  bool sat_ck() const;
 
   void oput_conflict_sizes(Cx::OFile& of) const;
   void oput(Cx::OFile& of) const;

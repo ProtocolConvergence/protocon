@@ -189,7 +189,7 @@ ProtoconFile::add_action(Sesp act_sp, Xn::Vbl::ShadowPuppetRole role)
       good = eval(guard_pf, cadr_of_Sesp (act_sp));
     if (!good)  continue;
 
-    Cx::PFmla assign_pf( topo.identity_pfmla );
+    Cx::PFmla assign_pf( topo.identity_xn );
     Sesp assign_sp = cddr_of_Sesp (act_sp);
 
 #if 0
@@ -225,7 +225,7 @@ ProtoconFile::add_action(Sesp act_sp, Xn::Vbl::ShadowPuppetRole role)
   DoLegit(good, "self-loop")
   {
     index_map.erase(idx_name);
-    good = !act_pf.overlap_ck(topo.identity_pfmla);
+    good = !act_pf.overlap_ck(topo.identity_xn);
   }
 
   DoLegit(good, "")
@@ -233,7 +233,7 @@ ProtoconFile::add_action(Sesp act_sp, Xn::Vbl::ShadowPuppetRole role)
     if (role != Xn::Vbl::Puppet) {
       const Cx::PFmla& shadow_act_pf =
         (topo.smooth_pure_puppet_vbls(act_pf) -
-         topo.smooth_pure_puppet_vbls(topo.identity_pfmla));
+         topo.smooth_pure_puppet_vbls(topo.identity_xn));
       pc_symm->shadow_pfmla |= shadow_act_pf;
       sys->shadow_pfmla |= shadow_act_pf;
     }
