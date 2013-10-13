@@ -7,7 +7,7 @@ set (CxPath ../cx)
 set (BinPath ../bin)
 set (BldPath protocon)
 set (GluPath ../glu-2.4)
-set (GluIncludePath = ${GluPath}/include)
+set (GluIncludePath ${GluPath}/include)
 
 list (APPEND CFiles satsyn.c xnsys.c)
 list (APPEND HFiles
@@ -24,6 +24,7 @@ list (APPEND HFiles
 
 list (APPEND CCFiles
 	pfmla.cc xnsys.cc test.cc search.cc main.cc inst.cc
+  main-mpi.cc
   promela.cc pla.cc
   conflictfamily.cc
   stabilization.cc
@@ -55,9 +56,8 @@ set_source_files_properties (${BldPathCXX}/protoconfile.leg.cc PROPERTIES GENERA
 set_property (SOURCE ${BldPathCXX}/protoconfile.leg.cc
   APPEND PROPERTY OBJECT_DEPENDS ${CxFullHFiles} ${CxFullHHFiles} ${FullHFiles} ${FullHHFiles})
 
-link_directories(${GluPath})
-addbinexe (protocon
-  pfmla.cc xnsys.cc test.cc search.cc main.cc inst.cc
+list (APPEND ProtoconSources
+  pfmla.cc xnsys.cc search.cc inst.cc
   promela.cc pla.cc
   stabilization.cc
   synthesis.cc
@@ -65,7 +65,33 @@ addbinexe (protocon
   protoconfile.cc protoconfile.leg.cc
   pfmla.c pfmla-glu.c pfmla-bittable.c
   )
+
+link_directories(${GluPath})
+addbinexe (protocon
+  ${ProtoconSources}
+  test.cc main.cc
+  )
 target_link_libraries (protocon cu glu cal m)
+
+find_package(MPI REQUIRED)
+include_directories(${MPI_INCLUDE_PATH})
+addbinexe (protocon-mpi
+  ${ProtoconSources}
+  main-mpi.cc
+  )
+target_link_libraries (protocon-mpi ${MPI_LIBRARIES})
+target_link_libraries (protocon-mpi cu glu cal m)
+
+if(MPI_COMPILE_FLAGS)
+  set_target_properties (protocon-mpi PROPERTIES
+    COMPILE_FLAGS "${MPI_COMPILE_FLAGS}")
+endif()
+
+if(MPI_LINK_FLAGS)
+  set_target_properties (protocon-mpi PROPERTIES
+    LINK_FLAGS "${MPI_LINK_FLAGS}")
+endif()
+
 
 #target_link_libraries (chatty rt)
 

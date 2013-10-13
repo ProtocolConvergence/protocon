@@ -21,7 +21,7 @@ CxPath = ../cx
 BinPath = ../bin
 BldPath = protocon
 
-ExeList = protocon satsyn
+ExeList = protocon protocon-mpi satsyn
 ExeList := $(addprefix $(BinPath)/,$(ExeList))
 
 include $(CxPath)/include.mk
@@ -41,16 +41,25 @@ LXXFLAGS += -L$(GluPath) -lcu -lglu -lcal -lm
 
 all: $(ExeList)
 
-$(BinPath)/protocon: \
+ProtoconObj = \
 	$(addprefix $(BldPath)/, pfmla.o pfmla-glu.o pfmla-bittable.o) \
-	$(addprefix $(BldPathCXX)/, pfmla.o xnsys.o test.o inst.o) \
+	$(addprefix $(BldPathCXX)/, pfmla.o xnsys.o inst.o) \
 	$(addprefix $(BldPathCXX)/, stabilization.o) \
 	$(addprefix $(BldPathCXX)/, promela.o pla.o) \
 	$(addprefix $(BldPathCXX)/, conflictfamily.o) \
-	$(addprefix $(BldPathCXX)/, search.o main.o synthesis.o) \
+	$(addprefix $(BldPathCXX)/, search.o synthesis.o) \
 	$(addprefix $(BldPathCXX)/, protoconfile.o protoconfile.leg.o) \
 	$(CxStdObjs) $(addprefix $(CxBldPath)/, bstree.o sesp.o rbtree.o ospc.o)
+
+$(BinPath)/protocon: \
+	$(ProtoconObj) \
+	$(addprefix $(BldPathCXX)/, main.o test.o)
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(LXXFLAGS)
+
+$(BinPath)/protocon-mpi: \
+	$(ProtoconObj) \
+	$(addprefix $(BldPathCXX)/, main-mpi.o)
+	mpicxx $(CXXFLAGS) $^ -o $@ $(LXXFLAGS)
 
 $(call binexe,satsyn): $(BldPath)/satsyn.o $(BldPath)/xnsys.o \
 	$(CxStdObjs) $(addprefix $(CxBldPath)/, bstree.o ospc.o rbtree.o)
@@ -61,6 +70,9 @@ $(BldPath)/pfmla-glu.o: $(BldPath)/pfmla-glu.c
 
 $(BldPathCXX)/pfmla-minisat.o: $(BldPathCXX)/pfmla-minisat.cc
 	$(CXX) -c $(CXXFLAGS) -isystem $(MinisatIncludePath) $< -o $@
+
+$(BldPathCXX)/main-mpi.o: $(BldPathCXX)/main-mpi.cc
+	mpicxx -c $(CXXFLAGS) $< -o $@
 
 $(BldPathCXX)/protoconfile.leg.cc: protoconfile.leg
 	leg -o $@ $<
