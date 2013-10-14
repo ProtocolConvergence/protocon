@@ -7,7 +7,6 @@
 #include "pfmla.hh"
 #include "inst.hh"
 #include "promela.hh"
-#include "test.hh"
 #include "xnsys.hh"
 #include <fstream>
 #include "protoconfile.hh"
@@ -188,24 +187,31 @@ public:
   Cx::PFmla csp_base_pfmla;
   Cx::URandom urandom;
   AddConvergenceOpt opt;
-  volatile bool* done;
+  Bool (*done_ck_fn) (void*);
+  void* done_ck_mem;
   ConflictFamily conflicts;
 
   SynthesisCtx()
     : base_inst( this )
     , log( &Cx::OFile::null() )
     , csp_base_pfmla(true)
-    , done(0)
+    , done_ck_fn(0)
+    , done_ck_mem(0)
   {}
   SynthesisCtx(uint pcidx, uint npcs)
     : base_inst( this )
     , log( &Cx::OFile::null() )
     , csp_base_pfmla(true)
     , urandom(pcidx, npcs)
-    , done(0)
+    , done_ck_fn(0)
+    , done_ck_mem(0)
   {}
   bool init(const Xn::Sys& sys, const AddConvergenceOpt& opt);
   bool add(const Xn::Sys& sys);
+  bool done_ck() {
+    if (!done_ck_fn)  return false;
+    return (0 != done_ck_fn (done_ck_mem));
+  }
 };
 
 

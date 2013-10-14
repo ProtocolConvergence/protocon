@@ -5,6 +5,7 @@
 
 #include "cx/urandom.h"
 #include "cx/fileb.hh"
+#include "opt.hh"
 #include "protoconfile.hh"
 #include "stabilization.hh"
 #include "synthesis.hh"
@@ -36,7 +37,7 @@ AddConvergence(vector<uint>& ret_actions,
     PartialSynthesis& inst = bt_stack[stack_idx];
     if (!inst.candidates_ck())
       break;
-    if (synctx.done && *synctx.done) {
+    if (synctx.done_ck()) {
       base_inst.failed_bt_level = inst.failed_bt_level;
       return false;
     }
@@ -73,7 +74,7 @@ AddConvergence(vector<uint>& ret_actions,
       continue;
     }
 
-    if (synctx.done && *synctx.done) {
+    if (synctx.done_ck()) {
       base_inst.failed_bt_level = inst.failed_bt_level;
       return false;
     }
@@ -151,7 +152,6 @@ check_conflict_sets(const Cx::LgTable< Set<uint> >& conflict_sets)
   }
 }
 
-static
   bool
 try_order_synthesis(vector<uint>& ret_actions,
                     const Xn::Sys& sys,
@@ -170,7 +170,7 @@ try_order_synthesis(vector<uint>& ret_actions,
     }
     else
     {
-      if (tape.ctx->done && *tape.ctx->done)
+      if (tape.ctx->done_ck())
         return false;
 
       if (!tape.revise_actions(Set<uint>(), Set<uint>(actidx)))
@@ -179,7 +179,7 @@ try_order_synthesis(vector<uint>& ret_actions,
         return false;
       }
     }
-    if (tape.ctx->done && *tape.ctx->done)
+    if (tape.ctx->done_ck())
       return false;
   }
 
@@ -214,7 +214,6 @@ rank_states (Cx::Table<Cx::PFmla>& state_layers,
   return (visit_pf.tautology_ck(true));
 }
 
-static
   bool
 rank_actions (Cx::Table< Cx::Table<uint> >& act_layers,
               const Xn::Net& topo,
@@ -260,14 +259,22 @@ oput_conflicts (const ConflictFamily& conflicts, Cx::String ofilename, uint pcid
   oput_conflicts(conflicts, ofilename);
 }
 
-static volatile bool* done_flag = 0;
+static volatile Bool done_flag = 0;
 
+static
   void
 set_done_flag (int sig)
 {
   (void) sig;
-  if (done_flag)
-    *done_flag = true;
+  done_flag = true;
+}
+
+static
+  Bool
+done_ck (void* dat)
+{
+  (void) dat;
+  return done_flag;
 }
 
   bool
@@ -276,12 +283,10 @@ stabilization_search(vector<uint>& ret_actions,
                      const ProtoconOpt& exec_opt,
                      const AddConvergenceOpt& global_opt)
 {
-  bool done = false;
   bool solution_found = false;
   uint NPcs = 0;
   ConflictFamily conflicts;
 
-  done_flag = &done;
   signal(SIGINT, set_done_flag);
   signal(SIGTERM, set_done_flag);
 
@@ -303,7 +308,7 @@ stabilization_search(vector<uint>& ret_actions,
     conflicts.all_conflicts(flat_conflicts);
   }
 
-#pragma omp parallel shared(done,NPcs,solution_found,ret_actions,conflicts,flat_conflicts)
+#pragma omp parallel shared(done_flag,NPcs,solution_found,ret_actions,conflicts,flat_conflicts)
   {
   Sign good = 1;
   AddConvergenceOpt opt(global_opt);
@@ -346,7 +351,7 @@ stabilization_search(vector<uint>& ret_actions,
 
   PartialSynthesis& synlvl = synctx.base_inst;
 
-  synctx.done = &done;
+  synctx.done_ck_fn = done_ck;
 
   Cx::Table< Cx::Table<uint> > act_layers;
   if (opt.search_method == opt.RankShuffleSearch)
@@ -374,8 +379,8 @@ stabilization_search(vector<uint>& ret_actions,
 
   if (!good)
   {
-    done = true;
-#pragma omp flush (done)
+    set_done_flag (1);
+#pragma omp flush (done_flag)
   }
 
 #pragma omp critical (DBog)
@@ -395,7 +400,7 @@ stabilization_search(vector<uint>& ret_actions,
 #pragma omp for schedule(dynamic)
     for (uint conflict_idx = 0; conflict_idx < flat_conflicts.sz(); ++conflict_idx) {
       uint old_sz = flat_conflicts[conflict_idx].sz();
-      if (!done && old_sz > 1) {
+      if (!done_flag && old_sz > 1) {
         *opt.log
           << "pcidx:" << PcIdx
           << " conflict:" << conflict_idx << "/" << flat_conflicts.sz()
@@ -423,7 +428,7 @@ stabilization_search(vector<uint>& ret_actions,
 
   vector<uint> actions;
   if (exec_opt.task == ProtoconOpt::SearchTask)
-  for (uint trial_idx = 0; !done && (opt.ntrials == 0 || trial_idx < opt.ntrials); ++trial_idx)
+  for (uint trial_idx = 0; !done_flag && (opt.ntrials == 0 || trial_idx < opt.ntrials); ++trial_idx)
   {
     bool found = false;
     if (opt.search_method == opt.RankShuffleSearch)
@@ -447,22 +452,22 @@ stabilization_search(vector<uint>& ret_actions,
 
 #pragma omp critical (DBog)
     {
-    if (done)
+    if (done_flag)
     {}
     else if (found)
     {
       if (!global_opt.try_all)
-        done = true;
+        set_done_flag (1);
       solution_found = true;
       ret_actions = actions;
       *opt.log << "SOLUTION FOUND!" << opt.log->endl();
     }
-    if (!done || global_opt.conflicts_ofilename)
+    if (!done_flag || global_opt.conflicts_ofilename)
     {
       synctx.conflicts.add_conflicts(conflicts);
       synctx.conflicts.trim(global_opt.max_conflict_sz);
       if (!synctx.conflicts.sat_ck())
-        done = true;
+        set_done_flag (1);
 
       conflicts = synctx.conflicts;
 
@@ -484,7 +489,7 @@ stabilization_search(vector<uint>& ret_actions,
     if (global_opt.snapshot_conflicts && global_opt.conflicts_ofilename)
       oput_conflicts (synctx.conflicts, global_opt.conflicts_ofilename, PcIdx);
 
-    if (!done) {
+    if (!done_flag) {
       Set<uint> impossible( synctx.conflicts.impossible_set );
       impossible &= Set<uint>(synlvl.candidates);
       if (!impossible.empty())
@@ -508,6 +513,8 @@ stabilization_search(vector<uint>& ret_actions,
     }
   }
 
+  signal(SIGINT, SIG_DFL);
+  signal(SIGTERM, SIG_DFL);
   return solution_found;
 }
 

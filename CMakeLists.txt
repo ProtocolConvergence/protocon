@@ -23,7 +23,8 @@ list (APPEND HFiles
 	pfmla.h pfmla-glu.h pfmla-bittable.h)
 
 list (APPEND CCFiles
-	pfmla.cc xnsys.cc test.cc search.cc main.cc inst.cc
+	pfmla.cc xnsys.cc test.cc main.cc inst.cc
+  opt.cc search.cc
   main-mpi.cc
   promela.cc pla.cc
   conflictfamily.cc
@@ -32,7 +33,8 @@ list (APPEND CCFiles
 	protoconfile.cc
   )
 list (APPEND HHFiles
-	pfmla.hh xnsys.hh test.hh search.hh main.hh inst.hh
+	pfmla.hh xnsys.hh test.hh main.hh inst.hh
+  opt.hh search.hh
   promela.hh pla.hh
   conflictfamily.hh
   stabilization.hh
@@ -57,7 +59,8 @@ set_property (SOURCE ${BldPathCXX}/protoconfile.leg.cc
   APPEND PROPERTY OBJECT_DEPENDS ${CxFullHFiles} ${CxFullHHFiles} ${FullHFiles} ${FullHHFiles})
 
 list (APPEND ProtoconSources
-  pfmla.cc xnsys.cc search.cc inst.cc
+  pfmla.cc xnsys.cc inst.cc
+  opt.cc search.cc
   promela.cc pla.cc
   stabilization.cc
   synthesis.cc

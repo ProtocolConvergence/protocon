@@ -44,7 +44,7 @@ all: $(ExeList)
 ProtoconObj = \
 	$(addprefix $(BldPath)/, pfmla.o pfmla-glu.o pfmla-bittable.o) \
 	$(addprefix $(BldPathCXX)/, pfmla.o xnsys.o inst.o) \
-	$(addprefix $(BldPathCXX)/, stabilization.o) \
+	$(addprefix $(BldPathCXX)/, opt.o stabilization.o) \
 	$(addprefix $(BldPathCXX)/, promela.o pla.o) \
 	$(addprefix $(BldPathCXX)/, conflictfamily.o) \
 	$(addprefix $(BldPathCXX)/, search.o synthesis.o) \

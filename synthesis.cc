@@ -749,7 +749,7 @@ PartialSynthesis::add_small_conflict_set(const Cx::Table<uint>& delpicks)
   }
   Set<uint> delpick_set( delpicks );
   for (uint i = 0; i < delpicks.sz(); ++i) {
-    if (this->ctx->done && *this->ctx->done)
+    if (this->ctx->done_ck())
       return delpicks.sz();
 
     PartialSynthesis lvl( this->ctx->base_inst[this->sys_idx] );
@@ -804,7 +804,7 @@ PartialSynthesis::check_forward(Set<uint>& adds, Set<uint>& dels, Set<uint>& rej
 
   const Cx::PFmla& lo_xn_pre = this->lo_xn.pre();
   for (uint i = 0; i < this->candidates.size(); ++i) {
-    if (ctx->done && *ctx->done)
+    if (ctx->done_ck())
       return true;
 
     uint actidx = this->candidates[i];
