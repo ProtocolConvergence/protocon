@@ -7,13 +7,105 @@ extern "C" {
 #include "cx/fileb.hh"
 
 #include "opt.hh"
+#include "pla.hh"
 #include "search.hh"
 #include "synthesis.hh"
+
+static
+  int
+egcd(int* ret_a, int* ret_b)
+{
+  int a = *ret_a;
+  int b = *ret_b;
+  int x = 0;
+  int y = 1;
+  int u = 1;
+  int v = 0;
+  while (a != 0) {
+    int q = b / a;
+    int r = b % a;
+    b = a;
+    a = r;
+    int m = x - u * q;
+    x = u;
+    u = m;
+    int n = y - v * q;
+    y = v;
+    v = n;
+  }
+  *ret_a = x;
+  *ret_b = y;
+  return b;
+}
+
+/**
+ * a x % n = b
+ */
+static
+  void
+linear_congruence(Cx::Table<uint>& ans, uint a, uint n, uint b)
+{
+  int r = a,
+      s = n;
+  uint d = umod_int(egcd(&r, &s), n);
+  uint n_div_d = n / d;
+  if (0 != b % d)  return;
+  uint x0 = umod_int(r * (int) b / (int)d, n);
+  for (uint i = 0; i < d; ++i) {
+    ans.push((x0 + i * n_div_d) % n);
+  }
+}
+
+/**
+ * Generalized Kautz graph topology of degree {degree}.
+ * The {hood} parameter is filled by 2*{degree} nodes.
+ * The first {degree} nodes are sources for arcs whose destination node is {vidx}.
+ * The second {degree} nodes are destinations for arcs whose source node is {vidx}.
+ */
+static
+  void
+gkautz_hood(Cx::Table<uint>& hood, uint vidx, uint degree, uint n)
+{
+  // For arcs ending at node {vidx}, solve the following
+  //   -(vidx + q) % n = i * degree % n
+  // for
+  //   q <- {1,...,degree}
+  // to obtain each source node {i}.
+  // Depending on {degree} and {n}, a single {q} may generate zero or multiple solutions,
+  // but there are exactly {degree} solutions in total.
+  for (uint q = 1; q <= degree; ++q) {
+    Cx::Table<uint> ans;
+    linear_congruence
+      (ans, degree, n,
+       umod_int (- (int)(vidx + q), n)
+      );
+    for (uint i = 0; i < ans.sz(); ++i) {
+      hood.push(ans[i]);
+      //DBog3("%0.2u %0.2u %u", ans[i], vidx, q);
+    }
+  }
+  Claim2( hood.sz() ,==, degree );
+
+  // For arcs beginning at node {vidx}, solve the following
+  //   j = -(vidx * degree + q) % n
+  // for
+  //   q <- {1,...,degree}
+  // to obtain each destination node {j}.
+  // Each q gives a unique {j}.
+  for (uint q = 1; q <= degree; ++q) {
+    uint j = umod_int (-(int)(vidx * degree + q), n);
+    hood.push(j);
+    //DBog3("%0.2u %0.2u %u", vidx, j, q);
+  }
+  Claim2( hood.sz() ,==, 2*degree );
+}
 
 class MpiRound
 {
 private:
   bool done;
+  uint degree;
+  int value;
   int tag;
   MPI_Comm comm;
   Cx::Table<uint> hood;
@@ -26,37 +118,35 @@ public:
 
   MpiRound(uint _PcIdx, uint NPcs, int _tag, MPI_Comm _comm)
     : done(false)
+    , degree(4)
+    , value(-1)
     , tag(_tag)
     , comm(_comm)
     , PcIdx(_PcIdx)
   {
-    if (PcIdx > 0)  hood.push((PcIdx-1)/2);
-    if (2*PcIdx+1 < NPcs)  hood.push(2*PcIdx+1);
-    if (2*PcIdx+2 < NPcs)  hood.push(2*PcIdx+2);
-    if (NPcs - 1 - PcIdx != PcIdx &&
-        (PcIdx == 0 || NPcs - 1 - PcIdx != (PcIdx-1)/2) &&
-        NPcs - 1 - PcIdx != 2*PcIdx+1 &&
-        NPcs - 1 - PcIdx != 2*PcIdx+2) {
-      hood.push(NPcs - 1 - PcIdx);
+    if (NPcs <= degree) {
+      degree = NPcs;
+      for (uint i = 0; i < NPcs; ++i)  hood.push(i);
+      for (uint i = 0; i < NPcs; ++i)  hood.push(i);
     }
-#if 0
-    for (uint i = 0; i < NPcs; ++i) {
-      hood.push((int)i);
+    else {
+      gkautz_hood(this->hood, PcIdx, degree, NPcs);
     }
-#endif
 
     payloads.grow(2*this->sz(), -1);
     requests.grow(2*this->sz(), MPI_REQUEST_NULL);
     statuses.grow(2*this->sz());
     for (uint i = 0; i < this->sz(); ++i) {
       MPI_Irecv (this->x_payload(i), 1, MPI_INT,
-                 this->hood[i], tag, comm,
+                 this->x_hood(i), tag, comm,
                  this->x_request(i));
     }
   }
 
-  uint sz() const { return hood.sz(); }
+  uint sz() const { return this->degree; }
 
+  int x_hood(uint i) { return hood[i]; }
+  int o_hood(uint i) { return hood[this->sz() + i]; }
   int* x_payload(uint i) { return &payloads[i]; }
   int* o_payload(uint i) { return &payloads[this->sz() + i]; }
   int* x_payloads() { return this->x_payload(0); }
@@ -76,12 +166,16 @@ public:
     else
       return;
 
+    this->value = x;
     for (uint i = 0; i < this->sz(); ++i) {
       *this->o_payload(i) = x;
       MPI_Isend (this->o_payload(i), 1, MPI_INT,
-                 this->hood[i], tag, comm,
+                 this->o_hood(i), tag, comm,
                  this->o_request(i));
     }
+  }
+  int of() const {
+    return this->value;
   }
 
   bool ck() {
@@ -92,7 +186,6 @@ public:
     }
     int index = 0;
     int flag = 0;
-    int stat =
       MPI_Testany (this->sz(),
                    x_requests(),
                    &index, &flag,
@@ -106,17 +199,13 @@ public:
     if (this->sz() == 0)  return;
     if (!this->done) {
       this->fo(PcIdx);
-     }
-    int stat =
+    }
     MPI_Waitall (this->sz(),
                  this->o_requests(),
                  MPI_STATUS_IGNORE);
-    Claim( stat == MPI_SUCCESS );
-    stat =
     MPI_Waitall (this->sz(),
                  this->x_requests(),
                  MPI_STATUS_IGNORE);
-    Claim( stat == MPI_SUCCESS );
   }
 };
 
@@ -128,7 +217,7 @@ static
 set_done_flag (int sig)
 {
   (void) sig;
-  mpi_done_flag->fo(mpi_done_flag->PcIdx);
+  mpi_done_flag->fo(-1);
 }
 
 static
@@ -140,7 +229,7 @@ done_ck (void* dat)
 }
 
 static
-  bool
+  int
 stabilization_search(vector<uint>& ret_actions,
                      const ProtoconFileOpt& infile_opt,
                      const ProtoconOpt& exec_opt,
@@ -219,7 +308,7 @@ stabilization_search(vector<uint>& ret_actions,
   }
 
   if (!good)
-    set_done_flag (1);
+    mpi_done_flag->fo(-1);
 
   DBog1( "BEGIN! %u", PcIdx );
 
@@ -261,7 +350,7 @@ stabilization_search(vector<uint>& ret_actions,
     else if (found)
     {
       if (!global_opt.try_all)
-        set_done_flag (1);
+        mpi_done_flag->fo(PcIdx);
       solution_found = true;
       ret_actions = actions;
       *opt.log << "SOLUTION FOUND!" << opt.log->endl();
@@ -291,12 +380,19 @@ stabilization_search(vector<uint>& ret_actions,
     }
   }
 
-  signal(SIGINT, SIG_DFL);
-  signal(SIGTERM, SIG_DFL);
+  int ret_pc;
+  {
+    int send_pc = solution_found ? (int)PcIdx : -1;
+    ret_pc = send_pc;
+    MPI_Allreduce(&send_pc, &ret_pc, 1,
+                  MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+  }
 
   mpi_done_flag->complete();
+  signal(SIGINT, SIG_DFL);
+  signal(SIGTERM, SIG_DFL);
   delete mpi_done_flag;
-  return solution_found;
+  return ret_pc;
 }
 
 int main(int argc, char** argv)
@@ -309,9 +405,9 @@ int main(int argc, char** argv)
   uint NPcs = 1;
   MPI_Comm_rank (MPI_COMM_WORLD, (int*) &PcIdx);
   MPI_Comm_size (MPI_COMM_WORLD, (int*) &NPcs);
-  fprintf(stderr, "Hello from %u / %u!\n", PcIdx, NPcs);
-  MPI_Barrier (MPI_COMM_WORLD);
-  fprintf(stderr, "Wah! from %u / %u!\n", PcIdx, NPcs);
+  //fprintf(stderr, "Hello from %u / %u!\n", PcIdx, NPcs);
+  //MPI_Barrier (MPI_COMM_WORLD);
+  //fprintf(stderr, "Wah! from %u / %u!\n", PcIdx, NPcs);
 
   AddConvergenceOpt opt;
   const char* modelFilePath = 0;
@@ -324,8 +420,29 @@ int main(int argc, char** argv)
     (sys, argi, argc, argv, opt, modelFilePath, infile_opt, outfile_path, exec_opt);
   if (!good)  failout_sysCx ("Bad args.");
 
-  bool found =
+  int found_papc =
     stabilization_search(sys.actions, infile_opt, exec_opt, opt, PcIdx, NPcs);
+  if (found_papc == (int)PcIdx) {
+    DBog1("Solution found! (By PcIdx %u)", PcIdx);
+    for (uint i = 0; i < sys.actions.size(); ++i) {
+      const Xn::Net& topo = sys.topology;
+      Xn::ActSymm act;
+      topo.action(act, sys.actions[i]);
+      //DBogOF << sys.actions[i] << ' ';
+      OPut(DBogOF, act) << '\n';
+    }
+
+    if (outfile_path)
+    {
+      Cx::OFileB ofb;
+      ofb.open(outfile_path);
+      oput_protocon_file (ofb, sys);
+    }
+  }
+  else if (found_papc < 0 && PcIdx == 0) {
+    DBog0("No solution found...");
+  }
+  DBogOF.flush();
 
   lose_sysCx ();
   return 0;
