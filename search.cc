@@ -11,6 +11,10 @@
 #include "synthesis.hh"
 #include <signal.h>
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 /**
  * Add convergence to a system.
  * The system will therefore be self-stabilizing.
@@ -308,6 +312,11 @@ stabilization_search(vector<uint>& ret_actions,
     conflicts.all_conflicts(flat_conflicts);
   }
 
+#ifdef _OPENMP
+  if (global_opt.search_method == global_opt.SimpleBacktrackSearch)
+    omp_set_num_threads(1);
+#endif
+
 #pragma omp parallel shared(done_flag,NPcs,solution_found,ret_actions,conflicts,flat_conflicts)
   {
   Sign good = 1;
@@ -325,6 +334,12 @@ stabilization_search(vector<uint>& ret_actions,
   opt.sys_pcidx = PcIdx;
   opt.sys_npcs = NPcs;
   opt.random_one_shot = true;
+
+  if (opt.search_method == opt.SimpleBacktrackSearch) {
+    opt.random_one_shot = false;
+    opt.ntrials = 1;
+  }
+
   if (exec_opt.log_ofilename) {
     Cx::String ofilename( exec_opt.log_ofilename );
     ofilename += ".";

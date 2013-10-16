@@ -167,8 +167,20 @@ ConstValue =
 
 Expr =
     a:Quantify {$$ = a;}
+  | a:IfThenElse {$$ = a;}
   | a:Implication {$$ = a;}
   ;
+
+IfThenElse =
+  'if'   WS a:Expr WS
+  'then' WS b:Expr WS
+  'else' WS c:Expr
+  {
+    $$.sp = list4_ccstr_Sesp ("iif", a.sp, b.sp, c.sp);
+    Claim2( b.int_ck ,==, 1 );
+    Claim2( c.int_ck ,==, 1 );
+    $$.int_ck = 1;
+  }
 
 Quantify =
     'forall' WS a:ID WS? IN WS? b:NatDom WS? ':' WS? c:Expr
@@ -303,7 +315,7 @@ ACTION = 'act:' | 'action:' ;
 
 END_STMT = WS? ';' ;
 
-ID = < [A-Za-z][0-9A-Za-z]* >
+ID = < [A-Za-z_][0-9A-Za-z_]* >
   {
     $$.sp = make_cstr_Sesp (yy->st->spctx, yytext);
     $$.int_ck = 1;

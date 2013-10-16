@@ -402,6 +402,14 @@ ProtoconFile::string_expression(Cx::String& ss, Sesp a)
     string_expression (ss, caddr_of_Sesp (a));
     ss += "]";
   }
+  else if (eq_cstr (key, "iif")) {
+    ss += "if ";
+    string_expression (ss, cadr_of_Sesp (a));
+    ss += " then ";
+    string_expression (ss, caddr_of_Sesp (a));
+    ss += " else ";
+    string_expression (ss, cadddr_of_Sesp (a));
+  }
   else if (eq_cstr (key, "forall") ||
            eq_cstr (key, "exists") ||
            eq_cstr (key, "unique")
@@ -632,12 +640,14 @@ ProtoconFile::eval(Cx::IntPFmla& ipf, Sesp a)
     }
   }
 
-  Sesp b = cdr_of_Sesp (a);;
-  Sesp c = cdr_of_Sesp (b);;
+  Sesp b = cdr_of_Sesp (a);
+  Sesp c = cdr_of_Sesp (b);
+  Sesp d = cdr_of_Sesp (c);
 
   a = car_of_Sesp (a);
   b = car_of_Sesp (b);
   c = car_of_Sesp (c);
+  d = car_of_Sesp (d);
 
   const char* key = ccstr_of_Sesp (a);
 
@@ -713,6 +723,23 @@ ProtoconFile::eval(Cx::IntPFmla& ipf, Sesp a)
     uint domsz = 0;
     if (LegitCk(eval_gtz (&domsz, b), good, "")) {
       ipf = Cx::IntPFmla( 1, 0, domsz );
+    }
+  }
+  else if (eq_cstr (key, "iif")) {
+    Cx::PFmla pf( true );
+    if (LegitCk(eval(pf, b), good, "")) {
+      if (pf.tautology_ck()) {
+        b = c;
+      }
+      else if (!pf.sat_ck()) {
+        b = d;
+      }
+      else {
+        DBog0("The conditional is not constant!");
+        good = false;
+      }
+    }
+    if (LegitCk(eval(ipf, b), good, "")) {
     }
   }
   else if (eq_cstr (key, "aref")) {

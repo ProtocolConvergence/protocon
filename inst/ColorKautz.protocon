@@ -1,0 +1,34 @@
+
+constant N := 6;
+
+variable x[Nat % N] <- Nat % 4;
+
+process P[i <- Nat % N]
+{
+  let idx0_even := (N-1-i)/2;
+  let idx1_even := idx0_even + N/2;
+
+  let idx0_odd  := (N-1)/2 * (i + 1);
+  let idx1_odd  := (N-1)/2 * (i + 2);
+
+  let idx0_tmp := if (N % 2 == 0) then (idx0_even) else (idx0_odd);
+  let idx1_tmp := if (N % 2 == 0) then (idx1_even) else (idx1_odd);
+
+  let idx0 := if (idx0_tmp % N != i) then (idx0_tmp) else (idx1_tmp);
+  let idx1 := if (idx1_tmp % N != i) then (idx1_tmp) else (idx0_tmp);
+
+  read: x[idx0];
+  read: x[idx1];
+  write: x[i];
+}
+
+invariant:
+  (forall i <- Nat % N :
+   (forall q <- Nat % 2 :
+    (i == -(2*i + q+1) % N)
+    ||
+    (x[i] != x[-(2*i + q+1)])
+   )
+  )
+  ;
+

@@ -1,0 +1,35 @@
+
+// This input file isn't supported yet.
+
+constant N := 4;
+constant M := 8;
+
+puppet variable x[Int % N] <- Int % M;
+shadow variable tok[Int % N] <- Int % 2;
+
+process Bot[i <- Int % 1]
+{
+  write: tok[i];
+  read:  x[i-1];
+  write: x[i];
+}
+
+process P[j <- Int % (N-1)]
+{
+  let i := j+1;
+  write: tok[i];
+  read:  x[i-1];
+  write: x[i];
+}
+
+process ShadowP[i <- Int % N]
+{
+  write: tok[i];
+  write: tok[i+1];
+  shadow action:
+    ( tok[i] == 1 --> tok[i] := 0; tok[i+1] := 1; );
+}
+
+shadow invariant:
+  unique i <- Int % N : (tok[i] == 1);
+

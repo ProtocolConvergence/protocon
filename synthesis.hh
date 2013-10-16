@@ -48,7 +48,7 @@ public:
     NNicePolicies
   };
   enum SearchMethod {
-    BacktrackSearch,
+    SimpleBacktrackSearch,
     RankShuffleSearch,
     RandomBacktrackSearch,
     NSearchMethods
@@ -76,7 +76,7 @@ public:
 
   AddConvergenceOpt() :
     pick_method( MCVLitePick )
-    , search_method( BacktrackSearch )
+    , search_method( RandomBacktrackSearch )
     , nicePolicy( NilNice )
     , pick_back_reach( false )
     , log( &DBogOF )

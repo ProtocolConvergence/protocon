@@ -36,6 +36,9 @@ int main(int argc, char** argv)
     return 0;
   }
   else if (exec_opt.task == ProtoconOpt::VerifyTask) {
+    if (exec_opt.params.sz() > 0) {
+      failout_sysCx ("The -verify mode does not allow -param flags!");
+    }
     found = stabilization_ck(DBogOF, sys);
   }
   else if (exec_opt.task == ProtoconOpt::MinimizeConflictsTask) {
@@ -44,15 +47,12 @@ int main(int argc, char** argv)
     }
     stabilization_search(sys.actions, infile_opt, exec_opt, opt);
   }
-  else if (opt.search_method != opt.BacktrackSearch) {
+  else {
     if (!infile_opt.file_path) {
       failout_sysCx ("Need to use input file with random or rank/shuffle method!");
     }
     found =
       stabilization_search(sys.actions, infile_opt, exec_opt, opt);
-  }
-  else {
-    found = AddConvergence(sys, opt);
   }
 
   if (exec_opt.task == ProtoconOpt::VerifyTask) {

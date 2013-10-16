@@ -405,9 +405,6 @@ int main(int argc, char** argv)
   uint NPcs = 1;
   MPI_Comm_rank (MPI_COMM_WORLD, (int*) &PcIdx);
   MPI_Comm_size (MPI_COMM_WORLD, (int*) &NPcs);
-  //fprintf(stderr, "Hello from %u / %u!\n", PcIdx, NPcs);
-  //MPI_Barrier (MPI_COMM_WORLD);
-  //fprintf(stderr, "Wah! from %u / %u!\n", PcIdx, NPcs);
 
   AddConvergenceOpt opt;
   const char* modelFilePath = 0;

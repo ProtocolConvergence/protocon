@@ -346,6 +346,16 @@ Sys::integrityCk() const
   Claim(topo.identity_xn.subseteq_ck(this->shadow_self));
   Claim(topo.smooth_pure_puppet_vbls(topo.identity_xn).equiv_ck(this->shadow_self));
 
+  if (false)
+  for (uint i = 0; i < topo.pcs.sz(); ++i) {
+    const Xn::Pc& pc = topo.pcs[i];
+    for (uint j = 0; j < pc.rvbls.sz(); ++j) {
+      if (!pc.symm->write_flags[j]) {
+        DBog2( "%u %u", pc.rvbls[j]->pfmla_idx, i );
+      }
+    }
+  }
+
   if (this->shadow_pfmla.overlap_ck(this->shadow_self)) {
     DBog0( "Error: Shadow protocol contains self-loops!" );
     good = false;
@@ -354,8 +364,7 @@ Sys::integrityCk() const
     DBog0( "Error: Invariant is empty!" );
     good = false;
   }
-
-  if (!topo.smooth_shadow_vbls(invariant).tautology_ck()) {
+  else if (!topo.smooth_shadow_vbls(invariant).tautology_ck()) {
     DBog0( "Error: Invariant includes non-shadow variables." );
     good = false;
   }

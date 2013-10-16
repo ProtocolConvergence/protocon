@@ -40,6 +40,9 @@ protocon_options
         DBog0("No path given!!!!");
       }
     }
+    else if (eq_cstr (arg, "-simple")) {
+      opt.search_method = opt.SimpleBacktrackSearch;
+    }
     else if (eq_cstr (arg, "-random")) {
       opt.search_method = opt.RandomBacktrackSearch;
     }
