@@ -20,12 +20,10 @@
  * The system will therefore be self-stabilizing.
  * This is the recursive function.
  *
- * \param sys  System definition. It is modified if convergence is added.
  * \return  True iff convergence could be added.
  */
   bool
 AddConvergence(vector<uint>& ret_actions,
-               const Xn::Sys& sys,
                PartialSynthesis& base_inst,
                const AddConvergenceOpt& opt)
 {
@@ -129,7 +127,7 @@ AddConvergence(Xn::Sys& sys, const AddConvergenceOpt& opt)
   PartialSynthesis& inst = synctx.base_inst;
 
   vector<uint> ret_actions;
-  bool found = AddConvergence(ret_actions, sys, inst, opt);
+  bool found = AddConvergence(ret_actions, inst, opt);
   if (!found)  return false;
 
   sys.actions = ret_actions;
@@ -158,44 +156,45 @@ check_conflict_sets(const Cx::LgTable< Set<uint> >& conflict_sets)
 
   bool
 try_order_synthesis(vector<uint>& ret_actions,
-                    const Xn::Sys& sys,
-                    PartialSynthesis& tape)
+                    PartialSynthesis& inst)
 {
   ret_actions.clear();
-  //tape.directly_add_conflicts = true;
+  //inst.directly_add_conflicts = true;
 
-  while (tape.candidates.size() > 0)
+  while (inst.candidates.size() > 0)
   {
-    uint actidx = tape.candidates[0];
-    PartialSynthesis next( tape );
+    uint actidx = inst.candidates[0];
+    PartialSynthesis next( inst );
     if (next.pick_action(actidx))
     {
-      tape = next;
+      inst = next;
     }
     else
     {
-      if (tape.ctx->done_ck())
+      if (inst.ctx->done_ck())
         return false;
 
-      if (!tape.revise_actions(Set<uint>(), Set<uint>(actidx)))
+      if (!inst.revise_actions(Set<uint>(), Set<uint>(actidx)))
       {
-        ret_actions = tape.actions;
+        ret_actions = inst.actions;
         return false;
       }
     }
-    if (tape.ctx->done_ck())
+    if (inst.ctx->done_ck())
       return false;
   }
 
-  Claim( !tape.deadlockPF.sat_ck() );
-  if (tape.ctx->opt.verify_found) {
-    *tape.log << "Verifying solution..." << tape.log->endl();
-    if (!stabilization_ck(*tape.log, sys, tape.actions)) {
-      *tape.log << "Solution was NOT self-stabilizing." << tape.log->endl();
-      return false;
+  Claim( !inst.deadlockPF.sat_ck() );
+  if (inst.ctx->opt.verify_found) {
+    for (uint i = 0; i < inst.ctx->systems.sz(); ++i) {
+      *inst.log << "Verifying solution for system " << i << "..." << inst.log->endl();
+      if (!stabilization_ck(*inst[i].log, *inst.ctx->systems[i], inst.actions)) {
+        *inst.log << "Solution was NOT self-stabilizing." << inst.log->endl();
+        return false;
+      }
     }
   }
-  ret_actions = tape.actions;
+  ret_actions = inst.actions;
   return true;
 }
 
@@ -281,6 +280,61 @@ done_ck (void* dat)
   return done_flag;
 }
 
+static
+  bool
+try_known_solution(const ConflictFamily& conflicts,
+                   const SynthesisCtx& synctx,
+                   bool quick = true)
+{
+  bool good = true;
+  if (synctx.done_ck())  return true;
+
+  PartialSynthesis inst( synctx.base_inst );
+  FlatSet<uint> solution( synctx.opt.known_solution );
+  for (uint i = 0; i < inst.sz(); ++i) {
+    inst[i].noconflicts = true;
+    Set<uint> candidates( inst[i].candidates );
+    candidates -= solution;
+    inst[i].candidates.clear();
+    inst[i].candidates.insert(inst[i].candidates.end(), solution.begin(), solution.end());
+    inst[i].candidates.insert(inst[i].candidates.end(), candidates.begin(), candidates.end());
+  }
+
+  vector<uint> actions;
+  bool found = false;
+  if (quick) {
+    if (inst.revise_actions(Set<uint>(solution), Set<uint>())) {
+      found = inst.candidates.empty();
+      actions = inst.actions;
+    }
+  }
+  else {
+    found = try_order_synthesis(actions, inst);
+  }
+  if (synctx.done_ck())  return true;
+  if (found && (FlatSet<uint>(actions) == solution))
+  {
+    *synctx.log << "Okay, known solution can still work.\n";
+  }
+  else
+  {
+    good = false;
+    if (!found)
+      *synctx.log << "NO LONGER WORKING OMG\n";
+    else
+      *synctx.log << "WTF I SKIPPED SOME\n";
+
+    Cx::OFileB working_of;
+    working_of.open(Cx::String("working_conflicts.out.") + synctx.opt.sys_pcidx);
+    working_of << conflicts;
+
+    Cx::OFileB broken_of;
+    broken_of.open(Cx::String("broken_conflicts.out.") + synctx.opt.sys_pcidx);
+    broken_of << synctx.conflicts;
+  }
+  return good;
+}
+
   bool
 stabilization_search(vector<uint>& ret_actions,
                      const ProtoconFileOpt& infile_opt,
@@ -290,6 +344,7 @@ stabilization_search(vector<uint>& ret_actions,
   bool solution_found = false;
   uint NPcs = 0;
   ConflictFamily conflicts;
+  const bool try_known_solution_ck = !global_opt.known_solution.empty();
 
   signal(SIGINT, set_done_flag);
   signal(SIGTERM, set_done_flag);
@@ -322,7 +377,6 @@ stabilization_search(vector<uint>& ret_actions,
   Sign good = 1;
   AddConvergenceOpt opt(global_opt);
   uint PcIdx;
-  ConflictFamily working_conflicts = conflicts;
   Cx::OFileB log_ofile;
 #pragma omp critical
   {
@@ -361,6 +415,8 @@ stabilization_search(vector<uint>& ret_actions,
   Cx::LgTable<Xn::Sys> systems;
   SynthesisCtx synctx( PcIdx, NPcs );
 
+  synctx.conflicts = conflicts;
+
   DoLegit(good, "initialization")
     good = synctx.init(sys, opt);
 
@@ -398,17 +454,16 @@ stabilization_search(vector<uint>& ret_actions,
 #pragma omp flush (done_flag)
   }
 
+#pragma omp master
+  if (try_known_solution_ck &&
+      !try_known_solution (conflicts, synctx))
+  {
+    *opt.log << "Conflicts are insonsistent!" << opt.log->endl();
+    set_done_flag (1);
+  }
+#pragma omp barrier
 #pragma omp critical (DBog)
   DBog1( "BEGIN! %u", PcIdx );
-
-  synctx.conflicts = working_conflicts;
-  working_conflicts.clear();
-  {
-    Set<uint> impossible( synctx.conflicts.impossible_set );
-    impossible &= Set<uint>(synlvl.candidates);
-    if (!impossible.empty())
-      synlvl.revise_actions(Set<uint>(), impossible);
-  }
 
   if (exec_opt.task == ProtoconOpt::MinimizeConflictsTask)
   {
@@ -458,11 +513,11 @@ stabilization_search(vector<uint>& ret_actions,
         }
         synctx.urandom.shuffle(&candidates[off], act_layers[i].sz());
       }
-      found = try_order_synthesis(actions, sys, tape);
+      found = try_order_synthesis(actions, tape);
     }
     else
     {
-      found = AddConvergence(actions, sys, synlvl, opt);
+      found = AddConvergence(actions, synlvl, opt);
     }
 
 #pragma omp critical (DBog)
@@ -477,9 +532,27 @@ stabilization_search(vector<uint>& ret_actions,
       ret_actions = actions;
       *opt.log << "SOLUTION FOUND!" << opt.log->endl();
     }
-    if (!done_flag || global_opt.conflicts_ofilename)
+    if (!done_flag || global_opt.conflicts_ofilename || try_known_solution_ck)
     {
-      synctx.conflicts.add_conflicts(conflicts);
+      if (try_known_solution_ck &&
+          !try_known_solution (conflicts, synctx))
+      {
+        *opt.log << "pcidx:" << PcIdx
+          << " broke it, trial:" << trial_idx+1 << " before merging!\n";
+        set_done_flag (1);
+      }
+      else {
+        synctx.conflicts.add_conflicts(conflicts);
+
+        if (try_known_solution_ck &&
+            !try_known_solution (conflicts, synctx))
+        {
+          *opt.log << "pcidx:" << PcIdx
+            << " broke it, trial:" << trial_idx+1 << " after merging!\n";
+          set_done_flag (1);
+        }
+      }
+
       synctx.conflicts.trim(global_opt.max_conflict_sz);
       if (!synctx.conflicts.sat_ck())
         set_done_flag (1);
@@ -523,6 +596,7 @@ stabilization_search(vector<uint>& ret_actions,
   {
     for (uint i = 0; i < NPcs; ++i) {
       Cx::String ofilename( global_opt.conflicts_ofilename );
+      ofilename += ".";
       ofilename += i;
       remove(ofilename.cstr());
     }

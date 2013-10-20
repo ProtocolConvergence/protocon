@@ -25,6 +25,19 @@ ConflictFamily::conflict_ck(const FlatSet<uint>& test_set) const
   return false;
 }
 
+  bool
+ConflictFamily::exact_conflict_ck(const FlatSet<uint>& test_set) const
+{
+  FOR_EACH( it, conflict_sets )
+  {
+    const FlatSet<uint>& conflict_set = *it;
+    if (conflict_set == test_set) {
+      return true;
+    }
+  }
+  return false;
+}
+
   void
 ConflictFamily::add_conflict(const FlatSet<uint>& b)
 {

@@ -21,6 +21,7 @@ public:
   Cx::Set<uint> impossible_set;
 
   bool conflict_ck(const FlatSet<uint>& test_set) const;
+  bool exact_conflict_ck(const FlatSet<uint>& test_set) const;
   void add_conflict(const FlatSet<uint>& b);
   void add_conflict(const Cx::Table<uint>& b);
   void add_conflict(const Cx::Set<uint>& b);

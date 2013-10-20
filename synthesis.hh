@@ -73,6 +73,7 @@ public:
   const char* conflicts_xfilename;
   const char* conflicts_ofilename;
   bool snapshot_conflicts;
+  vector<uint> known_solution;
 
   AddConvergenceOpt() :
     pick_method( MCVLitePick )
@@ -208,7 +209,7 @@ public:
   {}
   bool init(const Xn::Sys& sys, const AddConvergenceOpt& opt);
   bool add(const Xn::Sys& sys);
-  bool done_ck() {
+  bool done_ck() const {
     if (!done_ck_fn)  return false;
     return (0 != done_ck_fn (done_ck_mem));
   }

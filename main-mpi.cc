@@ -247,6 +247,19 @@ stabilization_search(vector<uint>& ret_actions,
   MPI_Info mpi_info;
   MPI_Info_create(&mpi_info);
 
+  if (global_opt.conflicts_xfilename)
+  {
+    Cx::XFileB conflicts_xf;
+    conflicts_xf.open(global_opt.conflicts_xfilename);
+    conflicts_xf >> conflicts;
+    if (!conflicts_xf.good()) {
+      DBog1( "Bad read from conflicts file: %s", global_opt.conflicts_xfilename );
+      return false;
+    }
+    conflicts.trim(global_opt.max_conflict_sz);
+    conflicts.oput_conflict_sizes(DBogOF);
+  }
+
   Sign good = 1;
   AddConvergenceOpt opt(global_opt);
   ConflictFamily working_conflicts = conflicts;
@@ -275,6 +288,8 @@ stabilization_search(vector<uint>& ret_actions,
 
   Cx::LgTable<Xn::Sys> systems;
   SynthesisCtx synctx( PcIdx, NPcs );
+
+  synctx.conflicts = conflicts;
 
   DoLegit(good, "initialization")
     good = synctx.init(sys, opt);
@@ -312,14 +327,6 @@ stabilization_search(vector<uint>& ret_actions,
 
   DBog1( "BEGIN! %u", PcIdx );
 
-  synctx.conflicts = working_conflicts;
-  working_conflicts.clear();
-  {
-    Set<uint> impossible( synctx.conflicts.impossible_set );
-    impossible &= Set<uint>(synlvl.candidates);
-    if (!impossible.empty())
-      synlvl.revise_actions(Set<uint>(), impossible);
-  }
 
   vector<uint> actions;
   if (exec_opt.task == ProtoconOpt::SearchTask)
@@ -338,11 +345,11 @@ stabilization_search(vector<uint>& ret_actions,
         }
         synctx.urandom.shuffle(&candidates[off], act_layers[i].sz());
       }
-      found = try_order_synthesis(actions, sys, tape);
+      found = try_order_synthesis(actions, tape);
     }
     else
     {
-      found = AddConvergence(actions, sys, synlvl, opt);
+      found = AddConvergence(actions, synlvl, opt);
     }
 
     if (synctx.done_ck())

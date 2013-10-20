@@ -18,14 +18,12 @@ class ProtoconOpt;
 
 bool
 AddConvergence(vector<uint>& ret_actions,
-               const Xn::Sys& sys,
                PartialSynthesis& base_inst,
                const AddConvergenceOpt& opt);
 bool
 AddConvergence(Xn::Sys& sys, const AddConvergenceOpt& opt);
 bool
 try_order_synthesis(vector<uint>& ret_actions,
-                    const Xn::Sys& sys,
                     PartialSynthesis& tape);
 bool
 rank_actions (Cx::Table< Cx::Table<uint> >& act_layers,

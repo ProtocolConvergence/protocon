@@ -743,9 +743,16 @@ count_actions_in_cycle (const Cx::PFmla& scc, Cx::PFmla edg,
 PartialSynthesis::add_small_conflict_set(const Cx::Table<uint>& delpicks)
 {
   if (noconflicts)  return 0;
-  if (false || directly_add_conflicts) {
-    this->ctx->conflicts.add_conflict(delpicks);
-    return 0;
+  ConflictFamily& conflicts = this->ctx->conflicts;
+  if (conflicts.conflict_ck(Cx::FlatSet<uint>(delpicks))) {
+    if (!conflicts.exact_conflict_ck(Cx::FlatSet<uint>(delpicks))) {
+      *this->log << "Conflict subsumed by existing one." << this->log->endl();
+      return delpicks.sz();
+    }
+  }
+  conflicts.add_conflict(delpicks);
+  if (directly_add_conflicts) {
+    return delpicks.sz();
   }
   Set<uint> delpick_set( delpicks );
   for (uint i = 0; i < delpicks.sz(); ++i) {
@@ -753,14 +760,19 @@ PartialSynthesis::add_small_conflict_set(const Cx::Table<uint>& delpicks)
       return delpicks.sz();
 
     PartialSynthesis lvl( this->ctx->base_inst[this->sys_idx] );
-    lvl.log = &Cx::OFile::null();
-    lvl.noconflicts = true;
+    for (uint j = 0; j < this->sz(); ++j) {
+      lvl[j].log = &Cx::OFile::null();
+      lvl[j].directly_add_conflicts = true;
+    }
     delpick_set -= delpicks[i];
     if (lvl.revise_actions(delpick_set, Set<uint>())) {
       delpick_set |= delpicks[i];
     }
+    else {
+      conflicts.add_conflict(delpick_set);
+    }
   }
-  this->ctx->conflicts.add_conflict(delpick_set);
+  *this->log << "Conflict size:" << delpick_set.sz() << this->log->endl();
   return delpick_set.sz();
 }
 
@@ -798,6 +810,10 @@ PartialSynthesis::check_forward(Set<uint>& adds, Set<uint>& dels, Set<uint>& rej
     // This should have been caught if no deadlocks remain.
     Claim(!this->deadlockPF.sat_ck());
     this->candidates.clear();
+    if (this->ctx->conflicts.conflict_ck(FlatSet<uint>(this->actions))) {
+      *this->log << "CONFLICT" << this->log->endl();
+      return false;
+    }
     return true;
   }
   adds |= this->mcv_deadlocks[1].candidates;
@@ -831,8 +847,10 @@ PartialSynthesis::check_forward(Set<uint>& adds, Set<uint>& dels, Set<uint>& rej
   FlatSet<uint> candidate_set( Set<uint>(this->candidates) - dels );
 
   Set<uint> membs;
-  if (!this->ctx->conflicts.conflict_membs(&membs, action_set, candidate_set))
+  if (!this->ctx->conflicts.conflict_membs(&membs, action_set, candidate_set)) {
+    *this->log << "CONFLICT" << this->log->endl();
     return false;
+  }
   dels |= membs;
   rejs |= membs;
 
@@ -869,12 +887,11 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels, Set<uin
     Set<uint> tmp_dels;
     QuickTrim(tmp_dels, this->candidates, topo, actId);
     dels |= tmp_dels;
-    rejs |= tmp_dels;
     add_act_pfmla |= topo.action_pfmla(actId);
     add_pure_shadow_pfmla &= topo.pure_shadow_pfmla(actId);
   }
 
-  if (!(adds & dels).empty()) {
+  if (adds.overlap_ck(dels)) {
     if ((adds & dels) <= this->mcv_deadlocks[1].candidates)
     {
       *this->log << "Conflicting add from MCV." << this->log->endl();
@@ -914,6 +931,7 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels, Set<uin
     this->hi_xn |= topo.proj_puppet(topo.identity_xn) &
       (~this->hi_pure_shadow_pfmla & this->hi_pure_shadow_pfmla.as_img());
   }
+
 
   if (this->sys_idx == 0)
   for (it = adds.begin(); it != adds.end(); ++it) {
@@ -1035,11 +1053,10 @@ PartialSynthesis::pick_action(uint act_idx)
     (*this)[i].picks.push(act_idx);
   }
   if (!this->revise_actions(Set<uint>(act_idx), Set<uint>())) {
-    if (!this->ctx->conflicts.conflict_ck(FlatSet<uint>(this->actions))) {
-      this->add_small_conflict_set(this->picks);
-    }
+    this->add_small_conflict_set(this->picks);
     return false;
   }
+
   return true;
 }
 
@@ -1053,6 +1070,7 @@ SynthesisCtx::init(const Xn::Sys& sys,
   const Xn::Net& topo = sys.topology;
   SynthesisCtx& synctx = *this;
   synctx.opt = opt;
+  synctx.log = opt.log;
 
   for (uint pcidx = 0; pcidx < topo.pc_symms.sz(); ++pcidx)
   {
@@ -1126,7 +1144,7 @@ SynthesisCtx::add(const Xn::Sys& sys)
   Set<uint> act_set(sys.actions);
   act_set |= Set<uint>(synctx.base_inst.actions);
 
-  if (!synctx.base_inst.revise_actions(act_set, Set<uint>())) {
+  if (!synctx.base_inst.revise_actions(act_set, this->conflicts.impossible_set)) {
     DBog0("No actions apply!");
     return false;
   }

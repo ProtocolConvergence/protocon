@@ -1,23 +1,33 @@
 #!/bin/sh
 
-tmpf=tmp
+nlines=10
 logf=out.log
-npcs=2
+if [ "$1" ]
+then
+  logf=$1
+fi
+
+tmpf=$logf.tmp
 
 while true
 do
   {
-    echo '------------------------------------'
-    for i in $(seq 0 $(expr $npcs - 1))
+    echo '------------------------------------------------------------------------------'
+    for f in "$logf"*
     do
-      tail -n3 $logf.$i
+      if [ "$f" = "$tmpf" ]
+      then
+        continue
+      fi
+      tail -n $nlines "$f"
       echo -n '\___'
-      ls --full-time $logf.$i
+      ls --full-time "$f"
     done
     echo -n '\___'
   } >$tmpf
-  ls --full-time $tmpf >> $tmpf
-  cat $tmpf
+  ls --full-time "$tmpf" >> "$tmpf"
+  cat "$tmpf"
+  rm -f "$tmpf"
   sleep 1
 done
 

@@ -1,0 +1,142 @@
+.TH PROTOCON 1 "October 2013" "Version 2013.10.17"
+.LS 1
+.SH NAME
+protocon \- add convergence to shared memory protocols
+.SH SYNOPSIS
+.B protocon
+.IR RUN_MODE ?
+.I OPTIONS
+.BI -x\  specification-file.protocon
+.RB ( -o
+.IR solution-file.protocon )?
+.SH DESCRIPTION
+.I Protocon
+adds convergence to shared memory protocols.
+.SH RUN_MODE
+.TP
+.B -random
+Randomized backtracking with restarts.
+This is the default.
+.TP
+.B -rank-shuffle
+Run the original swarm synthesis algorithm which ranks actions and permutes the actions within each rank.
+No backtracking is involved.
+.TP
+.B -simple
+Serial version of backtracking algorithm.
+This version does not use randomization or restarts.
+.TP
+.B -verify
+Verify a given protocol.
+.TP
+.B -minimize-conflicts
+Attempt to minimize the conflicts recorded from a previous run.
+.SH OPTIONS
+.TP
+.B -h
+Print a summary of available options and exit.
+.TP
+.BI -def\  key\ val
+Override or define a constant
+.I key
+in the input file to have the value
+.IR val .
+.TP
+.BI -param\  key\ val
+A solution protocol must satisfy the input system with the constant
+.I key
+defined as
+.IR val .
+This is different from
+.B -def
+since it forces the search to consider an additional system.
+If this parameter changes the size of variables, bad things will happen.
+.TP
+.BR -pick\  ( mcv | lcv | fully-random | conflict | quick )
+.IP
+.B mcv
+Most-constrained variable heuristic.
+This is used by default, and it is always used since (most) other picking heuristics build on its functionality.
+.IP
+.B lcv
+Least constraining value heuristic.
+Attempt to choose actions which constrain the possibilities the least.
+.IP
+.B fully-random
+Randomly choose a candidate action without the MCV heuristic.
+The
+.B mcv
+method already uses randomization in a backtracking search when the run mode is
+.B -random
+(this is the default) rather than
+.IP
+.B conflict
+Try to choose actions which correspond with existing conflicts.
+This is constrained by the MCV heuristic.
+.IP
+.B quick
+For testing, don't use this.
+The
+.B mcv
+picking method is fast.
+.TP
+.BR -pick-reach
+Without breaking the most-constrained variable heuristic, try to pick actions which resolve a deadlock which can reach the invariant using the partial solution.
+.BI -o-log\  log-file
+Output log file
+.IR log-file.tid ,
+where
+.I tid
+is the thread id.
+.TP
+.BI -x-conflicts\  conflicts-file
+Load conflicts from a previous run.
+.TP
+.BI -o-conflicts\  conflicts-file
+Store the conflicts found by this search.
+.TP
+.BI -snapshot-conflicts
+After every iteration, write the current conflicts to a file
+.IR conflicts-file.tid ,
+where
+.I tid
+is the thread id.
+.TP
+.BI -max-conflict\  N
+For recorded conflicts, limit the number of actions involved to
+.IR N .
+There is no limit by default.
+.TP
+.BI -ntrials\  N
+Limit the number of trials per thread to
+.IR N .
+.TP
+.B -try-all
+Keep searching, even if a solution is found.
+This is helpful for accumulating conflicts.
+.TP
+.BI -max-depth\  N
+Limit search depth to
+.I N
+levels before restarting.
+This is useful if you are searching for small conflicts.
+Consider using the
+.B -pick fully-random
+option with this.
+.TP
+.BI -max-height\  N
+Limit backtracking to
+.I N
+levels before restarting.
+Default is
+.IR 3 .
+.TP
+.BI -o-model\  model-file.pml
+Write a Promela model.
+This functionality is incomplete, in that the invariant is not included in the model.
+.TP
+.BI -x-test-known\  known-solution.protocon
+After each iteration, test to make sure a known solution can still be found.
+This is useful with the
+.B -try-all
+flag to test (to some degree) that the search method is complete.

@@ -34,7 +34,7 @@ protocon_options
   uint npcs = 4;
   while (pfxeq_cstr ("-", argv[argi])) {
     const char* arg = argv[argi++];
-    if (eq_cstr (arg, "-model")) {
+    if (eq_cstr (arg, "-o-model")) {
       modelFilePath = argv[argi++];
       if (!modelFilePath){
         DBog0("No path given!!!!");
@@ -46,7 +46,7 @@ protocon_options
     else if (eq_cstr (arg, "-random")) {
       opt.search_method = opt.RandomBacktrackSearch;
     }
-    else if (eq_cstr (arg, "-rankshuffle") || eq_cstr (arg, "-rank-shuffle")) {
+    else if (eq_cstr (arg, "-rank-shuffle")) {
       opt.search_method = opt.RankShuffleSearch;
     }
     else if (eq_cstr (arg, "-test")) {
@@ -58,6 +58,9 @@ protocon_options
     }
     else if (eq_cstr (arg, "-minimize-conflicts")) {
       exec_opt.task = ProtoconOpt::MinimizeConflictsTask;
+    }
+    else if (eq_cstr (arg, "-h") || eq_cstr (arg, "-help")) {
+      DBog0( "See the manpage for details: man ./doc/protocon.1" );
     }
     else if (eq_cstr (arg, "-def")) {
       if (argi + 1 >= argc) {
@@ -86,14 +89,26 @@ protocon_options
       problem = FromFileInstance;
       infile_opt.file_path = argv[argi++];
       if (!infile_opt.file_path) {
-        failout_sysCx("Not enuff arguments.\n");
+        failout_sysCx("Not enuff arguments.");
       }
     }
     else if (eq_cstr (arg, "-o")) {
       outfile_path = argv[argi++];
       if (!outfile_path) {
-        failout_sysCx("Not enuff arguments.\n");
+        failout_sysCx("Not enuff arguments.");
       }
+    }
+    else if (eq_cstr (arg, "-x-test-known")) {
+      Xn::Sys test_sys;
+      ProtoconFileOpt file_opt;
+      file_opt.file_path = argv[argi++];
+      if (!file_opt.file_path) {
+        failout_sysCx("Not enuff arguments for -x-test-known.");
+      }
+      if (!ReadProtoconFile(test_sys, file_opt)) {
+        failout_sysCx("Reading -x-test-known file.");
+      }
+      opt.known_solution = test_sys.actions;
     }
     else if (eq_cstr (arg, "-o-log")) {
       exec_opt.log_ofilename = argv[argi++];
@@ -147,14 +162,14 @@ protocon_options
       else if (eq_cstr (method, "lcv")) {
         opt.pick_method = opt.LCVLitePick;
       }
-      else if (eq_cstr (method, "quick")) {
-        opt.pick_method = opt.QuickPick;
-      }
-      else if (eq_cstr (method, "random")) {
+      else if (eq_cstr (method, "fully-random")) {
         opt.pick_method = opt.RandomPick;
       }
       else if (eq_cstr (method, "conflict")) {
         opt.pick_method = opt.ConflictPick;
+      }
+      else if (eq_cstr (method, "quick")) {
+        opt.pick_method = opt.QuickPick;
       }
       else {
         failout_sysCx("Argument Usage: -pick [mcv|greedy|lcv|quick]");

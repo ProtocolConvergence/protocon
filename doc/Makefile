@@ -1,6 +1,9 @@
 
-default: $(patsubst %.tex,%.pdf,$(shell ls */main.tex)) \
-	tosat.pdf algo.pdf behavior.pdf
+#default: $(patsubst %.tex,%.pdf,$(shell ls */main.tex)) \
+#	tosat.pdf algo.pdf behavior.pdf
+
+default:
+	# This file doesn't do anything at the moment!
 
 CxPfx = ../../cx
 
