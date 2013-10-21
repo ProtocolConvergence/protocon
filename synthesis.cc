@@ -182,7 +182,7 @@ RankDeadlocksMCV(vector<DeadlockConstraint>& dlsets,
     PF guard( topo.action_pfmla(actions[i]).pre() );
     for (uint j = 0; j < dlsets.size(); ++j) {
       if ((guard & dlsets[j].deadlockPF).sat_ck()) {
-        dlsets[j].candidates |= actions[i];
+        dlsets[j].candidates << actions[i];
       }
     }
   }
@@ -238,7 +238,7 @@ ReviseDeadlocksMCV(vector<DeadlockConstraint>& dlsets,
         const PF& candidateGuardPF = topo.action_pfmla(actId);
         if (!deadlockPF1.overlap_ck(candidateGuardPF)) {
           // Action no longer resolves any deadlocks in this rank.
-          diffCandidates1 |= actId;
+          diffCandidates1 << actId;
         }
       }
       candidates1 -= diffCandidates1;
@@ -281,12 +281,12 @@ ReviseDeadlocksMCV(vector<DeadlockConstraint>& dlsets,
         const PF& candidateGuardPF = topo.action_pfmla(actId).pre();
         if (!candidateGuardPF.overlap_ck(diffDeadlockPF1)) {
           // This candidate is not affected.
-          diffDeadlockSets[i].candidates |= actId;
+          diffDeadlockSets[i].candidates << actId;
           continue;
         }
         for (uint j = minIdx; j < diffDeadlockSets.size(); ++j) {
           if (candidateGuardPF.overlap_ck(diffDeadlockSets[j].deadlockPF)) {
-            diffDeadlockSets[j].candidates |= actId;
+            diffDeadlockSets[j].candidates << actId;
           }
         }
       }
@@ -368,7 +368,7 @@ PickActionMCV(uint& ret_actidx,
       const PF& resolve_img =
         topo.action_pfmla(actidx).img(dlsets[dlset_idx].deadlockPF);
       if (reach_pf.overlap_ck(resolve_img)) {
-        candidates_1 |= actidx;
+        candidates_1 << actidx;
       }
     }
     candidates = candidates_1;
@@ -393,7 +393,7 @@ PickActionMCV(uint& ret_actidx,
       if (!have || (niceIdx < niceIdxMin)) {
         have = true;
         candidates_1.clear();
-        candidates_1 |= actId;
+        candidates_1 << actId;
         niceIdxMin = niceIdx;
       }
     }
@@ -446,7 +446,7 @@ PickActionMCV(uint& ret_actidx,
     for (it = candidates.begin(); it != candidates.end(); ++it) {
       const uint actId = *it;
       uint n = *resolveMap.lookup(actId);
-      biasMap[n] |= actId;
+      biasMap[n] << actId;
     }
   }
   else if (pick_method == Opt::LCVLitePick) {
@@ -461,7 +461,7 @@ PickActionMCV(uint& ret_actidx,
         n += j * tmpDeadlocks[j].candidates.size();
       }
 
-      biasMap[n] |= actId;
+      biasMap[n] << actId;
     }
   }
   else if (pick_method == Opt::LCVHeavyPick) {
@@ -483,7 +483,7 @@ PickActionMCV(uint& ret_actidx,
       //  n += next.mcv_deadlocks[j].candidates.size() / j;
       //}
 
-      biasMap[n] |= actId;
+      biasMap[n] << actId;
     }
   }
   else if (pick_method == Opt::LCVJankPick) {
@@ -507,8 +507,8 @@ PickActionMCV(uint& ret_actidx,
         const uint actId2 = *jt;
         const PF& actPF2 = topo.action_pfmla(actId2);
         if (deadlockPF.overlap_ck(actPrePF & actPF2.pre())) {
-          overlapSet |= actId2;
-          *overlapSets.lookup(actId2) |= actId;
+          overlapSet << actId2;
+          *overlapSets.lookup(actId2) << actId;
         }
       }
     }
@@ -539,7 +539,7 @@ PickActionMCV(uint& ret_actidx,
       //for (uint j = 1; j < next.mcv_deadlocks.size(); ++j) {
       //  n += next.mcv_deadlocks[j].candidates.size() / j;
       //}
-      biasMap[n] |= actId;
+      biasMap[n] << actId;
     }
   }
   else if (pick_method == Opt::ConflictPick) {
@@ -553,7 +553,7 @@ PickActionMCV(uint& ret_actidx,
 #if 0
     else if (membs.sz() > 0) {
       uint idx = tape.ctx->urandom.pick(membs.sz());
-      biasMap[0] |= membs[idx];
+      biasMap[0] << membs[idx];
     }
 #endif
     else {
@@ -567,21 +567,21 @@ PickActionMCV(uint& ret_actidx,
       const PF& act_pf = topo.action_pfmla(actId);
       if (sys.shadow_puppet_synthesis_ck()) {
         if (!act_pf.overlap_ck(tape.hi_invariant)) {
-          biasMap[0] |= actId;
+          biasMap[0] << actId;
         }
         else {
-          biasMap[1] |= actId;
+          biasMap[1] << actId;
         }
         continue;
       }
       if (reach_pf.overlap_ck(act_pf.img())) {
-        biasMap[1] |= actId;
+        biasMap[1] << actId;
         if (!(act_pf.pre() <= reach_pf)) {
-          biasMap[0] |= actId;
+          biasMap[0] << actId;
         }
       }
       else {
-        biasMap[2] |= actId;
+        biasMap[2] << actId;
       }
     }
   }
@@ -649,7 +649,7 @@ QuickTrim(Set<uint>& delSet,
   for (uint i = 0; i < candidates.size(); ++i) {
     topo.action(act1, candidates[i]);
     if (!coexist_ck(act0, act1)) {
-      delSet |= candidates[i];
+      delSet << candidates[i];
     }
   }
 }
@@ -765,8 +765,8 @@ PartialSynthesis::add_small_conflict_set(const Cx::Table<uint>& delpicks)
       lvl[j].directly_add_conflicts = true;
     }
     delpick_set -= delpicks[i];
-    if (lvl.revise_actions(delpick_set, Set<uint>())) {
-      delpick_set |= delpicks[i];
+    if (lvl.revise_actions(delpick_set, Set<uint>(delpicks[i]))) {
+      delpick_set << delpicks[i];
     }
     else {
       conflicts.add_conflict(delpick_set);
@@ -838,13 +838,13 @@ PartialSynthesis::check_forward(Set<uint>& adds, Set<uint>& dels, Set<uint>& rej
         topo.action(act, actidx);
         OPut(*this->log, act) << this->log->endl();
       }
-      dels |= actidx;
+      dels << actidx;
       continue;
     }
   }
 
   FlatSet<uint> action_set( Set<uint>(this->actions) | adds );
-  FlatSet<uint> candidate_set( Set<uint>(this->candidates) - dels );
+  FlatSet<uint> candidate_set( this->candidates );
 
   Set<uint> membs;
   if (!this->ctx->conflicts.conflict_membs(&membs, action_set, candidate_set)) {
@@ -863,7 +863,6 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels, Set<uin
 {
   const Xn::Sys& sys = *this->ctx->systems[this->sys_idx];
   const Xn::Net& topo = sys.topology;
-  Xn::ActSymm act;
   Set<uint>::const_iterator it;
   const bool use_csp = false;
 
@@ -886,6 +885,24 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels, Set<uin
     this->actions.push_back(actId);
     Set<uint> tmp_dels;
     QuickTrim(tmp_dels, this->candidates, topo, actId);
+    if (tmp_dels.overlap_ck(adds)) {
+      *this->log << "QuickTrim() rejects an action!!!" << this->log->endl();
+      Xn::ActSymm act;
+      topo.action(act, actId);
+      *this->log
+        << " (sys " << this->sys_idx
+        << ") (lvl " << this->bt_level
+        << ") (sz " << this->actions.size()
+        << ") (rem " << this->candidates.size()
+        << ")  ";
+      OPut(*this->log, act) << this->log->endl();
+      FlatSet<uint> tmp_adds_dels( adds & tmp_dels );
+      for (uint i = 0; i < tmp_adds_dels.sz(); ++i) {
+        *this->log << "Reject:" << this->log->endl();
+        topo.action(act, tmp_adds_dels[i]);
+        OPut(*this->log, act) << this->log->endl();
+      }
+    }
     dels |= tmp_dels;
     add_act_pfmla |= topo.action_pfmla(actId);
     add_pure_shadow_pfmla &= topo.pure_shadow_pfmla(actId);
@@ -933,6 +950,7 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels, Set<uin
   }
 
 
+  Xn::ActSymm act;
   if (this->sys_idx == 0)
   for (it = adds.begin(); it != adds.end(); ++it) {
     uint actId = *it;
@@ -1007,38 +1025,43 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels, Set<uin
 }
 
   bool
-PartialSynthesis::revise_actions(Set<uint> adds, Set<uint> dels)
+PartialSynthesis::revise_actions(const Set<uint>& adds, const Set<uint>& dels)
 {
-  Cx::Table< Set<uint> > all_adds( this->sz() );
-  Cx::Table< Set<uint> > all_dels( this->sz() );
-  Cx::Table< Set<uint> > all_rejs( this->sz() );
+  Cx::Table< Set<uint> > all_adds( this->sz(), adds );
+  Cx::Table< Set<uint> > all_dels( this->sz(), dels );
 
-  Set<uint> rejs;
+  // If both sets are empty, we should force a check anyway.
+  bool force_revise = (adds.empty() && dels.empty());
+
   bool keep_going = true;
   while (keep_going) {
     keep_going = false;
-    for (uint i = 0; i < this->sz(); ++i) {
+
+    // Generally, systems with higher indices should be more computationally intensive.
+    // Therefore if {keep_going} becomes true, we should revise the systems with lower
+    // indices before revising the systems with higher indices.
+    for (uint i = 0; !keep_going && i < this->sz(); ++i) {
+      if (!force_revise && all_adds[i].empty() && all_dels[i].empty())
+        continue;
+
       PartialSynthesis& inst = (*this)[i];
-      if (inst.mcv_deadlocks.size() > 1) {
-        adds |= inst.mcv_deadlocks[1].candidates;
+      Set<uint> rejs;
+      if (!inst.revise_actions_alone(all_adds[i], all_dels[i], rejs))
+        return false;
+      Claim( rejs.subseteq_ck(all_dels[i]) );
+
+      if (!all_adds[i].empty() || !all_dels[i].empty() || !rejs.empty()) {
+        keep_going = true;
+        for (uint j = 0; j < this->sz(); ++j) {
+          all_adds[j] |= all_adds[i];
+          all_dels[j] |= rejs;
+        }
+        // Stop forcing if we'll check everything anyway.
+        if (!all_adds[i].empty() || !rejs.empty()) {
+          force_revise = false;
+        }
       }
     }
-    for (uint i = 0; i < this->sz(); ++i) {
-      PartialSynthesis& inst = (*this)[i];
-      all_adds[i] |= adds;
-      all_dels[i] |= dels;
-      all_dels[i] |= (rejs - all_rejs[i]);
-      all_rejs[i] |= rejs;
-      if (!inst.revise_actions_alone(all_adds[i], all_dels[i], all_rejs[i]))
-        return false;
-      adds |= all_adds[i];
-      rejs |= all_rejs[i];
-
-      if (!(all_adds[i].empty() && all_dels[i].empty()))
-        keep_going = true;
-    }
-    adds.clear();
-    dels.clear();
   }
   for (uint i = 0; i < this->sz()-1; ++i) {
     Claim2( (*this)[i].actions.size() ,==, (*this)[i+1].actions.size() );

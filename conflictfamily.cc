@@ -50,7 +50,7 @@ ConflictFamily::add_conflict(const FlatSet<uint>& b)
       return;
     }
     if (b.subseteq_ck(a)) {
-      //dels |= *it;
+      //dels << *it;
       Cx::Set< Cx::FlatSet<uint> >::iterator tmp = it;
       ++it;
       conflict_sets.erase(tmp);
@@ -60,10 +60,10 @@ ConflictFamily::add_conflict(const FlatSet<uint>& b)
     }
   }
   if (b.sz() == 1) {
-    this->impossible_set |= b[0];
+    this->impossible_set << b[0];
   }
   //conflict_sets -= dels;
-  conflict_sets |= b;
+  conflict_sets << b;
 }
 
   void
@@ -99,7 +99,7 @@ ConflictFamily::trim(uint max_sz)
   {
     uint sz = (*it).sz();
     if (sz > max_sz) {
-      dels |= *it;
+      dels << *it;
     }
   }
   conflict_sets -= dels;
@@ -136,7 +136,7 @@ ConflictFamily::superset_membs(FlatSet<uint>& ret_membs,
       if (i >= test_set.sz() || test_set[i] != elem) {
         j += 1;
         if (count_set.elem_ck(elem))
-          membs |= elem;
+          membs << elem;
       }
       else {
         i += 1;
@@ -159,7 +159,7 @@ ConflictFamily::conflict_membs(Set<uint>* ret_membs,
       if (diff.sz() == 0)
         return false;
       if (count_set.elem_ck(diff[0]))
-        *ret_membs |= diff[0];
+        *ret_membs << diff[0];
     }
   }
   return true;
@@ -249,8 +249,8 @@ ConflictFamily::xget(Cx::XFile& xf)
       if (!xf.good())  return;
     }
     if (conflict_set.sz() == 1)
-      impossible_set |= conflict_set[0];
-    conflict_sets |= Cx::FlatSet<uint>(conflict_set);
+      impossible_set << conflict_set[0];
+    conflict_sets << Cx::FlatSet<uint>(conflict_set);
   }
 }
 

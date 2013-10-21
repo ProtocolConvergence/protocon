@@ -175,7 +175,7 @@ public:
   uint add_small_conflict_set(const Cx::Table<uint>& delpicks);
   bool check_forward(Set<uint>& adds, Set<uint>& dels, Set<uint>& rejs);
   bool revise_actions_alone(Set<uint>& adds, Set<uint>& dels, Set<uint>& rejs);
-  bool revise_actions(Set<uint> adds, Set<uint> dels);
+  bool revise_actions(const Set<uint>& adds, const Set<uint>& dels);
   bool pick_action(uint act_idx);
 };
 
