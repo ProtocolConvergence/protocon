@@ -324,9 +324,9 @@ PickActionMCV(uint& ret_actidx,
 
   if (pick_method == Opt::RandomPick) {
     for (uint inst_idx = 0; inst_idx < tape.sz(); ++inst_idx) {
-      if (tape.candidates.size() > 0) {
-        uint idx = tape.ctx->urandom.pick(tape.candidates.size());
-        ret_actidx = tape.candidates[idx];
+      if (tape[inst_idx].candidates.size() > 0) {
+        uint idx = tape[inst_idx].ctx->urandom.pick(tape[inst_idx].candidates.size());
+        ret_actidx = tape[inst_idx].candidates[idx];
         return true;
       }
     }
@@ -344,6 +344,7 @@ PickActionMCV(uint& ret_actidx,
   // can only be resolved by some small number of actions.
   uint mcv_inst_idx = 0;
   for (uint inst_idx = 0; inst_idx < tape.sz(); ++inst_idx) {
+    if (tape[inst_idx].no_partial)  continue;
     for (uint i = 0; i < tape[inst_idx].mcv_deadlocks.size(); ++i) {
       if (dlset_idx > 0 && i >= dlset_idx) {
         break;
@@ -742,7 +743,13 @@ count_actions_in_cycle (const Cx::PFmla& scc, Cx::PFmla edg,
   uint
 PartialSynthesis::add_small_conflict_set(const Cx::Table<uint>& delpicks)
 {
-  if (noconflicts)  return 0;
+  bool doit = false;
+  for (uint i = 0; i < this->sz(); ++i) {
+    if (!(*this)[i].no_conflict) {
+      doit = true;
+    }
+  }
+  if (!doit)  return 0;
   ConflictFamily& conflicts = this->ctx->conflicts;
   if (conflicts.conflict_ck(Cx::FlatSet<uint>(delpicks))) {
     if (!conflicts.exact_conflict_ck(Cx::FlatSet<uint>(delpicks))) {
@@ -759,13 +766,16 @@ PartialSynthesis::add_small_conflict_set(const Cx::Table<uint>& delpicks)
     if (this->ctx->done_ck())
       return delpicks.sz();
 
-    PartialSynthesis lvl( this->ctx->base_inst[this->sys_idx] );
-    for (uint j = 0; j < this->sz(); ++j) {
-      lvl[j].log = &Cx::OFile::null();
-      lvl[j].directly_add_conflicts = true;
+    PartialSynthesis inst( this->ctx->base_inst );
+    for (uint j = 0; j < inst.sz(); ++j) {
+      inst[j].log = &Cx::OFile::null();
+      inst[j].directly_add_conflicts = true;
+      if (inst[j].no_conflict) {
+        inst[j].no_partial = true;
+      }
     }
     delpick_set -= delpicks[i];
-    if (lvl.revise_actions(delpick_set, Set<uint>(delpicks[i]))) {
+    if (inst.revise_actions(delpick_set, Set<uint>(delpicks[i]))) {
       delpick_set << delpicks[i];
     }
     else {
@@ -865,6 +875,20 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels, Set<uin
   const Xn::Net& topo = sys.topology;
   Set<uint>::const_iterator it;
   const bool use_csp = false;
+
+  if (this->no_partial) {
+    for (it = adds.begin(); it != adds.end(); ++it) {
+      Remove1(this->actions, *it);
+      Remove1(this->candidates, *it);
+      this->actions.push_back(*it);
+    }
+    for (it = dels.begin(); it != dels.end(); ++it) {
+      Remove1(this->candidates, *it);
+    }
+    adds.clear();
+    dels.clear();
+    return true;
+  }
 
   Cx::PFmla add_act_pfmla( false );
   Cx::PFmla add_pure_shadow_pfmla( true );
@@ -970,7 +994,7 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels, Set<uin
     //uint n = count_actions_in_cycle(scc, act_pf, this->actions, topo);
     //DBog1("scc actions: %u", n);
     *this->log << "CYCLE" << this->log->endl();
-    if (!this->noconflicts) {
+    if (!this->no_conflict) {
       Cx::Table<uint> conflict_set;
       small_cycle_conflict (conflict_set, scc, this->actions, topo, sys.invariant);
       this->ctx->conflicts.add_conflict(conflict_set);
@@ -1076,7 +1100,11 @@ PartialSynthesis::pick_action(uint act_idx)
     (*this)[i].picks.push(act_idx);
   }
   if (!this->revise_actions(Set<uint>(act_idx), Set<uint>())) {
+#if 0
+    this->ctx->conflicts.add_conflict(this->picks);
+#else
     this->add_small_conflict_set(this->picks);
+#endif
     return false;
   }
 

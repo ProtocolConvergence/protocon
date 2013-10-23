@@ -106,7 +106,8 @@ public:
   uint bt_level;
   uint failed_bt_level;
   bool directly_add_conflicts;
-  bool noconflicts;
+  bool no_conflict;
+  bool no_partial;
 
   vector<uint> actions; ///< Chosen actions.
   Cx::Table<uint> picks; ///< Chosen actions, no inferred ones.
@@ -132,7 +133,8 @@ public:
     , bt_level( 0 )
     , failed_bt_level( 0 )
     , directly_add_conflicts( false )
-    , noconflicts( false )
+    , no_conflict( false )
+    , no_partial( false )
     , lo_pure_shadow_pfmla( true )
     , hi_pure_shadow_pfmla( true )
     , lo_puppet_xn( false )
@@ -166,6 +168,8 @@ public:
 
   bool candidates_ck() const {
     for (uint i = 0; i < this->sz(); ++i) {
+      if ((*this)[i].no_partial)
+        continue;
       if (!(*this)[i].candidates.empty())
         return true;
     }

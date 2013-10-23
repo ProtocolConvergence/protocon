@@ -3,6 +3,7 @@
 #define OPT_HH_
 #include "cx/synhax.hh"
 #include "cx/alphatab.hh"
+#include "cx/map.hh"
 #include "cx/table.hh"
 
 namespace Xn {
@@ -10,7 +11,25 @@ namespace Xn {
 }
 class AddConvergenceOpt;
 class ProtoconFileOpt;
+class ProtoconParamOpt;
 class ProtoconOpt;
+
+class ProtoconParamOpt {
+public:
+  Cx::Map<Cx::String, uint> constant_map;
+  bool conflict;
+  bool partial;
+  ProtoconParamOpt()
+    : conflict( true )
+    , partial( true )
+  {}
+  bool conflict_ck() const {
+    return conflict && partial;
+  }
+  bool partial_ck() const {
+    return partial;
+  }
+};
 
 class ProtoconOpt {
 public:
@@ -23,11 +42,12 @@ public:
   };
 
   ExecTask task;
-  Cx::Table< std::pair<Cx::String, uint> > params;
+  Cx::Table< ProtoconParamOpt > params;
   const char* log_ofilename;
 
   ProtoconOpt()
     : task(SearchTask)
+    , params( 1 )
     , log_ofilename(0)
   {}
 };

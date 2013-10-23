@@ -58,6 +58,24 @@ For performance, is assumed that the
 .B -param
 flags specify systems in order of increasing computational cost.
 .TP
+.BR -param\ '('\  ... \ ')'
+This alternative form of
+.B -param
+allows some extra options to be specified between parentheses.
+.IP
+.BI -def\  key\ val
+Multiple constants can be defined.
+.IP
+.B -no-conflict
+Do not consider this parameterized system when minimizing and recording conflicts.
+.IP
+.B -no-partial
+Do not build a partial solution for this parameterized system.
+This system will only be considered when a solution is found which satisfies all other systems, at which point the protocol will be verified to work or fail for this system.
+In the case of a failed verification, the search will restart.
+This flag also implies
+.BR -no-conflict .
+.TP
 .BR -pick\  ( mcv | lcv | fully-random | conflict | quick )
 .IP
 .B mcv

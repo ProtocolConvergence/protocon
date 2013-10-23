@@ -10,6 +10,62 @@ extern "C" {
 #include "cx/fileb.hh"
 #include "search.hh"
 
+static
+  bool
+parse_param(ProtoconOpt& opt, int& argi, int argc, char** argv)
+{
+  ProtoconParamOpt& psys_opt = opt.params.grow1();
+  psys_opt = opt.params[0];
+  if (!eq_cstr(argv[argi], "(") &&
+      !eq_cstr(argv[argi], "[")) {
+    if (argi + 1 >= argc) {
+      failout_sysCx("2 arguments needed for -param.\n");
+    }
+    const char* key = argv[argi++];
+    const char* val = argv[argi++];
+    uint x = 0;
+    if (!xget_uint_cstr (&x, val))
+      failout_sysCx("Argument Usage: -param KEY VAL\nWhere VAL is an unsigned integer!");
+    psys_opt.constant_map[key] = x;
+    return true;
+  }
+  ++ argi;
+
+  while (argi < argc &&
+         !eq_cstr(argv[argi], ")") &&
+         !eq_cstr(argv[argi], "]"))
+  {
+    const char* arg = argv[argi++];
+    if (eq_cstr (arg, "-def")) {
+      if (argi + 1 >= argc) {
+        failout_sysCx("2 arguments needed for -def.\n");
+      }
+      const char* key = argv[argi++];
+      const char* val = argv[argi++];
+      uint x = 0;
+      if (!xget_uint_cstr (&x, val))
+        failout_sysCx("Argument Usage: -def KEY VAL\nWhere VAL is an unsigned integer!");
+      psys_opt.constant_map[key] = x;
+    }
+    else if (eq_cstr (arg, "-no-conflict")) {
+      psys_opt.conflict = false;
+    }
+    else if (eq_cstr (arg, "-no-conflicts")) {
+      psys_opt.conflict = false;
+    }
+    else if (eq_cstr (arg, "-no-partial")) {
+      psys_opt.partial = false;
+    }
+  }
+  if (argi >= argc) {
+    failout_sysCx("Need closing paren for -param!");
+  }
+  ++ argi;
+
+  return true;
+}
+
+
   bool
 protocon_options
   (Xn::Sys& sys,
@@ -71,18 +127,18 @@ protocon_options
       uint x = 0;
       if (!xget_uint_cstr (&x, val))
         failout_sysCx("Argument Usage: -def KEY VAL\nWhere VAL is an unsigned integer!");
-      infile_opt.constant_map[key] = x;
+      exec_opt.params[0].constant_map[key] = x;
+    }
+    else if (eq_cstr (arg, "-no-conflict")) {
+      exec_opt.params[0].conflict = false;
+    }
+    else if (eq_cstr (arg, "-no-conflicts")) {
+      exec_opt.params[0].conflict = false;
     }
     else if (eq_cstr (arg, "-param")) {
-      if (argi + 1 >= argc) {
-        failout_sysCx("2 arguments needed for -param.\n");
+      if (!parse_param(exec_opt, argi, argc, argv)) {
+        return false;
       }
-      const char* key = argv[argi++];
-      const char* val = argv[argi++];
-      uint x = 0;
-      if (!xget_uint_cstr (&x, val))
-        failout_sysCx("Argument Usage: -param KEY VAL\nWhere VAL is an unsigned integer!");
-      exec_opt.params.push(std::make_pair<Cx::String,uint>(key, x));
     }
     else if (eq_cstr (arg, "-x")) {
       DBog0("Problem: From File");
@@ -225,6 +281,8 @@ protocon_options
   if (argi < argc) {
     failout_sysCx("Too many arguments!");
   }
+
+  infile_opt.constant_map = exec_opt.params[0].constant_map;
 
   // Set up the chosen problem.
   switch(problem){

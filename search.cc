@@ -15,6 +15,30 @@
 #include <omp.h>
 #endif
 
+static bool
+verify_solutions(const PartialSynthesis& inst)
+{
+  for (uint i = 0; i < inst.sz(); ++i) {
+    if (!inst[i].no_partial)
+      continue;
+    *inst.log << "Verifying solution for system " << i << "..." << inst.log->endl();
+    if (!stabilization_ck(*inst[i].log, *inst[i].ctx->systems[i], inst[i].actions)) {
+      *inst[i].log << "Solution was NOT self-stabilizing." << inst[i].log->endl();
+      return false;
+    }
+  }
+  for (uint i = 0; i < inst.sz(); ++i) {
+    if (inst[i].no_partial || !inst.ctx->opt.verify_found)
+      continue;
+    *inst.log << "Verifying solution for system " << i << "..." << inst.log->endl();
+    if (!stabilization_ck(*inst[i].log, *inst[i].ctx->systems[i], inst[i].actions)) {
+      *inst[i].log << "Solution was NOT self-stabilizing." << inst[i].log->endl();
+      return false;
+    }
+  }
+  return true;
+}
+
 /**
  * Add convergence to a system.
  * The system will therefore be self-stabilizing.
@@ -37,8 +61,23 @@ AddConvergence(vector<uint>& ret_actions,
 
   while (true) {
     PartialSynthesis& inst = bt_stack[stack_idx];
-    if (!inst.candidates_ck())
-      break;
+    if (!inst.candidates_ck()) {
+      if (verify_solutions(inst))  break;
+
+      const bool early_return = true;
+      if (!early_return)
+        *inst.log << "backtrack from lvl:" << inst.bt_level << inst.log->endl();
+      inst.add_small_conflict_set(inst.picks);
+      stack_idx = decmod(stack_idx, 1, bt_stack.sz());
+      if (bt_stack[stack_idx].bt_level >= inst.bt_level) {
+        base_inst.failed_bt_level = bt_stack[stack_idx].bt_level;
+        return false;
+      }
+      if (early_return)
+        return false;
+      else
+        continue;
+    }
     if (synctx.done_ck()) {
       base_inst.failed_bt_level = inst.failed_bt_level;
       return false;
@@ -53,6 +92,7 @@ AddConvergence(vector<uint>& ret_actions,
     uint actidx = 0;
     if (!PickActionMCV(actidx, inst, opt)) {
       DBog0("Cannot resolve all deadlocks!");
+      inst.add_small_conflict_set(inst.picks);
       return false;
     }
 
@@ -97,16 +137,6 @@ AddConvergence(vector<uint>& ret_actions,
 
   PartialSynthesis& inst = bt_stack[stack_idx];
   Claim(!inst.deadlockPF.sat_ck());
-
-  if (opt.verify_found) {
-    for (uint i = 0; i < inst.ctx->systems.sz(); ++i) {
-      *inst.log << "Verifying solution for system " << i << "..." << inst.log->endl();
-      if (!stabilization_ck(*inst[i].log, *inst.ctx->systems[i], inst.actions)) {
-        *inst.log << "Solution was NOT self-stabilizing." << inst.log->endl();
-        return false;
-      }
-    }
-  }
   ret_actions = inst.actions;
   return true;
 }
@@ -158,12 +188,19 @@ check_conflict_sets(const Cx::LgTable< Set<uint> >& conflict_sets)
 try_order_synthesis(vector<uint>& ret_actions,
                     PartialSynthesis& inst)
 {
+  for (uint i = 0; i < inst.sz(); ++i) {
+    //inst[i].noconflicts = true;
+  }
   ret_actions.clear();
   //inst.directly_add_conflicts = true;
 
-  while (inst.candidates.size() > 0)
+  while (inst.candidates_ck())
   {
-    uint actidx = inst.candidates[0];
+      uint actidx;
+    for (uint i = 0; i < inst.sz(); ++i) {
+      if (inst[i].no_partial)  continue;
+      actidx = inst[i].candidates[0];
+    }
     PartialSynthesis next( inst );
     if (next.pick_action(actidx))
     {
@@ -185,14 +222,9 @@ try_order_synthesis(vector<uint>& ret_actions,
   }
 
   Claim( !inst.deadlockPF.sat_ck() );
-  if (inst.ctx->opt.verify_found) {
-    for (uint i = 0; i < inst.ctx->systems.sz(); ++i) {
-      *inst.log << "Verifying solution for system " << i << "..." << inst.log->endl();
-      if (!stabilization_ck(*inst[i].log, *inst.ctx->systems[i], inst.actions)) {
-        *inst.log << "Solution was NOT self-stabilizing." << inst.log->endl();
-        return false;
-      }
-    }
+  if (!verify_solutions(inst)) {
+    inst.add_small_conflict_set(inst.picks);
+    return false;
   }
   ret_actions = inst.actions;
   return true;
@@ -292,7 +324,7 @@ try_known_solution(const ConflictFamily& conflicts,
   PartialSynthesis inst( synctx.base_inst );
   FlatSet<uint> solution( synctx.opt.known_solution );
   for (uint i = 0; i < inst.sz(); ++i) {
-    inst[i].noconflicts = true;
+    inst[i].no_conflict = true;
     Set<uint> candidates( inst[i].candidates );
     candidates -= solution;
     inst[i].candidates.clear();
@@ -435,17 +467,20 @@ stabilization_search(vector<uint>& ret_actions,
                     synlvl.hi_invariant);
   }
 
-  for (uint i = 0; good && i < exec_opt.params.sz(); ++i) {
+  for (uint i = 1; good && i < exec_opt.params.sz(); ++i) {
     ProtoconFileOpt param_infile_opt = infile_opt;
-    const Cx::String& key = exec_opt.params[i].first;
-    const uint& val = exec_opt.params[i].second;
-    param_infile_opt.constant_map[key] = val;
+    param_infile_opt.constant_map = exec_opt.params[i].constant_map;
 
     Xn::Sys& param_sys = systems.grow1();
     DoLegit(good, "reading param file")
       good = ReadProtoconFile(param_sys, param_infile_opt);
     DoLegit(good, "add param sys")
       good = synctx.add(param_sys);
+  }
+
+  for (uint i = 0; good && i < exec_opt.params.sz(); ++i) {
+    synlvl[i].no_conflict = !exec_opt.params[i].conflict_ck();
+    synlvl[i].no_partial = !exec_opt.params[i].partial_ck();
   }
 
   if (!good)

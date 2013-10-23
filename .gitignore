@@ -2,6 +2,8 @@
 *.o
 bin
 tags
+Makefile
+deps.mk
 
 doc/*/main.pdf
 doc/*/quick.pdf

@@ -309,17 +309,20 @@ stabilization_search(vector<uint>& ret_actions,
                     synlvl.hi_invariant);
   }
 
-  for (uint i = 0; good && i < exec_opt.params.sz(); ++i) {
+  for (uint i = 1; good && i < exec_opt.params.sz(); ++i) {
     ProtoconFileOpt param_infile_opt = infile_opt;
-    const Cx::String& key = exec_opt.params[i].first;
-    const uint& val = exec_opt.params[i].second;
-    param_infile_opt.constant_map[key] = val;
+    param_infile_opt.constant_map = exec_opt.params[i].constant_map;
 
     Xn::Sys& param_sys = systems.grow1();
     DoLegit(good, "reading param file")
       good = ReadProtoconFile(param_sys, param_infile_opt);
     DoLegit(good, "add param sys")
       good = synctx.add(param_sys);
+  }
+
+  for (uint i = 0; good && i < exec_opt.params.sz(); ++i) {
+    synlvl[i].no_conflict = !exec_opt.params[i].conflict_ck();
+    synlvl[i].no_partial = !exec_opt.params[i].partial_ck();
   }
 
   if (!good)
