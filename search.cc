@@ -133,6 +133,8 @@ AddConvergence(vector<uint>& ret_actions,
       base_inst.failed_bt_level = bt_stack[stack_idx].bt_level;
       return false;
     }
+
+    bt_stack[stack_idx].revise_actions(Set<uint>(), Set<uint>(inst.picks.top()));
   }
 
   PartialSynthesis& inst = bt_stack[stack_idx];
