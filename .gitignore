@@ -5,6 +5,10 @@ tags
 Makefile
 deps.mk
 
+gui/moc_*.cpp
+gui/ui_*.h
+gui/gui
+
 doc/*/main.pdf
 doc/*/quick.pdf
 doc/*/full.pdf

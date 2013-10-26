@@ -6,6 +6,9 @@ CXX = g++
 #CC = clang
 #CXX = clang++
 #CC = $(CXX)
+MPICXX = mpicxx
+LEG = leg
+QMAKE = qmake
 
 CONFIG += ansi
 #CONFIG += errwarn
@@ -16,13 +19,27 @@ CONFIG += snappy
 #CONFIG += fast
 #CONFIG += noassert
 CONFIG += openmp
+CONFIG += mpi
+CONFIG += gui
+#CONFIG += on-gilbert-cluster
 
 CxPath = ../cx
 BinPath = ../bin
 BldPath = protocon
 
-ExeList = protocon protocon-mpi satsyn
+ExeList = protocon satsyn
+ifneq (,$(filter mpi,$(CONFIG)))
+	ExeList += protocon-mpi
+endif
+ifneq (,$(filter gui,$(CONFIG)))
+	ExeList += protocon-gui
+endif
 ExeList := $(addprefix $(BinPath)/,$(ExeList))
+
+ifneq (,$(filter on-gilbert-cluster,$(CONFIG)))
+	CONFIG := $(filter-out ansi openmp,$(CONFIG))
+	MPICXX := $(MPICXX) -CC=g++ -I/usr/local/mpi/include -L/usr/local/mpi/lib64
+endif
 
 include $(CxPath)/include.mk
 
@@ -59,7 +76,7 @@ $(BinPath)/protocon: \
 $(BinPath)/protocon-mpi: \
 	$(ProtoconObj) \
 	$(addprefix $(BldPathCXX)/, main-mpi.o)
-	mpicxx $(CXXFLAGS) $^ -o $@ $(LXXFLAGS)
+	$(MPICXX) $(CXXFLAGS) $^ -o $@ $(LXXFLAGS)
 
 $(call binexe,satsyn): $(BldPath)/satsyn.o $(BldPath)/xnsys.o \
 	$(CxStdObjs) $(addprefix $(CxBldPath)/, bstree.o ospc.o rbtree.o)
@@ -72,10 +89,20 @@ $(BldPathCXX)/pfmla-minisat.o: $(BldPathCXX)/pfmla-minisat.cc
 	$(CXX) -c $(CXXFLAGS) -isystem $(MinisatIncludePath) $< -o $@
 
 $(BldPathCXX)/main-mpi.o: $(BldPathCXX)/main-mpi.cc
-	mpicxx -c $(CXXFLAGS) $< -o $@
+	$(MPICXX) -c $(CXXFLAGS) $< -o $@
 
 $(BldPathCXX)/protoconfile.leg.cc: protoconfile.leg
-	leg -o $@ $<
+	$(LEG) -o $@ $<
+
+$(BinPath)/protocon-gui: gui/gui
+	cp $< $@
+
+.PHONY: gui/gui
+gui/gui: gui/Makefile
+	$(MAKE) -C gui
+
+gui/Makefile:
+	cd gui && $(QMAKE)
 
 #$(CXX) -c $(filter-out -pedantic -Wall -Wextra,$(CXXFLAGS))
 
@@ -99,4 +126,5 @@ clean:
 	rm -fr $(PfxBldPath)
 	rm -f $(ExeList)
 	rm -f deps.mk
+	$(MAKE) -C gui clean
 

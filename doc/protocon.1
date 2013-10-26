@@ -224,7 +224,7 @@ To find a 3-coloring protocol on a ring of size
 .IR 5 ,
 run:
 .nf
-    protocon -simple -x inst/ColorRing.protocn -o found.protocon -def N 5
+    protocon -simple -x inst/ColorRing.protocon -o found.protocon -def N 5
 .fi
 
 The
@@ -232,7 +232,7 @@ The
 flag is merely there to force a serial execution.
 If there are more cores available, run:
 .nf
-    protocon -x inst/ColorRing.protocn -o found.protocon -def N 5 -o-log search.log
+    protocon -x inst/ColorRing.protocon -o found.protocon -def N 5 -o-log search.log
 .fi
 We use the
 .B -o-log
@@ -248,12 +248,12 @@ In the
 shell:
 .nf
     export OMP_NUM_THREADS=1
-    protocon -x inst/ColorRing.protocn -def N 5
+    protocon -x inst/ColorRing.protocon -def N 5
     unset OMP_NUM_THREADS
 .fi
 This can of course be accomplished on one line:
 .nf
-    OMP_NUM_THREADS=1 protocon -x inst/ColorRing.protocn -def N 5
+    OMP_NUM_THREADS=1 protocon -x inst/ColorRing.protocon -def N 5
 .fi
 The equivalent
 .B csh
@@ -262,7 +262,7 @@ or
 shell commands are:
 .nf
     setenv OMP_NUM_THREADS 1
-    protocon -x inst/ColorRing.protocn -def N 5
+    protocon -x inst/ColorRing.protocon -def N 5
     unsetenv
 .fi
 
@@ -270,17 +270,17 @@ shell commands are:
 One particular instance of agreement on a ring poses some issues.
 Using the default heuristics, the following may take a long time!
 .nf
-    protocon -x inst/Agreement.protocn -def N 5
+    protocon -x inst/Agreement.protocon -def N 5
 .fi
 
 But notice that removing randomization solves this problem very quickly without any special flags.
 .nf
-    protocon -simple -x inst/Agreement.protocn -def N 5
+    protocon -simple -x inst/Agreement.protocon -def N 5
 .fi
 This even works well when the ring, and each variable domain, is of size
 .IR 6 .
 .nf
-    protocon -simple -x inst/Agreement.protocn -def N 6
+    protocon -simple -x inst/Agreement.protocon -def N 6
 .fi
 
 The random method can make better decisions (for this problem, at least) by trying to choose actions which make an execution from some deadlock state to the invariant, rather than just resolving some deadlock.
@@ -294,9 +294,9 @@ flag.
 Alone, each of these two flags make the runtime finish in a reasonable amount of time (55 seconds on a 2 GHz machine).
 Together, they rival the non-random version.
 .nf
-    protocon -x inst/Agreement.protocn -pick-reach -def N 5
-    protocon -x inst/Agreement.protocn -pick lcv -def N 5
-    protocon -x inst/Agreement.protocn -pick-reach -pick lcv -def N 5
+    protocon -x inst/Agreement.protocon -pick-reach -def N 5
+    protocon -x inst/Agreement.protocon -pick lcv -def N 5
+    protocon -x inst/Agreement.protocon -pick-reach -pick lcv -def N 5
 .fi
 
 Since
@@ -308,13 +308,13 @@ Use the
 .B -no-conflict
 flag to speed up the trials.
 .nf
-    protocon -rank-shuffle -x inst/Agreement.protocn -no-conflict -def N 5
+    protocon -rank-shuffle -x inst/Agreement.protocon -no-conflict -def N 5
 .fi
 We can similarly use
 .B -no-conflict
 with backtracking, which works fairly well in this case.
 .nf
-    protocon -x inst/Agreement.protocn -no-conflict -def N 5
+    protocon -x inst/Agreement.protocon -no-conflict -def N 5
 .fi
 Be warned that the
 .B -no-conflict

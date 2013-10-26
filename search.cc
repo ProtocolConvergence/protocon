@@ -243,12 +243,12 @@ rank_states (Cx::Table<Cx::PFmla>& state_layers,
 
   Cx::PFmla visit_pf( legit );
   Cx::PFmla layer_pf( xn.pre(legit) - visit_pf );
-  while (!layer_pf.tautology_ck(false)) {
+  while (layer_pf.sat_ck()) {
     state_layers.push(layer_pf);
     visit_pf |= layer_pf;
     layer_pf = xn.pre(layer_pf) - visit_pf;
   }
-  return (visit_pf.tautology_ck(true));
+  return (visit_pf.tautology_ck());
 }
 
   bool
