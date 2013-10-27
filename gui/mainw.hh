@@ -8,7 +8,6 @@ namespace Ui {
 }
 class SearchDialog;
 
-//! [0]
 class MainW : public QMainWindow
 {
 Q_OBJECT
@@ -17,10 +16,13 @@ public:
   MainW(QWidget *parent = 0);
   ~MainW();
 
+  bool open_file(QString fname);
+
 private slots:
   void open();
-  void save();
-  void saveas();
+  void new_file();
+  bool save();
+  bool saveas();
   void search();
 
 private:
@@ -28,6 +30,5 @@ private:
   Ui::MainW* ui;
   SearchDialog* search_dialog;
 };
-//! [0]
 
 #endif
