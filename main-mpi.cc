@@ -228,6 +228,9 @@ done_ck (void* dat)
   return mpi_done_flag->ck();
 }
 
+#define MpiTag_MpiRound 1
+#define MpiTag_Conflict 2
+
 static
   int
 stabilization_search(vector<uint>& ret_actions,
@@ -240,7 +243,7 @@ stabilization_search(vector<uint>& ret_actions,
   bool solution_found = false;
   ConflictFamily conflicts;
 
-  mpi_done_flag = new MpiRound(PcIdx, NPcs, 1, MPI_COMM_WORLD);
+  mpi_done_flag = new MpiRound(PcIdx, NPcs, MpiTag_MpiRound, MPI_COMM_WORLD);
 
   signal(SIGINT, set_done_flag);
   signal(SIGTERM, set_done_flag);
@@ -257,12 +260,33 @@ stabilization_search(vector<uint>& ret_actions,
       return false;
     }
     conflicts.trim(global_opt.max_conflict_sz);
-    conflicts.oput_conflict_sizes(DBogOF);
+    if (PcIdx == 0) {
+       conflicts.oput_conflict_sizes(DBogOF);
+    }
+  }
+
+  Cx::Table< FlatSet<uint> > flat_conflicts;
+  if (exec_opt.task == ProtoconOpt::MinimizeConflictsTask) {
+    conflicts.all_conflicts(flat_conflicts);
+    Cx::Table< Cx::Table< FlatSet<uint> > > sized_conflicts;
+    for (uint i = 0; i < flat_conflicts.sz(); ++i) {
+      uint sz = flat_conflicts[i].sz();
+      while (sz >= sized_conflicts.sz()) {
+        sized_conflicts.grow1();
+      }
+      sized_conflicts[sz].push(flat_conflicts[i]);
+    }
+    flat_conflicts.clear();
+    for (uint i = sized_conflicts.sz(); i > 0;) {
+      --i;
+      for (uint j = 0; j < sized_conflicts[i].sz(); ++j) {
+        flat_conflicts.push(sized_conflicts[i][j]);
+      }
+    }
   }
 
   Sign good = 1;
   AddConvergenceOpt opt(global_opt);
-  ConflictFamily working_conflicts = conflicts;
   Cx::OFileB log_ofile;
 
   opt.sys_pcidx = PcIdx;
@@ -330,6 +354,68 @@ stabilization_search(vector<uint>& ret_actions,
 
   DBog1( "BEGIN! %u", PcIdx );
 
+  if (exec_opt.task == ProtoconOpt::MinimizeConflictsTask)
+  {
+    for (uint conflict_idx = PcIdx; conflict_idx < flat_conflicts.sz(); conflict_idx += NPcs) {
+      uint old_sz = flat_conflicts[conflict_idx].sz();
+      if (!synctx.done_ck() && old_sz > 1) {
+        *opt.log
+          << "pcidx:" << PcIdx
+          << " conflict:" << conflict_idx << "/" << flat_conflicts.sz()
+          << " sz:" << old_sz
+          << opt.log->endl();
+
+        uint new_sz =
+          synlvl.add_small_conflict_set(flat_conflicts[conflict_idx]);
+
+        *opt.log
+          << "DONE: pcidx:" << PcIdx
+          << " conflict:" << conflict_idx << "/" << flat_conflicts.sz()
+          << " old_sz:" << old_sz << " new_sz:" << new_sz
+          << opt.log->endl();
+      }
+    }
+
+    synctx.conflicts.oput_conflict_sizes(*opt.log);
+    Cx::Table<uint> flattest_conflicts;
+    if (PcIdx == 0) {
+      for (uint source_idx = 1; source_idx < NPcs; ++source_idx) {
+        uint sz = 0;
+        MPI_Status status;
+        MPI_Recv(&sz, 1, MPI_UNSIGNED, source_idx,
+                 MpiTag_Conflict, MPI_COMM_WORLD, &status);
+        flattest_conflicts.resize(sz);
+        MPI_Recv(&flattest_conflicts[0], sz, MPI_UNSIGNED, source_idx,
+                 MpiTag_Conflict, MPI_COMM_WORLD, &status);
+        uint i = 0;
+        while (i < flattest_conflicts.sz()) {
+          uint n = flattest_conflicts[i++];
+          synctx.conflicts.add_conflict(FlatSet<uint>(&flattest_conflicts[i], n));
+          i += n;
+        }
+        synctx.conflicts.oput_conflict_sizes(*opt.log);
+      }
+      conflicts = synctx.conflicts;
+
+      conflicts.trim(global_opt.max_conflict_sz);
+      if (global_opt.conflicts_ofilename)
+        oput_conflicts (conflicts, global_opt.conflicts_ofilename);
+    }
+    else {
+      synctx.conflicts.all_conflicts(flat_conflicts);
+      for (uint i = 0; i < flat_conflicts.sz(); ++i) {
+        flattest_conflicts.push(flat_conflicts[i].sz());
+        for (uint j = 0; j < flat_conflicts[i].sz(); ++j) {
+          flattest_conflicts.push(flat_conflicts[i][j]);
+        }
+      }
+      uint sz = flattest_conflicts.sz();
+      MPI_Send(&sz, 1, MPI_UNSIGNED, 0,
+               MpiTag_Conflict, MPI_COMM_WORLD);
+      MPI_Send(&flattest_conflicts[0], sz, MPI_UNSIGNED, 0,
+               MpiTag_Conflict, MPI_COMM_WORLD);
+    }
+  }
 
   vector<uint> actions;
   if (exec_opt.task == ProtoconOpt::SearchTask)
@@ -394,7 +480,7 @@ stabilization_search(vector<uint>& ret_actions,
   {
     int send_pc = solution_found ? (int)PcIdx : -1;
     ret_pc = send_pc;
-    MPI_Allreduce(&send_pc, &ret_pc, 1,
+    MPI_Allreduce(&send_pc, &ret_pc, MpiTag_MpiRound,
                   MPI_INT, MPI_MAX, MPI_COMM_WORLD);
   }
 

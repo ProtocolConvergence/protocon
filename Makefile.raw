@@ -8,7 +8,6 @@ CXX = g++
 #CC = $(CXX)
 MPICXX = mpicxx
 LEG = leg
-QMAKE = qmake
 
 CONFIG += ansi
 #CONFIG += errwarn
@@ -42,6 +41,8 @@ ifneq (,$(filter on-gilbert-cluster,$(CONFIG)))
 endif
 
 include $(CxPath)/include.mk
+
+QMAKE = $(call FindCmd,qmake-qt4 qmake)
 
 CXXBldPath = $(PfxBldPath)/protocon-cxx
 

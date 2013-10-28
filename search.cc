@@ -399,6 +399,21 @@ stabilization_search(vector<uint>& ret_actions,
   Cx::Table< FlatSet<uint> > flat_conflicts;
   if (exec_opt.task == ProtoconOpt::MinimizeConflictsTask) {
     conflicts.all_conflicts(flat_conflicts);
+    Cx::Table< Cx::Table< FlatSet<uint> > > sized_conflicts;
+    for (uint i = 0; i < flat_conflicts.sz(); ++i) {
+      uint sz = flat_conflicts[i].sz();
+      while (sz >= sized_conflicts.sz()) {
+        sized_conflicts.grow1();
+      }
+      sized_conflicts[sz].push(flat_conflicts[i]);
+    }
+    flat_conflicts.clear();
+    for (uint i = sized_conflicts.sz(); i > 0;) {
+      --i;
+      for (uint j = 0; j < sized_conflicts[i].sz(); ++j) {
+        flat_conflicts.push(sized_conflicts[i][j]);
+      }
+    }
   }
 
 #ifdef _OPENMP
@@ -495,7 +510,7 @@ stabilization_search(vector<uint>& ret_actions,
   if (try_known_solution_ck &&
       !try_known_solution (conflicts, synctx))
   {
-    *opt.log << "Conflicts are insonsistent!" << opt.log->endl();
+    *opt.log << "Conflicts are inconsistent!" << opt.log->endl();
     set_done_flag (1);
   }
 #pragma omp barrier

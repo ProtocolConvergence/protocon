@@ -168,6 +168,7 @@ ConflictFamily::conflict_membs(Set<uint>* ret_membs,
   void
 ConflictFamily::all_conflicts(Cx::Table< FlatSet<uint> >& ret) const
 {
+  ret.clear();
   FOR_EACH( it, conflict_sets )
   {
     ret.push(*it);

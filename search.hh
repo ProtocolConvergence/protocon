@@ -2,6 +2,7 @@
 #ifndef SEARCH_HH_
 #define SEARCH_HH_
 #include "cx/synhax.hh"
+#include "cx/alphatab.hh"
 #include "cx/table.hh"
 
 namespace Cx {
@@ -15,6 +16,7 @@ class AddConvergenceOpt;
 class PartialSynthesis;
 class ProtoconFileOpt;
 class ProtoconOpt;
+class ConflictFamily;
 
 bool
 AddConvergence(vector<uint>& ret_actions,
@@ -31,6 +33,10 @@ rank_actions (Cx::Table< Cx::Table<uint> >& act_layers,
               const vector<uint>& candidates,
               const Cx::PFmla& xn,
               const Cx::PFmla& legit);
+void
+oput_conflicts (const ConflictFamily& conflicts, const Cx::String& ofilename);
+void
+oput_conflicts (const ConflictFamily& conflicts, Cx::String ofilename, uint pcidx);
 bool
 stabilization_search(vector<uint>& ret_actions,
                      const ProtoconFileOpt& infile_opt,
