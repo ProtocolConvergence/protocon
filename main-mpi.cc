@@ -377,44 +377,7 @@ stabilization_search(vector<uint>& ret_actions,
     }
 
     synctx.conflicts.oput_conflict_sizes(*opt.log);
-    Cx::Table<uint> flattest_conflicts;
-    if (PcIdx == 0) {
-      for (uint source_idx = 1; source_idx < NPcs; ++source_idx) {
-        uint sz = 0;
-        MPI_Status status;
-        MPI_Recv(&sz, 1, MPI_UNSIGNED, source_idx,
-                 MpiTag_Conflict, MPI_COMM_WORLD, &status);
-        flattest_conflicts.resize(sz);
-        MPI_Recv(&flattest_conflicts[0], sz, MPI_UNSIGNED, source_idx,
-                 MpiTag_Conflict, MPI_COMM_WORLD, &status);
-        uint i = 0;
-        while (i < flattest_conflicts.sz()) {
-          uint n = flattest_conflicts[i++];
-          synctx.conflicts.add_conflict(FlatSet<uint>(&flattest_conflicts[i], n));
-          i += n;
-        }
-        synctx.conflicts.oput_conflict_sizes(*opt.log);
-      }
-      conflicts = synctx.conflicts;
-
-      conflicts.trim(global_opt.max_conflict_sz);
-      if (global_opt.conflicts_ofilename)
-        oput_conflicts (conflicts, global_opt.conflicts_ofilename);
-    }
-    else {
-      synctx.conflicts.all_conflicts(flat_conflicts);
-      for (uint i = 0; i < flat_conflicts.sz(); ++i) {
-        flattest_conflicts.push(flat_conflicts[i].sz());
-        for (uint j = 0; j < flat_conflicts[i].sz(); ++j) {
-          flattest_conflicts.push(flat_conflicts[i][j]);
-        }
-      }
-      uint sz = flattest_conflicts.sz();
-      MPI_Send(&sz, 1, MPI_UNSIGNED, 0,
-               MpiTag_Conflict, MPI_COMM_WORLD);
-      MPI_Send(&flattest_conflicts[0], sz, MPI_UNSIGNED, 0,
-               MpiTag_Conflict, MPI_COMM_WORLD);
-    }
+    opt.log->flush();
   }
 
   vector<uint> actions;
@@ -445,8 +408,14 @@ stabilization_search(vector<uint>& ret_actions,
     {}
     else if (found)
     {
-      if (!global_opt.try_all)
+      if (!global_opt.try_all) {
         mpi_done_flag->fo(PcIdx);
+      }
+      else {
+        Cx::OFileB ofb;
+        ofb.open(exec_opt.ofilepath + "." + PcIdx + "." + trial_idx);
+        oput_protocon_file (ofb, sys, actions);
+      }
       solution_found = true;
       ret_actions = actions;
       *opt.log << "SOLUTION FOUND!" << opt.log->endl();
@@ -473,6 +442,49 @@ stabilization_search(vector<uint>& ret_actions,
       impossible &= Set<uint>(synlvl.candidates);
       if (!impossible.empty())
         synlvl.revise_actions(Set<uint>(), impossible);
+    }
+  }
+
+  if (global_opt.try_all)
+    mpi_done_flag->fo(-1);
+
+  if (global_opt.conflicts_ofilename) {
+    Cx::Table<uint> flattest_conflicts;
+    if (PcIdx == 0) {
+      for (uint source_idx = 1; source_idx < NPcs; ++source_idx) {
+        uint sz = 0;
+        MPI_Recv(&sz, 1, MPI_UNSIGNED, source_idx,
+                 MpiTag_Conflict, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        flattest_conflicts.resize(sz);
+        MPI_Recv(&flattest_conflicts[0], sz, MPI_UNSIGNED, source_idx,
+                 MpiTag_Conflict, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        uint i = 0;
+        while (i < flattest_conflicts.sz()) {
+          uint n = flattest_conflicts[i++];
+          synctx.conflicts.add_conflict(FlatSet<uint>(&flattest_conflicts[i], n));
+          i += n;
+        }
+        synctx.conflicts.oput_conflict_sizes(*opt.log);
+        opt.log->flush();
+      }
+      conflicts = synctx.conflicts;
+
+      conflicts.trim(global_opt.max_conflict_sz);
+      oput_conflicts(conflicts, global_opt.conflicts_ofilename);
+    }
+    else {
+      synctx.conflicts.all_conflicts(flat_conflicts);
+      for (uint i = 0; i < flat_conflicts.sz(); ++i) {
+        flattest_conflicts.push(flat_conflicts[i].sz());
+        for (uint j = 0; j < flat_conflicts[i].sz(); ++j) {
+          flattest_conflicts.push(flat_conflicts[i][j]);
+        }
+      }
+      uint sz = flattest_conflicts.sz();
+      MPI_Send(&sz, 1, MPI_UNSIGNED, 0,
+               MpiTag_Conflict, MPI_COMM_WORLD);
+      MPI_Send(&flattest_conflicts[0], sz, MPI_UNSIGNED, 0,
+               MpiTag_Conflict, MPI_COMM_WORLD);
     }
   }
 
@@ -505,12 +517,11 @@ int main(int argc, char** argv)
   AddConvergenceOpt opt;
   const char* modelFilePath = 0;
   ProtoconFileOpt infile_opt;
-  const char* outfile_path = 0;
   ProtoconOpt exec_opt;
   Xn::Sys sys;
   bool good =
     protocon_options
-    (sys, argi, argc, argv, opt, modelFilePath, infile_opt, outfile_path, exec_opt);
+    (sys, argi, argc, argv, opt, modelFilePath, infile_opt, exec_opt);
   if (!good)  failout_sysCx ("Bad args.");
 
   int found_papc =
@@ -525,10 +536,10 @@ int main(int argc, char** argv)
       OPut(DBogOF, act) << '\n';
     }
 
-    if (outfile_path)
+    if (!exec_opt.ofilepath.empty_ck())
     {
       Cx::OFileB ofb;
-      ofb.open(outfile_path);
+      ofb.open(exec_opt.ofilepath);
       oput_protocon_file (ofb, sys);
     }
   }

@@ -75,7 +75,6 @@ protocon_options
    AddConvergenceOpt& opt,
    const char*& modelFilePath,
    ProtoconFileOpt& infile_opt,
-   const char*& outfile_path,
    ProtoconOpt& exec_opt)
 {
   enum ProblemInstance {
@@ -149,10 +148,10 @@ protocon_options
       }
     }
     else if (eq_cstr (arg, "-o")) {
-      outfile_path = argv[argi++];
-      if (!outfile_path) {
+      if (!argv[argi]) {
         failout_sysCx("Not enuff arguments.");
       }
+      exec_opt.ofilepath = argv[argi++];
     }
     else if (eq_cstr (arg, "-x-test-known")) {
       Xn::Sys test_sys;

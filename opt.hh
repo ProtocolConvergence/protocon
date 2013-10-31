@@ -44,6 +44,7 @@ public:
   ExecTask task;
   Cx::Table< ProtoconParamOpt > params;
   const char* log_ofilename;
+  Cx::String ofilepath;
 
   ProtoconOpt()
     : task(SearchTask)
@@ -61,7 +62,6 @@ protocon_options
    AddConvergenceOpt& opt,
    const char*& modelFilePath,
    ProtoconFileOpt& infile_opt,
-   const char*& outfile_path,
    ProtoconOpt& exec_opt);
 
 #endif

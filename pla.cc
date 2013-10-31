@@ -170,6 +170,28 @@ oput_protocon_pc_act (Cx::OFile& of, XFile* xf,
   return good;
 }
 
+  void
+oput_protocon_pc_act (Cx::OFile& of, const Xn::ActSymm& act)
+{
+  of << "  puppet action:\n    ( ";
+  const Xn::PcSymm& pc_symm = *act.pc_symm;
+  
+  for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
+    if (i > 0) {
+      of << " && ";
+    }
+    of << pc_symm.vbl_name(i) << "==" << act.guard(i);
+  }
+  of << " --> ";
+  for (uint i = 0; i < pc_symm.wvbl_symms.sz(); ++i) {
+    if (i > 0) {
+      of << " && ";
+    }
+    of << pc_symm.vbl_name(pc_symm.wmap[i]) << ":=" << act.assign(i) << "; ";
+  }
+  of << ");\n";
+}
+
   bool
 oput_protocon_pc_acts (Cx::OFile& of, const Xn::PcSymm& pc_symm,
                        const Cx::Table<Xn::ActSymm>& acts,
@@ -193,15 +215,24 @@ oput_protocon_pc_acts (Cx::OFile& of, const Xn::PcSymm& pc_symm,
     assign_vbls[i] = pc_symm.vbl_name(pc_symm.wmap[i]);
   }
 
-  DoLegit(good, "spawn process")
+  bool use_espresso = false;
+
+  if (!use_espresso) {
+    for (uint i = 0; i < acts.sz(); ++i) {
+      oput_protocon_pc_act (of, acts[i]);
+    }
+    return true;
+  }
+
+  DoLegit( good, "spawn espresso" )
     good = spawn_OSPc (ospc);
 
-  if (good)
-  {
+  if (good) {
     Cx::OFile espresso_xf(ospc->of);
     oput_pla_pc_acts (espresso_xf, pc_symm, acts);
     close_OFile (ospc->of);
   }
+
   while (good && !skip_cstr_XFile (ospc->xf, ".p"))
   {
     DoLegit(good, "get line")
@@ -230,7 +261,7 @@ oput_protocon_pc_acts (Cx::OFile& of, const Xn::PcSymm& pc_symm,
 }
 
   bool
-oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys)
+oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys, const vector<uint>& actions)
 {
   Sign good = 1;
   OSPc ospc[1];
@@ -254,9 +285,9 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys)
       << "] <- Nat % " << vbl_symm.domsz_expression << ";\n";
   }
 
-  Cx::Table<Xn::ActSymm> acts( sys.actions.size() );
-  for (uint i = 0; i < sys.actions.size(); ++i) {
-    topo.action(acts[i], sys.actions[i]);
+  Cx::Table<Xn::ActSymm> acts( actions.size() );
+  for (uint i = 0; i < actions.size(); ++i) {
+    topo.action(acts[i], actions[i]);
   }
 
   for (uint i = 0; i < topo.pc_symms.sz(); ++i) {
@@ -280,5 +311,11 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys)
 
   lose_OSPc (ospc);
   return good;
+}
+
+  bool
+oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys)
+{
+  return oput_protocon_file (of, sys, sys.actions);
 }
 

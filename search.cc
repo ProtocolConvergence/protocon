@@ -6,6 +6,7 @@
 #include "cx/urandom.h"
 #include "cx/fileb.hh"
 #include "opt.hh"
+#include "pla.hh"
 #include "protoconfile.hh"
 #include "stabilization.hh"
 #include "synthesis.hh"
@@ -61,6 +62,16 @@ AddConvergence(vector<uint>& ret_actions,
 
   while (true) {
     PartialSynthesis& inst = bt_stack[stack_idx];
+    if (synctx.done_ck()) {
+      base_inst.failed_bt_level = inst.failed_bt_level;
+      return false;
+    }
+
+    if (opt.max_depth > 0 && inst.bt_level >= opt.max_depth) {
+      base_inst.failed_bt_level = opt.max_depth;
+      return false;
+    }
+
     if (!inst.candidates_ck()) {
       if (verify_solutions(inst))  break;
 
@@ -77,15 +88,6 @@ AddConvergence(vector<uint>& ret_actions,
         return false;
       else
         continue;
-    }
-    if (synctx.done_ck()) {
-      base_inst.failed_bt_level = inst.failed_bt_level;
-      return false;
-    }
-
-    if (opt.max_depth > 0 && inst.bt_level >= opt.max_depth) {
-      base_inst.failed_bt_level = opt.max_depth;
-      return false;
     }
 
     // Pick the action.
@@ -121,20 +123,25 @@ AddConvergence(vector<uint>& ret_actions,
       return false;
     }
 
-    if (inst.revise_actions(Set<uint>(), Set<uint>(actidx)))
-      continue;
+    while (!bt_stack[stack_idx].revise_actions(Set<uint>(), Set<uint>(actidx)))
+    {
+      PartialSynthesis& inst = bt_stack[stack_idx];
+      *inst.log << "backtrack from inst:" << inst.bt_level << inst.log->endl();
+      inst.add_small_conflict_set(inst.picks);
 
-    *inst.log << "backtrack from lvl:" << inst.bt_level << inst.log->endl();
-    inst.add_small_conflict_set(inst.picks);
+      stack_idx = decmod(stack_idx, 1, bt_stack.sz());
 
-    stack_idx = decmod(stack_idx, 1, bt_stack.sz());
+      if (bt_stack[stack_idx].bt_level >= inst.bt_level) {
+        base_inst.failed_bt_level = bt_stack[stack_idx].bt_level;
+        return false;
+      }
 
-    if (bt_stack[stack_idx].bt_level >= inst.bt_level) {
-      base_inst.failed_bt_level = bt_stack[stack_idx].bt_level;
-      return false;
+      if (synctx.done_ck()) {
+        base_inst.failed_bt_level = inst.failed_bt_level;
+        return false;
+      }
+      actidx = inst.picks.top();
     }
-
-    bt_stack[stack_idx].revise_actions(Set<uint>(), Set<uint>(inst.picks.top()));
   }
 
   PartialSynthesis& inst = bt_stack[stack_idx];
@@ -578,8 +585,14 @@ stabilization_search(vector<uint>& ret_actions,
     {}
     else if (found)
     {
-      if (!global_opt.try_all)
+      if (!global_opt.try_all) {
         set_done_flag (1);
+      }
+      else {
+        Cx::OFileB ofb;
+        ofb.open(exec_opt.ofilepath + "." + PcIdx + "." + trial_idx);
+        oput_protocon_file (ofb, sys, actions);
+      }
       solution_found = true;
       ret_actions = actions;
       *opt.log << "SOLUTION FOUND!" << opt.log->endl();

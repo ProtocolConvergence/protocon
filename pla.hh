@@ -6,6 +6,8 @@
 #include "xnsys.hh"
 
 bool
+oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys, const vector<uint>& actions);
+bool
 oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys);
 
 #endif

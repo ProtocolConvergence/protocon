@@ -18,13 +18,12 @@ int main(int argc, char** argv)
   AddConvergenceOpt opt;
   const char* modelFilePath = 0;
   ProtoconFileOpt infile_opt;
-  const char* outfile_path = 0;
   ProtoconOpt exec_opt;
   Xn::Sys sys;
 
   bool good =
     protocon_options
-    (sys, argi, argc, argv, opt, modelFilePath, infile_opt, outfile_path, exec_opt);
+    (sys, argi, argc, argv, opt, modelFilePath, infile_opt, exec_opt);
   if (!good)  failout_sysCx ("Bad args.");
 
   bool found = false;
@@ -88,10 +87,10 @@ int main(int argc, char** argv)
       DBog1("Model written to \"%s\".", modelFilePath);
       DBog0("WARNING: The model is not working at this time.");
     }
-    if (outfile_path)
+    if (!exec_opt.ofilepath.empty_ck())
     {
       Cx::OFileB ofb;
-      ofb.open(outfile_path);
+      ofb.open(exec_opt.ofilepath);
       oput_protocon_file (ofb, sys);
     }
   }

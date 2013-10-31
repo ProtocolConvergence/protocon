@@ -743,6 +743,9 @@ count_actions_in_cycle (const Cx::PFmla& scc, Cx::PFmla edg,
   uint
 PartialSynthesis::add_small_conflict_set(const Cx::Table<uint>& delpicks)
 {
+  if (this->ctx->done_ck())
+    return delpicks.sz();
+
   bool doit = false;
   for (uint i = 0; i < this->sz(); ++i) {
     if (!(*this)[i].no_conflict) {
@@ -763,9 +766,6 @@ PartialSynthesis::add_small_conflict_set(const Cx::Table<uint>& delpicks)
   }
   Set<uint> delpick_set( delpicks );
   for (uint i = 0; i < delpicks.sz(); ++i) {
-    if (this->ctx->done_ck())
-      return delpicks.sz();
-
     PartialSynthesis inst( this->ctx->base_inst );
     for (uint j = 0; j < inst.sz(); ++j) {
       inst[j].log = &Cx::OFile::null();
@@ -779,6 +779,10 @@ PartialSynthesis::add_small_conflict_set(const Cx::Table<uint>& delpicks)
       delpick_set << delpicks[i];
     }
     else {
+      if (this->ctx->done_ck()) {
+        delpick_set << delpicks[i];
+        break;
+      }
       conflicts.add_conflict(delpick_set);
     }
   }
@@ -830,9 +834,6 @@ PartialSynthesis::check_forward(Set<uint>& adds, Set<uint>& dels, Set<uint>& rej
 
   const Cx::PFmla& lo_xn_pre = this->lo_xn.pre();
   for (uint i = 0; i < this->candidates.size(); ++i) {
-    if (ctx->done_ck())
-      return true;
-
     uint actidx = this->candidates[i];
     if (dels.elem_ck(actidx))  continue;
 
@@ -875,6 +876,8 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels, Set<uin
   const Xn::Net& topo = sys.topology;
   Set<uint>::const_iterator it;
   const bool use_csp = false;
+  if (this->ctx->done_ck())
+    return false;
 
   if (this->no_partial) {
     for (it = adds.begin(); it != adds.end(); ++it) {
@@ -1100,11 +1103,7 @@ PartialSynthesis::pick_action(uint act_idx)
     (*this)[i].picks.push(act_idx);
   }
   if (!this->revise_actions(Set<uint>(act_idx), Set<uint>())) {
-#if 0
-    this->ctx->conflicts.add_conflict(this->picks);
-#else
     this->add_small_conflict_set(this->picks);
-#endif
     return false;
   }
 
