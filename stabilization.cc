@@ -133,7 +133,9 @@ shadow_ck(Cx::PFmla* ret_invariant,
 
   bool
 stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
-                 const Cx::PFmla& lo_xn, const Cx::PFmla& hi_xn)
+                 const Cx::PFmla& lo_xn,
+                 const Cx::PFmla& hi_xn,
+                 StabilizationCkInfo* info)
 {
   const Xn::Net& topo = sys.topology;
   of << "Checking for bad shadow...\n";
@@ -166,6 +168,24 @@ stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
   lo_xn.cycle_ck(&scc);
   if (!scc.subseteq_ck(sys.invariant)) {
     of << "Livelock found.\n";
+    if (info) {
+      info->livelock_exists = true;
+      Cx::Table<Cx::PFmla> states;
+      find_one_cycle(states, lo_xn, scc);
+      for (uint i = 0; i < states.sz()-1; ++i) {
+        for (uint j = 0; j < info->actions.size(); ++j) {
+          uint actidx = info->actions[j];
+          const Cx::PFmla& act_pfmla = topo.action_pfmla(actidx);
+          if (states[i].overlap_ck(act_pfmla) &&
+              states[i+1].as_img().overlap_ck(act_pfmla))
+          {
+            Remove1(info->livelock_actions, actidx);
+            info->livelock_actions.push_back(actidx);
+          }
+        }
+      }
+      of << info->livelock_actions.size() << " actions involved in livelocks.\n";
+    }
     if (false) {
       oput_one_cycle(of, lo_xn, scc, topo);
     }
@@ -211,7 +231,8 @@ stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
   bool
 stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
                  const vector<uint>& actions,
-                 const vector<uint>& candidates)
+                 const vector<uint>& candidates,
+                 StabilizationCkInfo* info)
 {
   const Xn::Net& topo = sys.topology;
   Cx::PFmla lo_xn( false );
@@ -235,20 +256,26 @@ stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
   const Cx::PFmla& puppet_self = topo.proj_puppet(topo.identity_xn);
   lo_xn |= puppet_self & ~lo_pure_shadow_pf & lo_pure_shadow_pf.as_img();
   hi_xn |= puppet_self & ~hi_pure_shadow_pf & hi_pure_shadow_pf.as_img();
-  return stabilization_ck(of, sys, lo_xn, hi_xn);
+
+  if (info) {
+    info->actions = actions;
+  }
+  return stabilization_ck(of, sys, lo_xn, hi_xn, info);
 }
 
   bool
 stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
-                 const vector<uint>& actions)
+                 const vector<uint>& actions,
+                 StabilizationCkInfo* info)
 {
   const vector<uint> candidates;
-  return stabilization_ck(of, sys, actions, candidates);
+  return stabilization_ck(of, sys, actions, candidates, info);
 }
 
   bool
-stabilization_ck(Cx::OFile& of, const Xn::Sys& sys)
+stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
+                 StabilizationCkInfo* info)
 {
-  return stabilization_ck(of, sys, sys.actions);
+  return stabilization_ck(of, sys, sys.actions, info);
 }
 

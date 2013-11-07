@@ -10,6 +10,7 @@ extern "C" {
 #include "pla.hh"
 #include "search.hh"
 #include "synthesis.hh"
+#include "stabilization.hh"
 
 static
   int
@@ -242,6 +243,7 @@ stabilization_search(vector<uint>& ret_actions,
 {
   bool solution_found = false;
   ConflictFamily conflicts;
+  Cx::Table< FlatSet<uint> > flat_conflicts;
 
   mpi_done_flag = new MpiRound(PcIdx, NPcs, MpiTag_MpiRound, MPI_COMM_WORLD);
 
@@ -250,39 +252,10 @@ stabilization_search(vector<uint>& ret_actions,
   MPI_Info mpi_info;
   MPI_Info_create(&mpi_info);
 
-  if (global_opt.conflicts_xfilename)
+  if (!initialize_conflicts(conflicts, flat_conflicts, exec_opt, global_opt,
+                            PcIdx == 0))
   {
-    Cx::XFileB conflicts_xf;
-    conflicts_xf.open(global_opt.conflicts_xfilename);
-    conflicts_xf >> conflicts;
-    if (!conflicts_xf.good()) {
-      DBog1( "Bad read from conflicts file: %s", global_opt.conflicts_xfilename );
-      return false;
-    }
-    conflicts.trim(global_opt.max_conflict_sz);
-    if (PcIdx == 0) {
-       conflicts.oput_conflict_sizes(DBogOF);
-    }
-  }
-
-  Cx::Table< FlatSet<uint> > flat_conflicts;
-  if (exec_opt.task == ProtoconOpt::MinimizeConflictsTask) {
-    conflicts.all_conflicts(flat_conflicts);
-    Cx::Table< Cx::Table< FlatSet<uint> > > sized_conflicts;
-    for (uint i = 0; i < flat_conflicts.sz(); ++i) {
-      uint sz = flat_conflicts[i].sz();
-      while (sz >= sized_conflicts.sz()) {
-        sized_conflicts.grow1();
-      }
-      sized_conflicts[sz].push(flat_conflicts[i]);
-    }
-    flat_conflicts.clear();
-    for (uint i = sized_conflicts.sz(); i > 0;) {
-      --i;
-      for (uint j = 0; j < sized_conflicts[i].sz(); ++j) {
-        flat_conflicts.push(sized_conflicts[i][j]);
-      }
-    }
+    return false;
   }
 
   Sign good = 1;
@@ -292,7 +265,7 @@ stabilization_search(vector<uint>& ret_actions,
   opt.sys_pcidx = PcIdx;
   opt.sys_npcs = NPcs;
   opt.random_one_shot = true;
-  if (exec_opt.log_ofilename) {
+  if (!!exec_opt.log_ofilename) {
     Cx::String ofilename( exec_opt.log_ofilename );
     ofilename += ".";
     ofilename += PcIdx;
@@ -305,10 +278,13 @@ stabilization_search(vector<uint>& ret_actions,
   //opt.log = &DBogOF;
   //opt.verify_found = false;
 
+
   Xn::Sys sys;
   DoLegit(good, "reading file")
-    good =
-    ReadProtoconFile(sys, infile_opt);
+  {
+    if (exec_opt.task != ProtoconOpt::VerifyTask)
+      good = ReadProtoconFile(sys, infile_opt);
+  }
 
   Cx::LgTable<Xn::Sys> systems;
   SynthesisCtx synctx( PcIdx, NPcs );
@@ -316,7 +292,10 @@ stabilization_search(vector<uint>& ret_actions,
   synctx.conflicts = conflicts;
 
   DoLegit(good, "initialization")
-    good = synctx.init(sys, opt);
+  {
+    if (exec_opt.task != ProtoconOpt::VerifyTask)
+      good = synctx.init(sys, opt);
+  }
 
   PartialSynthesis& synlvl = synctx.base_inst;
 
@@ -333,6 +312,7 @@ stabilization_search(vector<uint>& ret_actions,
                     synlvl.hi_invariant);
   }
 
+  if (exec_opt.task != ProtoconOpt::VerifyTask)
   for (uint i = 1; good && i < exec_opt.params.sz(); ++i) {
     ProtoconFileOpt param_infile_opt = infile_opt;
     param_infile_opt.constant_map = exec_opt.params[i].constant_map;
@@ -354,7 +334,41 @@ stabilization_search(vector<uint>& ret_actions,
 
   DBog1( "BEGIN! %u", PcIdx );
 
-  if (exec_opt.task == ProtoconOpt::MinimizeConflictsTask)
+  if (exec_opt.task == ProtoconOpt::VerifyTask)
+  {
+    for (uint i = PcIdx; i < exec_opt.xfilepaths.sz(); i += NPcs) {
+      if (synctx.done_ck())  break;
+      Xn::Sys sys;
+      ProtoconFileOpt verif_infile_opt( infile_opt );
+      verif_infile_opt.file_path = exec_opt.xfilepaths[i].cstr();
+      *opt.log << "VERIFYING: " << verif_infile_opt.file_path << opt.log->endl();
+      if (ReadProtoconFile(sys, verif_infile_opt)) {
+        StabilizationCkInfo info;
+        if (stabilization_ck(*opt.log, sys, &info)) {
+          solution_found = true;
+          ret_actions = sys.actions;
+          *opt.log << "System is stabilizing." << opt.log->endl();
+
+          if (!!exec_opt.ofilepath) {
+            Cx::String filepath( exec_opt.ofilepath + "." + i );
+            *opt.log << "Writing system to: " << filepath  << opt.log->endl();
+            Cx::OFileB ofb;
+            ofb.open(filepath);
+            oput_protocon_file(ofb, sys, sys.actions);
+          }
+        }
+        else {
+          *opt.log << "System NOT stabilizing." << opt.log->endl();
+          if (info.livelock_exists) {
+            //synctx.conflicts.add_conflict(FlatSet<uint>(sys.actions));
+            synctx.conflicts.add_conflict(FlatSet<uint>(info.livelock_actions));
+          }
+        }
+      }
+    }
+  }
+  if (exec_opt.task == ProtoconOpt::MinimizeConflictsHiLoTask ||
+      exec_opt.task == ProtoconOpt::MinimizeConflictsLoHiTask)
   {
     for (uint conflict_idx = PcIdx; conflict_idx < flat_conflicts.sz(); conflict_idx += NPcs) {
       uint old_sz = flat_conflicts[conflict_idx].sz();
@@ -375,9 +389,6 @@ stabilization_search(vector<uint>& ret_actions,
           << opt.log->endl();
       }
     }
-
-    synctx.conflicts.oput_conflict_sizes(*opt.log);
-    opt.log->flush();
   }
 
   vector<uint> actions;
@@ -448,16 +459,20 @@ stabilization_search(vector<uint>& ret_actions,
   if (global_opt.try_all)
     mpi_done_flag->fo(-1);
 
-  if (global_opt.conflicts_ofilename) {
+
+  if (!!exec_opt.conflicts_ofilepath) {
     Cx::Table<uint> flattest_conflicts;
+    synctx.conflicts.oput_conflict_sizes(*opt.log);
+    opt.log->flush();
     if (PcIdx == 0) {
       for (uint source_idx = 1; source_idx < NPcs; ++source_idx) {
+        MPI_Status status;
         uint sz = 0;
-        MPI_Recv(&sz, 1, MPI_UNSIGNED, source_idx,
-                 MpiTag_Conflict, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Probe(MPI_ANY_SOURCE, MpiTag_Conflict, MPI_COMM_WORLD, &status);
+        MPI_Get_count (&status, MPI_UNSIGNED, (int*) &sz);
         flattest_conflicts.resize(sz);
-        MPI_Recv(&flattest_conflicts[0], sz, MPI_UNSIGNED, source_idx,
-                 MpiTag_Conflict, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Recv(&flattest_conflicts[0], sz, MPI_UNSIGNED, MPI_ANY_SOURCE,
+                 MpiTag_Conflict, MPI_COMM_WORLD, &status);
         uint i = 0;
         while (i < flattest_conflicts.sz()) {
           uint n = flattest_conflicts[i++];
@@ -470,10 +485,10 @@ stabilization_search(vector<uint>& ret_actions,
       conflicts = synctx.conflicts;
 
       conflicts.trim(global_opt.max_conflict_sz);
-      oput_conflicts(conflicts, global_opt.conflicts_ofilename);
+      oput_conflicts(conflicts, exec_opt.conflicts_ofilepath);
     }
     else {
-      synctx.conflicts.all_conflicts(flat_conflicts);
+      (synctx.conflicts - conflicts).all_conflicts(flat_conflicts);
       for (uint i = 0; i < flat_conflicts.sz(); ++i) {
         flattest_conflicts.push(flat_conflicts[i].sz());
         for (uint j = 0; j < flat_conflicts[i].sz(); ++j) {
@@ -481,8 +496,6 @@ stabilization_search(vector<uint>& ret_actions,
         }
       }
       uint sz = flattest_conflicts.sz();
-      MPI_Send(&sz, 1, MPI_UNSIGNED, 0,
-               MpiTag_Conflict, MPI_COMM_WORLD);
       MPI_Send(&flattest_conflicts[0], sz, MPI_UNSIGNED, 0,
                MpiTag_Conflict, MPI_COMM_WORLD);
     }
@@ -515,13 +528,12 @@ int main(int argc, char** argv)
   MPI_Comm_size (MPI_COMM_WORLD, (int*) &NPcs);
 
   AddConvergenceOpt opt;
-  const char* modelFilePath = 0;
   ProtoconFileOpt infile_opt;
   ProtoconOpt exec_opt;
   Xn::Sys sys;
   bool good =
     protocon_options
-    (sys, argi, argc, argv, opt, modelFilePath, infile_opt, exec_opt);
+    (sys, argi, argc, argv, opt, infile_opt, exec_opt);
   if (!good)  failout_sysCx ("Bad args.");
 
   int found_papc =

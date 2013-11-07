@@ -338,11 +338,11 @@ ReadProtoconFile(Xn::Sys& sys, const ProtoconFileOpt& opt)
   bool good = true;
   yycontext yyctx;
   memset (&yyctx, 0, sizeof (yyctx));
-  Claim(opt.file_path);
+  Claim(!opt.file_path.empty_ck());
   XFileB xfb;
   init_XFileB (&xfb);
-  open_FileB (&xfb.fb, 0, opt.file_path);
-  //yyctx.infile = fopen(opt.file_path, "rb");
+  open_FileB (&xfb.fb, 0, opt.file_path.cstr());
+  //yyctx.infile = fopen(opt.file_path.cstr(), "rb");
   yyctx.st = new ProtoconFile(&sys, &xfb.xf);
   for (Cx::Map<Cx::String,uint>::const_iterator itr = opt.constant_map.begin();
        itr != opt.constant_map.end();
@@ -355,7 +355,7 @@ ReadProtoconFile(Xn::Sys& sys, const ProtoconFileOpt& opt)
   }
   if (!yyparse(&yyctx) || !yyctx.st->allgood) {
     good = false;
-    DBog1( "Error parsing the file: %s", opt.file_path );
+    DBog1( "Error parsing the file: %s", opt.file_path.cstr() );
   }
   lose_XFileB (&xfb);
   delete yyctx.st;

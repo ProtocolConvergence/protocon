@@ -20,6 +20,9 @@ private:
 public:
   Cx::Set<uint> impossible_set;
 
+  ConflictFamily operator-(const ConflictFamily& fam) const;
+
+
   bool conflict_ck(const FlatSet<uint>& test_set) const;
   bool exact_conflict_ck(const FlatSet<uint>& test_set) const;
   void add_conflict(const FlatSet<uint>& b);

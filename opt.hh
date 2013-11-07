@@ -11,8 +11,34 @@ namespace Xn {
 }
 class AddConvergenceOpt;
 class ProtoconFileOpt;
-class ProtoconParamOpt;
 class ProtoconOpt;
+class ProtoconParamOpt;
+
+class ProtoconOpt {
+public:
+  enum ExecTask {
+    TestTask,
+    SearchTask,
+    VerifyTask,
+    MinimizeConflictsHiLoTask,
+    MinimizeConflictsLoHiTask,
+    NExecTasks
+  };
+
+  ExecTask task;
+  Cx::Table< ProtoconParamOpt > params;
+  Cx::String log_ofilename;
+  Cx::String ofilepath;
+  Cx::Table< Cx::String > xfilepaths;
+  Cx::String model_ofilepath;
+  Cx::String conflicts_xfilepath;;
+  Cx::String conflicts_ofilepath;;
+
+  ProtoconOpt()
+    : task(SearchTask)
+    , params( 1 )
+  {}
+};
 
 class ProtoconParamOpt {
 public:
@@ -31,27 +57,6 @@ public:
   }
 };
 
-class ProtoconOpt {
-public:
-  enum ExecTask {
-    TestTask,
-    SearchTask,
-    VerifyTask,
-    MinimizeConflictsTask,
-    NExecTasks
-  };
-
-  ExecTask task;
-  Cx::Table< ProtoconParamOpt > params;
-  const char* log_ofilename;
-  Cx::String ofilepath;
-
-  ProtoconOpt()
-    : task(SearchTask)
-    , params( 1 )
-    , log_ofilename(0)
-  {}
-};
 
   bool
 protocon_options
@@ -60,7 +65,6 @@ protocon_options
    int argc,
    char** argv,
    AddConvergenceOpt& opt,
-   const char*& modelFilePath,
    ProtoconFileOpt& infile_opt,
    ProtoconOpt& exec_opt);
 

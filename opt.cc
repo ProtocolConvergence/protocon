@@ -10,6 +10,16 @@ extern "C" {
 #include "cx/fileb.hh"
 #include "search.hh"
 
+enum ProblemInstance {
+  FromFileInstance,
+  ThreeColoringRingInstance,
+  TwoColoringRingInstance,
+  MaximalMatchingInstance,
+  SumNotTwoInstance,
+  AgreementRingInstance,
+  NProblemInstances
+};
+
 static
   bool
 parse_param(ProtoconOpt& opt, int& argi, int argc, char** argv)
@@ -65,35 +75,26 @@ parse_param(ProtoconOpt& opt, int& argi, int argc, char** argv)
   return true;
 }
 
-
+static
   bool
-protocon_options
-  (Xn::Sys& sys,
-   int argi,
+protocon_options_rec
+  (int& argi,
    int argc,
    char** argv,
    AddConvergenceOpt& opt,
-   const char*& modelFilePath,
    ProtoconFileOpt& infile_opt,
-   ProtoconOpt& exec_opt)
+   ProtoconOpt& exec_opt,
+   ProblemInstance& problem)
 {
-  enum ProblemInstance {
-    FromFileInstance,
-    ThreeColoringRingInstance,
-    TwoColoringRingInstance,
-    MaximalMatchingInstance,
-    SumNotTwoInstance,
-    AgreementRingInstance,
-    NProblemInstances
-  } problem = NProblemInstances;
-  uint npcs = 4;
+  Cx::OFile of( stderr_OFile() );
   while (pfxeq_cstr ("-", argv[argi])) {
     const char* arg = argv[argi++];
     if (eq_cstr (arg, "-o-model")) {
-      modelFilePath = argv[argi++];
-      if (!modelFilePath){
-        DBog0("No path given!!!!");
+      if (!argv[argi]) {
+        DBog0("No path given for -o-model!!!");
+        return false;
       }
+      exec_opt.model_ofilepath = argv[argi++];
     }
     else if (eq_cstr (arg, "-simple")) {
       opt.search_method = opt.SimpleBacktrackSearch;
@@ -106,13 +107,18 @@ protocon_options
     }
     else if (eq_cstr (arg, "-test")) {
       exec_opt.task = ProtoconOpt::TestTask;
-      return true;
     }
     else if (eq_cstr (arg, "-verify")) {
       exec_opt.task = ProtoconOpt::VerifyTask;
     }
     else if (eq_cstr (arg, "-minimize-conflicts")) {
-      exec_opt.task = ProtoconOpt::MinimizeConflictsTask;
+      exec_opt.task = ProtoconOpt::MinimizeConflictsHiLoTask;
+    }
+    else if (eq_cstr (arg, "-minimize-conflicts-hilo")) {
+      exec_opt.task = ProtoconOpt::MinimizeConflictsHiLoTask;
+    }
+    else if (eq_cstr (arg, "-minimize-conflicts-lohi")) {
+      exec_opt.task = ProtoconOpt::MinimizeConflictsLoHiTask;
     }
     else if (eq_cstr (arg, "-h") || eq_cstr (arg, "-help")) {
       DBog0( "See the manpage for details: man ./doc/protocon.1" );
@@ -142,10 +148,49 @@ protocon_options
     else if (eq_cstr (arg, "-x")) {
       DBog0("Problem: From File");
       problem = FromFileInstance;
-      infile_opt.file_path = argv[argi++];
-      if (!infile_opt.file_path) {
+      if (!argv[argi]) {
         failout_sysCx("Not enuff arguments.");
       }
+      infile_opt.file_path = argv[argi++];
+    }
+    else if (eq_cstr (arg, "-x-list")) {
+      while (argi < argc) {
+        arg = argv[argi++];
+        if (eq_cstr(arg, ".")) {
+          break;
+        }
+        exec_opt.xfilepaths.push(arg);
+      }
+    }
+    else if (eq_cstr (arg, "-x-args")) {
+      Cx::String args_xfilepath( argv[argi++] );
+      if (!args_xfilepath) {
+        of << "-x-args requires an argument!" << of.endl();
+        return false;
+      }
+      Cx::C::XFileB args_xf;
+      init_XFileB (&args_xf);
+      if (!open_FileB (&args_xf.fb, 0, args_xfilepath.cstr())) {
+        of << "-x-args could not be opened!" << of.endl();
+        return false;
+      }
+      xget_XFileB (&args_xf);
+
+      XFile olay;
+      olay_txt_XFile (&olay, &args_xf.xf, 0);
+      Cx::Table<char*> xargs;
+      do {
+        xargs.push(nextok_XFile (&olay, 0, WhiteSpaceChars));
+      } while (xargs.top());
+      int tmp_argi = 0;
+      int tmp_argc = xargs.sz()-1;
+      if (!protocon_options_rec
+          (tmp_argi, tmp_argc, &xargs[0], opt, infile_opt, exec_opt, problem))
+      {
+        return false;
+      }
+      lose_XFile (&olay);
+      lose_XFileB (&args_xf);
     }
     else if (eq_cstr (arg, "-o")) {
       if (!argv[argi]) {
@@ -156,10 +201,10 @@ protocon_options
     else if (eq_cstr (arg, "-x-test-known")) {
       Xn::Sys test_sys;
       ProtoconFileOpt file_opt;
-      file_opt.file_path = argv[argi++];
-      if (!file_opt.file_path) {
+      if (!argv[argi]) {
         failout_sysCx("Not enuff arguments for -x-test-known.");
       }
+      file_opt.file_path = argv[argi++];
       if (!ReadProtoconFile(test_sys, file_opt)) {
         failout_sysCx("Reading -x-test-known file.");
       }
@@ -168,7 +213,8 @@ protocon_options
     else if (eq_cstr (arg, "-o-log")) {
       exec_opt.log_ofilename = argv[argi++];
       if (!exec_opt.log_ofilename) {
-        failout_sysCx("Argument Usage: -o-log FILE");
+        of << "-o-log requires an argument!" << of.endl();
+        return false;
       }
     }
     else if (eq_cstr (arg, "-ntrials")) {
@@ -180,10 +226,18 @@ protocon_options
       opt.try_all = true;
     }
     else if (eq_cstr (arg, "-x-conflicts")) {
-      opt.conflicts_xfilename = argv[argi++];
+      exec_opt.conflicts_xfilepath = argv[argi++];
+      if (!exec_opt.conflicts_xfilepath) {
+        of << "-x-conflicts requires an argument!" << of.endl();
+        return false;
+      }
     }
     else if (eq_cstr (arg, "-o-conflicts")) {
-      opt.conflicts_ofilename = argv[argi++];
+      exec_opt.conflicts_ofilepath = argv[argi++];
+      if (!exec_opt.conflicts_ofilepath) {
+        of << "-o-conflicts requires an argument!" << of.endl();
+        return false;
+      }
     }
     else if (eq_cstr (arg, "-snapshot-conflicts")) {
       opt.snapshot_conflicts = true;
@@ -234,6 +288,27 @@ protocon_options
       failout_sysCx(arg);
     }
   }
+  return true;
+}
+
+
+  bool
+protocon_options
+  (Xn::Sys& sys,
+   int argi,
+   int argc,
+   char** argv,
+   AddConvergenceOpt& opt,
+   ProtoconFileOpt& infile_opt,
+   ProtoconOpt& exec_opt)
+{
+  ProblemInstance problem = NProblemInstances;
+  uint npcs = 4;
+  if (!protocon_options_rec (argi, argc, argv, opt, infile_opt, exec_opt, problem))
+    return false;
+
+  if (exec_opt.task == ProtoconOpt::TestTask)
+    return true;
 
   if (problem == FromFileInstance) {
   }

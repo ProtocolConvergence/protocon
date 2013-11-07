@@ -126,7 +126,7 @@ AddConvergence(vector<uint>& ret_actions,
     while (!bt_stack[stack_idx].revise_actions(Set<uint>(), Set<uint>(actidx)))
     {
       PartialSynthesis& inst = bt_stack[stack_idx];
-      *inst.log << "backtrack from inst:" << inst.bt_level << inst.log->endl();
+      *inst.log << "backtrack from lvl:" << inst.bt_level << inst.log->endl();
       inst.add_small_conflict_set(inst.picks);
 
       stack_idx = decmod(stack_idx, 1, bt_stack.sz());
@@ -377,34 +377,30 @@ try_known_solution(const ConflictFamily& conflicts,
 }
 
   bool
-stabilization_search(vector<uint>& ret_actions,
-                     const ProtoconFileOpt& infile_opt,
+initialize_conflicts(ConflictFamily& conflicts,
+                     Cx::Table< Cx::FlatSet<uint> >& flat_conflicts,
                      const ProtoconOpt& exec_opt,
-                     const AddConvergenceOpt& global_opt)
+                     const AddConvergenceOpt& global_opt,
+                     bool do_output)
 {
-  bool solution_found = false;
-  uint NPcs = 0;
-  ConflictFamily conflicts;
-  const bool try_known_solution_ck = !global_opt.known_solution.empty();
-
-  signal(SIGINT, set_done_flag);
-  signal(SIGTERM, set_done_flag);
-
-  if (global_opt.conflicts_xfilename)
+  if (!!exec_opt.conflicts_xfilepath)
   {
     Cx::XFileB conflicts_xf;
-    conflicts_xf.open(global_opt.conflicts_xfilename);
+    conflicts_xf.open(exec_opt.conflicts_xfilepath);
     conflicts_xf >> conflicts;
     if (!conflicts_xf.good()) {
-      DBog1( "Bad read from conflicts file: %s", global_opt.conflicts_xfilename );
+      DBog1( "Bad read from conflicts file: %s", exec_opt.conflicts_xfilepath.cstr() );
       return false;
     }
     conflicts.trim(global_opt.max_conflict_sz);
-    conflicts.oput_conflict_sizes(DBogOF);
+    if (do_output) {
+      conflicts.oput_conflict_sizes(DBogOF);
+    }
   }
 
-  Cx::Table< FlatSet<uint> > flat_conflicts;
-  if (exec_opt.task == ProtoconOpt::MinimizeConflictsTask) {
+  if (exec_opt.task == ProtoconOpt::MinimizeConflictsHiLoTask ||
+      exec_opt.task == ProtoconOpt::MinimizeConflictsLoHiTask)
+  {
     conflicts.all_conflicts(flat_conflicts);
     Cx::Table< Cx::Table< FlatSet<uint> > > sized_conflicts;
     for (uint i = 0; i < flat_conflicts.sz(); ++i) {
@@ -415,12 +411,42 @@ stabilization_search(vector<uint>& ret_actions,
       sized_conflicts[sz].push(flat_conflicts[i]);
     }
     flat_conflicts.clear();
-    for (uint i = sized_conflicts.sz(); i > 0;) {
-      --i;
-      for (uint j = 0; j < sized_conflicts[i].sz(); ++j) {
-        flat_conflicts.push(sized_conflicts[i][j]);
+    if (exec_opt.task == ProtoconOpt::MinimizeConflictsLoHiTask) {
+      for (uint i = 0; i < sized_conflicts.sz(); ++i) {
+        for (uint j = 0; j < sized_conflicts[i].sz(); ++j) {
+          flat_conflicts.push(sized_conflicts[i][j]);
+        }
       }
     }
+    else {
+      for (uint i = sized_conflicts.sz(); i > 0;) {
+        --i;
+        for (uint j = 0; j < sized_conflicts[i].sz(); ++j) {
+          flat_conflicts.push(sized_conflicts[i][j]);
+        }
+      }
+    }
+  }
+  return true;
+}
+
+  bool
+stabilization_search(vector<uint>& ret_actions,
+                     const ProtoconFileOpt& infile_opt,
+                     const ProtoconOpt& exec_opt,
+                     const AddConvergenceOpt& global_opt)
+{
+  bool solution_found = false;
+  uint NPcs = 0;
+  ConflictFamily conflicts;
+  Cx::Table< FlatSet<uint> > flat_conflicts;
+  const bool try_known_solution_ck = !global_opt.known_solution.empty();
+
+  signal(SIGINT, set_done_flag);
+  signal(SIGTERM, set_done_flag);
+
+  if (!initialize_conflicts(conflicts, flat_conflicts, exec_opt, global_opt, true)) {
+    return false;
   }
 
 #ifdef _OPENMP
@@ -450,7 +476,7 @@ stabilization_search(vector<uint>& ret_actions,
     opt.ntrials = 1;
   }
 
-  if (exec_opt.log_ofilename) {
+  if (!!exec_opt.log_ofilename) {
     Cx::String ofilename( exec_opt.log_ofilename );
     ofilename += ".";
     ofilename += PcIdx;
@@ -524,7 +550,8 @@ stabilization_search(vector<uint>& ret_actions,
 #pragma omp critical (DBog)
   DBog1( "BEGIN! %u", PcIdx );
 
-  if (exec_opt.task == ProtoconOpt::MinimizeConflictsTask)
+  if (exec_opt.task == ProtoconOpt::MinimizeConflictsHiLoTask ||
+      exec_opt.task == ProtoconOpt::MinimizeConflictsLoHiTask)
   {
 #pragma omp for schedule(dynamic)
     for (uint conflict_idx = 0; conflict_idx < flat_conflicts.sz(); ++conflict_idx) {
@@ -597,7 +624,7 @@ stabilization_search(vector<uint>& ret_actions,
       ret_actions = actions;
       *opt.log << "SOLUTION FOUND!" << opt.log->endl();
     }
-    if (!done_flag || global_opt.conflicts_ofilename || try_known_solution_ck)
+    if (!done_flag || !!exec_opt.conflicts_ofilepath || try_known_solution_ck)
     {
       if (try_known_solution_ck &&
           !try_known_solution (conflicts, synctx))
@@ -639,8 +666,8 @@ stabilization_search(vector<uint>& ret_actions,
       *opt.log << "pcidx:" << PcIdx << " trial:" << trial_idx+1 << " depth:" << synlvl.failed_bt_level << '\n';
     opt.log->flush();
 
-    if (global_opt.snapshot_conflicts && global_opt.conflicts_ofilename)
-      oput_conflicts (synctx.conflicts, global_opt.conflicts_ofilename, PcIdx);
+    if (global_opt.snapshot_conflicts && !!exec_opt.conflicts_ofilepath)
+      oput_conflicts (synctx.conflicts, exec_opt.conflicts_ofilepath, PcIdx);
 
     if (!done_flag) {
       Set<uint> impossible( synctx.conflicts.impossible_set );
@@ -654,13 +681,13 @@ stabilization_search(vector<uint>& ret_actions,
   }
 
   conflicts.trim(global_opt.max_conflict_sz);
-  if (global_opt.conflicts_ofilename)
-    oput_conflicts (conflicts, global_opt.conflicts_ofilename);
+  if (!!exec_opt.conflicts_ofilepath)
+    oput_conflicts (conflicts, exec_opt.conflicts_ofilepath);
 
-  if (global_opt.snapshot_conflicts && global_opt.conflicts_ofilename)
+  if (global_opt.snapshot_conflicts && !!exec_opt.conflicts_ofilepath)
   {
     for (uint i = 0; i < NPcs; ++i) {
-      Cx::String ofilename( global_opt.conflicts_ofilename );
+      Cx::String ofilename( exec_opt.conflicts_ofilepath );
       ofilename += ".";
       ofilename += i;
       remove(ofilename.cstr());

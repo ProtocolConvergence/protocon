@@ -16,14 +16,13 @@ int main(int argc, char** argv)
 {
   int argi = (init_sysCx (&argc, &argv), 1);
   AddConvergenceOpt opt;
-  const char* modelFilePath = 0;
   ProtoconFileOpt infile_opt;
   ProtoconOpt exec_opt;
   Xn::Sys sys;
 
   bool good =
     protocon_options
-    (sys, argi, argc, argv, opt, modelFilePath, infile_opt, exec_opt);
+    (sys, argi, argc, argv, opt, infile_opt, exec_opt);
   if (!good)  failout_sysCx ("Bad args.");
 
   bool found = false;
@@ -40,14 +39,16 @@ int main(int argc, char** argv)
     }
     found = stabilization_ck(DBogOF, sys);
   }
-  else if (exec_opt.task == ProtoconOpt::MinimizeConflictsTask) {
-    if (!infile_opt.file_path) {
+  else if (exec_opt.task == ProtoconOpt::MinimizeConflictsHiLoTask ||
+           exec_opt.task == ProtoconOpt::MinimizeConflictsLoHiTask)
+  {
+    if (infile_opt.file_path.empty_ck()) {
       failout_sysCx ("Need to use input file with random or -minimize-conflicts method!");
     }
     stabilization_search(sys.actions, infile_opt, exec_opt, opt);
   }
   else {
-    if (!infile_opt.file_path) {
+    if (infile_opt.file_path.empty_ck()) {
       failout_sysCx ("Need to use input file with random or rank/shuffle method!");
     }
     found =
@@ -77,7 +78,8 @@ int main(int argc, char** argv)
   }
 
   if (found) {
-    if (modelFilePath)  {
+    if (!exec_opt.model_ofilepath.empty_ck()) {
+      const char* modelFilePath = exec_opt.model_ofilepath.cstr();
       std::fstream of(modelFilePath,
                       std::ios::binary |
                       std::ios::out |

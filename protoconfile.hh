@@ -12,11 +12,10 @@ extern "C" {
 class ProtoconFileOpt
 {
 public:
-  const char* file_path;
+  Cx::String file_path;
   Map< Cx::String, uint > constant_map;
 
   ProtoconFileOpt()
-    : file_path(0)
   {}
 };
 

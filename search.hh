@@ -7,6 +7,7 @@
 
 namespace Cx {
   class PFmla;
+  template <class T> class FlatSet;
 }
 namespace Xn {
   class Net;
@@ -37,6 +38,12 @@ void
 oput_conflicts (const ConflictFamily& conflicts, const Cx::String& ofilename);
 void
 oput_conflicts (const ConflictFamily& conflicts, Cx::String ofilename, uint pcidx);
+bool
+initialize_conflicts(ConflictFamily& conflicts,
+                     Cx::Table< Cx::FlatSet<uint> >& flat_conflicts,
+                     const ProtoconOpt& exec_opt,
+                     const AddConvergenceOpt& global_opt,
+                     bool do_output);
 bool
 stabilization_search(vector<uint>& ret_actions,
                      const ProtoconFileOpt& infile_opt,

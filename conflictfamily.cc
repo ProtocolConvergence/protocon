@@ -9,6 +9,16 @@
        it != conflict_sets.end(); \
        ++it)
 
+
+  ConflictFamily
+ConflictFamily::operator-(const ConflictFamily& fam) const
+{
+  ConflictFamily diff;
+  diff.conflict_sets = this->conflict_sets - fam.conflict_sets;
+  diff.impossible_set = this->impossible_set - fam.impossible_set;
+  return diff;
+}
+
   bool
 ConflictFamily::conflict_ck(const FlatSet<uint>& test_set) const
 {

@@ -411,16 +411,15 @@ OPut(Cx::OFile& of, const Xn::ActSymm& act)
 }
 
   void
-oput_one_cycle(Cx::OFile& of, const Cx::PFmla& xn, const Cx::PFmla& scc, const Xn::Net& topo)
+find_one_cycle(Cx::Table<Cx::PFmla>& states, const Cx::PFmla& xn, const Cx::PFmla& scc)
 {
-  Cx::Table<Cx::PFmla> states;
+  states.clear();
   states.push( scc.pick_pre() );
   Cx::PFmla visit( false );
 
-  Cx::PFmla next;
   while (true) {
     visit |= states.top();
-    next = scc & xn.img(states.top());
+    const Cx::PFmla& next = scc & xn.img(states.top());
     Claim( next.sat_ck() );
     if (next.overlap_ck(visit)) {
       states.push( (next & visit).pick_pre() );
@@ -428,15 +427,29 @@ oput_one_cycle(Cx::OFile& of, const Cx::PFmla& xn, const Cx::PFmla& scc, const X
     }
     states.push(next.pick_pre());
   }
-  of << "Cycle is:\n";
-  bool printing = false;
+
+  uint start_idx = 0;
   for (uint i = 0; i < states.sz(); ++i) {
     if (states[i].equiv_ck(states.top())) {
-      printing = true;
+      start_idx = i;
+      break;
     }
-    if (printing) {
-      topo.oput_pfmla(of, states[i], -1, true);
-    }
+  }
+
+  for (uint i = 0; i + start_idx < states.sz(); ++i) {
+    states[i] = states[i+start_idx];
+  }
+  states.mpop(start_idx);
+}
+
+  void
+oput_one_cycle(Cx::OFile& of, const Cx::PFmla& xn, const Cx::PFmla& scc, const Xn::Net& topo)
+{
+  Cx::Table<Cx::PFmla> states;
+  find_one_cycle(states, xn, scc);
+  of << "Cycle is:\n";
+  for (uint i = 0; i < states.sz(); ++i) {
+    topo.oput_pfmla(of, states[i], -1, true);
   }
   of.flush();
 }
