@@ -31,8 +31,8 @@ public:
   Cx::String ofilepath;
   Cx::Table< Cx::String > xfilepaths;
   Cx::String model_ofilepath;
-  Cx::String conflicts_xfilepath;;
-  Cx::String conflicts_ofilepath;;
+  Cx::String conflicts_xfilepath;
+  Cx::String conflicts_ofilepath;
 
   ProtoconOpt()
     : task(SearchTask)
