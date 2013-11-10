@@ -655,12 +655,14 @@ QuickTrim(Set<uint>& delSet,
   }
 }
 
+static
   void
 small_cycle_conflict (Cx::Table<uint>& conflict_set,
                       const Cx::PFmla& scc,
                       const vector<uint>& actions,
                       const Xn::Net& topo,
-                      const Cx::PFmla& invariant)
+                      const Cx::PFmla& invariant,
+                      const SynthesisCtx& synctx)
 {
   conflict_set.clear();
 
@@ -686,6 +688,14 @@ small_cycle_conflict (Cx::Table<uint>& conflict_set,
   for (uint i = scc_actidcs.sz(); i > 0;) {
     i -= 1;
     Cx::PFmla next_scc(false);
+    if (synctx.done_ck()) {
+      while (i > 0) {
+        conflict_set.push(scc_actidcs[i]);
+        --i;
+      }
+      break;
+    }
+
     if ((edg | xn_pfmlas[i]).cycle_ck(&next_scc, scc)
         && invariant.overlap_ck(next_scc))
     {
@@ -999,7 +1009,13 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels, Set<uin
     *this->log << "CYCLE" << this->log->endl();
     if (!this->no_conflict) {
       Cx::Table<uint> conflict_set;
-      small_cycle_conflict (conflict_set, scc, this->actions, topo, sys.invariant);
+#if 0
+      small_cycle_conflict (conflict_set, scc, this->actions, topo, sys.invariant,
+                            *this->ctx);
+#else
+      conflict_set = this->actions;
+      find_one_cycle (conflict_set, this->lo_xn, scc, topo);
+#endif
       this->ctx->conflicts.add_conflict(conflict_set);
       *this->log << "cycle conflict size:" << conflict_set.sz() << this->log->endl();
     }

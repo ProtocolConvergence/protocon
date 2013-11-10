@@ -171,19 +171,8 @@ stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
     if (info) {
       info->livelock_exists = true;
       Cx::Table<Cx::PFmla> states;
-      find_one_cycle(states, lo_xn, scc);
-      for (uint i = 0; i < states.sz()-1; ++i) {
-        for (uint j = 0; j < info->actions.size(); ++j) {
-          uint actidx = info->actions[j];
-          const Cx::PFmla& act_pfmla = topo.action_pfmla(actidx);
-          if (states[i].overlap_ck(act_pfmla) &&
-              states[i+1].as_img().overlap_ck(act_pfmla))
-          {
-            Remove1(info->livelock_actions, actidx);
-            info->livelock_actions.push_back(actidx);
-          }
-        }
-      }
+      info->livelock_actions = info->actions;
+      find_one_cycle(info->livelock_actions, lo_xn, scc, topo);
       of << info->livelock_actions.size() << " actions involved in livelocks.\n";
     }
     if (false) {

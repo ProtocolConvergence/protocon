@@ -1,0 +1,18 @@
+
+constant N := 5;
+constant M := 3;
+constant Target := M-1;
+
+variable x[Nat % N] <- Nat % M;
+
+process P[i <- Nat % N]
+{
+  read:  x[i-1];
+  write: x[i];
+}
+
+invariant:
+  (forall i <- Nat % N :
+   x[i-1] + x[i] != Target
+  );
+

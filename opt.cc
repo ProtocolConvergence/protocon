@@ -112,13 +112,20 @@ protocon_options_rec
       exec_opt.task = ProtoconOpt::VerifyTask;
     }
     else if (eq_cstr (arg, "-minimize-conflicts")) {
-      exec_opt.task = ProtoconOpt::MinimizeConflictsHiLoTask;
+      exec_opt.task = ProtoconOpt::MinimizeConflictsTask;
+      exec_opt.conflict_order = ProtoconOpt::HiLoOrder;
     }
     else if (eq_cstr (arg, "-minimize-conflicts-hilo")) {
-      exec_opt.task = ProtoconOpt::MinimizeConflictsHiLoTask;
+      exec_opt.task = ProtoconOpt::MinimizeConflictsTask;
+      exec_opt.conflict_order = ProtoconOpt::HiLoOrder;
     }
     else if (eq_cstr (arg, "-minimize-conflicts-lohi")) {
-      exec_opt.task = ProtoconOpt::MinimizeConflictsLoHiTask;
+      exec_opt.task = ProtoconOpt::MinimizeConflictsTask;
+      exec_opt.conflict_order = ProtoconOpt::LoHiOrder;
+    }
+    else if (eq_cstr (arg, "-minimize-conflicts-random")) {
+      exec_opt.task = ProtoconOpt::MinimizeConflictsTask;
+      exec_opt.conflict_order = ProtoconOpt::RandomOrder;
     }
     else if (eq_cstr (arg, "-h") || eq_cstr (arg, "-help")) {
       DBog0( "See the manpage for details: man ./doc/protocon.1" );

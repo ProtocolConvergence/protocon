@@ -20,9 +20,13 @@ public:
     TestTask,
     SearchTask,
     VerifyTask,
-    MinimizeConflictsHiLoTask,
-    MinimizeConflictsLoHiTask,
+    MinimizeConflictsTask,
     NExecTasks
+  };
+  enum MinimizeConflictsOrder {
+    LoHiOrder,
+    HiLoOrder,
+    RandomOrder
   };
 
   ExecTask task;
@@ -34,9 +38,12 @@ public:
   Cx::String conflicts_xfilepath;
   Cx::String conflicts_ofilepath;
 
+  MinimizeConflictsOrder conflict_order;
+
   ProtoconOpt()
     : task(SearchTask)
     , params( 1 )
+    , conflict_order( HiLoOrder )
   {}
 };
 

@@ -443,6 +443,27 @@ find_one_cycle(Cx::Table<Cx::PFmla>& states, const Cx::PFmla& xn, const Cx::PFml
 }
 
   void
+find_one_cycle(Cx::Table<uint>& ret_actions, const Cx::PFmla& xn, const Cx::PFmla& scc, const Xn::Net& topo)
+{
+  Cx::Table<Cx::PFmla> states;
+  find_one_cycle(states, xn, scc);
+  Cx::Table<uint> actions(ret_actions);
+  ret_actions.clear();
+  for (uint i = 0; i < states.sz()-1; ++i) {
+    for (uint j = 0; j < actions.size(); ++j) {
+      uint actidx = actions[j];
+      const Cx::PFmla& act_pfmla = topo.action_pfmla(actidx);
+      if (states[i].overlap_ck(act_pfmla) &&
+          states[i+1].as_img().overlap_ck(act_pfmla))
+      {
+        ret_actions.remove(actidx);
+        ret_actions.push(actidx);
+      }
+    }
+  }
+}
+
+  void
 oput_one_cycle(Cx::OFile& of, const Cx::PFmla& xn, const Cx::PFmla& scc, const Xn::Net& topo)
 {
   Cx::Table<Cx::PFmla> states;

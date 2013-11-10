@@ -219,13 +219,7 @@ ConflictFamily::oput(Cx::OFile& of) const
   of << conflict_sets.sz() << '\n';
   FOR_EACH( it, conflict_sets )
   {
-    of << ' ' << (*it).sz();
-  }
-
-  of << '\n';
-
-  FOR_EACH( it, conflict_sets )
-  {
+    of << (*it).sz() << ' ';
     const Cx::FlatSet<uint>& conflict_set = *it;
     for (uint i = 0; i < conflict_set.sz(); ++i)
       of << ' ' << conflict_set[i];
@@ -239,22 +233,16 @@ ConflictFamily::xget(Cx::XFile& xf)
   conflict_sets.clear();
   impossible_set.clear();
 
-  Cx::Table<uint> sizes;
   ujint n = 0;
   xf >> n;
-  if (!xf.good())  return;
-  for (ujint i = 0; i < n; ++i)
-  {
-    ujint sz = 0;
-    xf >> sz;
-    if (!xf.good())  return;
-    sizes.push(sz);
-  }
 
+  Cx::Table<uint> conflict_set;
   for (ujint i = 0; i < n; ++i)
   {
-    Cx::Table<uint> conflict_set(sizes[i]);
-    for (uint j = 0; j < sizes[i]; ++j)
+    uint sz = 0;
+    xf >> sz;
+    conflict_set.resize(sz);
+    for (uint j = 0; j < sz; ++j)
     {
       xf >> conflict_set[j];
       if (!xf.good())  return;

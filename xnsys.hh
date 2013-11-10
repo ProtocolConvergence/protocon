@@ -387,6 +387,8 @@ OPut(Cx::OFile& of, const Xn::ActSymm& act);
 void
 find_one_cycle(Cx::Table<Cx::PFmla>& states, const Cx::PFmla& xn, const Cx::PFmla& scc);
 void
+find_one_cycle(Cx::Table<uint>& actions, const Cx::PFmla& xn, const Cx::PFmla& scc, const Xn::Net& topo);
+void
 oput_one_cycle(Cx::OFile& of, const Cx::PFmla& xn, const Cx::PFmla& scc, const Xn::Net& topo);
 
 

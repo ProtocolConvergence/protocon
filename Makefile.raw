@@ -27,6 +27,11 @@ BinPath = ../bin
 BldPath = protocon
 
 ExeList = protocon satsyn
+
+ifneq (,$(filter on-gilbert-cluster,$(CONFIG)))
+	CONFIG := $(filter-out ansi openmp gui,$(CONFIG))
+	MPICXX := $(MPICXX) -CC=g++ -I/usr/local/mpi/include -L/usr/local/mpi/lib64
+endif
 ifneq (,$(filter mpi,$(CONFIG)))
 	ExeList += protocon-mpi
 endif
@@ -34,11 +39,6 @@ ifneq (,$(filter gui,$(CONFIG)))
 	ExeList += protocon-gui
 endif
 ExeList := $(addprefix $(BinPath)/,$(ExeList))
-
-ifneq (,$(filter on-gilbert-cluster,$(CONFIG)))
-	CONFIG := $(filter-out ansi openmp,$(CONFIG))
-	MPICXX := $(MPICXX) -CC=g++ -I/usr/local/mpi/include -L/usr/local/mpi/lib64
-endif
 
 include $(CxPath)/include.mk
 

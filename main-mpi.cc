@@ -367,8 +367,7 @@ stabilization_search(vector<uint>& ret_actions,
       }
     }
   }
-  if (exec_opt.task == ProtoconOpt::MinimizeConflictsHiLoTask ||
-      exec_opt.task == ProtoconOpt::MinimizeConflictsLoHiTask)
+  if (exec_opt.task == ProtoconOpt::MinimizeConflictsTask)
   {
     for (uint conflict_idx = PcIdx; conflict_idx < flat_conflicts.sz(); conflict_idx += NPcs) {
       uint old_sz = flat_conflicts[conflict_idx].sz();
@@ -422,7 +421,7 @@ stabilization_search(vector<uint>& ret_actions,
       if (!global_opt.try_all) {
         mpi_done_flag->fo(PcIdx);
       }
-      else {
+      else if (!!exec_opt.ofilepath) {
         Cx::OFileB ofb;
         ofb.open(exec_opt.ofilepath + "." + PcIdx + "." + trial_idx);
         oput_protocon_file (ofb, sys, actions);

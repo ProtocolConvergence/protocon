@@ -398,8 +398,15 @@ initialize_conflicts(ConflictFamily& conflicts,
     }
   }
 
-  if (exec_opt.task == ProtoconOpt::MinimizeConflictsHiLoTask ||
-      exec_opt.task == ProtoconOpt::MinimizeConflictsLoHiTask)
+  if (exec_opt.task != ProtoconOpt::MinimizeConflictsTask)
+  {}
+  else if (exec_opt.conflict_order == ProtoconOpt::RandomOrder)
+  {
+    conflicts.all_conflicts(flat_conflicts);
+    Cx::URandom urandom;
+    urandom.shuffle(&flat_conflicts[0], flat_conflicts.sz());
+  }
+  else
   {
     conflicts.all_conflicts(flat_conflicts);
     Cx::Table< Cx::Table< FlatSet<uint> > > sized_conflicts;
@@ -411,14 +418,14 @@ initialize_conflicts(ConflictFamily& conflicts,
       sized_conflicts[sz].push(flat_conflicts[i]);
     }
     flat_conflicts.clear();
-    if (exec_opt.task == ProtoconOpt::MinimizeConflictsLoHiTask) {
+    if (exec_opt.conflict_order == ProtoconOpt::LoHiOrder) {
       for (uint i = 0; i < sized_conflicts.sz(); ++i) {
         for (uint j = 0; j < sized_conflicts[i].sz(); ++j) {
           flat_conflicts.push(sized_conflicts[i][j]);
         }
       }
     }
-    else {
+    else if (exec_opt.conflict_order == ProtoconOpt::HiLoOrder) {
       for (uint i = sized_conflicts.sz(); i > 0;) {
         --i;
         for (uint j = 0; j < sized_conflicts[i].sz(); ++j) {
@@ -550,8 +557,7 @@ stabilization_search(vector<uint>& ret_actions,
 #pragma omp critical (DBog)
   DBog1( "BEGIN! %u", PcIdx );
 
-  if (exec_opt.task == ProtoconOpt::MinimizeConflictsHiLoTask ||
-      exec_opt.task == ProtoconOpt::MinimizeConflictsLoHiTask)
+  if (exec_opt.task == ProtoconOpt::MinimizeConflictsTask)
   {
 #pragma omp for schedule(dynamic)
     for (uint conflict_idx = 0; conflict_idx < flat_conflicts.sz(); ++conflict_idx) {
@@ -615,7 +621,7 @@ stabilization_search(vector<uint>& ret_actions,
       if (!global_opt.try_all) {
         set_done_flag (1);
       }
-      else {
+      else if (!!exec_opt.ofilepath) {
         Cx::OFileB ofb;
         ofb.open(exec_opt.ofilepath + "." + PcIdx + "." + trial_idx);
         oput_protocon_file (ofb, sys, actions);

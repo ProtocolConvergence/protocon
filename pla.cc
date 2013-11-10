@@ -175,7 +175,7 @@ oput_protocon_pc_act (Cx::OFile& of, const Xn::ActSymm& act)
 {
   of << "  puppet action:\n    ( ";
   const Xn::PcSymm& pc_symm = *act.pc_symm;
-  
+
   for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
     if (i > 0) {
       of << " && ";

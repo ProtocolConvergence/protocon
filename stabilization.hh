@@ -2,6 +2,7 @@
 #ifndef STABILIZATION_HH_
 #define STABILIZATION_HH_
 #include "cx/synhax.hh"
+#include "cx/table.hh"
 
 namespace Cx {
   class PFmla;
@@ -14,9 +15,9 @@ namespace Xn {
 class StabilizationCkInfo
 {
 public:
-  vector<uint> actions;
+  Cx::Table<uint> actions;
   bool livelock_exists;
-  vector<uint> livelock_actions;
+  Cx::Table<uint> livelock_actions;
 
   StabilizationCkInfo()
     : livelock_exists(false)

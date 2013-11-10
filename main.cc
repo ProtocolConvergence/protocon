@@ -39,8 +39,7 @@ int main(int argc, char** argv)
     }
     found = stabilization_ck(DBogOF, sys);
   }
-  else if (exec_opt.task == ProtoconOpt::MinimizeConflictsHiLoTask ||
-           exec_opt.task == ProtoconOpt::MinimizeConflictsLoHiTask)
+  else if (exec_opt.task == ProtoconOpt::MinimizeConflictsTask)
   {
     if (infile_opt.file_path.empty_ck()) {
       failout_sysCx ("Need to use input file with random or -minimize-conflicts method!");
