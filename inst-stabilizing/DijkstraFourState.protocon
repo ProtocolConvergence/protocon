@@ -1,5 +1,8 @@
 
-protocol DijkstraFourState;
+// Token passing on a chain defined in
+// Title: Self-stabilizing Systems in Spite of Distributed Control
+// Author: Edsger W. Dijkstra
+// Year: 1974
 
 constant N := 7;
 

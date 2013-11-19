@@ -75,15 +75,24 @@ ActionExpr =
    ;
 
 ShadowActionDef =
-  'shadow' (WS ACTION | ':') WS? act:ActionExpr END_STMT {$$ = act;}
+  'shadow' (WS ACTION | ':') WS? act:ActionExpr
+  {yy->st->add_action (act.sp, Xn::Vbl::Shadow);}
+  (WS? (',' WS?)? act2:ActionExpr {yy->st->add_action (act2.sp, Xn::Vbl::Shadow);} )*
+  END_STMT
   ;
 
 DirectActionDef =
-  ('direct:' | ('direct' WS)? ACTION) WS? act:ActionExpr END_STMT {$$ = act;}
+  ('direct:' | ('direct' WS)? ACTION) WS? act:ActionExpr
+  {yy->st->add_action (act.sp, Xn::Vbl::Direct);}
+  (WS? (',' WS?)? act2:ActionExpr {yy->st->add_action (act2.sp, Xn::Vbl::Direct);} )*
+  END_STMT
   ;
 
 PuppetActionDef =
-  'puppet' (WS ACTION | ':') WS? act:ActionExpr END_STMT {$$ = act;}
+  'puppet' (WS ACTION | ':') WS? act:ActionExpr
+  {yy->st->add_action (act.sp, Xn::Vbl::Puppet);}
+  (WS? (',' WS?)? act2:ActionExpr {yy->st->add_action (act2.sp, Xn::Vbl::Puppet);} )*
+  END_STMT
   ;
 
 ProcDecl =
@@ -100,9 +109,8 @@ ProcDecl =
     )
     END_STMT WS?
   )+
-  (  act:ShadowActionDef WS? {yy->st->add_action (act.sp, Xn::Vbl::Shadow);}
-   | act:DirectActionDef WS? {yy->st->add_action (act.sp, Xn::Vbl::Direct);}
-   | act:PuppetActionDef WS? {yy->st->add_action (act.sp, Xn::Vbl::Puppet);}
+  ((ShadowActionDef | DirectActionDef | PuppetActionDef)
+   WS?
   )*
   ( LEGIT WS? legit:Expr END_STMT WS?
     {yy->st->add_pc_legit(legit.sp);}
@@ -146,12 +154,19 @@ OptionalArithNeg =
   ;
 
 ConstNeg =
-  pfx:OptionalArithNeg a:ConstValue
+  pfx:OptionalArithNeg a:ConstPower
   {
     $$ = a;
     if (pfx.sp)
       $$.sp = list2_Sesp (pfx.sp, $$.sp);
   }
+  ;
+
+ConstPower =
+  a:ConstValue
+  (  (WS? '^' WS? b:ConstNeg {a.sp = list3_ccstr_Sesp ("^", a.sp, b.sp);  a.int_ck = 1;} )
+  )*
+  {$$ = a;}
   ;
 
 ConstValue =
@@ -222,6 +237,10 @@ Comparison =
   a:Sum
   (  (WS? '==' WS? b:Sum {a.sp = list3_ccstr_Sesp ((b.int_ck ? "==" : "xnor"), a.sp, b.sp);  a.int_ck = 0;} )
    | (WS? '!=' WS? b:Sum {a.sp = list3_ccstr_Sesp ((b.int_ck ? "!=" :  "xor"), a.sp, b.sp);  a.int_ck = 0;} )
+   | (WS? '<=' WS? b:Sum {a.sp = list3_ccstr_Sesp ("<=", a.sp, b.sp);  a.int_ck = 0;} )
+   | (WS? '>=' WS? b:Sum {a.sp = list3_ccstr_Sesp (">=", a.sp, b.sp);  a.int_ck = 0;} )
+   | (WS? '<'  WS? b:Sum {a.sp = list3_ccstr_Sesp ("<", a.sp, b.sp);  a.int_ck = 0;} )
+   | (WS? '>'  WS? b:Sum {a.sp = list3_ccstr_Sesp (">", a.sp, b.sp);  a.int_ck = 0;} )
   )?
   {$$ = a;}
   ;
@@ -251,12 +270,19 @@ OptionalNeg =
   ;
 
 Neg =
-  pfx:OptionalNeg a:Value
+  pfx:OptionalNeg a:Power
   {
     $$ = a;
     if (pfx.sp)
       $$.sp = list2_Sesp (pfx.sp, $$.sp);
   }
+
+Power =
+  a:Value
+  (  (WS? '^' WS? b:Neg {a.sp = list3_ccstr_Sesp ("^", a.sp, b.sp);  a.int_ck = 1;} )
+  )*
+  {$$ = a;}
+  ;
 
 Value =
     a:VblRef {$$ = a;}

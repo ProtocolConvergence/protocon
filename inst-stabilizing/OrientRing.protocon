@@ -1,0 +1,82 @@
+
+// Ring orientation protocol using the state-reading model defined in
+// Title: Uniform Deterministic Self-Stabilizing Ring-Orientation on Odd-Length Rings
+// Author: Jaap-Henk Hoepman
+// Year: 1994
+
+// Note that this can only work for rings of odd size.
+
+constant N := 5;
+
+// Build a bitfield for the processes to flip.
+constant Flip0 := 0;
+constant Flip1 := 0;
+constant Flip2 := 0;
+constant Flip3 := 0;
+constant Flip4 := 0;
+constant Flip5 := 0;
+constant Flip6 := 0;
+constant Flip7 := 0;
+constant Flip8 := 0;
+constant FlipField :=
+  (  Flip0 * 2^0
+   + Flip1 * 2^1
+   + Flip2 * 2^2
+   + Flip3 * 2^3
+   + Flip4 * 2^4
+   + Flip5 * 2^5
+   + Flip6 * 2^6
+   + Flip7 * 2^7
+   + Flip8 * 2^8
+  );
+
+puppet variable color[Nat % N] <- Nat % 2;
+puppet variable phase[Nat % N] <- Nat % 2;
+direct variable orientation[Nat % N] <- Nat % 2;
+
+process P[q <- Int % N]
+{
+  let flip := (FlipField / 2^q) % 2;
+
+  let p := if (flip==0) then (q-1) else (q+1);
+  let r := if (flip==0) then (q+1) else (q-1);
+
+  read:  color[p], phase[p];
+  write: color[q], phase[q];
+  read:  color[r], phase[r];
+  write: orientation[q];
+
+  // Actions a,b,c,d from the paper
+  puppet action:
+    ( color[p]==color[r] && (color[q]==color[p] || phase[q]==1)
+     -->
+      color[q]:=1-color[p];
+      phase[q]:=0;
+    );
+
+  // Actions e,f from the paper
+  puppet action:
+    (    color[p]==color[q] && color[q]!=color[r] && phase[p]==1 && phase[q]==0 && phase[r]==0
+      || color[r]==color[q] && color[q]!=color[p] && phase[r]==1 && phase[q]==0 && phase[p]==0
+     -->
+      color[q] := 1-color[q];
+      phase[q] := 1;
+      orientation[q] := phase[r];
+    );
+
+  // Actions g,h,i,j from the paper
+  puppet action:
+    (    color[p]==color[q] && phase[p]==phase[q] && color[q]!=color[r]
+      || color[r]==color[q] && phase[r]==phase[q] && color[q]!=color[p]
+     -->
+      phase[q] := 1-phase[q];
+    );
+}
+
+// Eventually, all processes are pointing in the same direction.
+shadow invariant:
+  (forall i <- Nat % N : orientation[i] == (FlipField / 2^i) % 2)
+  ||
+  (forall i <- Nat % N : orientation[i] != (FlipField / 2^i) % 2)
+  ;
+

@@ -1,0 +1,87 @@
+
+// Ring orientation protocol using links between processesses defined in
+// Title: Uniform Deterministic Self-Stabilizing Ring-Orientation on Odd-Length Rings
+// Author: Jaap-Henk Hoepman
+// Year: 1994
+
+// Note that this can only work for rings of odd size.
+// Also note that I have not verified correctness of this algorithm even for N=3
+// since the verification gets stuck building all possible actions,
+// of which there are 2^24.
+
+constant N := 3;
+
+// Build a bitfield for the processes to flip.
+constant Flip0 := 0;
+constant Flip1 := 0;
+constant Flip2 := 0;
+constant Flip3 := 0;
+constant Flip4 := 0;
+constant Flip5 := 0;
+constant Flip6 := 0;
+constant Flip7 := 0;
+constant Flip8 := 0;
+constant FlipField :=
+  (  Flip0 * 2^0
+   + Flip1 * 2^1
+   + Flip2 * 2^2
+   + Flip3 * 2^3
+   + Flip4 * 2^4
+   + Flip5 * 2^5
+   + Flip6 * 2^6
+   + Flip7 * 2^7
+   + Flip8 * 2^8
+  );
+
+puppet variable youare[Nat % (2*N)] <- Nat % 2;
+direct variable dir[Nat % (2*N)] <- Nat % 2;
+puppet variable ord[Nat % (2*N)] <- Nat % 2;
+puppet variable parity[Nat % (2*N)] <- Nat % 2;
+
+process P[q <- Int % N]
+{
+  let flip_q := (FlipField / 2^q) % 2;
+
+  let p := if (flip_q==0) then ((q-1) % N) else ((q+1) % N);
+  let r := if (flip_q==0) then ((q+1) % N) else ((q-1) % N);
+
+  let qp := if (flip_q==0) then (2*q+0) else (2*q+1);
+  let qr := if (flip_q==0) then (2*q+1) else (2*q+0);
+
+  let pq := if (flip_q==0) then (2*p+1) else (2*p+0);
+  let rq := if (flip_q==0) then (2*r+0) else (2*r+1);
+
+  read:  youare[pq], dir[pq], ord[pq], parity[pq];
+  read:  youare[rq], dir[rq], ord[rq], parity[rq];
+  write: youare[qp], dir[qp], ord[qp], parity[qp];
+  write: youare[qr], dir[qr], ord[qr], parity[qr];
+
+  // Actions from paper, labeled by letter.
+  puppet action:
+  // a
+    ( youare[qp]!=0 --> youare[qp] := 0; )
+  // b
+    ( dir[pq]==dir[qp] && parity[qp]!=0 --> parity[qp]:=0; )
+  // c
+    ( youare[qr]< youare[rq] && dir[qr]!=dir[rq] && parity[qp]==parity[rq] --> parity[qp]:=parity[rq]+1; )
+  // d
+    ( youare[qr]>=youare[rq] && dir[qr]!=dir[rq] && parity[qp]!=parity[rq] --> parity[qp]:=parity[rq]; )
+  // e
+    ( dir[qr]==dir[rq] && ord[qp]!=0--> ord[qp]:=0; )
+    ( dir[qr]==dir[rq] && ord[qp]!=1--> ord[qp]:=1; )
+  // f1
+    ( dir[pq]==dir[qp] && youare[pq]< youare[qp] --> dir[qp]:=1-dir[qp]; )
+  // f2
+    ( dir[pq]==dir[qp] && youare[pq]==youare[qp] && dir[qr]!=dir[rq] && ord[pq]==0 --> dir[qp]:=1-dir[qp]; )
+  // f3
+    ( dir[pq]==dir[qp] && youare[pq]==youare[qp] && dir[qr]!=dir[rq] && ord[pq]==1 && parity[qp]==1 --> dir[qp]:=1-dir[qp]; )
+    ;
+}
+
+// Eventually, all processes are pointing in the same direction.
+shadow invariant:
+  (forall i <- Nat % N : dir[2*i]==1 && dir[2*i+1]==0)
+  ||
+  (forall i <- Nat % N : dir[2*i]==0 && dir[2*i+1]==1)
+  ;
+

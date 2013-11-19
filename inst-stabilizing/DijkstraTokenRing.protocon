@@ -1,5 +1,8 @@
 
-protocol DijkstraTokenRing;
+// Token passing around a ring defined in
+// Title: Self-stabilizing Systems in Spite of Distributed Control
+// Author: Edsger W. Dijkstra
+// Year: 1974
 
 constant N := 5;
 constant M := N;
@@ -10,7 +13,8 @@ process Bot[i <- Int % 1]
 {
   read:  x[i-1];
   write: x[i];
-  action: ( x[i-1] == x[i] --> x[i] := x[i-1] + 1; );
+  direct action:
+    ( x[i-1] == x[i] --> x[i] := x[i-1] + 1; );
 }
 
 process P[j <- Int % (N-1)]
@@ -18,7 +22,8 @@ process P[j <- Int % (N-1)]
   let i := j+1;
   read:  x[i-1];
   write: x[i];
-  action: ( x[i-1] != x[i] --> x[i] := x[i-1]; );
+  direct action:
+    ( x[i-1] != x[i] --> x[i] := x[i-1]; );
 }
 
 invariant:

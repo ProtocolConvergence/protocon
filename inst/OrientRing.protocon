@@ -1,0 +1,52 @@
+
+// Ring orientation using the state-reading model.
+// See inst-stabilizing/OrientRing.protocon for the stabilizing version.
+
+constant N := 5;
+
+// Build a bitfield for the processes to flip.
+constant Flip0 := 0;
+constant Flip1 := 0;
+constant Flip2 := 0;
+constant Flip3 := 0;
+constant Flip4 := 0;
+constant Flip5 := 0;
+constant Flip6 := 0;
+constant Flip7 := 0;
+constant Flip8 := 0;
+constant FlipField :=
+  (  Flip0 * 2^0
+   + Flip1 * 2^1
+   + Flip2 * 2^2
+   + Flip3 * 2^3
+   + Flip4 * 2^4
+   + Flip5 * 2^5
+   + Flip6 * 2^6
+   + Flip7 * 2^7
+   + Flip8 * 2^8
+  );
+
+puppet variable color[Nat % N] <- Nat % 2;
+puppet variable phase[Nat % N] <- Nat % 2;
+direct variable orientation[Nat % N] <- Nat % 2;
+
+process P[q <- Int % N]
+{
+  let flip := (FlipField / 2^q) % 2;
+
+  let p := if (flip==0) then (q-1) else (q+1);
+  let r := if (flip==0) then (q+1) else (q-1);
+
+  read:  color[p], phase[p];
+  write: color[q], phase[q];
+  read:  color[r], phase[r];
+  write: orientation[q];
+}
+
+// Eventually, all processes are pointing in the same direction.
+shadow invariant:
+  (forall i <- Nat % N : orientation[i] == (FlipField / 2^i) % 2)
+  ||
+  (forall i <- Nat % N : orientation[i] != (FlipField / 2^i) % 2)
+  ;
+

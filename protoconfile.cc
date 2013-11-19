@@ -355,14 +355,19 @@ ProtoconFile::string_expression(Cx::String& ss, Sesp a)
   else if (eq_cstr (key, "&&") ||
            eq_cstr (key, "||") ||
            eq_cstr (key, "=>") ||
-           eq_cstr (key, "==") ||
+           eq_cstr (key, "<") ||
+           eq_cstr (key, "<=") ||
            eq_cstr (key, "!=") ||
+           eq_cstr (key, "==") ||
+           eq_cstr (key, ">=") ||
+           eq_cstr (key, ">") ||
            eq_cstr (key, ":=") ||
            eq_cstr (key, "+") ||
            eq_cstr (key, "-") ||
            eq_cstr (key, "*") ||
            eq_cstr (key, "/") ||
-           eq_cstr (key, "%")) {
+           eq_cstr (key, "%") ||
+           eq_cstr (key, "^")) {
     bool pad =
       (eq_cstr (key, "&&") ||
        eq_cstr (key, "||") ||
@@ -500,17 +505,21 @@ ProtoconFile::eval(Cx::PFmla& pf, Sesp a)
       }
     }
   }
-  else if (eq_cstr (key, "==")) {
+  else if (eq_cstr (key, "<" ) ||
+           eq_cstr (key, "<=") ||
+           eq_cstr (key, "!=") ||
+           eq_cstr (key, "==") ||
+           eq_cstr (key, ">=") ||
+           eq_cstr (key, ">" ))
+  {
     if (LegitCk( eval(ipf_b, b), good, "" )) {
       if (LegitCk( eval(ipf_c, c), good, "" )) {
-        pf = (ipf_b == ipf_c);
-      }
-    }
-  }
-  else if (eq_cstr (key, "!=")) {
-    if (LegitCk( eval(ipf_b, b), good, "" )) {
-      if (LegitCk( eval(ipf_c, c), good, "" )) {
-        pf = (ipf_b != ipf_c);
+        if      (eq_cstr (key, "<" ))  pf = (ipf_b < ipf_c);
+        else if (eq_cstr (key, "<="))  pf = (ipf_b <= ipf_c);
+        else if (eq_cstr (key, "!="))  pf = (ipf_b != ipf_c);
+        else if (eq_cstr (key, "=="))  pf = (ipf_b == ipf_c);
+        else if (eq_cstr (key, ">="))  pf = (ipf_b >= ipf_c);
+        else if (eq_cstr (key, ">" ))  pf = (ipf_b > ipf_c);
       }
     }
   }
@@ -716,6 +725,13 @@ ProtoconFile::eval(Cx::IntPFmla& ipf, Sesp a)
     if (LegitCk( eval(ipf, b), good, "" )) {
       if (LegitCk( eval(ipf_c, c), good, "" )) {
         ipf %= ipf_c;
+      }
+    }
+  }
+  else if (eq_cstr (key, "^")) {
+    if (LegitCk( eval(ipf, b), good, "" )) {
+      if (LegitCk( eval(ipf_c, c), good, "" )) {
+        ipf.defeq_pow(ipf_c);
       }
     }
   }

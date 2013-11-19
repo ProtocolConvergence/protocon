@@ -312,6 +312,18 @@ IntPFmla::defeq_binop(const IntPFmla& b, IntPFmla::BinIntOp op)
       val_a() = umod_int (val_a(), (uint) x);
     }
     break;
+  case IntPFmla::PowOp:
+    for (ujint idx_a = 0; idx_a < n; ++idx_a) {
+      int x = val_b();
+      Claim2( x ,>=, 0 );
+      int val = 1;
+      while (x > 0) {
+        val *= val_a();
+        x -= 1;
+      }
+      val_a() = val;
+    }
+    break;
   case IntPFmla::NBinIntOps:
     Claim( 0 );
     break;

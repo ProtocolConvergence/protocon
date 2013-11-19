@@ -114,7 +114,7 @@ oput_protocon_pc_act (Cx::OFile& of, XFile* xf,
 {
   Sign good = 1;
   bool clause = false;
-  of << "  puppet action:\n    ( ";
+  of << "    ( ";
   for (uint i = 0;
        good && i < (guard_vbls.sz() + assign_vbls.sz());
        ++i)
@@ -166,14 +166,14 @@ oput_protocon_pc_act (Cx::OFile& of, XFile* xf,
     }
     if (vals.sz() > 1)  of << ")";
   }
-  of << " );\n";
+  of << " )\n";
   return good;
 }
 
   void
 oput_protocon_pc_act (Cx::OFile& of, const Xn::ActSymm& act)
 {
-  of << "  puppet action:\n    ( ";
+  of << "    ( ";
   const Xn::PcSymm& pc_symm = *act.pc_symm;
 
   for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
@@ -184,12 +184,9 @@ oput_protocon_pc_act (Cx::OFile& of, const Xn::ActSymm& act)
   }
   of << " --> ";
   for (uint i = 0; i < pc_symm.wvbl_symms.sz(); ++i) {
-    if (i > 0) {
-      of << " && ";
-    }
     of << pc_symm.vbl_name(pc_symm.wmap[i]) << ":=" << act.assign(i) << "; ";
   }
-  of << ");\n";
+  of << ")\n";
 }
 
   bool
@@ -198,9 +195,12 @@ oput_protocon_pc_acts (Cx::OFile& of, const Xn::PcSymm& pc_symm,
                        OSPc* ospc)
 {
   Sign good = 1;
-  for (uint i = 0; i < pc_symm.shadow_act_strings.sz(); ++i) {
+  if (pc_symm.shadow_act_strings.sz() > 0) {
     of << "  shadow action:\n";
-    of << "    ( " << pc_symm.shadow_act_strings[i] << " );\n";
+    for (uint i = 0; i < pc_symm.shadow_act_strings.sz(); ++i) {
+      of << "    ( " << pc_symm.shadow_act_strings[i] << " )\n";
+    }
+    of << "    ;\n";
   }
 
   // Names for variables.
@@ -217,10 +217,14 @@ oput_protocon_pc_acts (Cx::OFile& of, const Xn::PcSymm& pc_symm,
 
   bool use_espresso = false;
 
+  of << "  puppet action:\n";
   if (!use_espresso) {
     for (uint i = 0; i < acts.sz(); ++i) {
-      oput_protocon_pc_act (of, acts[i]);
+      if (acts[i].pc_symm == &pc_symm) {
+        oput_protocon_pc_act (of, acts[i]);
+      }
     }
+    of << "    ;\n";
     return true;
   }
 
@@ -255,6 +259,7 @@ oput_protocon_pc_acts (Cx::OFile& of, const Xn::PcSymm& pc_symm,
       good =
       oput_protocon_pc_act (of, olay, guard_vbls, assign_vbls);
   }
+  of << "    ;\n";
 
   close_OSPc (ospc);
   return good;

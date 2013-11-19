@@ -1,17 +1,26 @@
 
-protocol SumNotTarget;
+// The Sum-Not-(l-1) protocol defined in
+// Title: Automated Design of Self-Stabilization
+// Author: Aly Farahat
+// Year: 2012
+
+// The constants' names differ from Aly's dissertation.
 
 constant N := 5;
 constant M := 3;
 constant Target := M-1;
 
-variable x[Int % N] <- Int % M;
+variable x[Nat % N] <- Nat % M;
 
-process P[i <- Int % N]
+process P[i <- Nat % N]
 {
   read:  x[i-1];
   write: x[i];
-  act: ( x[i-1] + x[i] == Target --> x[i] := Target + 1 - x[i-1]; );
-  legit: x[i-1] + x[i] != Target;
+  puppet action:
+    ( x[i-1] + x[i] == Target --> x[i] := Target + 1 - x[i-1]; );
 }
+
+invariant:
+  (forall i <- Nat % N : x[i-1] + x[i] != Target)
+  ;
 

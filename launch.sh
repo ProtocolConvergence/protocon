@@ -2,20 +2,21 @@
 
 args_file=args
 
-#npcs=21
-npcs=88
+npcs=21
+npcs=84
 #npcs=10
 #npcs=42
 
 mode=""
-mode="-minimize-conflicts"
-#mode="-minimize-conflicts-random"
+#mode="-minimize-conflicts"
+mode="-minimize-conflicts-random"
 #mode="-minimize-conflicts-lohi"
 #mode="-verify"
 misc=""
-#misc="-try-all"
-#misc="$misc -max-depth 12"
-#misc="$misc -max-height 7"
+misc="-try-all"
+misc="$misc -max-depth 12"
+misc="$misc -max-height 7"
+misc=""
 
 params="-def N 3"
 #params="-def N 4"
@@ -24,7 +25,7 @@ params="$params -param N 5"
 params="$params -param N 4"
 params="$params -param N 6"
 params="$params -param N 7"
-#params="$params -param N 8"
+params="$params -param N 8"
 #params="$params -param N 9"
 #params="$params -param N 10"
 #params="$params -param [ -def N 10 -no-conflict ]"
@@ -37,7 +38,7 @@ params="$params -param N 7"
 path=kautz14
 xspec="-x inst/ColorKautz.protocon"
 ospec=""
-if true
+if false
 then
   PrevN=13
   InstN=14

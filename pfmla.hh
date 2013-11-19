@@ -387,6 +387,7 @@ private:
   enum BinIntOp {
     AddOp, SubOp,
     MulOp, DivOp, ModOp,
+    PowOp,
     NBinIntOps
   };
 public:
@@ -433,6 +434,8 @@ public:
   IntPFmla& operator*=(const IntPFmla& b) { return this->defeq_binop(b, MulOp); }
   IntPFmla& operator/=(const IntPFmla& b) { return this->defeq_binop(b, DivOp); }
   IntPFmla& operator%=(const IntPFmla& b) { return this->defeq_binop(b, ModOp); }
+
+  IntPFmla& defeq_pow(const IntPFmla& b)  { return this->defeq_binop(b, PowOp); }
 
   IntPFmla operator+(const IntPFmla& b) const { return IntPFmla(*this) += b; }
   IntPFmla operator-(const IntPFmla& b) const { return IntPFmla(*this) -= b; }
