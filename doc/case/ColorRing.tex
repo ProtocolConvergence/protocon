@@ -1,0 +1,45 @@
+
+\title{Coloring}
+%\author{}
+\date{}
+
+\begin{document}
+
+The \ilfile{inst/ColorRing.protocon} file specifies a bidirectional ring topology where each process wishes to obtain a different value than its neighbors.
+
+This is a very simple protocol, and is useful for instruction.
+Use the \ilflag{-simple} flag to see non-random run without OpenMP or restarts.
+Use the \ilflag{-def} flag to set the constant \illit{N} equal to $5$, corresponding to $5$ processes in the ring.
+\begin{code}
+protocon -simple -x inst/ColorRing.protocon -o found.protocon -def N 5
+\end{code}
+
+If there are more cores available, run
+\begin{code}
+protocon -x inst/ColorRing.protocon -o found.protocon -def N 5 -o-log search.log
+\end{code}
+We use the \ilflag{-o-log} flag to create log files \ilfile{search.log.}\ilsym{tid} for each thread of index \ilsym{tid}.
+If these log files are not desired, simply do not give the flag.
+
+To use the default search method (using random choinces and restarts) with only one thread (and see the output), set the \ilname{$OMP_NUM_THREADS} environment variable to $1$.
+
+In the \ilname{bash} shell:
+\begin{code}
+export OMP_NUM_THREADS=1
+protocon -x inst/ColorRing.protocon -def N 5
+unset OMP_NUM_THREADS
+\end{code}
+
+This can of course be accomplished on one line:
+\begin{code}
+OMP_NUM_THREADS=1 protocon -x inst/ColorRing.protocon -def N 5
+\end{code}
+The equivalent \ilname{csh} or \ilname{tcsh} shell commands are:
+\begin{code}
+setenv OMP_NUM_THREADS 1
+protocon -x inst/ColorRing.protocon -def N 5
+unsetenv
+\end{code}
+
+\end{document}
+

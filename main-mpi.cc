@@ -11,226 +11,56 @@ extern "C" {
 #include "search.hh"
 #include "synthesis.hh"
 #include "stabilization.hh"
+#include "mpidissem.hh"
 
-static
-  int
-egcd(int* ret_a, int* ret_b)
-{
-  int a = *ret_a;
-  int b = *ret_b;
-  int x = 0;
-  int y = 1;
-  int u = 1;
-  int v = 0;
-  while (a != 0) {
-    int q = b / a;
-    int r = b % a;
-    b = a;
-    a = r;
-    int m = x - u * q;
-    x = u;
-    u = m;
-    int n = y - v * q;
-    y = v;
-    v = n;
-  }
-  *ret_a = x;
-  *ret_b = y;
-  return b;
-}
+#define MpiTag_MpiDissem 1
+#define MpiTag_Conflict 2
 
-/**
- * a x % n = b
- */
-static
-  void
-linear_congruence(Cx::Table<uint>& ans, uint a, uint n, uint b)
-{
-  int r = a,
-      s = n;
-  uint d = umod_int(egcd(&r, &s), n);
-  uint n_div_d = n / d;
-  if (0 != b % d)  return;
-  uint x0 = umod_int(r * (int) b / (int)d, n);
-  for (uint i = 0; i < d; ++i) {
-    ans.push((x0 + i * n_div_d) % n);
-  }
-}
-
-/**
- * Generalized Kautz graph topology of degree {degree}.
- * The {hood} parameter is filled by 2*{degree} nodes.
- * The first {degree} nodes are sources for arcs whose destination node is {vidx}.
- * The second {degree} nodes are destinations for arcs whose source node is {vidx}.
- */
-static
-  void
-gkautz_hood(Cx::Table<uint>& hood, uint vidx, uint degree, uint n)
-{
-  // For arcs ending at node {vidx}, solve the following
-  //   -(vidx + q) % n = i * degree % n
-  // for
-  //   q <- {1,...,degree}
-  // to obtain each source node {i}.
-  // Depending on {degree} and {n}, a single {q} may generate zero or multiple solutions,
-  // but there are exactly {degree} solutions in total.
-  for (uint q = 1; q <= degree; ++q) {
-    Cx::Table<uint> ans;
-    linear_congruence
-      (ans, degree, n,
-       umod_int (- (int)(vidx + q), n)
-      );
-    for (uint i = 0; i < ans.sz(); ++i) {
-      hood.push(ans[i]);
-      //DBog3("%0.2u %0.2u %u", ans[i], vidx, q);
-    }
-  }
-  Claim2( hood.sz() ,==, degree );
-
-  // For arcs beginning at node {vidx}, solve the following
-  //   j = -(vidx * degree + q) % n
-  // for
-  //   q <- {1,...,degree}
-  // to obtain each destination node {j}.
-  // Each q gives a unique {j}.
-  for (uint q = 1; q <= degree; ++q) {
-    uint j = umod_int (-(int)(vidx * degree + q), n);
-    hood.push(j);
-    //DBog3("%0.2u %0.2u %u", vidx, j, q);
-  }
-  Claim2( hood.sz() ,==, 2*degree );
-}
-
-class MpiRound
-{
-private:
-  bool done;
-  uint degree;
-  int value;
-  int tag;
-  MPI_Comm comm;
-  Cx::Table<uint> hood;
-  Cx::Table<int        > payloads;
-  Cx::Table<MPI_Request> requests;
-  Cx::Table<MPI_Status > statuses;
-public:
-  uint PcIdx;
-public:
-
-  MpiRound(uint _PcIdx, uint NPcs, int _tag, MPI_Comm _comm)
-    : done(false)
-    , degree(4)
-    , value(-1)
-    , tag(_tag)
-    , comm(_comm)
-    , PcIdx(_PcIdx)
-  {
-    if (NPcs <= degree) {
-      degree = NPcs;
-      for (uint i = 0; i < NPcs; ++i)  hood.push(i);
-      for (uint i = 0; i < NPcs; ++i)  hood.push(i);
-    }
-    else {
-      gkautz_hood(this->hood, PcIdx, degree, NPcs);
-    }
-
-    payloads.grow(2*this->sz(), -1);
-    requests.grow(2*this->sz(), MPI_REQUEST_NULL);
-    statuses.grow(2*this->sz());
-    for (uint i = 0; i < this->sz(); ++i) {
-      MPI_Irecv (this->x_payload(i), 1, MPI_INT,
-                 this->x_hood(i), tag, comm,
-                 this->x_request(i));
-    }
-  }
-
-  uint sz() const { return this->degree; }
-
-  int x_hood(uint i) { return hood[i]; }
-  int o_hood(uint i) { return hood[this->sz() + i]; }
-  int* x_payload(uint i) { return &payloads[i]; }
-  int* o_payload(uint i) { return &payloads[this->sz() + i]; }
-  int* x_payloads() { return this->x_payload(0); }
-  int* o_payloads() { return this->o_payload(0); }
-  MPI_Request* x_request(uint i) { return &requests[i]; }
-  MPI_Request* o_request(uint i) { return &requests[this->sz() + i]; }
-  MPI_Request* x_requests() { return this->x_request(0); }
-  MPI_Request* o_requests() { return this->o_request(0); }
-  MPI_Status* x_status(uint i) { return &statuses[i]; }
-  MPI_Status* o_status(uint i) { return &statuses[this->sz() + i]; }
-  MPI_Status* x_statuses() { return this->x_status(0); }
-  MPI_Status* o_statuses() { return this->o_status(0); }
-
-  void fo(int x) {
-    if (!done)
-      done = true;
-    else
-      return;
-
-    this->value = x;
-    for (uint i = 0; i < this->sz(); ++i) {
-      *this->o_payload(i) = x;
-      MPI_Isend (this->o_payload(i), 1, MPI_INT,
-                 this->o_hood(i), tag, comm,
-                 this->o_request(i));
-    }
-  }
-  int of() const {
-    return this->value;
-  }
-
-  bool ck() {
-    if (done)  return true;
-    if (this->sz() == 0) {
-      done = true;
-      return true;
-    }
-    int index = 0;
-    int flag = 0;
-      MPI_Testany (this->sz(),
-                   x_requests(),
-                   &index, &flag,
-                   MPI_STATUS_IGNORE);
-    if (flag == 0)  return false;
-    this->fo(*this->x_payload(index));
-    return true;
-  }
-
-  void complete() {
-    if (this->sz() == 0)  return;
-    if (!this->done) {
-      this->fo(PcIdx);
-    }
-    MPI_Waitall (this->sz(),
-                 this->o_requests(),
-                 MPI_STATUS_IGNORE);
-    MPI_Waitall (this->sz(),
-                 this->x_requests(),
-                 MPI_STATUS_IGNORE);
-  }
-};
-
-static MpiRound* mpi_done_flag = 0;
+static MpiDissem* mpi_dissem = 0;
 
 
 static
   void
-set_done_flag (int sig)
+set_term_flag (int sig)
 {
   (void) sig;
-  mpi_done_flag->fo(-1);
+  mpi_dissem->terminate();
 }
 
 static
   Bool
 done_ck (void* dat)
 {
-  (void) dat;
-  return mpi_done_flag->ck();
+  Cx::Table<uint> flat_conflicts;
+  ConflictFamily& conflicts = *(ConflictFamily*) dat;
+
+  if (mpi_dissem->done_ck()) {
+    return 1;
+  }
+  while (mpi_dissem->xtest(flat_conflicts)) {
+    conflicts.add_conflicts(flat_conflicts);
+  }
+  conflicts.flush_new_conflicts(flat_conflicts);
+  for (uint i = 0; i < flat_conflicts.sz(); ++i) {
+    *mpi_dissem << flat_conflicts[i];
+  }
+  mpi_dissem->maysend();
+  return mpi_dissem->done_ck();
 }
 
-#define MpiTag_MpiRound 1
-#define MpiTag_Conflict 2
+static
+  void 
+complete_dissemination(ConflictFamily& conflicts)
+{
+  Cx::Table<uint> flat_conflicts;
+  mpi_dissem->done_fo();
+  /* DBog1("completing... %u", mpi_dissem->PcIdx); */
+  while (mpi_dissem->xwait(flat_conflicts)) {
+    /* DBog1("waiting... %u", mpi_dissem->PcIdx); */
+    conflicts.add_conflicts(flat_conflicts);
+  }
+  /* DBog1("done... %u", mpi_dissem->PcIdx); */
+}
 
 static
   int
@@ -245,10 +75,10 @@ stabilization_search(vector<uint>& ret_actions,
   ConflictFamily conflicts;
   Cx::Table< FlatSet<uint> > flat_conflicts;
 
-  mpi_done_flag = new MpiRound(PcIdx, NPcs, MpiTag_MpiRound, MPI_COMM_WORLD);
+  mpi_dissem = new MpiDissem(PcIdx, NPcs, MpiTag_MpiDissem, MPI_COMM_WORLD);
 
-  signal(SIGINT, set_done_flag);
-  signal(SIGTERM, set_done_flag);
+  signal(SIGINT, set_term_flag);
+  signal(SIGTERM, set_term_flag);
   MPI_Info mpi_info;
   MPI_Info_create(&mpi_info);
 
@@ -257,6 +87,7 @@ stabilization_search(vector<uint>& ret_actions,
   {
     return false;
   }
+  conflicts.flush_new_conflicts();
 
   Sign good = 1;
   AddConvergenceOpt opt(global_opt);
@@ -300,6 +131,7 @@ stabilization_search(vector<uint>& ret_actions,
   PartialSynthesis& synlvl = synctx.base_inst;
 
   synctx.done_ck_fn = done_ck;
+  synctx.done_ck_mem = &synctx.conflicts;
 
   Cx::Table< Cx::Table<uint> > act_layers;
   if (opt.search_method == opt.RankShuffleSearch)
@@ -330,7 +162,7 @@ stabilization_search(vector<uint>& ret_actions,
   }
 
   if (!good)
-    mpi_done_flag->fo(-1);
+    mpi_dissem->terminate();
 
   DBog1( "BEGIN! %u", PcIdx );
 
@@ -419,7 +251,7 @@ stabilization_search(vector<uint>& ret_actions,
     else if (found)
     {
       if (!global_opt.try_all) {
-        mpi_done_flag->fo(PcIdx);
+        mpi_dissem->terminate();
       }
       else if (!!exec_opt.ofilepath) {
         Cx::OFileB ofb;
@@ -456,14 +288,16 @@ stabilization_search(vector<uint>& ret_actions,
   }
 
   if (global_opt.try_all)
-    mpi_done_flag->fo(-1);
+    mpi_dissem->terminate();
 
+  complete_dissemination(synctx.conflicts);
 
   if (!!exec_opt.conflicts_ofilepath) {
     Cx::Table<uint> flattest_conflicts;
     synctx.conflicts.oput_conflict_sizes(*opt.log);
     opt.log->flush();
     if (PcIdx == 0) {
+      synctx.conflicts.flush_new_conflicts();
       for (uint source_idx = 1; source_idx < NPcs; ++source_idx) {
         MPI_Status status;
         uint sz = 0;
@@ -472,28 +306,17 @@ stabilization_search(vector<uint>& ret_actions,
         flattest_conflicts.resize(sz);
         MPI_Recv(&flattest_conflicts[0], sz, MPI_UNSIGNED, MPI_ANY_SOURCE,
                  MpiTag_Conflict, MPI_COMM_WORLD, &status);
-        uint i = 0;
-        while (i < flattest_conflicts.sz()) {
-          uint n = flattest_conflicts[i++];
-          synctx.conflicts.add_conflict(FlatSet<uint>(&flattest_conflicts[i], n));
-          i += n;
-        }
+        synctx.conflicts.add_conflicts(flattest_conflicts);
+        synctx.conflicts.flush_new_conflicts();
         synctx.conflicts.oput_conflict_sizes(*opt.log);
         opt.log->flush();
       }
-      conflicts = synctx.conflicts;
 
-      conflicts.trim(global_opt.max_conflict_sz);
-      oput_conflicts(conflicts, exec_opt.conflicts_ofilepath);
+      synctx.conflicts.trim(global_opt.max_conflict_sz);
+      oput_conflicts(synctx.conflicts, exec_opt.conflicts_ofilepath);
     }
     else {
-      (synctx.conflicts - conflicts).all_conflicts(flat_conflicts);
-      for (uint i = 0; i < flat_conflicts.sz(); ++i) {
-        flattest_conflicts.push(flat_conflicts[i].sz());
-        for (uint j = 0; j < flat_conflicts[i].sz(); ++j) {
-          flattest_conflicts.push(flat_conflicts[i][j]);
-        }
-      }
+      synctx.conflicts.flush_new_conflicts(flattest_conflicts);
       uint sz = flattest_conflicts.sz();
       MPI_Send(&flattest_conflicts[0], sz, MPI_UNSIGNED, 0,
                MpiTag_Conflict, MPI_COMM_WORLD);
@@ -504,14 +327,13 @@ stabilization_search(vector<uint>& ret_actions,
   {
     int send_pc = solution_found ? (int)PcIdx : -1;
     ret_pc = send_pc;
-    MPI_Allreduce(&send_pc, &ret_pc, MpiTag_MpiRound,
+    MPI_Allreduce(&send_pc, &ret_pc, MpiTag_MpiDissem,
                   MPI_INT, MPI_MAX, MPI_COMM_WORLD);
   }
 
-  mpi_done_flag->complete();
   signal(SIGINT, SIG_DFL);
   signal(SIGTERM, SIG_DFL);
-  delete mpi_done_flag;
+  delete mpi_dissem;
   return ret_pc;
 }
 

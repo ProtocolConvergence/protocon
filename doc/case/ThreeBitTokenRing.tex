@@ -1,0 +1,36 @@
+
+\title{Three Bit Token Ring}
+%\author{}
+\date{}
+
+\begin{document}
+Let's try to find a stabilizing token ring using three bits on a ring of size $5$.
+\begin{code}
+protocon -x inst/ThreeBitTokenRing.protocon -o found.protocon -def N 5
+\end{code}
+
+Is the protocol stabilizing on a ring of size $3$?
+\begin{code}
+protocon -verify -x found.protocon -def N 3
+\end{code}
+
+How about of size $4$ or $6$?
+\begin{code}
+protocon -verify -x found.protocon -def N 4
+protocon -verify -x found.protocon -def N 6
+\end{code}
+
+Probably not.
+Let's try again, taking those sizes into account!
+\begin{code}
+protocon -x inst/ThreeBitTokenRing.protocon -o found.protocon -def N 5 -param N 3 -param N 4 -param N 6
+\end{code}
+
+But what if we want to search up to size $7$, but it takes too long check a system of that size at each decision level?
+Use the \ilflag{-no-partial} flag to just verify the protocol on that system after finding a protocol which is self-stabilizing for all smaller sizes.
+\begin{code}
+protocon -x inst/ThreeBitTokenRing.protocon -o found.protocon -def N 5 -param N 3 -param N 4 -param N 6 -param [ -def N 7 -no-partial ]
+\end{code}
+
+\end{document}
+

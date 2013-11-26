@@ -69,11 +69,14 @@ ConflictFamily::add_conflict(const FlatSet<uint>& b)
       ++it;
     }
   }
+  //conflict_sets -= dels;
+  this->conflict_sets << b;
   if (b.sz() == 1) {
     this->impossible_set << b[0];
   }
-  //conflict_sets -= dels;
-  conflict_sets << b;
+  if (this->record_new_conflict_sets) {
+    this->new_conflict_sets.push(b);
+  }
 }
 
   void
@@ -98,6 +101,17 @@ ConflictFamily::add_conflicts(const ConflictFamily& fam)
 
   FOR_EACH( it, diff_set )
     this->add_conflict(*it);
+}
+
+  void
+ConflictFamily::add_conflicts(const Cx::Table<uint>& flat_conflicts)
+{
+  uint i = 0;
+  while (i < flat_conflicts.sz()) {
+    uint n = flat_conflicts[i++];
+    this->add_conflict(FlatSet<uint>(&flat_conflicts[i], n));
+    i += n;
+  }
 }
 
   void
@@ -186,10 +200,66 @@ ConflictFamily::all_conflicts(Cx::Table< FlatSet<uint> >& ret) const
 }
 
   void
+ConflictFamily::all_conflicts(Cx::Table<uint>& ret) const
+{
+  ret.clear();
+  FOR_EACH( it, conflict_sets )
+  {
+    const FlatSet<uint>& conflict = *it;
+    ret.push(conflict.sz());
+    for (uint j = 0; j < conflict.sz(); ++j) {
+      ret.push(conflict[j]);
+    }
+  }
+}
+
+  void
+ConflictFamily::flush_new_conflicts(Cx::Table< FlatSet<uint> >& ret)
+{
+  if (!this->record_new_conflict_sets) {
+    this->all_conflicts(ret);
+    this->record_new_conflict_sets = true;
+  }
+  else {
+    ret = this->new_conflict_sets;
+    this->new_conflict_sets.clear();
+  }
+}
+
+  void
+ConflictFamily::flush_new_conflicts(Cx::Table<uint>& ret)
+{
+  if (!this->record_new_conflict_sets) {
+    this->all_conflicts(ret);
+    this->record_new_conflict_sets = true;
+  }
+  else {
+    ret.clear();
+    for (uint i = 0; i < this->new_conflict_sets.sz(); ++i) {
+      const FlatSet<uint>& conflict = this->new_conflict_sets[i];
+      ret.push(conflict.sz());
+      for (uint j = 0; j < conflict.sz(); ++j) {
+        ret.push(conflict[j]);
+      }
+    }
+    this->new_conflict_sets.clear();
+  }
+}
+
+  void
+ConflictFamily::flush_new_conflicts()
+{
+  this->new_conflict_sets.clear();
+  this->record_new_conflict_sets = true;
+}
+
+  void
 ConflictFamily::clear()
 {
   conflict_sets.clear();
   impossible_set.clear();
+  new_conflict_sets.clear();
+  record_new_conflict_sets = false;
 }
 
   bool

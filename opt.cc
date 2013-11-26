@@ -153,7 +153,7 @@ protocon_options_rec
       }
     }
     else if (eq_cstr (arg, "-x")) {
-      DBog0("Problem: From File");
+      DBog0("Instance: From File");
       problem = FromFileInstance;
       if (!argv[argi]) {
         failout_sysCx("Not enuff arguments.");
@@ -323,23 +323,23 @@ protocon_options
     if (false) {
     }
     else if (string(argv[argi]) == "3-coloring") {
-      DBog0("Problem: 3-Coloring on Bidirectional Ring");
+      DBog0("Instance: 3-Coloring on Bidirectional Ring");
       problem = ThreeColoringRingInstance;
     }
     else if (string(argv[argi]) == "2-coloring") {
-      DBog0("Problem: 2-Coloring on Unidirectional Ring");
+      DBog0("Instance: 2-Coloring on Unidirectional Ring");
       problem = TwoColoringRingInstance;
     }
     else if (string(argv[argi]) == "matching") {
-      DBog0("Problem: Maximal Matching");
+      DBog0("Instance: Maximal Matching");
       problem = MaximalMatchingInstance;
     }
     else if (string(argv[argi]) == "sum-not-2") {
-      DBog0("Problem: Sum-Not-2");
+      DBog0("Instance: Sum-Not-2");
       problem = SumNotTwoInstance;
     }
     else if (string(argv[argi]) == "agreement") {
-      DBog0("Problem: Agreement");
+      DBog0("Instance: Agreement");
       problem = AgreementRingInstance;
     }
     else{
