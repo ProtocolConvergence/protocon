@@ -49,7 +49,7 @@ done_ck (void* dat)
 }
 
 static
-  void 
+  void
 complete_dissemination(ConflictFamily& conflicts)
 {
   Cx::Table<uint> flat_conflicts;

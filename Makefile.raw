@@ -57,7 +57,7 @@ LXXFLAGS += -L$(GluPath) -lcu -lglu -lcal -lm
 -include deps.mk
 
 
-all: $(ExeList)
+all: $(ExeList) udp
 
 ProtoconObj = \
 	$(addprefix $(BldPath)/, pfmla.o pfmla-glu.o pfmla-bittable.o) \
@@ -95,6 +95,12 @@ $(BldPathCXX)/main-mpi.o: $(BldPathCXX)/main-mpi.cc
 $(BldPathCXX)/mpidissem.o: $(BldPathCXX)/mpidissem.cc $(BldPathCXX)/mpidissem.hh
 	$(MPICXX) -c $(CXXFLAGS) $< -o $@
 
+$(BldPath)/udp.o: $(BldPath)/udp.c
+	$(CC) -c $(filter-out -pedantic,$(CFLAGS)) -D_BSD_SOURCE $< -o $@
+
+udp: $(BldPath)/udp.o
+	$(CC) $(filter-out -pedantic,$(CFLAGS)) -D_BSD_SOURCE $< -o $@
+
 $(BldPathCXX)/protoconfile.leg.cc: protoconfile.leg
 	$(LEG) -o $@ $<
 
@@ -128,7 +134,7 @@ deps.mk:
 .PHONY: clean
 clean:
 	rm -fr $(PfxBldPath)
-	rm -f $(ExeList)
+	rm -f $(ExeList) udp
 	rm -f deps.mk
 	$(MAKE) -C gui clean
 
