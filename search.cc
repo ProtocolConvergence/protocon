@@ -496,10 +496,13 @@ stabilization_search(vector<uint>& ret_actions,
   //opt.log = &DBogOF;
   //opt.verify_found = false;
 
+
   Xn::Sys sys;
   DoLegit(good, "reading file")
-    good =
-    ReadProtoconFile(sys, infile_opt);
+  {
+    if (exec_opt.task != ProtoconOpt::VerifyTask)
+      good = ReadProtoconFile(sys, infile_opt);
+  }
 
   Cx::LgTable<Xn::Sys> systems;
   SynthesisCtx synctx( PcIdx, NPcs );
@@ -507,7 +510,10 @@ stabilization_search(vector<uint>& ret_actions,
   synctx.conflicts = conflicts;
 
   DoLegit(good, "initialization")
-    good = synctx.init(sys, opt);
+  {
+    if (exec_opt.task != ProtoconOpt::VerifyTask)
+      good = synctx.init(sys, opt);
+  }
 
   PartialSynthesis& synlvl = synctx.base_inst;
 
@@ -524,6 +530,7 @@ stabilization_search(vector<uint>& ret_actions,
                     synlvl.hi_invariant);
   }
 
+  if (exec_opt.task != ProtoconOpt::VerifyTask)
   for (uint i = 1; good && i < exec_opt.params.sz(); ++i) {
     ProtoconFileOpt param_infile_opt = infile_opt;
     param_infile_opt.constant_map = exec_opt.params[i].constant_map;
@@ -557,12 +564,53 @@ stabilization_search(vector<uint>& ret_actions,
 #pragma omp critical (DBog)
   DBog1( "BEGIN! %u", PcIdx );
 
+  if (exec_opt.task == ProtoconOpt::VerifyTask)
+  {
+#pragma omp for schedule(dynamic)
+    for (uint i = 0; i < exec_opt.xfilepaths.sz(); ++i) {
+      if (synctx.done_ck())  continue;
+      Xn::Sys sys;
+      ProtoconFileOpt verif_infile_opt( infile_opt );
+      verif_infile_opt.file_path = exec_opt.xfilepaths[i].cstr();
+      *opt.log << "VERIFYING: " << verif_infile_opt.file_path << opt.log->endl();
+      if (ReadProtoconFile(sys, verif_infile_opt)) {
+        StabilizationCkInfo info;
+        if (stabilization_ck(*opt.log, sys, &info)) {
+          solution_found = true;
+          ret_actions = sys.actions;
+          *opt.log << "System is stabilizing." << opt.log->endl();
+
+          if (!!exec_opt.ofilepath) {
+            Cx::String filepath( exec_opt.ofilepath + "." + i );
+            *opt.log << "Writing system to: " << filepath  << opt.log->endl();
+            Cx::OFileB ofb;
+            ofb.open(filepath);
+            oput_protocon_file(ofb, sys, sys.actions);
+          }
+        }
+        else {
+          *opt.log << "System NOT stabilizing." << opt.log->endl();
+          if (info.livelock_exists) {
+            //synctx.conflicts.add_conflict(FlatSet<uint>(sys.actions));
+            synctx.conflicts.add_conflict(FlatSet<uint>(info.livelock_actions));
+          }
+        }
+      }
+    }
+
+#pragma omp critical (DBog)
+    {
+      conflicts.add_conflicts(synctx.conflicts);
+      synctx.conflicts = conflicts;
+    }
+    synctx.conflicts.oput_conflict_sizes(*opt.log);
+  }
   if (exec_opt.task == ProtoconOpt::MinimizeConflictsTask)
   {
 #pragma omp for schedule(dynamic)
     for (uint conflict_idx = 0; conflict_idx < flat_conflicts.sz(); ++conflict_idx) {
       uint old_sz = flat_conflicts[conflict_idx].sz();
-      if (!done_flag && old_sz > 1) {
+      if (!synctx.done_ck() && old_sz > 1) {
         *opt.log
           << "pcidx:" << PcIdx
           << " conflict:" << conflict_idx << "/" << flat_conflicts.sz()
@@ -590,7 +638,7 @@ stabilization_search(vector<uint>& ret_actions,
 
   vector<uint> actions;
   if (exec_opt.task == ProtoconOpt::SearchTask)
-  for (uint trial_idx = 0; !done_flag && (opt.ntrials == 0 || trial_idx < opt.ntrials); ++trial_idx)
+  for (uint trial_idx = 0; !synctx.done_ck() && (opt.ntrials == 0 || trial_idx < opt.ntrials); ++trial_idx)
   {
     bool found = false;
     if (opt.search_method == opt.RankShuffleSearch)
@@ -614,7 +662,7 @@ stabilization_search(vector<uint>& ret_actions,
 
 #pragma omp critical (DBog)
     {
-    if (done_flag)
+    if (synctx.done_ck())
     {}
     else if (found)
     {
@@ -630,7 +678,7 @@ stabilization_search(vector<uint>& ret_actions,
       ret_actions = actions;
       *opt.log << "SOLUTION FOUND!" << opt.log->endl();
     }
-    if (!done_flag || !!exec_opt.conflicts_ofilepath || try_known_solution_ck)
+    if (!synctx.done_ck() || !!exec_opt.conflicts_ofilepath || try_known_solution_ck)
     {
       if (try_known_solution_ck &&
           !try_known_solution (conflicts, synctx))
@@ -675,7 +723,7 @@ stabilization_search(vector<uint>& ret_actions,
     if (global_opt.snapshot_conflicts && !!exec_opt.conflicts_ofilepath)
       oput_conflicts (synctx.conflicts, exec_opt.conflicts_ofilepath, PcIdx);
 
-    if (!done_flag) {
+    if (!synctx.done_ck()) {
       Set<uint> impossible( synctx.conflicts.impossible_set );
       impossible &= Set<uint>(synlvl.candidates);
       if (!impossible.empty())

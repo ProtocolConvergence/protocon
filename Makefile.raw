@@ -3,6 +3,8 @@ default: all
 
 CC = gcc
 CXX = g++
+#CC = icc
+#CXX = icpc
 #CC = clang
 #CXX = clang++
 #CC = $(CXX)

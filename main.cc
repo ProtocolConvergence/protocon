@@ -37,7 +37,8 @@ int main(int argc, char** argv)
     if (exec_opt.params.sz() > 1) {
       failout_sysCx ("The -verify mode does not allow -param flags!");
     }
-    found = stabilization_ck(DBogOF, sys);
+    found =
+      stabilization_search(sys.actions, infile_opt, exec_opt, opt);
   }
   else if (exec_opt.task == ProtoconOpt::MinimizeConflictsTask)
   {

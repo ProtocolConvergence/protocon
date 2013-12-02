@@ -155,18 +155,24 @@ protocon_options_rec
     else if (eq_cstr (arg, "-x")) {
       DBog0("Instance: From File");
       problem = FromFileInstance;
-      if (!argv[argi]) {
+      arg = argv[argi++];
+      if (!arg) {
         failout_sysCx("Not enuff arguments.");
       }
-      infile_opt.file_path = argv[argi++];
-    }
-    else if (eq_cstr (arg, "-x-list")) {
-      while (argi < argc) {
-        arg = argv[argi++];
-        if (eq_cstr(arg, ".")) {
-          break;
+      if (eq_cstr (arg, "-list")) {
+        while (argi < argc) {
+          arg = argv[argi++];
+          if (eq_cstr(arg, ".")) {
+            break;
+          }
+          exec_opt.xfilepaths.push(arg);
+          if (!infile_opt.file_path) {
+            infile_opt.file_path = arg;
+          }
         }
-        exec_opt.xfilepaths.push(arg);
+      }
+      else {
+        infile_opt.file_path = arg;
       }
     }
     else if (eq_cstr (arg, "-x-args")) {
@@ -186,9 +192,16 @@ protocon_options_rec
       XFile olay;
       olay_txt_XFile (&olay, &args_xf.xf, 0);
       Cx::Table<char*> xargs;
+      char* xarg;
       do {
-        xargs.push(nextok_XFile (&olay, 0, WhiteSpaceChars));
-      } while (xargs.top());
+        xarg = nextok_XFile (&olay, 0, WhiteSpaceChars);
+        if (pfxeq_cstr("#", xarg)) {
+          skiplined_XFile (&olay, "\n");
+        }
+        else {
+          xargs.push(xarg);
+        }
+      } while (xarg);
       int tmp_argi = 0;
       int tmp_argc = xargs.sz()-1;
       if (!protocon_options_rec
@@ -364,6 +377,12 @@ protocon_options
   }
 
   infile_opt.constant_map = exec_opt.params[0].constant_map;
+
+  if (exec_opt.xfilepaths.sz() == 0) {
+    if (!!infile_opt.file_path) {
+      exec_opt.xfilepaths.push(infile_opt.file_path);
+    }
+  }
 
   // Set up the chosen problem.
   switch(problem){

@@ -300,6 +300,12 @@ ReviseDeadlocksMCV(vector<DeadlockConstraint>& dlsets,
   }
 }
 
+static void
+pick_action_candidates(Set<uint>& ret_candidates,
+                       const PartialSynthesis& inst,
+                       const AddConvergenceOpt& opt,
+                       uint dlset_idx);
+
 /**
  * Pick the next candidate action to use.
  * The most constrained variable (MCV) heuristic may be used.
@@ -314,13 +320,7 @@ PickActionMCV(uint& ret_actidx,
               const AddConvergenceOpt& opt)
 {
   typedef AddConvergenceOpt Opt;
-  const Xn::Sys& sys = *tape.ctx->systems[tape.sys_idx];
   const Opt::PickActionHeuristic& pick_method = opt.pick_method;
-  const Opt::NicePolicy& nicePolicy = opt.nicePolicy;
-
-  const Xn::Net& topo = sys.topology;
-  const vector<DeadlockConstraint>& dlsets = tape.mcv_deadlocks;
-  uint dlset_idx = 0;
 
   if (pick_method == Opt::RandomPick) {
     for (uint inst_idx = 0; inst_idx < tape.sz(); ++inst_idx) {
@@ -333,35 +333,85 @@ PickActionMCV(uint& ret_actidx,
     return false;
   }
 
-  Set<uint> candidates;
-  Set<uint>::const_iterator it;
-
-  const Cx::PFmla& reach_pf =
-    tape.lo_xn.pre_reach(tape.hi_invariant);
-
   // Do most constrained variable (MCV).
   // That is, find an action which resolves a deadlock which
   // can only be resolved by some small number of actions.
-  uint mcv_inst_idx = 0;
+  uint mcv_dlset_idx = 0;
   for (uint inst_idx = 0; inst_idx < tape.sz(); ++inst_idx) {
     if (tape[inst_idx].no_partial)  continue;
-    for (uint i = 0; i < tape[inst_idx].mcv_deadlocks.size(); ++i) {
-      if (dlset_idx > 0 && i >= dlset_idx) {
+    const PartialSynthesis& inst = tape[inst_idx];
+    for (uint i = 0; i < inst.mcv_deadlocks.size(); ++i) {
+      if (mcv_dlset_idx > 0 && i >= mcv_dlset_idx)
         break;
-      }
-      if (!tape[inst_idx].mcv_deadlocks[i].candidates.empty()) {
-        dlset_idx = i;
-        mcv_inst_idx = inst_idx;
-        break;
-      }
+      const Set<uint>& inst_candidates = inst.mcv_deadlocks[i].candidates;
+      if (!inst_candidates.empty())
+        mcv_dlset_idx = i;
     }
   }
-  if (mcv_inst_idx != 0) {
-    return PickActionMCV(ret_actidx, tape[mcv_inst_idx], opt);
+  Set<uint> candidates;
+  uint mcv_inst_idx = 0;
+  for (uint inst_idx = 0; inst_idx < tape.sz(); ++inst_idx) {
+    if (tape[inst_idx].no_partial)
+      continue;
+    const PartialSynthesis& inst = tape[inst_idx];
+    Claim2( mcv_dlset_idx ,<, inst.mcv_deadlocks.size() );
+    const Set<uint>& inst_candidates = inst.mcv_deadlocks[mcv_dlset_idx].candidates;
+    if (inst_candidates.empty())
+      continue;
+
+    Set<uint> tmp_candidates;
+    pick_action_candidates(tmp_candidates, inst, opt, mcv_dlset_idx);
+    if (tmp_candidates.sz() == 0)
+      return false;
+
+    if (candidates.sz() == 0 || tmp_candidates.sz() < candidates.sz()) {
+      mcv_inst_idx = inst_idx;
+      candidates = tmp_candidates;
+    }
   }
-  candidates = dlsets[dlset_idx].candidates;
+
+  const PartialSynthesis& inst = tape[mcv_inst_idx];
+  *inst.log
+    << " (lvl " << inst.bt_level
+    << ") (psys " << inst.sys_idx
+    << ") (mcv " << mcv_dlset_idx
+    << ") (mcv-sz " << inst.mcv_deadlocks[mcv_dlset_idx].candidates.sz()
+    << ") (rem-sz " << candidates.sz()
+    << ")" << inst.log->endl();
+
+  if (opt.random_one_shot) {
+    vector<uint> candidates_vec;
+    candidates.fill(candidates_vec);
+    uint idx = inst.ctx->urandom.pick(candidates_vec.size());
+    ret_actidx = candidates_vec[idx];
+  }
+  else {
+    ret_actidx = candidates.elem();
+  }
+  return true;
+}
+
+  void
+pick_action_candidates(Set<uint>& ret_candidates,
+                       const PartialSynthesis& inst,
+                       const AddConvergenceOpt& opt,
+                       uint dlset_idx)
+{
+
+  typedef AddConvergenceOpt Opt;
+  const Opt::PickActionHeuristic& pick_method = opt.pick_method;
+  const Opt::NicePolicy& nicePolicy = opt.nicePolicy;
+  const Xn::Sys& sys = *inst.ctx->systems[inst.sys_idx];
+  const Xn::Net& topo = sys.topology;
+
+  Set<uint> candidates( inst.mcv_deadlocks[dlset_idx].candidates );
+  const vector<DeadlockConstraint>& dlsets = inst.mcv_deadlocks;
+
+  Set<uint>::const_iterator it;
 
   // Try to choose an action which adds a new path to the invariant.
+  const Cx::PFmla& reach_pf =
+    inst.lo_xn.pre_reach(inst.hi_invariant);
   if (opt.pick_back_reach) {
     Set<uint> candidates_1;
     for (it = candidates.begin(); it != candidates.end(); ++it) {
@@ -396,6 +446,9 @@ PickActionMCV(uint& ret_actidx,
         candidates_1.clear();
         candidates_1 << actId;
         niceIdxMin = niceIdx;
+      }
+      else if (niceIdx == niceIdxMin) {
+        candidates_1 << actId;
       }
     }
     candidates = candidates_1;
@@ -459,7 +512,7 @@ PickActionMCV(uint& ret_actidx,
       vector<DeadlockConstraint> tmpDeadlocks( dlsets );
       ReviseDeadlocksMCV(tmpDeadlocks, topo, Set<uint>(actId), Set<uint>());
       for (uint j = 1; j < tmpDeadlocks.size(); ++j) {
-        n += j * tmpDeadlocks[j].candidates.size();
+        n += tmpDeadlocks[j].candidates.size();
       }
 
       biasMap[n] << actId;
@@ -470,13 +523,13 @@ PickActionMCV(uint& ret_actidx,
 
     for (it = candidates.begin(); it != candidates.end(); ++it) {
       const uint actId = *it;
-      PartialSynthesis next( tape );
+      PartialSynthesis next( inst );
       next.log = &Cx::OFile::null();
-      uint n = tape.candidates.size();
+      uint n = inst.candidates.size();
       if (next.revise_actions(Set<uint>(actId), Set<uint>()))
       {
         n -= next.candidates.size();
-        n /= (next.actions.size() - tape.actions.size());
+        n /= (next.actions.size() - inst.actions.size());
       }
       //uint n = next.candidates.size() + next.actions.size();
       //uint n = 0;
@@ -526,11 +579,11 @@ PickActionMCV(uint& ret_actidx,
       }
     }
 
-    DBog2("(lvl %u) (size %u)", tape.bt_level, minOverlapSet.size());
+    DBog2("(lvl %u) (size %u)", inst.bt_level, minOverlapSet.size());
 
     for (it = minOverlapSet.begin(); it != minOverlapSet.end(); ++it) {
       const uint actId = *it;
-      PartialSynthesis next( tape );
+      PartialSynthesis next( inst );
       next.log = &Cx::OFile::null();
       uint n = 0;
       if (next.revise_actions(Set<uint>(actId), Set<uint>()))
@@ -546,14 +599,14 @@ PickActionMCV(uint& ret_actidx,
   else if (pick_method == Opt::ConflictPick) {
     biasToMax = false;
     FlatSet<uint> membs;
-    tape.ctx->conflicts.superset_membs(membs, FlatSet<uint>(tape.picks),
-                                       FlatSet<uint>(tape.candidates));
+    inst.ctx->conflicts.superset_membs(membs, FlatSet<uint>(inst.picks),
+                                       FlatSet<uint>(inst.candidates));
     if (membs.overlap_ck(candidates)) {
       biasMap[0] = (candidates & Set<uint>(membs));
     }
 #if 0
     else if (membs.sz() > 0) {
-      uint idx = tape.ctx->urandom.pick(membs.sz());
+      uint idx = inst.ctx->urandom.pick(membs.sz());
       biasMap[0] << membs[idx];
     }
 #endif
@@ -567,7 +620,7 @@ PickActionMCV(uint& ret_actidx,
       uint actId = *it;
       const PF& act_pf = topo.action_pfmla(actId);
       if (sys.shadow_puppet_synthesis_ck()) {
-        if (!act_pf.overlap_ck(tape.hi_invariant)) {
+        if (!act_pf.overlap_ck(inst.hi_invariant)) {
           biasMap[0] << actId;
         }
         else {
@@ -591,46 +644,34 @@ PickActionMCV(uint& ret_actidx,
     const std::pair< uint, Set<uint> >& entry =
       (biasToMax ? *biasMap.rbegin() : *biasMap.begin());
     candidates = entry.second;
-    *tape.log
-      << " (lvl " << tape.bt_level
-      << ") (psys " << tape.sys_idx
-      << ") (mcv " << dlset_idx
-      << ") (mcv-sz " << dlsets[dlset_idx].candidates.sz()
-      << ") (rem-sz " << candidates.sz()
-      << ")" << tape.log->endl();
   }
   else {
+    ret_candidates.clear();
     DBog0( "Bad News: biasMap is empty!!!" );
-    return false;
+    return;
   }
 
-  if (opt.random_one_shot) {
-    vector<uint> candidates_vec;
-    candidates.fill(candidates_vec);
-    uint idx = tape.ctx->urandom.pick(candidates_vec.size());
-    ret_actidx = candidates_vec[idx];
-  }
-  else if (nicePolicy == Opt::EndNice) {
+  if (nicePolicy == Opt::EndNice) {
     bool have = false;
     uint niceIdxMin = 0;
-    uint extremeActId = 0;
-    Set<uint>::const_iterator it;
+    Set<uint> candidates_1;
     for (it = candidates.begin(); it != candidates.end(); ++it) {
       const uint actId = *it;
       const uint pcId = topo.action_pcsymm_index(actId);
       const uint niceIdx = sys.niceIdxOf(pcId);
       if (!have || (niceIdx < niceIdxMin)) {
         have = true;
+        candidates_1.clear();
+        candidates_1 << actId;
         niceIdxMin = niceIdx;
-        extremeActId = actId;
+      }
+      else if (niceIdx == niceIdxMin) {
+        candidates_1 << actId;
       }
     }
-    ret_actidx = extremeActId;
+    candidates = candidates_1;
   }
-  else {
-    ret_actidx = candidates.elem();
-  }
-  return true;
+  ret_candidates = candidates;
 }
 
 /**
@@ -1007,7 +1048,7 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels, Set<uin
     //uint n = count_actions_in_cycle(scc, act_pf, this->actions, topo);
     //DBog1("scc actions: %u", n);
     *this->log << "CYCLE" << this->log->endl();
-    if (!this->no_conflict) {
+    if (true || !this->no_conflict) {
       Cx::Table<uint> conflict_set;
 #if 0
       small_cycle_conflict (conflict_set, scc, this->actions, topo, sys.invariant,

@@ -5,6 +5,7 @@ extern "C" {
 #include "cx/syscx.h"
 }
 #include "cx/fileb.hh"
+#include <errno.h>
 
 #include "opt.hh"
 #include "pla.hh"
@@ -33,6 +34,14 @@ done_ck (void* dat)
 {
   Cx::Table<uint> flat_conflicts;
   ConflictFamily& conflicts = *(ConflictFamily*) dat;
+
+  if (0 == remove("kill-protocon")) {
+    mpi_dissem->terminate();
+    return 1;
+  }
+  else {
+    errno = 0;
+  }
 
   if (mpi_dissem->done_ck()) {
     return 1;
