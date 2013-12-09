@@ -18,6 +18,17 @@
 #include <signal.h>
 #include <time.h>
 
+static const char SharedFilePfx[] = "udp-host.";
+static const Bool ShowCommunication = 1;
+static const uint TimeoutMS = 10000;
+static const uint QuickTimeoutMS = 200;
+#define NQuickTimeouts (TimeoutMS / QuickTimeoutMS)
+//static const double NetworkReliability = 0.1;
+//static const double NetworkReliability = 0.5;
+static const double NetworkReliability = 1;
+static const uint32_t ActionLagMS = 256;
+
+
 typedef struct Packet Packet;
 typedef struct Channel Channel;
 typedef struct State State;
@@ -36,8 +47,9 @@ struct Channel
   uint32_t adj_seq;
   struct sockaddr_in host;
   uint adj_PcIdx;
-  //uint32_t adj_enabled;
   Bool adj_acknowledged;
+  Bool reply;
+  uint32_t n_timeout_skips;
 };
 
 struct State
@@ -53,11 +65,6 @@ struct State
   Channel channels[2];
   FILE* logf;
 };
-
-static const char SharedFilePfx[] = "udp-host.";
-static const Bool ShowCommunication = 0;
-//#define DebugLogging
-static const uint TimeoutMS = 5000;
 
 
 #define BailOut( ret, msg ) \
@@ -128,6 +135,7 @@ CMD_seq(Channel* channel, State* st)
   *seq |= 0xFFFF0000;
   *seq &= x;
   channel->adj_acknowledged = 0;
+  channel->reply = 1;
 }
 
   void
@@ -168,11 +176,7 @@ lookup_host(struct sockaddr_in* host, uint id)
   sprintf(fname, "%s%d", SharedFilePfx, id);
   f = fopen(fname, "rb");
   if (!f) {
-#ifdef DebugLogging
     BailOut(-1, "fopen()");
-#else
-    return -1;
-#endif
   }
   nmatched = fscanf(f, "%128s %d", hostname, &port);
   if (nmatched < 2)
@@ -208,7 +212,7 @@ init_Channel(Channel* channel, State* st)
       id = (st->PcIdx + 1) % st->NPcs;
     channel->adj_PcIdx = id;
     while (0 > lookup_host(&channel->host, id)) {
-      sleep(1);
+      usleep(1000 * QuickTimeoutMS);
     }
   }
 }
@@ -225,6 +229,8 @@ randomize_State(State* st)
     next_urandom(&channel->seq, st);
     next_urandom(&channel->adj_seq, st);
     channel->adj_acknowledged = next_urandom_Bool(st);
+    channel->reply = next_urandom_Bool(st);
+    next_urandom(&channel->n_timeout_skips, st);
   }
 }
 
@@ -305,7 +311,7 @@ oput_line(const char* line, const State* st)
 }
 
   int
-send_Packet (const Packet* packet, const struct sockaddr_in* host, const State* st)
+send_Packet (const Packet* packet, const struct sockaddr_in* host, State* st)
 {
   Packet pkt[1];
   int stat;
@@ -324,6 +330,16 @@ send_Packet (const Packet* packet, const struct sockaddr_in* host, const State* 
     oput_line(buf, st);
   }
   hton_Packet(pkt);
+
+  if (NetworkReliability < 1) {
+    uint32_t x = 0;
+    next_urandom (&x, st);
+    if (NetworkReliability * ~(uint32_t)0 < x) {
+      // Packet dropped.
+      return sizeof(*pkt);
+    }
+  }
+
   stat = sendto(st->fd, pkt, sizeof(*pkt), 0,
                 (struct sockaddr*)host, sizeof(*host));
   return stat;
@@ -387,12 +403,13 @@ CMD_act(State* st, Bool modify)
         action_pre_assign(tmp, st->PcIdx);
       }
 
+      if (ActionLagMS > 0)
       {
+        // Lag actions a bit to expose livelocks.
         uint32_t x = 0;
         next_urandom(&x, st);
-        // This helps the scheduler find livelocks.
-        //usleep(10000);
-        usleep(1000 * (x % 256));
+        //usleep(1000 * ActionLagMS);
+        usleep(1000 * (ActionLagMS/2 + x % ActionLagMS));
       }
 
       if (true) {
@@ -412,14 +429,22 @@ CMD_act(State* st, Bool modify)
 }
 
   void
-CMD_send(Channel* channel, State* st)
+CMD_send1(Channel* channel, State* st, uint32_t enabled)
 {
   Packet pkt[1];
   pkt->src_seq = channel->seq;
   pkt->dst_seq = channel->adj_seq;
-  pkt->enabled = st->enabled;
+  pkt->enabled = enabled;
   pkt->state = st->x_me;
+  channel->n_timeout_skips = NQuickTimeouts-1;
+  channel->reply = 0;
   send_Packet(pkt, &channel->host, st);
+}
+
+  void
+CMD_send(Channel* channel, State* st)
+{
+  CMD_send1(channel, st, st->enabled);
 }
 
   void
@@ -427,6 +452,8 @@ CMD_send_all(State* st)
 {
   for (uint i = 0; i < 2; ++i) {
     Channel* channel = &st->channels[i];
+    if (st->enabled != 0 && channel->adj_acknowledged)
+      continue;
     CMD_send(channel, st);
   }
 }
@@ -453,7 +480,10 @@ update_enabled(State* st)
   return 0;
 }
 
+
 /**
+ * TODO: This comment needs some revision...
+ *
  * - Each variable is owned by a single process.
  * - In each packet sent to another process, include the current
  * values of all the variables it can read (that the sending process owns).
@@ -514,26 +544,24 @@ handle_recv (Packet* pkt, Channel* channel, State* st)
   // If the packet doesn't know this process's sequence number,
   // then reply with the current data.
   if (pkt->dst_seq != channel->seq) {
-    pkt->dst_seq = pkt->src_seq;
-    pkt->src_seq = channel->seq;
-    if (false && channel->adj_acknowledged) {
+    if (pkt->src_seq == channel->adj_seq && !channel->adj_acknowledged) {
       // 50% chance of not replying.
-      if (0 == next_urandom_Bool(st)) {
+      if (!channel->reply) {
+        channel->reply = 1;
         return 0;
       }
     }
-#if 1
-    // This is faster when no fairness is assumed.
+    pkt->dst_seq = pkt->src_seq;
+    pkt->src_seq = channel->seq;
     if (st->enabled != 0 && st->enabled < pkt->enabled) {
-      pkt->enabled = 0xFFFFFFFF;
+      pkt->enabled = 0;
+      pkt->enabled = ~pkt->enabled;
     }
     else {
       pkt->enabled = st->enabled;
     }
-#else
-    pkt->enabled = 0xFFFFFFFF;
-#endif
     pkt->state = st->x_me;
+    channel->reply = 0;
     send_Packet(pkt, &channel->host, st);
     return 1;
   }
@@ -572,19 +600,35 @@ handle_recv (Packet* pkt, Channel* channel, State* st)
   }
   else if (adj_acted && st->enabled == 0) {
     CMD_seq(channel, st);
-    //reply = 1;
+    channel->adj_acknowledged = 1;
+    reply = 1;
+  }
+
+  // If the adjacent process acted to enable this one,
+  // then count that as acknowledging that this process can act.
+  if (adj_acted && st->enabled != 0 && pkt->enabled < st->enabled) {
+    channel->adj_acknowledged = 1;
   }
 
   if (channel->adj_seq != pkt->src_seq) {
     // The adjacent process updated its sequence number.
     channel->adj_seq = pkt->src_seq;
-    // If it is enabled (just became enabled),
-    // then this process should reply.
-    if (pkt->enabled != 0) {
-      reply = 1;
-      if (~pkt->enabled != 0 && st->enabled == 0 && pkt->dst_seq == channel->seq) {
+    // If it just became enabled and this process is disabled,
+    // update this process's sequence number if it hasn't already.
+    if (pkt->enabled != 0 && ~pkt->enabled != 0 && st->enabled == 0) {
+      if (pkt->dst_seq == channel->seq) {
         CMD_seq(channel, st);
       }
+    }
+  }
+
+  if (~pkt->enabled == 0) {
+    // We always want to reply in this case.
+    reply = 1;
+  }
+  else if (pkt->enabled != 0) {
+    if (!channel->adj_acknowledged) {
+      reply = 1;
     }
   }
 
@@ -603,7 +647,10 @@ handle_recv (Packet* pkt, Channel* channel, State* st)
       }
     }
 
-    if (channel->adj_acknowledged) {
+    if (~pkt->enabled == 0) {
+      // We always want to reply in this case.
+    }
+    else if (channel->adj_acknowledged) {
       // No need to reply when the adjacent process already
       // acknowledged that this process can act.
       reply = 0;
@@ -611,6 +658,17 @@ handle_recv (Packet* pkt, Channel* channel, State* st)
   }
   else if (pkt->dst_seq == channel->seq) {
     channel->adj_acknowledged = 1;
+    if (!reply) {
+      // 50% chance of not replying.
+      if (channel->reply) {
+        reply = 1;
+        // {channel->reply} is assigned 0 in CMD_send()
+        // {channel->n_timeout_skips} is assigned {NQuickTimeouts-1} in CMD_send()
+      }
+      else {
+        channel->reply = 1;
+      }
+    }
   }
 
   if (st->enabled != 0 &&
@@ -644,10 +702,34 @@ handle_recv (Packet* pkt, Channel* channel, State* st)
 }
 
   void
-handle_send_all (State* st)
+handle_timeout (State* st)
 {
+  const uint skip_limit = NQuickTimeouts/2 + NQuickTimeouts;
   update_enabled(st);
-  CMD_send_all(st);
+  for (uint i = 0; i < 2; ++i) {
+    Channel* channel = &st->channels[i];
+    if (channel->n_timeout_skips >= skip_limit) {
+      channel->n_timeout_skips = NQuickTimeouts-1;
+    }
+    if (st->enabled != 0 && channel->adj_acknowledged)
+      continue;
+    if (st->enabled == 0 && channel->adj_acknowledged) {
+      if (channel->n_timeout_skips > 0) {
+        channel->n_timeout_skips -= 1;
+        continue;
+      }
+      channel->adj_acknowledged = 0;
+      CMD_send1(channel, st, ~(uint32_t)0);
+    }
+    else {
+      CMD_send(channel, st);
+    }
+    {
+      uint32_t x = 0;
+      next_urandom(&x, st);
+      channel->n_timeout_skips = NQuickTimeouts / 2 + x %  NQuickTimeouts;
+    }
+  }
 }
 
 static Bool terminating = 0;
@@ -677,12 +759,12 @@ init_timeout(timer_t* timeout_id)
 }
 
 static int
-reset_timeout(timer_t timeout_id) {
+reset_timeout(timer_t timeout_id, uint timeout_ms) {
   struct itimerspec timeout_spec[1];
   int stat = 0;
   memset(timeout_spec, 0, sizeof(*timeout_spec));
-  timeout_spec->it_value.tv_sec = TimeoutMS / 1000;
-  timeout_spec->it_value.tv_nsec = 1000000 * (TimeoutMS % 1000);
+  timeout_spec->it_value.tv_sec = timeout_ms / 1000;
+  timeout_spec->it_value.tv_nsec = 1000000 * (timeout_ms % 1000);
   stat = timer_settime(timeout_id, 0, timeout_spec, 0);
   if (stat != 0)
     BailOut(stat, "timer_settime()");
@@ -736,15 +818,17 @@ int main(int argc, char** argv)
 
     if (stat == 0) {
       // We hit timeout, resend things.
-      handle_send_all(st);
-      reset_timeout(timeout_id);
+      handle_timeout(st);
+      //reset_timeout(timeout_id, st->enabled == 0 ? TimeoutMS : QuickTimeoutMS);
+      reset_timeout(timeout_id, QuickTimeoutMS);
     }
     else if (stat == 1) {
       // Ok got message.
       Channel* channel = recv_Packet(pkt, st);
       if (channel) {
         if (2 == handle_recv(pkt, channel, st)) {
-          reset_timeout(timeout_id);
+          //reset_timeout(timeout_id, st->enabled == 0 ? TimeoutMS : QuickTimeoutMS);
+          reset_timeout(timeout_id, QuickTimeoutMS);
         }
       }
     }

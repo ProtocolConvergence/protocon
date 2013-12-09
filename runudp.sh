@@ -1,6 +1,6 @@
 #!/bin/sh
 
-npcs=10
+npcs=50
 
 rm -f udp-host.*
 rm -f out.log.*
