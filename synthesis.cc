@@ -1009,14 +1009,24 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels, Set<uin
 
   Cx::PFmla del_act_pfmla( false );
   for (it = dels.begin(); it != dels.end(); ++it) {
-    uint actId = *it;
+    uint actidx = *it;
     if (use_csp) {
       this->csp_pfmla &=
-        this->ctx->csp_pfmla_ctx.vbl(topo.action_pre_index(actId))
-        != topo.action_img_index(actId);
+        this->ctx->csp_pfmla_ctx.vbl(topo.action_pre_index(actidx))
+        != topo.action_img_index(actidx);
     }
-    Remove1(this->candidates, actId);
-    del_act_pfmla |= topo.action_pfmla(actId);
+    Remove1(this->candidates, actidx);
+    del_act_pfmla |= topo.action_pfmla(actidx);
+    if (false) {
+      Xn::ActSymm act;
+      DBogOF << "DEL ";
+      topo.action(act, actidx);
+      OPut(DBogOF, act) << DBogOF.endl();
+    }
+  }
+  del_act_pfmla -= this->lo_xn;
+  for (uint i = 0; i < this->candidates.size(); ++i) {
+    del_act_pfmla -= topo.action_pfmla(this->candidates[i]);
   }
   this->hi_puppet_xn -= del_act_pfmla;
   this->hi_xn = this->hi_puppet_xn;

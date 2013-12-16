@@ -203,6 +203,19 @@ oput_protocon_pc_acts (Cx::OFile& of, const Xn::PcSymm& pc_symm,
     of << "    ;\n";
   }
 
+  // Return early if there are no puppet actions.
+  {
+    bool have_actions = false;
+    for (uint i = 0; i < acts.sz(); ++i) {
+      if (acts[i].pc_symm == &pc_symm) {
+        have_actions = true;
+        break;
+      }
+    }
+    if (!have_actions)
+      return true;
+  }
+
   // Names for variables.
   Cx::Table<Cx::String> guard_vbls;
   Cx::Table<Cx::String> assign_vbls( pc_symm.wmap.sz() );

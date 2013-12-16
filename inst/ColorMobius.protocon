@@ -1,0 +1,17 @@
+
+// Coloring protocol on a Mobius ladder
+
+constant N := 3;
+constant M := 4;
+
+variable x[Nat % (2*N)] <- Nat % M;
+
+process P[i <- Nat % (2*N)]
+{
+  read:  x[i-1];
+  read:  x[i+N];
+  read:  x[i+1];
+  write: x[i];
+  invariant: (x[i] != x[i-1]) && (x[i] != x[i+N]) && (x[i] != x[i+1]);
+}
+

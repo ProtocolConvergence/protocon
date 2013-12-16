@@ -101,7 +101,7 @@ $(BldPath)/udp.o: $(BldPath)/udp.c
 	$(CC) -c $(filter-out -pedantic,$(CFLAGS)) -D_POSIX_C_SOURCE=199309L -D_BSD_SOURCE $< -o $@
 
 udp: $(BldPath)/udp.o
-	$(CC) $(filter-out -pedantic,$(CFLAGS)) -D_POSIX_C_SOURCE=199309L -D_BSD_SOURCE $< -o $@
+	$(CC) $(filter-out -pedantic,$(CFLAGS)) -D_POSIX_C_SOURCE=199309L -D_BSD_SOURCE $< -o $@ -lrt
 
 $(BldPathCXX)/protoconfile.leg.cc: protoconfile.leg
 	$(LEG) -o $@ $<

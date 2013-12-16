@@ -100,6 +100,8 @@ public:
 
   bool eval_int(int* ret, Sesp sp);
 
+  bool eval_nat(uint* ret, Sesp sp);
+
   bool eval_gtz(uint* ret, Sesp sp);
 
   bool eval_vbl(Xn::Vbl** ret, Sesp sp);

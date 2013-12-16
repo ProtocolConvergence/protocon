@@ -1,0 +1,80 @@
+
+// Mark all "rung" edges of a ladder topology with a 1 bit
+// and mark the other edges with 0.
+
+constant N := 3;
+constant M := 4;
+constant E := N + 2*(N-1);
+constant V := 2*N;
+
+direct variable e[Nat % E] <- Nat % 2;
+puppet variable z[Nat % V] <- Nat % 4;
+
+process P[i <- Nat % (2*N-4)]
+{
+  let id := i+2;
+  let ac := if (id % 2 == 0) then (id+1) else (id-1);
+  let pd := id-2;
+  let sc := id+2;
+
+  let e_ac := 3*(id/2);
+  let e_pd := (i % 2) + e_ac-2;
+  let e_sc := (i % 2) + e_ac+1;
+
+
+  // I'd like to replace all other lines for this process with the following:
+  //for (z_idx,e_idx) <- {# (pd,e_pd),(ac,e_ac),(sc,e_sc) #}
+  //{
+  //  read: z[z_idx];
+  //  write: e[e_idx];
+  //}
+  //write: z[id];
+
+  let permutation := i % 6;
+
+  // 001122
+  let i_idx0 := permutation / 2;
+  // 210210
+  let i_idx1 := 2 - permutation % 3;
+  // 122001
+  let i_idx2 := ((permutation + 3) % 6) / 2;
+
+  let z_idx0 := if (i_idx0==0) then (pd) else (if (i_idx0==1) then (ac) else (sc));
+  let z_idx1 := if (i_idx1==0) then (pd) else (if (i_idx1==1) then (ac) else (sc));
+  let z_idx2 := if (i_idx2==0) then (pd) else (if (i_idx2==1) then (ac) else (sc));
+
+  let e_idx0 := if (i_idx0==0) then (e_pd) else (if (i_idx0==1) then (e_ac) else (e_sc));
+  let e_idx1 := if (i_idx1==0) then (e_pd) else (if (i_idx1==1) then (e_ac) else (e_sc));
+  let e_idx2 := if (i_idx2==0) then (e_pd) else (if (i_idx2==1) then (e_ac) else (e_sc));
+
+  read: z[z_idx0]; write: e[e_idx0];
+  read: z[z_idx1]; write: e[e_idx1];
+  read: z[z_idx2]; write: e[e_idx2];
+  write: z[id];
+}
+
+process End[i <- Nat % 4]
+{
+  let id := (V-2) * (i/2) + (i%2);
+  let ac := if (id % 2 == 0) then (id+1) else (id-1);
+  let sc := if (i < 2) then (id+2) else (id-2);
+
+  let e_ac := 3*(id/2);
+  let e_sc := (i % 2) + (if (i < 2) then (e_ac+1) else (e_ac-2));
+
+  read: z[ac]; write: e[e_ac];
+  read: z[sc]; write: e[e_sc];
+  write: z[id];
+  //puppet action:
+  //  ( z[id]==z[ac] || e[e_ac]!=1 || e[e_sc]!=0 --> z[id]:=0; e[e_ac]:=1; e[e_sc]:=0; )
+  //  ;
+}
+
+shadow invariant:
+  (forall i <- Nat % N : e[3*i] == 1)
+  &&
+  (forall i <- Nat % (N-1) : e[3*i+1] == 0)
+  &&
+  (forall i <- Nat % (N-1) : e[3*i+2] == 0)
+  ;
+

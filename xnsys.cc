@@ -327,11 +327,12 @@ Sys::commit_initialization()
 
   for (uint act_idx = 0; act_idx < topo.n_possible_acts; ++act_idx) {
     const Cx::PFmla& act_pfmla = topo.action_pfmla(act_idx);
-    if (act_pfmla <= this->direct_pfmla && act_pfmla.sat_ck()) {
+    if (act_pfmla.subseteq_ck(this->direct_pfmla) && act_pfmla.sat_ck()) {
       this->actions.push_back(act_idx);
     }
     else {
-      Claim( !act_pfmla.overlap_ck(this->direct_pfmla) );
+      // This may not hold when multiple processes can write to the same variable.
+      //Claim( !act_pfmla.overlap_ck(this->direct_pfmla) );
     }
   }
 }

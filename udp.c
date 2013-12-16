@@ -2,7 +2,6 @@
 #include "cx/def.h"
 #include <stdint.h>
 #include <stdio.h>
-#include "udp-act.c"
 #include <sys/types.h>
 #include <netdb.h>
 #include <errno.h>
@@ -18,16 +17,42 @@
 #include <signal.h>
 #include <time.h>
 
-static const char SharedFilePfx[] = "udp-host.";
 static const Bool ShowCommunication = 1;
 static const uint TimeoutMS = 10000;
 static const uint QuickTimeoutMS = 200;
+//static const uint QuickTimeoutMS = 20;
 #define NQuickTimeouts (TimeoutMS / QuickTimeoutMS)
-//static const double NetworkReliability = 0.1;
-//static const double NetworkReliability = 0.5;
 static const double NetworkReliability = 1;
+//static const double NetworkReliability = 0.5;
+//static const double NetworkReliability = 0.1;
 static const uint32_t ActionLagMS = 256;
+//static const uint32_t ActionLagMS = 0;
+static const char SharedFilePfx[] = "udp-host.";
 
+
+typedef struct PcIden PcIden;
+struct PcIden
+{
+  uint idx;
+  uint npcs;;
+};
+
+static void
+oput_line(const char* line);
+
+static uint
+process_of_channel(PcIden pc, uint channel_idx);
+static uint
+variable_of_channel(PcIden pc, uint channel_idx, uint i, Bool writing);
+static uint
+domsz_of_variable(PcIden pc, uint vbl_idx);
+static void
+action_assign(PcIden pc, uint8_t* values);
+static void
+action_pre_assign(PcIden pc, const uint8_t* x);
+#define Max_NChannels 2
+#define Max_NVariables 4
+#include "udp-act.c"
 
 typedef struct Packet Packet;
 typedef struct Channel Channel;
@@ -38,7 +63,7 @@ struct Packet
   uint32_t src_seq;
   uint32_t dst_seq;
   uint32_t enabled;
-  uint32_t state;
+  uint8_t values[Max_NVariables];
 };
 
 struct Channel
@@ -57,15 +82,13 @@ struct State
   int fd;
   int urandom_fd;
   uint32_t enabled;
-  uint32_t x_lo;
-  uint32_t x_me;
-  uint32_t x_hi;
-  uint PcIdx;
-  uint NPcs;
-  Channel channels[2];
+  uint8_t values[Max_NVariables];
+  PcIden pc;
+  Channel channels[Max_NChannels];
   FILE* logf;
 };
 
+State StateOfThisProcess;
 
 #define BailOut( ret, msg ) \
 do \
@@ -85,30 +108,32 @@ void failmsg(const char* msg)
   }
 }
 
+/** Convert packet data members to network byte order.*/
   void
 hton_Packet (Packet* pkt)
 {
   pkt->src_seq = htonl (pkt->src_seq);
   pkt->dst_seq = htonl (pkt->dst_seq);
   pkt->enabled = htonl (pkt->enabled);
-  pkt->state = htonl (pkt->state);
+  //pkt->state = htonl (pkt->state);
 }
 
+/** Convert packet data members to host byte order.*/
   void
 ntoh_Packet (Packet* pkt)
 {
   pkt->src_seq = ntohl (pkt->src_seq);
   pkt->dst_seq = ntohl (pkt->dst_seq);
   pkt->enabled = ntohl (pkt->enabled);
-  pkt->state = ntohl (pkt->state);
+  //pkt->state = ntohl (pkt->state);
 }
 
   int
-next_urandom(uint32_t* x, State* st)
+next_urandom(void* x, uint nbytes, State* st)
 {
   int stat;
-  stat = read(st->urandom_fd, x, sizeof(*x));
-  if (stat != sizeof(*x))
+  stat = read(st->urandom_fd, x, nbytes);
+  if (stat != (int)nbytes)
     BailOut(-1, "next_urandom() -- read()");
   return 0;
 }
@@ -120,16 +145,23 @@ next_urandom_Bool(State* st)
   int stat;
   stat = read(st->urandom_fd, &x, sizeof(x));
   if (stat != sizeof(x))
-    BailOut(-1, "next_urandom_Bool() -- read()");
+    BailOut(0, "next_urandom_Bool() -- read()");
   return x & 1;
 }
 
+/**
+ * Update this process's sequence number for a specific channel.
+ *
+ * A sequence number is a mix between
+ * (1) a sequentially increasing number in the low bits and
+ * (2) a random number in the high bits.
+ */
   void
 CMD_seq(Channel* channel, State* st)
 {
   uint32_t* seq = &channel->seq;
   uint32_t x = 0;
-  next_urandom(&x, st);
+  next_urandom(&x, sizeof(x), st);
   x |= 0x0000FFFF;
   *seq += 1;
   *seq |= 0xFFFF0000;
@@ -138,18 +170,38 @@ CMD_seq(Channel* channel, State* st)
   channel->reply = 1;
 }
 
+static
+  Bool
+channel_idx_ck(PcIden pc, uint i)
+{
+  return pc.idx != process_of_channel(pc, i);
+}
+
+/**
+ * Update this process's sequence number for all channels.
+ */
   void
 CMD_seq_all(State* st)
 {
-  for (uint i = 0; i < 2; ++i) {
+  for (uint i = 0; channel_idx_ck(st->pc, i); ++i) {
     CMD_seq(&st->channels[i], st);
   }
 }
 
+/**
+ * Mark this process as enabled (ready to act) by assigning
+ * the {enabled} member of {st}.
+ *
+ * The {enabled} value can be in three general states:
+ * - {enabled == 0}, this process is disabled.
+ * - {~enabled == 0}, a flag which has special meaning packets
+ * but is invalid for processes.
+ * - Anything else signifies an enabled process.
+ */
   void
 CMD_enable(State* st)
 {
-  next_urandom(&st->enabled, st);
+  next_urandom(&st->enabled, sizeof(st->enabled), st);
   // Not allowed to 0.
   st->enabled |= (1 << 31);
   // Not allowed to be 0xFFFFFFFF.
@@ -157,6 +209,9 @@ CMD_enable(State* st)
   CMD_seq_all(st);
 }
 
+/**
+ * Mark this process as disabled (not ready to act).
+ */
   void
 CMD_disable(State* st)
 {
@@ -164,7 +219,12 @@ CMD_disable(State* st)
   CMD_seq_all(st);
 }
 
-
+/**
+ * Read a file containing host data of an adjacent process.
+ *
+ * \sa init_Channel()
+ * \sa init_State()
+ */
   int
 lookup_host(struct sockaddr_in* host, uint id)
 {
@@ -197,6 +257,12 @@ lookup_host(struct sockaddr_in* host, uint id)
   return 0;
 }
 
+/** Initialize a channel.
+ *
+ * An important step here is getting host information.
+ * \sa lookup_host()
+ * \sa init_State()
+ */
   void
 init_Channel(Channel* channel, State* st)
 {
@@ -205,11 +271,7 @@ init_Channel(Channel* channel, State* st)
   channel->adj_seq = 0;
   memset(&channel->host, 0, sizeof(channel->host));
   {
-    uint id;
-    if (channel == &st->channels[0])
-      id = (st->PcIdx + st->NPcs - 1) % st->NPcs;
-    else
-      id = (st->PcIdx + 1) % st->NPcs;
+    uint id = process_of_channel(st->pc, IdxElt(st->channels, channel));
     channel->adj_PcIdx = id;
     while (0 > lookup_host(&channel->host, id)) {
       usleep(1000 * QuickTimeoutMS);
@@ -217,31 +279,54 @@ init_Channel(Channel* channel, State* st)
   }
 }
 
+/**
+ * Randomly assign all protocol data within reason.
+ *
+ * Basically this means that we randomize all data which does not
+ * define the topology or interact with the operating system.
+ * A comprehensive list of all data which is not randomized follows.
+ *
+ * NOT randomized in State:
+ * - {fd}, the socket file descriptor.
+ * - {urandom_fd}, the /dev/urandom file descriptor.
+ * - {pc.idx}, this process index (convenience).
+ * - {pc.npcs}, the number of processes (convenience).
+ * - {logf}, pointer to log file.
+ * NOT randomized in members of {channels}:
+ * - {host}, host information for adjacent process.
+ * - {adj_PcIdx}, adjacent process index (convenience).
+ * NOT randomized elsewhere:
+ * - Program counter.
+ * - Operating system data.
+ * - Timing variables in main(). The same reasoning holds here as
+ *   for not corrupting file descriptors.
+ */
   void
 randomize_State(State* st)
 {
-  next_urandom(&st->x_lo, st);
-  next_urandom(&st->x_me, st);
-  next_urandom(&st->x_hi, st);
-  next_urandom(&st->enabled, st);
-  for (uint i = 0; i < 2; ++i) {
+  next_urandom(st->values, sizeof(*st->values)*Max_NVariables, st);
+  next_urandom(&st->enabled, sizeof(st->enabled), st);
+  for (uint i = 0; channel_idx_ck(st->pc, i); ++i) {
     Channel* channel = &st->channels[i];
-    next_urandom(&channel->seq, st);
-    next_urandom(&channel->adj_seq, st);
+    next_urandom(&channel->seq, sizeof(channel->seq), st);
+    next_urandom(&channel->adj_seq, sizeof(channel->adj_seq), st);
     channel->adj_acknowledged = next_urandom_Bool(st);
     channel->reply = next_urandom_Bool(st);
-    next_urandom(&channel->n_timeout_skips, st);
+    next_urandom(&channel->n_timeout_skips, sizeof(channel->n_timeout_skips), st);
   }
 }
 
+/**
+ * Initialize the poorly-named State object.
+ */
   int
 init_State(State* st, uint PcIdx, uint NPcs)
 {
   struct sockaddr_in host[1];
   memset(st, 0, sizeof(*st));
   st->urandom_fd = open("/dev/urandom", O_RDONLY);
-  st->PcIdx = PcIdx;
-  st->NPcs = NPcs;
+  st->pc.idx = PcIdx;
+  st->pc.npcs = NPcs;
 
   st->fd = socket(AF_INET, SOCK_DGRAM, 0);
   memset (host, 0, sizeof (*host));
@@ -263,7 +348,7 @@ init_State(State* st, uint PcIdx, uint NPcs)
     FILE* f;
     if (0 > gethostname(hostname, sizeof(hostname)))
       BailOut(-1, "gethostname()");
-    sprintf(fname, "%s%d", SharedFilePfx, st->PcIdx);
+    sprintf(fname, "%s%d", SharedFilePfx, st->pc.idx);
     f = fopen(fname, "wb");
     if (!f)
       BailOut(-1, "fopen()");
@@ -271,29 +356,35 @@ init_State(State* st, uint PcIdx, uint NPcs)
     fprintf(f, "%s\n%d", hostname, ntohs(host->sin_port)),
     fclose(f);
   }
-  init_Channel(&st->channels[0], st);
-  init_Channel(&st->channels[1], st);
+  for (uint i = 0; channel_idx_ck(st->pc, i); ++i) {
+    init_Channel(&st->channels[i], st);
+  }
   randomize_State(st);
   return 0;
 }
 
+/**
+ * Destroy the poorly-named State object.
+ */
   void
 lose_State(State* st)
 {
   char fname[128];
-  sprintf(fname, "%s%d", SharedFilePfx, st->PcIdx);
+  sprintf(fname, "%s%d", SharedFilePfx, st->pc.idx);
   remove(fname);
   close(st->urandom_fd);
   if (st->logf)
     fclose(st->logf);
 }
 
+/** Output a line prefixed by a timestamp and process id.*/
   void
-oput_line(const char* line, const State* st)
+oput_line(const char* line)
 {
   char timebuf[200];
   time_t t = time(0);
   struct tm *tmp;
+  const State* st = &StateOfThisProcess;
 
   tmp = localtime(&t);
   if (tmp) {
@@ -305,11 +396,45 @@ oput_line(const char* line, const State* st)
     timebuf[0] = '\0';
   }
 
-  fprintf(stderr, "%s %2u %s\n", timebuf, st->PcIdx, line);
+  fprintf(stderr, "%s %2u %s\n", timebuf, st->pc.idx, line);
   if (st->logf)
-    fprintf(st->logf, "%s %2u %s\n", timebuf, st->PcIdx, line);
+    fprintf(st->logf, "%s %2u %s\n", timebuf, st->pc.idx, line);
 }
 
+static
+  void
+cstr_of_values(char* s, const uint8_t* values, PcIden pc, uint channel_idx, Bool writing)
+{
+  uint off = 0;
+  s[0] = '\0';
+  for (uint i = 0; i < Max_NVariables; ++i) {
+    uint8_t val;
+    uint vbl_idx;
+    uint domsz;
+    if (channel_idx == Max_NChannels)
+      vbl_idx = i;
+    else
+      vbl_idx = variable_of_channel(pc, channel_idx, i, writing);
+
+    domsz = domsz_of_variable(pc, vbl_idx);
+    if (domsz == 0)  return;
+
+    if (!writing)
+      val = values[i];
+    else
+      val = values[vbl_idx];
+
+    val %= domsz;
+
+    if (i > 0)  s[off++] = ' ';
+    off += sprintf(&s[off], "%u", (uint)val);
+  }
+}
+
+
+/**
+ * Send a packet.
+ */
   int
 send_Packet (const Packet* packet, const struct sockaddr_in* host, State* st)
 {
@@ -317,23 +442,29 @@ send_Packet (const Packet* packet, const struct sockaddr_in* host, State* st)
   int stat;
   *pkt = *packet;
   if (ShowCommunication) {
-    char buf[512];
-    sprintf(buf, "-> %2u  (%u %u %u)  src_seq:%08x  dst_seq:%08x  enabled:%08x  state:%u",
-            ((&st->channels[0].host == host)
-             ? st->channels[0].adj_PcIdx
-             : st->channels[1].adj_PcIdx),
-            st->x_lo, st->x_me, st->x_hi,
-            pkt->src_seq,
-            pkt->dst_seq,
-            pkt->enabled,
-            pkt->state);
-    oput_line(buf, st);
+    char local_vals_buf[100];
+    char channel_vals_buf[100];
+    char buf[1024];
+    uint channel_idx = Max_NChannels;
+    for (uint i = 0; channel_idx_ck(st->pc, i); ++i) {
+      if (&st->channels[i].host == host) {
+        channel_idx = i;
+        break;
+      }
+    }
+    cstr_of_values(local_vals_buf, st->values, st->pc, Max_NChannels, 0);
+    cstr_of_values(channel_vals_buf, st->values, st->pc, channel_idx, 1);
+    sprintf(buf, "-> %2u  (%s)  src_seq:%08x  dst_seq:%08x  enabled:%08x  values:(%s)",
+            process_of_channel(st->pc, channel_idx), local_vals_buf,
+            pkt->src_seq, pkt->dst_seq,
+            pkt->enabled, channel_vals_buf);
+    oput_line(buf);
   }
   hton_Packet(pkt);
 
   if (NetworkReliability < 1) {
     uint32_t x = 0;
-    next_urandom (&x, st);
+    next_urandom (&x, sizeof(x), st);
     if (NetworkReliability * ~(uint32_t)0 < x) {
       // Packet dropped.
       return sizeof(*pkt);
@@ -345,6 +476,9 @@ send_Packet (const Packet* packet, const struct sockaddr_in* host, State* st)
   return stat;
 }
 
+/**
+ * Receive a packet and figure out which neighbor sent it.
+ */
   Channel*
 recv_Packet (Packet* pkt, State* st)
 {
@@ -358,21 +492,22 @@ recv_Packet (Packet* pkt, State* st)
   }
   ntoh_Packet(pkt);
 
-  for (uint i = 0; i < 2; ++i) {
+  for (uint i = 0; channel_idx_ck(st->pc, i); ++i) {
     Channel* channel = &st->channels[i];
     if (channel->host.sin_addr.s_addr == host->sin_addr.s_addr &&
         channel->host.sin_port == host->sin_port)
     {
       if (ShowCommunication) {
-        char buf[512];
-        sprintf(buf, "<- %2u  (%u %u %u)  src_seq:%08x  dst_seq:%08x  enabled:%08x  state:%u",
-                channel->adj_PcIdx,
-                st->x_lo, st->x_me, st->x_hi,
-                pkt->src_seq,
-                pkt->dst_seq,
-                pkt->enabled,
-                pkt->state);
-        oput_line(buf, st);
+        char local_vals_buf[100];
+        char channel_vals_buf[100];
+        char buf[1024];
+        cstr_of_values(local_vals_buf, st->values, st->pc, Max_NChannels, 0);
+        cstr_of_values(channel_vals_buf, pkt->values, st->pc, i, 0);
+        sprintf(buf, "<- %2u  (%s)  src_seq:%08x  dst_seq:%08x  enabled:%08x  values:(%s)",
+                channel->adj_PcIdx, local_vals_buf,
+                pkt->src_seq, pkt->dst_seq,
+                pkt->enabled, channel_vals_buf);
+        oput_line(buf);
       }
       return channel;
     }
@@ -381,53 +516,53 @@ recv_Packet (Packet* pkt, State* st)
   BailOut(0, "who sent the message?");
 }
 
+/**
+ * Perform an action or check to see if an action can occur.
+ * If {modify} is true, then the process state will be modified.
+ *
+ * \return Whether the process can or did act.
+ */
   Bool
 CMD_act(State* st, Bool modify)
 {
-  const uint i = 1;
-  uint32_t x[3];
-  x[i-1] = st->x_lo;
-  x[i] = st->x_me;
-  x[i+1] = st->x_hi;
+  uint8_t values[Max_NVariables];
 
-  action_assign(x, st->PcIdx);
+  for (uint i = 0; i < Max_NVariables; ++i)
+  {
+    const uint domsz = domsz_of_variable(st->pc, i);
+    if (domsz == 0)  break;
+    if (st->values[i] >= domsz)
+      st->values[i] %= domsz;
+  }
+  memcpy(values, st->values, sizeof(values));
 
-  if (x[i] != st->x_me) {
+  action_assign(st->pc, values);
+
+  if (0 != memcmp(values, st->values, sizeof(values))) {
     if (modify) {
 
-      {
-        uint32_t tmp[3];
-        tmp[i-1] = st->x_lo;
-        tmp[i] = st->x_me;
-        tmp[i+1] = st->x_hi;
-        action_pre_assign(tmp, st->PcIdx);
-      }
+      action_pre_assign(st->pc, st->values);
 
       if (ActionLagMS > 0)
       {
         // Lag actions a bit to expose livelocks.
         uint32_t x = 0;
-        next_urandom(&x, st);
+        next_urandom(&x, sizeof(x), st);
         //usleep(1000 * ActionLagMS);
         usleep(1000 * (ActionLagMS/2 + x % ActionLagMS));
       }
 
-      if (true) {
-        char buf[1024];
-        sprintf(buf, " ACT:  x[%u]==%u && x[%u]==%u && x[%u]==%u --> x[%u]:=%u;",
-                st->channels[0].adj_PcIdx, x[i-1],
-                st->PcIdx, st->x_me,
-                st->channels[1].adj_PcIdx, x[i+1],
-                st->PcIdx, x[i]);
-        oput_line(buf, st);
-      }
-      st->x_me = x[i];
+      memcpy(st->values, values, sizeof(values));
     }
     return 1;
   }
   return 0;
 }
 
+/**
+ * Send the current process state to some neighbor
+ * using a custom {enabled} value.
+ */
   void
 CMD_send1(Channel* channel, State* st, uint32_t enabled)
 {
@@ -435,22 +570,35 @@ CMD_send1(Channel* channel, State* st, uint32_t enabled)
   pkt->src_seq = channel->seq;
   pkt->dst_seq = channel->adj_seq;
   pkt->enabled = enabled;
-  pkt->state = st->x_me;
+  memset(pkt->values, 0, sizeof(*pkt->values)*Max_NVariables);
+  for (uint i = 0; i < Max_NVariables; ++i) {
+    const uint vbl_idx =
+      variable_of_channel(st->pc, IdxElt(st->channels, channel), i, 1);
+    if (vbl_idx >= Max_NVariables)  break;
+    pkt->values[i] = st->values[vbl_idx];
+  }
   channel->n_timeout_skips = NQuickTimeouts-1;
   channel->reply = 0;
   send_Packet(pkt, &channel->host, st);
 }
 
+/**
+ * Send the current process state to some neighbor.
+ */
   void
 CMD_send(Channel* channel, State* st)
 {
   CMD_send1(channel, st, st->enabled);
 }
 
+/**
+ * Broadcast to all neighbors.
+ * (More or less... some are excluded for efficiency.)
+ */
   void
 CMD_send_all(State* st)
 {
-  for (uint i = 0; i < 2; ++i) {
+  for (uint i = 0; channel_idx_ck(st->pc, i); ++i) {
     Channel* channel = &st->channels[i];
     if (st->enabled != 0 && channel->adj_acknowledged)
       continue;
@@ -458,6 +606,10 @@ CMD_send_all(State* st)
   }
 }
 
+/**
+ * Check if this process should be enabled or disabled.
+ * Change {st->enabled} accordingly.
+ */
   Bool
 update_enabled(State* st)
 {
@@ -482,7 +634,7 @@ update_enabled(State* st)
 
 
 /**
- * TODO: This comment needs some revision...
+ * TODO: This comment is not completely accurate.
  *
  * - Each variable is owned by a single process.
  * - In each packet sent to another process, include the current
@@ -553,29 +705,31 @@ handle_recv (Packet* pkt, Channel* channel, State* st)
     }
     pkt->dst_seq = pkt->src_seq;
     pkt->src_seq = channel->seq;
-    if (st->enabled != 0 && st->enabled < pkt->enabled) {
+    if (false || (st->enabled != 0 && st->enabled < pkt->enabled)) {
       pkt->enabled = 0;
       pkt->enabled = ~pkt->enabled;
     }
     else {
       pkt->enabled = st->enabled;
     }
-    pkt->state = st->x_me;
+    for (uint i = 0; i < Max_NVariables; ++i) {
+      const uint vbl_idx =
+        variable_of_channel(st->pc, IdxElt(st->channels, channel), i, 1);
+      if (vbl_idx >= Max_NVariables)  break;
+      pkt->values[i] = st->values[vbl_idx];
+    }
     channel->reply = 0;
     send_Packet(pkt, &channel->host, st);
     return 1;
   }
 
   // Update the current values of the adjacent process's states.
-  if (channel == &st->channels[0]) {
-    if (st->x_lo != pkt->state) {
-      st->x_lo = pkt->state;
-      adj_acted = 1;
-    }
-  }
-  else {
-    if (st->x_hi != pkt->state) {
-      st->x_hi = pkt->state;
+  for (uint i = 0; i < Max_NVariables; ++i) {
+    const uint vbl_idx = variable_of_channel(st->pc, IdxElt(st->channels, channel), i, 0);
+    if (vbl_idx >= Max_NVariables)
+      break;
+    if (st->values[vbl_idx] != pkt->values[i]) {
+      st->values[vbl_idx] = pkt->values[i];
       adj_acted = 1;
     }
   }
@@ -606,7 +760,7 @@ handle_recv (Packet* pkt, Channel* channel, State* st)
 
   // If the adjacent process acted to enable this one,
   // then count that as acknowledging that this process can act.
-  if (adj_acted && st->enabled != 0 && pkt->enabled < st->enabled) {
+  if (false && adj_acted && st->enabled != 0 && pkt->enabled < st->enabled) {
     channel->adj_acknowledged = 1;
   }
 
@@ -671,17 +825,24 @@ handle_recv (Packet* pkt, Channel* channel, State* st)
     }
   }
 
-  if (st->enabled != 0 &&
-      st->channels[0].adj_acknowledged &&
-      st->channels[1].adj_acknowledged)
+  if (st->enabled != 0)
   {
-    // This process is enabled and all adjacent processes
-    // have acknowledged that it can act!
-    while (CMD_act(st, 1)) {
-      // Keep acting until disabled.
+    Bool acknowledged = 1;
+    for (uint i = 0; channel_idx_ck(st->pc, i); ++i) {
+      if (Max_NVariables <= variable_of_channel(st->pc, i, 0, 0))
+        continue;
+      if (!st->channels[i].adj_acknowledged)
+        acknowledged  = 0;
     }
-    CMD_disable(st);
-    bcast = 1;
+    if (acknowledged) {
+      // This process is enabled and all adjacent processes
+      // have acknowledged that it can act!
+      while (CMD_act(st, 1)) {
+        // Keep acting until disabled.
+      }
+      CMD_disable(st);
+      bcast = 1;
+    }
   }
 
   // Any outgoing message contains our current enabled status and state.
@@ -706,7 +867,7 @@ handle_timeout (State* st)
 {
   const uint skip_limit = NQuickTimeouts/2 + NQuickTimeouts;
   update_enabled(st);
-  for (uint i = 0; i < 2; ++i) {
+  for (uint i = 0; channel_idx_ck(st->pc, i); ++i) {
     Channel* channel = &st->channels[i];
     if (channel->n_timeout_skips >= skip_limit) {
       channel->n_timeout_skips = NQuickTimeouts-1;
@@ -726,22 +887,21 @@ handle_timeout (State* st)
     }
     {
       uint32_t x = 0;
-      next_urandom(&x, st);
+      next_urandom(&x, sizeof(x), st);
       channel->n_timeout_skips = NQuickTimeouts / 2 + x %  NQuickTimeouts;
     }
   }
 }
 
 static Bool terminating = 0;
-static Bool randomize_state_flag = 0;
 static void set_term_flag()
 {
   terminating = 1;
 }
 
-static void set_randomize_state_flag()
+static void randomize_process_state()
 {
-  randomize_state_flag = 1;
+  randomize_State(&StateOfThisProcess);
 }
 
 
@@ -773,32 +933,39 @@ reset_timeout(timer_t timeout_id, uint timeout_ms) {
 
 int main(int argc, char** argv)
 {
-  State st[1];
+  State* st = &StateOfThisProcess;
   int argi = 1;
-  uint PcIdx;
-  uint NPcs;
   timer_t timeout_id;
   uint timeout_ms = 0;
   if (argi + 2 > argc) {
     BailOut(1, "Need two or three arguments");
   }
-  if (1 != sscanf(argv[argi++], "%u", &PcIdx))
-    BailOut(1, "First argument must be an unsigned int.");
-
-  if (1 != sscanf(argv[argi++], "%u", &NPcs) || NPcs == 0)
-    BailOut(1, "Second argument must be a positive unsigned int.");
 
   /* remove("shared-resource"); */
+
+  // The two common kill signals try to cleanly exit.
   signal(SIGTERM, set_term_flag);
   signal(SIGINT, set_term_flag);
-  signal(SIGUSR1, set_randomize_state_flag);
+  // The first user signal randomizes all protocol data!
+  signal(SIGUSR1, randomize_process_state);
 
-  init_timeout(&timeout_id);
+  {
+    uint PcIdx;
+    uint NPcs;
+    if (1 != sscanf(argv[argi++], "%u", &PcIdx))
+      BailOut(1, "First argument must be an unsigned int.");
 
-  init_State(st, PcIdx, NPcs);
+    if (1 != sscanf(argv[argi++], "%u", &NPcs) || NPcs == 0)
+      BailOut(1, "Second argument must be a positive unsigned int.");
+    init_State(st, PcIdx, NPcs);
+  }
+
   if (argv[argi]) {
     st->logf = fopen(argv[argi++], "wb");
   }
+
+  init_timeout(&timeout_id);
+
 
   while (!terminating)
   {
@@ -811,15 +978,12 @@ int main(int argc, char** argv)
     pfd->revents = 0;
     stat = poll(pfd, 1, timeout_ms);
 
-    if (randomize_state_flag) {
-      randomize_State(st);
-      randomize_state_flag = 0;
-    }
+    if (terminating)
+      break;
 
     if (stat == 0) {
       // We hit timeout, resend things.
       handle_timeout(st);
-      //reset_timeout(timeout_id, st->enabled == 0 ? TimeoutMS : QuickTimeoutMS);
       reset_timeout(timeout_id, QuickTimeoutMS);
     }
     else if (stat == 1) {
@@ -827,7 +991,6 @@ int main(int argc, char** argv)
       Channel* channel = recv_Packet(pkt, st);
       if (channel) {
         if (2 == handle_recv(pkt, channel, st)) {
-          //reset_timeout(timeout_id, st->enabled == 0 ? TimeoutMS : QuickTimeoutMS);
           reset_timeout(timeout_id, QuickTimeoutMS);
         }
       }

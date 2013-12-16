@@ -48,7 +48,7 @@ ProtoconFile::add_processes(Sesp pc_name, Sesp idx_name, Sesp npcs)
   const char* name_b = ccstr_of_Sesp (idx_name);
   if (LegitCk(name_a && name_b, good, "")) {
     uint domsz = 0;
-    if (LegitCk(eval_gtz (&domsz, cadr_of_Sesp (npcs)), good, "")) {
+    if (LegitCk(eval_nat (&domsz, cadr_of_Sesp (npcs)), good, "")) {
       this->pc_symm =
         sys->topology.add_processes(name_a, (uint) domsz);
       this->pc_symm->idx_name = name_b;
@@ -274,7 +274,7 @@ ProtoconFile::add_pc_legit(Sesp legit_sp)
       }
 
       sys->invariant_expression += Cx::String("(forall ")
-        + idx_name + " <- Nat % " + pc_symm->membs.sz() + " : ";
+        + idx_name + " <- Nat % " + pc_symm->nmembs_expression + " : ";
       sys->invariant_expression += invariant_expression;;
       sys->invariant_expression += ")";
     }
@@ -796,6 +796,17 @@ ProtoconFile::eval_int(int* ret, Sesp sp)
     if (LegitCk( ipf.state_map.sz() == 1, legit, "" )) {
       *ret = ipf.state_map[0];
     }
+  }
+  return update_allgood (legit);
+}
+
+  bool
+ProtoconFile::eval_nat(uint* ret, Sesp sp)
+{
+  int x = 0;
+  bool legit = eval_int (&x, sp);;
+  if (LegitCk( x >= 0, legit, "" )) {
+    *ret = (uint) x;
   }
   return update_allgood (legit);
 }
