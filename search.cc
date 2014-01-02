@@ -536,6 +536,7 @@ stabilization_search(vector<uint>& ret_actions,
     param_infile_opt.constant_map = exec_opt.params[i].constant_map;
 
     Xn::Sys& param_sys = systems.grow1();
+    param_sys.topology.pfmla_ctx.use_context_of(sys.topology.pfmla_ctx);
     DoLegit(good, "reading param file")
       good = ReadProtoconFile(param_sys, param_infile_opt);
     DoLegit(good, "add param sys")

@@ -395,8 +395,6 @@ void TestProtoconFile(bool agreement)
   pf = pf.substitute_new_old(topo_f.vbl_symms[0].pfmla_list_id,
                              topo_c.vbl_symms[0].pfmla_list_id);
   Claim( pf.equiv_ck(sys_f.invariant) );
-
-  topo_c.pfmla_ctx.nullify_context();
 }
 
   void

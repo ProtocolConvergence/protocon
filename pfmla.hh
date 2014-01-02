@@ -472,29 +472,35 @@ class PFmlaCtx
 {
 private:
   C::PFmlaCtx* ctx;
+  bool own_ctx;
 
 public:
   PFmlaCtx()
+    : ctx(0)
+    , own_ctx(true)
   {
     ctx = make_GluPFmlaCtx ();
   }
 
+  explicit PFmlaCtx(C::PFmlaCtx* _ctx)
+    : ctx(_ctx)
+    , own_ctx(true)
+  {
+  }
+
   ~PFmlaCtx()
   {
-    if (ctx) {
+    if (ctx && own_ctx) {
       free_PFmlaCtx (ctx);
     }
   }
 
-  /**
-   * If this is called, be sure to call nullify_context()
-   * before the object is destroyed.
-   */
   void use_context_of(PFmlaCtx& a)
   {
-    if (ctx) {
+    if (ctx && own_ctx) {
       free_PFmlaCtx (ctx);
     }
+    own_ctx = false;
     ctx = a.ctx;
   }
   void nullify_context()

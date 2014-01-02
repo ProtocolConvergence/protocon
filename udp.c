@@ -29,12 +29,13 @@ static const uint32_t ActionLagMS = 256;
 //static const uint32_t ActionLagMS = 0;
 static const char SharedFilePfx[] = "udp-host.";
 
+typedef int fd_t;
 
 typedef struct PcIden PcIden;
 struct PcIden
 {
   uint idx;
-  uint npcs;;
+  uint npcs;
 };
 
 static void
@@ -66,6 +67,11 @@ struct Packet
   uint8_t values[Max_NVariables];
 };
 
+#define NakShakeStep 0
+#define ReqShakeStep 1
+#define SynShakeStep 2
+#define AckShakeStep 3
+
 struct Channel
 {
   uint32_t seq;
@@ -73,14 +79,14 @@ struct Channel
   struct sockaddr_in host;
   uint adj_PcIdx;
   Bool adj_acknowledged;
+  uint8_t shake_step;  ///< Not used yet.
   Bool reply;
   uint32_t n_timeout_skips;
 };
 
 struct State
 {
-  int fd;
-  int urandom_fd;
+  fd_t fd;
   uint32_t enabled;
   uint8_t values[Max_NVariables];
   PcIden pc;
@@ -115,7 +121,6 @@ hton_Packet (Packet* pkt)
   pkt->src_seq = htonl (pkt->src_seq);
   pkt->dst_seq = htonl (pkt->dst_seq);
   pkt->enabled = htonl (pkt->enabled);
-  //pkt->state = htonl (pkt->state);
 }
 
 /** Convert packet data members to host byte order.*/
@@ -125,27 +130,52 @@ ntoh_Packet (Packet* pkt)
   pkt->src_seq = ntohl (pkt->src_seq);
   pkt->dst_seq = ntohl (pkt->dst_seq);
   pkt->enabled = ntohl (pkt->enabled);
-  //pkt->state = ntohl (pkt->state);
 }
 
-  int
-next_urandom(void* x, uint nbytes, State* st)
-{
-  int stat;
-  stat = read(st->urandom_fd, x, nbytes);
-  if (stat != (int)nbytes)
-    BailOut(-1, "next_urandom() -- read()");
+static int
+randomize(void* p, uint size) {
+  static uint8_t buf[4096];
+  static uint off = sizeof(buf);
+  const uint buf_size = sizeof(buf);
+  ssize_t nbytes;
+
+  if (size == 0)  return 0;
+  if (size + off <= buf_size) {
+    memcpy(p, CastOff(void, buf ,+, off), size);
+    off += size;
+    return 0;
+  }
+  if (off < buf_size) {
+    size -= buf_size - off;
+    memcpy(CastOff(void, p ,+, size),
+           CastOff(void, buf ,+, off),
+           buf_size - off);
+  }
+  off = 0;
+
+  {
+    fd_t urandom_fd = open("/dev/urandom", O_RDONLY);
+    if (urandom_fd < 0)
+      BailOut(-1, "Failed to open /dev/urandom");
+
+    nbytes = read(urandom_fd, buf, buf_size);
+    nbytes += read(urandom_fd, p, size);
+    close(urandom_fd);
+  }
+
+  if (nbytes != (int)(buf_size+size))
+    BailOut(-1, "Failed to read from /dev/urandom");
+
   return 0;
 }
 
+#define Randomize(x)  randomize((x), sizeof(*(x)))
+
   Bool
-next_urandom_Bool(State* st)
+random_Bool()
 {
-  uint8_t x;
-  int stat;
-  stat = read(st->urandom_fd, &x, sizeof(x));
-  if (stat != sizeof(x))
-    BailOut(0, "next_urandom_Bool() -- read()");
+  uint8_t x = 0;
+  Randomize(&x);
   return x & 1;
 }
 
@@ -157,16 +187,17 @@ next_urandom_Bool(State* st)
  * (2) a random number in the high bits.
  */
   void
-CMD_seq(Channel* channel, State* st)
+CMD_seq(Channel* channel)
 {
   uint32_t* seq = &channel->seq;
   uint32_t x = 0;
-  next_urandom(&x, sizeof(x), st);
+  Randomize(&x);
   x |= 0x0000FFFF;
   *seq += 1;
   *seq |= 0xFFFF0000;
   *seq &= x;
   channel->adj_acknowledged = 0;
+  channel->shake_step = NakShakeStep;
   channel->reply = 1;
 }
 
@@ -184,7 +215,7 @@ channel_idx_ck(PcIden pc, uint i)
 CMD_seq_all(State* st)
 {
   for (uint i = 0; channel_idx_ck(st->pc, i); ++i) {
-    CMD_seq(&st->channels[i], st);
+    CMD_seq(&st->channels[i]);
   }
 }
 
@@ -201,7 +232,7 @@ CMD_seq_all(State* st)
   void
 CMD_enable(State* st)
 {
-  next_urandom(&st->enabled, sizeof(st->enabled), st);
+  Randomize(&st->enabled);
   // Not allowed to 0.
   st->enabled |= (1 << 31);
   // Not allowed to be 0xFFFFFFFF.
@@ -267,7 +298,7 @@ lookup_host(struct sockaddr_in* host, uint id)
 init_Channel(Channel* channel, State* st)
 {
   channel->seq = 0;
-  CMD_seq(channel, st);
+  CMD_seq(channel);
   channel->adj_seq = 0;
   memset(&channel->host, 0, sizeof(channel->host));
   {
@@ -288,7 +319,6 @@ init_Channel(Channel* channel, State* st)
  *
  * NOT randomized in State:
  * - {fd}, the socket file descriptor.
- * - {urandom_fd}, the /dev/urandom file descriptor.
  * - {pc.idx}, this process index (convenience).
  * - {pc.npcs}, the number of processes (convenience).
  * - {logf}, pointer to log file.
@@ -304,15 +334,16 @@ init_Channel(Channel* channel, State* st)
   void
 randomize_State(State* st)
 {
-  next_urandom(st->values, sizeof(*st->values)*Max_NVariables, st);
-  next_urandom(&st->enabled, sizeof(st->enabled), st);
+  Randomize(&st->values);
+  Randomize(&st->enabled);
   for (uint i = 0; channel_idx_ck(st->pc, i); ++i) {
     Channel* channel = &st->channels[i];
-    next_urandom(&channel->seq, sizeof(channel->seq), st);
-    next_urandom(&channel->adj_seq, sizeof(channel->adj_seq), st);
-    channel->adj_acknowledged = next_urandom_Bool(st);
-    channel->reply = next_urandom_Bool(st);
-    next_urandom(&channel->n_timeout_skips, sizeof(channel->n_timeout_skips), st);
+    Randomize(&channel->seq);
+    Randomize(&channel->adj_seq);
+    channel->adj_acknowledged = random_Bool();
+    Randomize(&channel->shake_step);
+    channel->reply = random_Bool();
+    Randomize(&channel->n_timeout_skips);
   }
 }
 
@@ -324,7 +355,6 @@ init_State(State* st, uint PcIdx, uint NPcs)
 {
   struct sockaddr_in host[1];
   memset(st, 0, sizeof(*st));
-  st->urandom_fd = open("/dev/urandom", O_RDONLY);
   st->pc.idx = PcIdx;
   st->pc.npcs = NPcs;
 
@@ -372,7 +402,6 @@ lose_State(State* st)
   char fname[128];
   sprintf(fname, "%s%d", SharedFilePfx, st->pc.idx);
   remove(fname);
-  close(st->urandom_fd);
   if (st->logf)
     fclose(st->logf);
 }
@@ -464,7 +493,7 @@ send_Packet (const Packet* packet, const struct sockaddr_in* host, State* st)
 
   if (NetworkReliability < 1) {
     uint32_t x = 0;
-    next_urandom (&x, sizeof(x), st);
+    Randomize(&x);
     if (NetworkReliability * ~(uint32_t)0 < x) {
       // Packet dropped.
       return sizeof(*pkt);
@@ -547,7 +576,7 @@ CMD_act(State* st, Bool modify)
       {
         // Lag actions a bit to expose livelocks.
         uint32_t x = 0;
-        next_urandom(&x, sizeof(x), st);
+        Randomize(&x);
         //usleep(1000 * ActionLagMS);
         usleep(1000 * (ActionLagMS/2 + x % ActionLagMS));
       }
@@ -705,7 +734,7 @@ handle_recv (Packet* pkt, Channel* channel, State* st)
     }
     pkt->dst_seq = pkt->src_seq;
     pkt->src_seq = channel->seq;
-    if (false || (st->enabled != 0 && st->enabled < pkt->enabled)) {
+    if (st->enabled != 0 && st->enabled < pkt->enabled) {
       pkt->enabled = 0;
       pkt->enabled = ~pkt->enabled;
     }
@@ -753,15 +782,9 @@ handle_recv (Packet* pkt, Channel* channel, State* st)
     bcast = 1;
   }
   else if (adj_acted && st->enabled == 0) {
-    CMD_seq(channel, st);
+    CMD_seq(channel);
     channel->adj_acknowledged = 1;
     reply = 1;
-  }
-
-  // If the adjacent process acted to enable this one,
-  // then count that as acknowledging that this process can act.
-  if (false && adj_acted && st->enabled != 0 && pkt->enabled < st->enabled) {
-    channel->adj_acknowledged = 1;
   }
 
   if (channel->adj_seq != pkt->src_seq) {
@@ -771,7 +794,7 @@ handle_recv (Packet* pkt, Channel* channel, State* st)
     // update this process's sequence number if it hasn't already.
     if (pkt->enabled != 0 && ~pkt->enabled != 0 && st->enabled == 0) {
       if (pkt->dst_seq == channel->seq) {
-        CMD_seq(channel, st);
+        CMD_seq(channel);
       }
     }
   }
@@ -797,7 +820,7 @@ handle_recv (Packet* pkt, Channel* channel, State* st)
     }
     else if (pkt->enabled > st->enabled) {
       if (~pkt->enabled != 0) {
-        CMD_seq(channel, st);
+        CMD_seq(channel);
       }
     }
 
@@ -845,7 +868,6 @@ handle_recv (Packet* pkt, Channel* channel, State* st)
     }
   }
 
-  // Any outgoing message contains our current enabled status and state.
   if (bcast) {
     // We are broadcasting to all adjacent processes.
     CMD_send_all(st);
@@ -887,8 +909,8 @@ handle_timeout (State* st)
     }
     {
       uint32_t x = 0;
-      next_urandom(&x, sizeof(x), st);
-      channel->n_timeout_skips = NQuickTimeouts / 2 + x %  NQuickTimeouts;
+      Randomize(&x);
+      channel->n_timeout_skips = NQuickTimeouts / 2 + x % NQuickTimeouts;
     }
   }
 }

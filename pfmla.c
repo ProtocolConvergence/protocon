@@ -722,9 +722,14 @@ add_vbl_PFmlaCtx (PFmlaCtx* ctx, const char* name, uint domsz)
 
   assoc = ensure1_Associa (&ctx->vbl_map, &key, &added);
   if (!added) {
-    DBog1( "There already exists a variable with name: %s", name );
     lose_AlphaTab (&key);
+#if 0
+    DBog1( "There already exists a variable with name: %s", name );
     return 0;
+#else
+    //DBog1( "Re-using variable with name: %s", name );
+    return (*(PFmlaVbl**) val_of_Assoc (&ctx->vbl_map, assoc))->id;
+#endif
   }
 
   id = takeidx_LgTable (&ctx->vbls);
