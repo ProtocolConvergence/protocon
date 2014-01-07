@@ -306,7 +306,6 @@ public:
     state_of_PFmla (state, this->g, &vbls[0], vbls.sz());
   }
 
-
   static PFmla of_state(const uint* state, const Cx::Table<uint>& vbls, C::PFmlaCtx* ctx);
   static PFmla of_img_state(const uint* state, const Cx::Table<uint>& vbls, C::PFmlaCtx* ctx);
 };
@@ -530,6 +529,9 @@ public:
   {
     return PFmlaVbl( vbl_lookup_PFmlaCtx (ctx, s.cstr()) );
   }
+
+  PFmla pfmla_of_state(const uint* state, const Cx::Table<uint>& vbls) const;
+  PFmla pfmla_of_img_state(const uint* state, const Cx::Table<uint>& vbls) const;
 
   ostream& oput(ostream& of,
                 const PFmla& a,

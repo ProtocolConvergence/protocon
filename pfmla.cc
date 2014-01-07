@@ -192,6 +192,18 @@ PFmla::of_img_state(const uint* state, const Cx::Table<uint>& vbls, C::PFmlaCtx*
   return conj;
 }
 
+  PFmla
+PFmlaCtx::pfmla_of_state(const uint* state, const Cx::Table<uint>& vbls) const
+{
+  return PFmla::of_state(state, vbls, this->ctx);
+}
+
+  PFmla
+PFmlaCtx::pfmla_of_img_state(const uint* state, const Cx::Table<uint>& vbls) const
+{
+  return PFmla::of_img_state(state, vbls, this->ctx);
+}
+
 static inline
   void
 intmap_init_op (Cx::Table<uint>& vbl_map, IntPFmla& a, const IntPFmla& b)

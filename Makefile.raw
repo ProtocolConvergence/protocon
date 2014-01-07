@@ -69,6 +69,7 @@ ProtoconObj = \
 	$(addprefix $(BldPathCXX)/, conflictfamily.o) \
 	$(addprefix $(BldPathCXX)/, search.o synthesis.o) \
 	$(addprefix $(BldPathCXX)/, protoconfile.o protoconfile.leg.o) \
+	$(addprefix $(BldPathCXX)/, interactive.o) \
 	$(CxStdObjs) $(addprefix $(CxBldPath)/, bstree.o sesp.o rbtree.o ospc.o)
 
 $(BinPath)/protocon: \

@@ -1,10 +1,13 @@
 
 #include "mainw.hh"
 #include "ui_mainw.h"
+
+#include "explorew.hh"
 #include "searchdialog.hh"
 
 #include <QFileDialog>
 #include <QTextStream>
+#include <stdio.h>
 
 MainW::MainW(QWidget *parent)
     : QMainWindow(parent)
@@ -19,6 +22,7 @@ MainW::MainW(QWidget *parent)
   connect(ui->actionQuit, SIGNAL(triggered()), qApp, SLOT(quit()));
 
   connect(ui->searchButton, SIGNAL(clicked()), this, SLOT(search()));
+  connect(ui->exploreButton, SIGNAL(clicked()), this, SLOT(explore()));
 }
 
 MainW::~MainW()
@@ -109,5 +113,15 @@ MainW::search()
     return;
   search_dialog->show();
   search_dialog->search(filename, ui->outputFileLineEdit->text());
+}
+
+  void
+MainW::explore()
+{
+  if (!this->save())
+    return;
+  ExploreW explorew(this);
+  explorew.explore(filename);
+  explorew.exec();
 }
 

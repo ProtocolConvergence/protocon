@@ -47,9 +47,11 @@ Net::commit_initialization()
     ntotal += pc.n_possible_acts;
   }
 
+  this->n_possible_acts = ntotal;
+  if (this->lightweight)
+    return;
   act_pfmlas.resize(ntotal);
   pure_shadow_pfmlas.resize(ntotal);
-  n_possible_acts = ntotal;
   for (uint i = 0; i < ntotal; ++i) {
     this->make_action_pfmla(i);
   }
@@ -179,6 +181,73 @@ PcSymm::action(ActSymm& act, uint actidx) const
   act.pre_idx_of_img =
     index_of_state (&act.vals[0], &pc.doms[0], pc.rvbl_symms.sz());
   swap_pre_img (&act.vals[0], pc);
+}
+
+  void
+PcSymm::actions(Cx::Table<uint>& ret_actions, Cx::PFmlaCtx& ctx) const
+{
+  uint pcidx = 0;
+  bool found = false;
+  for (uint i = 0; i < membs.sz(); ++i) {
+    const Pc& pc = *membs[i];
+    bool use = true;
+    for (uint j = 0; j < pc.rvbls.sz(); ++j) {
+      for (uint k = j+1; k < pc.rvbls.sz(); ++k) {
+        if (pc.rvbls[j] == pc.rvbls[k]) {
+          use = false;
+        }
+      }
+    }
+    for (uint j = 0; j < pc.wvbls.sz(); ++j) {
+      for (uint k = j+1; k < pc.wvbls.sz(); ++k) {
+        if (pc.wvbls[j] == pc.wvbls[k]) {
+          use = false;
+        }
+      }
+    }
+    if (use) {
+      pcidx = i;
+      found = true;
+      break;
+    }
+  }
+
+  if (!found) {
+    DBog0("System may not represent all actions!");
+  }
+
+  const Pc& pc = *membs[pcidx];
+
+  Cx::Table<uint> pfmla_rvbl_idcs;
+  for (uint i = 0; i < pc.rvbls.sz(); ++i) {
+    pfmla_rvbl_idcs.push(pc.rvbls[i]->pfmla_idx);
+  }
+  Cx::Table<uint> pfmla_wvbl_idcs;
+  for (uint i = 0; i < pc.wvbls.sz(); ++i) {
+    pfmla_wvbl_idcs.push(pc.wvbls[i]->pfmla_idx);
+  }
+
+  Cx::PFmla pfmla( direct_pfmla & pc.act_unchanged_pfmla );
+
+  ActSymm act;
+  act.vals.grow(pc.rvbls.sz() + pc.wvbls.sz());
+
+  while (pfmla.sat_ck()) {
+    uint* pre_state = &act.vals[0];
+    pfmla.state(pre_state, pfmla_rvbl_idcs);
+    Cx::PFmla pre_pf = ctx.pfmla_of_state(pre_state, pfmla_rvbl_idcs);
+    Cx::PFmla img_pf = pfmla.img(pre_pf);
+
+    while (img_pf.sat_ck()) {
+      uint* img_state = &act.vals[pc.rvbls.sz()];
+      img_pf.state(img_state, pfmla_wvbl_idcs);
+      uint actidx = this->act_idx_offset +
+        Cx::index_of_state (&act.vals[0], this->doms);
+      ret_actions.push(actidx);
+      img_pf -= ctx.pfmla_of_state(img_state, pfmla_wvbl_idcs);
+    }
+    pfmla -= pre_pf;
+  }
 }
 
   void
@@ -325,6 +394,16 @@ Sys::commit_initialization()
     }
   }
 
+#if 1
+  for (uint i = 0; i < topo.pc_symms.sz(); ++i) {
+    const PcSymm& pc_symm = topo.pc_symms[i];
+    Cx::Table<uint> tmp_actions;
+    pc_symm.actions(tmp_actions, topo.pfmla_ctx);
+    for (uint j = 0; j < tmp_actions.sz(); ++j) {
+      this->actions.push_back(tmp_actions[j]);
+    }
+  }
+#else
   for (uint act_idx = 0; act_idx < topo.n_possible_acts; ++act_idx) {
     const Cx::PFmla& act_pfmla = topo.action_pfmla(act_idx);
     if (act_pfmla.subseteq_ck(this->direct_pfmla) && act_pfmla.sat_ck()) {
@@ -335,6 +414,7 @@ Sys::commit_initialization()
       //Claim( !act_pfmla.overlap_ck(this->direct_pfmla) );
     }
   }
+#endif
 }
 
   bool

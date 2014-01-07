@@ -73,6 +73,13 @@
       </widget>
      </item>
      <item>
+      <widget class="QPushButton" name="exploreButton">
+       <property name="text">
+        <string>Explore</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QLabel" name="label">
        <property name="text">
         <string>Output File:</string>

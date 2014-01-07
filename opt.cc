@@ -127,6 +127,9 @@ protocon_options_rec
       exec_opt.task = ProtoconOpt::MinimizeConflictsTask;
       exec_opt.conflict_order = ProtoconOpt::RandomOrder;
     }
+    else if (eq_cstr (arg, "-interactive")) {
+      exec_opt.task = ProtoconOpt::InteractiveTask;
+    }
     else if (eq_cstr (arg, "-h") || eq_cstr (arg, "-help")) {
       DBog0( "See the manpage for details: man ./doc/protocon.1" );
     }

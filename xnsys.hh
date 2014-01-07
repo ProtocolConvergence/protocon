@@ -182,6 +182,7 @@ public:
   }
 
   void action(ActSymm& act, uint actidx) const;
+  void actions(Cx::Table<uint>& ret_actions, Cx::PFmlaCtx& ctx) const;
 };
 
 inline uint ActSymm::guard(uint vbl_idx) const
@@ -204,6 +205,7 @@ public:
   Cx::Table< Cx::PFmla > pure_shadow_pfmlas;
   uint n_possible_acts;
   uint total_pre_domsz;
+  bool lightweight;
   Cx::PFmla identity_xn;
 
   bool pure_shadow_vbl_exists;
@@ -219,6 +221,7 @@ public:
   Net()
     : n_possible_acts(0)
     , total_pre_domsz(0)
+    , lightweight(false)
     , identity_xn(true)
     , pure_shadow_vbl_exists(false)
     , pure_puppet_vbl_exists(false)
@@ -257,10 +260,10 @@ public:
     return act_pfmlas[i];
   }
 
-  Cx::PFmlaVbl pfmla_vbl(uint i) {
+  Cx::PFmlaVbl pfmla_vbl(uint i) const {
     return this->pfmla_ctx.vbl(this->vbls[i].pfmla_idx);
   }
-  Cx::PFmlaVbl pfmla_vbl(const Vbl& x) {
+  Cx::PFmlaVbl pfmla_vbl(const Vbl& x) const {
     return this->pfmla_ctx.vbl(x.pfmla_idx);
   }
 

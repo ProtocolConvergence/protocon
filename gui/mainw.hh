@@ -7,6 +7,7 @@ namespace Ui {
   class MainW;
 }
 class SearchDialog;
+class ExploreW;
 
 class MainW : public QMainWindow
 {
@@ -24,6 +25,7 @@ private slots:
   bool save();
   bool saveas();
   void search();
+  void explore();
 
 private:
   QString filename;

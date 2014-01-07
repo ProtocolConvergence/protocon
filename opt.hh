@@ -21,6 +21,7 @@ public:
     SearchTask,
     VerifyTask,
     MinimizeConflictsTask,
+    InteractiveTask,
     NExecTasks
   };
   enum MinimizeConflictsOrder {

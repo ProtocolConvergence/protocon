@@ -1,0 +1,19 @@
+
+Build dependencies:
+- peg >=0.1.11
+    http://piumarta.com/software/peg/
+    Parser.
+- glu 2.4
+    ftp://vlsi.colorado.edu/pub/vis/
+    Library for multi-valued decision diagrams (MDDs).
+- Qt4
+    For the gui.
+
+Run dependencies:
+- espresso
+    http://code.google.com/p/eqntott/downloads/detail?name=espresso-ab-1.0.tar.gz
+    Optional logic minimization tool.
+    (Not used right now.)
+
+See the man page for details on how to run the protocon.
+

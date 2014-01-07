@@ -265,6 +265,10 @@ stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
 stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
                  StabilizationCkInfo* info)
 {
+#if 1
+  return stabilization_ck(of, sys, sys.direct_pfmla, sys.direct_pfmla, info);
+#else
   return stabilization_ck(of, sys, sys.actions, info);
+#endif
 }
 

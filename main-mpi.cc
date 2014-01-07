@@ -184,6 +184,7 @@ stabilization_search(vector<uint>& ret_actions,
       ProtoconFileOpt verif_infile_opt( infile_opt );
       verif_infile_opt.file_path = exec_opt.xfilepaths[i].cstr();
       *opt.log << "VERIFYING: " << verif_infile_opt.file_path << opt.log->endl();
+      sys.topology.lightweight = true;
       if (ReadProtoconFile(sys, verif_infile_opt)) {
         StabilizationCkInfo info;
         if (stabilization_ck(*opt.log, sys, &info)) {
@@ -362,6 +363,7 @@ int main(int argc, char** argv)
   ProtoconFileOpt infile_opt;
   ProtoconOpt exec_opt;
   Xn::Sys sys;
+  sys.topology.lightweight = true;
   bool good =
     protocon_options
     (sys, argi, argc, argv, opt, infile_opt, exec_opt);

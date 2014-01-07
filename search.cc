@@ -459,6 +459,8 @@ stabilization_search(vector<uint>& ret_actions,
 #ifdef _OPENMP
   if (global_opt.search_method == global_opt.SimpleBacktrackSearch)
     omp_set_num_threads(1);
+  if (exec_opt.task == ProtoconOpt::VerifyTask && exec_opt.xfilepaths.sz()==1)
+    omp_set_num_threads(1);
 #endif
 
 #pragma omp parallel shared(done_flag,NPcs,solution_found,ret_actions,conflicts,flat_conflicts)
@@ -574,6 +576,7 @@ stabilization_search(vector<uint>& ret_actions,
       ProtoconFileOpt verif_infile_opt( infile_opt );
       verif_infile_opt.file_path = exec_opt.xfilepaths[i].cstr();
       *opt.log << "VERIFYING: " << verif_infile_opt.file_path << opt.log->endl();
+      sys.topology.lightweight = true;
       if (ReadProtoconFile(sys, verif_infile_opt)) {
         StabilizationCkInfo info;
         if (stabilization_ck(*opt.log, sys, &info)) {

@@ -9,6 +9,7 @@ extern "C" {
 #include "cx/fileb.hh"
 #include "opt.hh"
 #include "search.hh"
+#include "interactive.hh"
 #include "test.hh"
 
 /** Execute me now!*/
@@ -20,6 +21,7 @@ int main(int argc, char** argv)
   ProtoconOpt exec_opt;
   Xn::Sys sys;
 
+  sys.topology.lightweight = true;
   bool good =
     protocon_options
     (sys, argi, argc, argv, opt, infile_opt, exec_opt);
@@ -32,6 +34,9 @@ int main(int argc, char** argv)
     DBog0( "Done." );
     lose_sysCx ();
     return 0;
+  }
+  else if (exec_opt.task == ProtoconOpt::InteractiveTask) {
+    interactive(sys);
   }
   else if (exec_opt.task == ProtoconOpt::VerifyTask) {
     if (exec_opt.params.sz() > 1) {
@@ -62,6 +67,8 @@ int main(int argc, char** argv)
     else {
       DBog0( "Protocol is NOT self-stabilizing... :(" );
     }
+  }
+  else if (exec_opt.task == ProtoconOpt::InteractiveTask) {
   }
   else if (found) {
     DBog0("Solution found!");
@@ -99,6 +106,9 @@ int main(int argc, char** argv)
   DBogOF.flush();
 
   lose_sysCx ();
+  if (exec_opt.task == ProtoconOpt::InteractiveTask) {
+    return 0;
+  }
   return found ? 0 : 2;
 }
 
