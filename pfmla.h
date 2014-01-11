@@ -211,6 +211,18 @@ phase_of_PFmla (const PFmla g)
 
 qual_inline
   void
+init2_PFmla (PFmla* g, bool phase, const PFmla a)
+{
+  if (May == phase_of_PFmla (a)) {
+    *g = cons1_PFmla (a->ctx, phase);
+  }
+  else {
+    init1_PFmla (g, phase);
+  }
+}
+
+qual_inline
+  void
 lose_PFmla (PFmla* g)
 {
   if (phase_of_PFmla (*g) == May)

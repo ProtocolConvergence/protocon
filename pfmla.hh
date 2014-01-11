@@ -55,8 +55,12 @@ public:
 
   explicit PFmla(bool phase)
   {
-    init_PFmla (&g);
-    wipe1_PFmla (&g, phase);
+    init1_PFmla (&g, phase);
+  }
+
+  PFmla(bool phase, const PFmla& pf)
+  {
+    init2_PFmla (&g, phase, pf.g);
   }
 
   ~PFmla()

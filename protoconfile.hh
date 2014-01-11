@@ -53,6 +53,7 @@ public:
 
   Map< Cx::String, int > index_map;
   Map< Cx::String, const Xn::VblSymm* > vbl_map;
+  Map< Cx::String, Sesp > scope_let_map;
   Xn::Sys* sys;
   SespCtx* spctx;
   Xn::PcSymm* pc_symm;
@@ -84,11 +85,17 @@ public:
 
   bool add_let(Sesp name_sp, Sesp val_sp);
 
+  bool add_scope_let(Sesp name_sp, Sesp val_sp);
+
+  void del_scope_let(Sesp name_sp);
+
   bool add_access(Sesp vbl_sp, Bit write);
 
   bool add_action(Sesp act_sp, Xn::Vbl::ShadowPuppetRole role);
 
   bool add_pc_legit(Sesp legit_sp);
+
+  bool add_predicate(Sesp name_sp, Sesp val_sp);
 
   bool add_legit(Sesp legit_sp);
 
@@ -107,6 +114,7 @@ public:
   bool eval_vbl(Xn::Vbl** ret, Sesp sp);
   bool eval_vbl(Xn::Vbl** ret, Sesp b, Sesp c);
 
+  bool lookup_pfmla(Cx::PFmla* ret, const Cx::String& name);
   bool lookup_int(int* ret, const Cx::String& name);
 };
 

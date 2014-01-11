@@ -106,6 +106,26 @@ ProtoconFile::add_let(Sesp name_sp, Sesp val_sp)
 }
 
   bool
+ProtoconFile::add_scope_let(Sesp name_sp, Sesp val_sp)
+{
+  Sign good = 1;
+  const char* name = ccstr_of_Sesp (name_sp);
+  DoLegit(  good, "" )
+    good = !!name;
+
+  DoLegit(  good, "" )
+    scope_let_map[name] = val_sp;
+
+  return update_allgood (good);
+}
+
+  void
+ProtoconFile::del_scope_let(Sesp name_sp)
+{
+  scope_let_map.erase(ccstr_of_Sesp(name_sp));
+}
+
+  bool
 ProtoconFile::add_access(Sesp vbl_sp, Bit write)
 {
   bool legit = true;
@@ -284,6 +304,28 @@ ProtoconFile::add_pc_legit(Sesp legit_sp)
 }
 
   bool
+ProtoconFile::add_predicate(Sesp name_sp, Sesp val_sp)
+{
+  Sign good = 1;
+  const char* name = ccstr_of_Sesp (name_sp);
+  DoLegit(  good, "" )
+    good = !!name;
+
+  Cx::PFmla pf(false);
+  Cx::String expression;
+  DoLegit( good, "" )
+    good = eval(pf, val_sp);
+
+  DoLegit( good, "finding expression" )
+    good = string_expression (expression, val_sp);
+
+  DoLegit( good, "" )
+    sys->predicate_map.add(name, pf, expression);
+
+  return update_allgood (good);
+}
+
+  bool
 ProtoconFile::add_legit(Sesp legit_sp)
 {
   bool good = true;
@@ -319,6 +361,12 @@ ProtoconFile::string_expression(Cx::String& ss, Sesp a)
     const char* name = ccstr_of_Sesp (a);
     if (name)
     {
+      {
+        Sesp* val_sp = scope_let_map.lookup(name);
+        if (val_sp) {
+          return string_expression(ss, *val_sp);
+        }
+      }
       ss += name;
       return good;
     }
@@ -441,6 +489,19 @@ ProtoconFile::string_expression(Cx::String& ss, Sesp a)
 ProtoconFile::eval(Cx::PFmla& pf, Sesp a)
 {
   bool good = true;
+
+  if (LegitCk(a, good, ""))
+  {
+    const char* name = ccstr_of_Sesp (a);
+    if (name)
+    {
+      if (LegitCk( lookup_pfmla(&pf, name), good, "lookup_pfmla()" )) {
+      }
+      if (LegitCk( good, allgood, "" )) {}
+      return good;
+    }
+  }
+
   Sesp b = cdr_of_Sesp (a);
   Sesp c = cdr_of_Sesp (b);
   Sesp d = cdr_of_Sesp (c);
@@ -632,6 +693,16 @@ ProtoconFile::eval(Cx::IntPFmla& ipf, Sesp a)
     const char* name = ccstr_of_Sesp (a);
     if (name)
     {
+      {
+        Sesp* val_sp = scope_let_map.lookup(name);
+        if (val_sp) {
+          if (LegitCk( eval(ipf, *val_sp), good, "evaluating scope'd let" )) {
+            return true;
+          }
+          return update_allgood (false);
+        }
+      }
+
       int val = 0;
       if (LegitCk( lookup_int(&val, name), good, "lookup_int()" )) {
         ipf = Cx::IntPFmla( val );
@@ -853,6 +924,17 @@ ProtoconFile::eval_vbl(Xn::Vbl** ret, Sesp b, Sesp c)
   }
   if (LegitCk( legit, allgood, "" )) {}
   return update_allgood (legit);
+}
+
+  bool
+ProtoconFile::lookup_pfmla(Cx::PFmla* ret, const Cx::String& name)
+{
+  const Cx::PFmla* pf = sys->predicate_map.lookup(name);
+  if (pf) {
+    *ret = *pf;
+    return true;
+  }
+  return update_allgood (false);
 }
 
   bool

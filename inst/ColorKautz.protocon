@@ -1,7 +1,8 @@
 
 constant N := 6;
+constant M := 4;
 
-variable x[Nat % N] <- Nat % 4;
+variable x[Nat % N] <- Nat % M;
 
 process P[i <- Nat % N]
 {
@@ -17,8 +18,10 @@ process P[i <- Nat % N]
   let idx0 := if (idx0_tmp % N != i) then (idx0_tmp) else (idx1_tmp);
   let idx1 := if (idx1_tmp % N != i) then (idx1_tmp) else (idx0_tmp);
 
-  read: x[idx0];
-  read: x[idx1];
+  for j <- {# idx0, idx1 #}
+  {
+    read: x[j];
+  }
   write: x[i];
 }
 

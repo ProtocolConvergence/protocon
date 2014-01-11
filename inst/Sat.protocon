@@ -44,14 +44,12 @@ process P3[i <- Nat % 1]
   write: sat[0];
 }
 
-legit:
+predicate Iden :=
   (forall i <- Nat % 3 :
    (forall j <- Nat % 3 :
-    (x[i] != x[j]) || (y[i] == y[j])))
-  &&
-  (sat[0] == 1)
-  &&
-  // Clauses:
+    (x[i] != x[j]) || (y[i] == y[j])));
+
+predicate Clauses :=
   //      v0           v1           v2
   (x[0] != 0 || x[1] != 1 || x[2] != 2 ||
    y[0] == 1 || y[1] == 1 || y[2] == 1)
@@ -68,4 +66,7 @@ legit:
   (x[0] != 1 || x[1] != 2 || x[2] != 0 ||
    y[0] == 1 || y[1] == 0 || y[2] == 0)
   ;
+
+legit:
+  Iden && Clauses && (sat[0] == 1);
 

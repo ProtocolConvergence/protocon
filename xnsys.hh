@@ -69,6 +69,33 @@ public:
   }
 };
 
+class PredicateMap {
+public:
+  Cx::Table<String> keys;
+  Cx::Table<Cx::PFmla> pfmlas;
+  Cx::Table<String> expressions;
+  Cx::Map<String,uint> map;
+
+  void add(const String& key, const Cx::PFmla& pf, const String& expression) {
+    keys.push(key);
+    pfmlas.push(pf);
+    expressions.push(expression);
+    map[key] = keys.sz()-1;
+  }
+
+  Cx::PFmla* lookup(const String& key) {
+    uint* idx = map.lookup(key);
+    if (!idx)  return 0;
+    return &pfmlas[*idx];
+  }
+
+  bool key_ck(const String& key) {
+    return !!map.lookup(key);
+  }
+
+  uint sz() const { return keys.sz(); }
+};
+
 class Vbl {
 public:
   enum ShadowPuppetRole { Direct, Shadow, Puppet };
@@ -329,6 +356,8 @@ class Sys {
 public:
   Xn::Net topology;
   vector<uint> actions; ///< Force use of these actions.
+
+  PredicateMap predicate_map;
 
   /// Invariant to which we should converge.
   Cx::PFmla invariant;

@@ -320,6 +320,11 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys, const vector<uint>& actio
     of << "}\n";
   }
 
+  for (uint i = 0; i < sys.predicate_map.sz(); ++i) {
+    of << "predicate " << sys.predicate_map.keys[i]
+      << " :=\n  " << sys.predicate_map.expressions[i] << ";\n";
+  }
+
   if (sys.direct_invariant_ck())
     of << "direct";
   else

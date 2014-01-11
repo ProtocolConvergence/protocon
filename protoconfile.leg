@@ -26,6 +26,7 @@ ProtoconFile =
   (WS? ConstDecl)*
   (WS? VarDecl)+
   (WS? ProcDecl)+
+  (WS? NamedPredicate)*
   (WS? GlobalLegit)?
   WS? END_OF_FILE
   ;
@@ -102,12 +103,14 @@ ProcDecl =
   ( 'let' WS let_name:ID WS? ':=' WS? let_val:Expr END_STMT WS?
     {yy->st->add_let(let_name.sp, let_val.sp);}
   )*
-  ( (  'read:'  WS?  u:VblRef  {yy->st->add_access(u.sp, 0);}
-       (WS? ',' WS? v:VblRef  {yy->st->add_access(v.sp, 0);} )*
-     | 'write:' WS?  u:VblRef  {yy->st->add_access(u.sp, 1);}
-       (WS? ',' WS? v:VblRef  {yy->st->add_access(v.sp, 1);} )*
+  ( (  'read:'  WS? u:VblRef WS?  {yy->st->add_access(u.sp, 0);}
+       (','     WS? v:VblRef WS?  {yy->st->add_access(v.sp, 0);} )*
+     | 'write:' WS? u:VblRef WS?  {yy->st->add_access(u.sp, 1);}
+       (','     WS? v:VblRef WS?  {yy->st->add_access(v.sp, 1);} )*
     )
     END_STMT WS?
+    |
+    SymmetricAccess WS?
   )+
   ((ShadowActionDef | DirectActionDef | PuppetActionDef)
    WS?
@@ -117,6 +120,42 @@ ProcDecl =
   )?
   {yy->st->pc_symm = 0;}
   '}'
+  ;
+
+SymmetricAccess =
+  'for' WS let_name:ID WS? IN WS?
+  '{#' WS? let_vals:ID  {let_vals.sp = list1_Sesp (let_vals.sp);}
+   WS? (',' WS? let_val:ID  {pushlast_Sesp (let_vals.sp, let_val.sp);} WS?)*
+  '#}' WS?
+  '{' WS?
+  ( (  'read:'  WS? u:VblRef WS?  {u.sp = list2_ccstr_Sesp ("r", u.sp);}
+       (','     WS? v:VblRef WS?  {pushlast_Sesp (u.sp, v.sp);} )*
+     | 'write:' WS? u:VblRef WS?  {u.sp = list2_ccstr_Sesp ("w", u.sp);}
+       (','     WS? v:VblRef WS?  {pushlast_Sesp (u.sp, v.sp);} )*
+    )
+    END_STMT WS?
+    {
+      Sesp vals_sp = let_vals.sp;
+      while (!nil_ck_Sesp (vals_sp)) {
+        yy->st->add_scope_let(let_name.sp, car_of_Sesp (vals_sp));
+        Sesp sp = u.sp;
+        Bool own = eq_cstr ("w", ccstr_of_Sesp (car_of_Sesp (sp)));
+        sp = cdr_of_Sesp (sp);
+        while (!nil_ck_Sesp (sp)) {
+          yy->st->add_access(car_of_Sesp (sp), own ? 1 : 0);
+          sp = cdr_of_Sesp (sp);
+        }
+        yy->st->del_scope_let(let_name.sp);
+        vals_sp = cdr_of_Sesp (vals_sp);
+      }
+    }
+  )+
+ '}'
+ ;
+
+NamedPredicate =
+  'predicate' WS name:ID WS? ':=' WS? a:Expr END_STMT
+  {yy->st->add_predicate(name.sp, a.sp);}
   ;
 
 GlobalLegit =

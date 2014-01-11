@@ -481,7 +481,7 @@ TestShadowColoring()
       }
     }
   }
-  if (!stabilization_ck(of, sys)) {
+  if (!stabilization_ck(of, sys, sys.actions)) {
     Claim(0);
   }
 }

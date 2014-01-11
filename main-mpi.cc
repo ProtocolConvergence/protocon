@@ -184,10 +184,11 @@ stabilization_search(vector<uint>& ret_actions,
       ProtoconFileOpt verif_infile_opt( infile_opt );
       verif_infile_opt.file_path = exec_opt.xfilepaths[i].cstr();
       *opt.log << "VERIFYING: " << verif_infile_opt.file_path << opt.log->endl();
-      sys.topology.lightweight = true;
+      const bool lightweight = !exec_opt.conflicts_ofilepath;
+      sys.topology.lightweight = lightweight;
       if (ReadProtoconFile(sys, verif_infile_opt)) {
         StabilizationCkInfo info;
-        if (stabilization_ck(*opt.log, sys, &info)) {
+        if (stabilization_ck(*opt.log, sys, lightweight ? 0 : &info)) {
           solution_found = true;
           ret_actions = sys.actions;
           *opt.log << "System is stabilizing." << opt.log->endl();
@@ -202,7 +203,7 @@ stabilization_search(vector<uint>& ret_actions,
         }
         else {
           *opt.log << "System NOT stabilizing." << opt.log->endl();
-          if (info.livelock_exists) {
+          if (!lightweight && info.livelock_exists) {
             //synctx.conflicts.add_conflict(FlatSet<uint>(sys.actions));
             synctx.conflicts.add_conflict(FlatSet<uint>(info.livelock_actions));
           }

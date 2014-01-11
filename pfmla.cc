@@ -59,7 +59,7 @@ PFmla::closure_within(const Cx::PFmla& pf) const
   bool
 PFmla::cycle_ck(Cx::PFmla* scc) const
 {
-  Cx::PFmla span0( true );
+  Cx::PFmla span0( true, *this );
 
   while (true) {
     const Cx::PFmla& span1 = this->img(span0);
@@ -592,11 +592,9 @@ SCC_Find(Cx::PFmla* ret_cycles, const Cx::PFmla& E, const Cx::PFmla& pf)
 {
   Cx::PFmla tmp_E = E;
   Cx::PFmla tmp_pf = pf;
-  Cx::PFmla tmp_S( false );
-  Cx::PFmla tmp_NODE( false );
   fill_ctx (tmp_E, tmp_pf);
-  fill_ctx (tmp_E, tmp_S);
-  fill_ctx (tmp_E, tmp_NODE);
+  Cx::PFmla tmp_S( false, tmp_E );
+  Cx::PFmla tmp_NODE( false, tmp_E );
   return SCC_Find(ret_cycles, tmp_pf, tmp_E, tmp_S, tmp_NODE);
 }
 

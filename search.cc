@@ -17,13 +17,13 @@
 #endif
 
 static bool
-verify_solutions(const PartialSynthesis& inst)
+verify_solutions(const PartialSynthesis& inst, StabilizationCkInfo* info)
 {
   for (uint i = 0; i < inst.sz(); ++i) {
     if (!inst[i].no_partial)
       continue;
     *inst.log << "Verifying solution for system " << i << "..." << inst.log->endl();
-    if (!stabilization_ck(*inst[i].log, *inst[i].ctx->systems[i], inst[i].actions)) {
+    if (!stabilization_ck(*inst[i].log, *inst[i].ctx->systems[i], inst[i].actions, info)) {
       *inst[i].log << "Solution was NOT self-stabilizing." << inst[i].log->endl();
       return false;
     }
@@ -32,7 +32,7 @@ verify_solutions(const PartialSynthesis& inst)
     if (inst[i].no_partial || !inst.ctx->opt.verify_found)
       continue;
     *inst.log << "Verifying solution for system " << i << "..." << inst.log->endl();
-    if (!stabilization_ck(*inst[i].log, *inst[i].ctx->systems[i], inst[i].actions)) {
+    if (!stabilization_ck(*inst[i].log, *inst[i].ctx->systems[i], inst[i].actions, info)) {
       *inst[i].log << "Solution was NOT self-stabilizing." << inst[i].log->endl();
       return false;
     }
@@ -73,11 +73,16 @@ AddConvergence(vector<uint>& ret_actions,
     }
 
     if (!inst.candidates_ck()) {
-      if (verify_solutions(inst))  break;
+      const bool early_return = false;
+      StabilizationCkInfo info;
+      if (verify_solutions(inst, early_return ? 0 : &info))  break;
 
-      const bool early_return = true;
-      if (!early_return)
+      if (!early_return) {
         *inst.log << "backtrack from lvl:" << inst.bt_level << inst.log->endl();
+        if (info.livelock_exists) {
+          base_inst.ctx->conflicts.add_conflict(info.livelock_actions);
+        }
+      }
       inst.add_small_conflict_set(inst.picks);
       stack_idx = decmod(stack_idx, 1, bt_stack.sz());
       if (bt_stack[stack_idx].bt_level >= inst.bt_level) {
@@ -231,7 +236,11 @@ try_order_synthesis(vector<uint>& ret_actions,
   }
 
   Claim( !inst.deadlockPF.sat_ck() );
-  if (!verify_solutions(inst)) {
+  StabilizationCkInfo info;
+  if (!verify_solutions(inst, &info)) {
+    if (info.livelock_exists) {
+      inst.ctx->conflicts.add_conflict(info.livelock_actions);
+    }
     inst.add_small_conflict_set(inst.picks);
     return false;
   }
@@ -576,10 +585,11 @@ stabilization_search(vector<uint>& ret_actions,
       ProtoconFileOpt verif_infile_opt( infile_opt );
       verif_infile_opt.file_path = exec_opt.xfilepaths[i].cstr();
       *opt.log << "VERIFYING: " << verif_infile_opt.file_path << opt.log->endl();
-      sys.topology.lightweight = true;
+      const bool lightweight = !exec_opt.conflicts_ofilepath;
+      sys.topology.lightweight = lightweight;
       if (ReadProtoconFile(sys, verif_infile_opt)) {
         StabilizationCkInfo info;
-        if (stabilization_ck(*opt.log, sys, &info)) {
+        if (stabilization_ck(*opt.log, sys, lightweight ? 0 : &info)) {
           solution_found = true;
           ret_actions = sys.actions;
           *opt.log << "System is stabilizing." << opt.log->endl();
@@ -594,9 +604,9 @@ stabilization_search(vector<uint>& ret_actions,
         }
         else {
           *opt.log << "System NOT stabilizing." << opt.log->endl();
-          if (info.livelock_exists) {
+          if (!lightweight && info.livelock_exists) {
             //synctx.conflicts.add_conflict(FlatSet<uint>(sys.actions));
-            synctx.conflicts.add_conflict(FlatSet<uint>(info.livelock_actions));
+            synctx.conflicts.add_conflict(info.livelock_actions);
           }
         }
       }
