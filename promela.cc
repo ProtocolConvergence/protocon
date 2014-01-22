@@ -7,16 +7,16 @@ static
 OPutPromelaAction(ostream& of, const Xn::ActSymm& act)
 {
   const Xn::PcSymm& pc = *act.pc_symm;
-  of << "/*" << pc.name << "[i]" << "*/ ";
+  of << "/*" << pc.spec->name << "[i]" << "*/ ";
   for (uint i = 0; i < pc.rvbl_symms.sz(); ++i) {
     if (i != 0)  of << " && ";
-    of << pc.rvbl_symms[i]->name
+    of << pc.rvbl_symms[i]->spec->name
       << "[" <<  pc.rindices[i].expression << "]"
       << "==" << act.guard(i);
   }
   of << " ->";
   for (uint i = 0; i < pc.wvbl_symms.sz(); ++i) {
-    of << ' ' << pc.wvbl_symms[i]->name
+    of << ' ' << pc.wvbl_symms[i]->spec->name
       << "[" << pc.windices[i].expression << "]"
       << "=" << act.assign(i) << ';';
   }
@@ -29,7 +29,7 @@ OPutPromelaSelect(ostream& of, const Xn::Vbl& x)
 {
   of << "  if\n";
   for (uint i = 0; i < x.symm->domsz; ++i) {
-    of << "  :: " << x.symm->name
+    of << "  :: " << x.symm->spec->name
       << "[" << x.symm_idx << "] = " << i << ";\n";
   }
   of << "  fi;\n";
@@ -41,7 +41,7 @@ OPutPromelaPc(ostream& of, const Xn::Sys& sys, uint pcidx)
 {
   const Xn::Net& topo = sys.topology;
   const Xn::PcSymm& pc = topo.pc_symms[pcidx];
-  of << "proctype " << pc.name << "(byte i)\n{\n";
+  of << "proctype " << pc.spec->name << "(byte i)\n{\n";
   bool found = false;
 
   for (uint i = 0; i < sys.actions.size(); ++i) {
@@ -83,7 +83,7 @@ OPutPromelaModel(ostream& of, const Xn::Sys& sys)
   const Xn::Net& topo = sys.topology;
   for (uint i = 0; i < topo.vbl_symms.sz(); ++i) {
     const Xn::VblSymm& x = topo.vbl_symms[i];
-    of << "byte " << x.name << "[" << x.membs.sz() << "];\n";
+    of << "byte " << x.spec->name << "[" << x.membs.sz() << "];\n";
   }
 
   for (uint i = 0; i < topo.pc_symms.sz(); ++i) {
@@ -98,7 +98,7 @@ OPutPromelaModel(ostream& of, const Xn::Sys& sys)
   for (uint i = 0; i < topo.pc_symms.sz(); ++i) {
     const Xn::PcSymm& pc_symm = topo.pc_symms[i];
     for (uint j = 0; j < pc_symm.membs.sz(); ++j) {
-      of << "  run " << pc_symm.name << "(" << j << ");\n";
+      of << "  run " << pc_symm.spec->name << "(" << j << ");\n";
     }
   }
 

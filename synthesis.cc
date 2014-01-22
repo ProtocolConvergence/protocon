@@ -23,6 +23,10 @@ candidate_actions(vector<uint>& candidates, const Xn::Sys& sys)
   }
 
   for (uint actidx = 0; actidx < topo.n_possible_acts; ++actidx) {
+    if (actidx != topo.representative_action_index(actidx)) {
+      continue;
+    }
+
     bool add = true;
 
     Xn::ActSymm act;
@@ -354,6 +358,8 @@ PickActionMCV(uint& ret_actidx,
     if (tape[inst_idx].no_partial)
       continue;
     const PartialSynthesis& inst = tape[inst_idx];
+    if (mcv_dlset_idx >= inst.mcv_deadlocks.size())
+      continue;
     Claim2( mcv_dlset_idx ,<, inst.mcv_deadlocks.size() );
     const Set<uint>& inst_candidates = inst.mcv_deadlocks[mcv_dlset_idx].candidates;
     if (inst_candidates.empty())
@@ -683,15 +689,18 @@ pick_action_candidates(Set<uint>& ret_candidates,
 QuickTrim(Set<uint>& delSet,
           const vector<uint>& candidates,
           const Xn::Net& topo,
-          uint actId)
+          uint actidx)
 {
   Xn::ActSymm act0;
-  topo.action(act0, actId);
   Xn::ActSymm act1;
   for (uint i = 0; i < candidates.size(); ++i) {
     topo.action(act1, candidates[i]);
-    if (!coexist_ck(act0, act1)) {
-      delSet << candidates[i];
+    for (uint j = 0; j < topo.represented_actions[actidx].sz(); ++j) {
+      topo.action(act0, topo.represented_actions[actidx][j]);
+      if (!coexist_ck(act0, act1)) {
+        delSet << candidates[i];
+        break;
+      }
     }
   }
 }
@@ -1194,7 +1203,7 @@ SynthesisCtx::init(const Xn::Sys& sys,
     const Xn::PcSymm& pc_symm = topo.pc_symms[pcidx];
     for (uint i = 0; i < pc_symm.pre_domsz; ++i)
     {
-      Cx::String name = pc_symm.name + "@pre_enum[" + i + "]";
+      Cx::String name = pc_symm.spec->name + "@pre_enum[" + i + "]";
       uint vbl_idx =
         synctx.csp_pfmla_ctx.add_vbl(name, pc_symm.img_domsz);
       Claim2( vbl_idx ,==, pc_symm.pre_dom_offset + i );

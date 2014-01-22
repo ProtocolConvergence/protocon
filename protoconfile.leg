@@ -118,7 +118,10 @@ ProcDecl =
   ( LEGIT WS? legit:Expr END_STMT WS?
     {yy->st->add_pc_legit(legit.sp);}
   )?
-  {yy->st->pc_symm = 0;}
+  {
+    yy->st->pc_symm = 0;
+    yy->st->pc_symm_spec = 0;
+  }
   '}'
   ;
 
@@ -128,6 +131,20 @@ SymmetricAccess =
    WS? (',' WS? let_val:ID  {pushlast_Sesp (let_vals.sp, let_val.sp);} WS?)*
   '#}' WS?
   '{' WS?
+  {
+    yy->st->pc_symm_spec->oblivious_specs.push(Xn::ObliviousSpec(sz_of_Sesp (let_vals.sp)));
+    Xn::ObliviousSpec& obliv_spec = yy->st->pc_symm_spec->oblivious_specs.top();
+    obliv_spec.let_expression = ccstr_of_Sesp (let_name.sp);
+
+    Sesp vals_sp = let_vals.sp;
+    while (!nil_ck_Sesp (vals_sp)) {
+      if (!obliv_spec.multiset_expression.empty_ck()) {
+        obliv_spec.multiset_expression += ", ";
+      }
+      obliv_spec.multiset_expression += ccstr_of_Sesp (car_of_Sesp (vals_sp));
+      vals_sp = cdr_of_Sesp (vals_sp);
+    }
+  }
   ( (  'read:'  WS? u:VblRef WS?  {u.sp = list2_ccstr_Sesp ("r", u.sp);}
        (','     WS? v:VblRef WS?  {pushlast_Sesp (u.sp, v.sp);} )*
      | 'write:' WS? u:VblRef WS?  {u.sp = list2_ccstr_Sesp ("w", u.sp);}
@@ -135,23 +152,31 @@ SymmetricAccess =
     )
     END_STMT WS?
     {
-      Sesp vals_sp = let_vals.sp;
-      while (!nil_ck_Sesp (vals_sp)) {
-        yy->st->add_scope_let(let_name.sp, car_of_Sesp (vals_sp));
-        Sesp sp = u.sp;
-        Bool own = eq_cstr ("w", ccstr_of_Sesp (car_of_Sesp (sp)));
-        sp = cdr_of_Sesp (sp);
-        while (!nil_ck_Sesp (sp)) {
-          yy->st->add_access(car_of_Sesp (sp), own ? 1 : 0);
-          sp = cdr_of_Sesp (sp);
+      Xn::ObliviousSpec& obliv_spec = yy->st->pc_symm_spec->oblivious_specs.top();
+      Sesp vbls_sp = u.sp;
+      Bool own = eq_cstr ("w", ccstr_of_Sesp (car_of_Sesp (vbls_sp)));
+      vbls_sp = cdr_of_Sesp (vbls_sp);
+
+      while (!nil_ck_Sesp (vbls_sp)) {
+        Sesp vals_sp = let_vals.sp;
+        Cx::Table<uint> vbl_idcs;
+        while (!nil_ck_Sesp (vals_sp)) {
+          yy->st->add_scope_let(let_name.sp, car_of_Sesp (vals_sp));
+          vbl_idcs.push(yy->st->pc_symm_spec->rvbl_symms.sz());
+          yy->st->add_access(car_of_Sesp (vbls_sp), own ? 1 : 0);
+          vals_sp = cdr_of_Sesp (vals_sp);
+          yy->st->del_scope_let(let_name.sp);
         }
-        yy->st->del_scope_let(let_name.sp);
-        vals_sp = cdr_of_Sesp (vals_sp);
+
+        Cx::String index_expression;
+        yy->st->string_expression(index_expression, caddar_of_Sesp (vbls_sp));
+        obliv_spec.add_oblivious(vbl_idcs, index_expression);
+        vbls_sp = cdr_of_Sesp (vbls_sp);
       }
     }
   )+
  '}'
- ;
+  ;
 
 NamedPredicate =
   'predicate' WS name:ID WS? ':=' WS? a:Expr END_STMT
@@ -416,7 +441,7 @@ ReadProtoconFile(Xn::Sys& sys, const ProtoconFileOpt& opt)
     Xn::NatMap x(1);
     x.membs[0] = itr->second;
     x.expression = x.membs[0];
-    yyctx.st->sys->topology.constant_map.add(itr->first, x);
+    yyctx.st->sys->spec->constant_map.add(itr->first, x);
   }
   if (!yyparse(&yyctx) || !yyctx.st->allgood) {
     good = false;

@@ -52,6 +52,7 @@ Net::commit_initialization()
     return;
   act_pfmlas.resize(ntotal);
   pure_shadow_pfmlas.resize(ntotal);
+  represented_actions.resize(ntotal);
   for (uint i = 0; i < ntotal; ++i) {
     this->make_action_pfmla(i);
   }
@@ -61,48 +62,92 @@ Net::commit_initialization()
 Net::add_variables(const String& name, uint nmembs, uint domsz,
                    Vbl::ShadowPuppetRole role)
 {
+  // Cannot add variables after committing them.
+  Claim2( vbls.sz() ,==, 0 );
+
   VblSymm& symm = vbl_symms.grow1();
-  symm.name = name;
+  symm.spec = &spec->vbl_symms.grow1();
   symm.domsz = domsz;
-  symm.domsz_expression = domsz;
-  symm.nmembs_expression = nmembs;
+  symm.spec->name = name;
+  symm.spec->domsz_expression = domsz;
+  symm.spec->nmembs_expression = nmembs;
   symm.pfmla_list_id = pfmla_ctx.add_vbl_list();
   symm.shadow_puppet_role = role;
-
-  for (uint i = 0; i < nmembs; ++i) {
-    Vbl* vbl = &vbls.push(Vbl(&symm, i));
-    symm.membs.push(vbl);
-    vbl->pfmla_idx = pfmla_ctx.add_vbl(name_of (*vbl), domsz);
-    pfmla_ctx.add_to_vbl_list(symm.pfmla_list_id, vbl->pfmla_idx);
-
-    const Cx::PFmlaVbl& pf_vbl = this->pfmla_vbl(*vbl);
-    this->identity_xn &= pf_vbl.img_eq(pf_vbl);
-
-    if (symm.pure_shadow_ck()) {
-      pure_shadow_vbl_exists = true;
-      pfmla_ctx.add_to_vbl_list (pure_shadow_pfmla_list_id, vbl->pfmla_idx);
-    }
-    if (symm.pure_puppet_ck()) {
-      pure_puppet_vbl_exists = true;
-      pfmla_ctx.add_to_vbl_list (pure_puppet_pfmla_list_id, vbl->pfmla_idx);
-    }
-    if (symm.shadow_ck()) {
-      pfmla_ctx.add_to_vbl_list (shadow_pfmla_list_id, vbl->pfmla_idx);
-    }
-    if (symm.puppet_ck()) {
-      pfmla_ctx.add_to_vbl_list (puppet_pfmla_list_id, vbl->pfmla_idx);
-    }
-  }
+  symm.membs.grow(nmembs, 0);
 
   return &symm;
 }
 
-  PcSymm*
-Net::add_processes(const String& name, uint nmembs)
+  void
+Net::commit_variable(VblSymm& symm, uint i)
 {
+  Vbl* vbl = &vbls.push(Vbl(&symm, i));
+  symm.membs[i] = vbl;
+  vbl->pfmla_idx = pfmla_ctx.add_vbl(name_of (*vbl), symm.domsz);
+  pfmla_ctx.add_to_vbl_list(symm.pfmla_list_id, vbl->pfmla_idx);
+
+  const Cx::PFmlaVbl& pf_vbl = this->pfmla_vbl(*vbl);
+  this->identity_xn &= pf_vbl.img_eq(pf_vbl);
+
+  if (symm.pure_shadow_ck()) {
+    pure_shadow_vbl_exists = true;
+    pfmla_ctx.add_to_vbl_list (pure_shadow_pfmla_list_id, vbl->pfmla_idx);
+  }
+  if (symm.pure_puppet_ck()) {
+    pure_puppet_vbl_exists = true;
+    pfmla_ctx.add_to_vbl_list (pure_puppet_pfmla_list_id, vbl->pfmla_idx);
+  }
+  if (symm.shadow_ck()) {
+    pfmla_ctx.add_to_vbl_list (shadow_pfmla_list_id, vbl->pfmla_idx);
+  }
+  if (symm.puppet_ck()) {
+    pfmla_ctx.add_to_vbl_list (puppet_pfmla_list_id, vbl->pfmla_idx);
+  }
+}
+
+  void
+Net::commit_variables()
+{
+  Cx::Table< Cx::Tuple<uint,2> > sizes(vbl_symms.sz());
+  uint refsz = 1;
+  uint maxsz = 0;
+  for (uint i = 0; i < vbl_symms.sz(); ++i) {
+    VblSymm& symm = vbl_symms[i];
+    sizes[i][0] = symm.membs.sz();
+    sizes[i][1] = i;
+    if (symm.membs.sz() > refsz) {
+      refsz = symm.membs.sz();
+    }
+    if (symm.membs.sz() > 1 && symm.membs.sz() < refsz) {
+      refsz = symm.membs.sz();
+    }
+    if (symm.membs.sz() > maxsz) {
+      maxsz = symm.membs.sz();
+    }
+  }
+  std::sort (sizes.begin(), sizes.end());
+  for (uint cut_i = 0; cut_i < refsz; ++cut_i) {
+    for (uint i = 0; i < vbl_symms.sz(); ++i) {
+      VblSymm& symm = vbl_symms[sizes[i][1]];
+      uint stride = ceil_quot(symm.membs.sz(), refsz);
+      for (uint j = cut_i * stride; j < symm.membs.sz() && j < (cut_i+1) * stride; ++j) {
+        commit_variable(symm, j);
+      }
+    }
+  }
+}
+
+  PcSymm*
+Net::add_processes(const String& name, const String& idx_name, uint nmembs)
+{
+  if (vbls.sz() == 0) {
+    commit_variables();
+  }
   PcSymm& symm = pc_symms.grow1();
-  symm.name = name;
-  symm.nmembs_expression = nmembs;
+  symm.spec = &spec->pc_symms.grow1();
+  symm.spec->name = name;
+  symm.spec->nmembs_expression = nmembs;
+  symm.spec->idx_name = idx_name;
   for (uint i = 0; i < nmembs; ++i) {
     Pc& pc = pcs.push(Pc(&symm, i));
     symm.membs.push(&pc);
@@ -116,6 +161,7 @@ Net::add_read_access (PcSymm* pc_symm, const VblSymm* vbl_symm,
                       const NatMap& indices)
 {
   pc_symm->rvbl_symms.push(vbl_symm);
+  pc_symm->spec->rvbl_symms.push(+vbl_symm->spec);
   pc_symm->write_flags.push_back(false);
   pc_symm->rindices.push(indices);
   for (uint i = 0; i < pc_symm->membs.sz(); ++i) {
@@ -130,6 +176,7 @@ Net::add_write_access (PcSymm* pc_symm, const VblSymm* vbl_symm,
 {
   add_read_access (pc_symm, vbl_symm, indices);
   pc_symm->wvbl_symms.push(vbl_symm);
+  pc_symm->spec->wvbl_symms.push(+vbl_symm->spec);
   pc_symm->wmap.push(pc_symm->rvbl_symms.sz() - 1);
   pc_symm->write_flags[pc_symm->rvbl_symms.sz() - 1] = true;
   pc_symm->windices.push(indices);
@@ -284,6 +331,15 @@ Net::action_img_index(uint actidx) const
   const Xn::PcSymm& pc_symm = pc_symms[pcidx];
   actidx -= pc_symm.act_idx_offset;
   return actidx % pc_symm.img_domsz;
+}
+
+  uint
+Net::representative_action_index(uint actidx) const
+{
+  uint rep_actidx = actidx;
+  Claim2( rep_actidx ,<=, actidx );
+  // TODO: much magic
+  return rep_actidx;
 }
 
   ostream&
@@ -468,7 +524,7 @@ Sys::integrityCk() const
 OPut(Cx::OFile& of, const Xn::ActSymm& act)
 {
   const Xn::PcSymm& pc = *act.pc_symm;
-  of << "/*" << pc.name << "[" << pc.idx_name << "]" << "*/ ";
+  of << "/*" << pc.spec->name << "[" << pc.spec->idx_name << "]" << "*/ ";
   const char* delim = "";
   for (uint i = 0; i < pc.rvbl_symms.sz(); ++i) {
     if (pc.rvbl_symms[i]->pure_shadow_ck()) {
@@ -478,13 +534,13 @@ OPut(Cx::OFile& of, const Xn::ActSymm& act)
     }
     of << delim;
     delim = " && ";
-    of << pc.rvbl_symms[i]->name
+    of << pc.rvbl_symms[i]->spec->name
       << "[" << pc.rindices[i].expression << "]"
       << "==" << act.guard(i);
   }
   of << " -->";
   for (uint i = 0; i < pc.wvbl_symms.sz(); ++i) {
-    of << ' ' << pc.wvbl_symms[i]->name
+    of << ' ' << pc.wvbl_symms[i]->spec->name
       << "[" << pc.windices[i].expression << "]"
       << ":=" << act.assign(i) << ';';
   }
@@ -616,7 +672,19 @@ Xn::Net::make_action_pfmla(uint actidx)
       xn = false;
     }
   }
-  act_pfmlas[actidx] = xn;
-  pure_shadow_pfmlas[actidx] = pure_shadow_pfmla;
+
+  uint rep_actidx = representative_action_index(actidx);
+
+  represented_actions[rep_actidx].push(actidx);
+  if (rep_actidx == actidx) {
+    act_pfmlas[actidx] = xn;
+    pure_shadow_pfmlas[actidx] = pure_shadow_pfmla;
+  }
+  else {
+    act_pfmlas[actidx] = false;
+    pure_shadow_pfmlas[actidx] = false;
+    act_pfmlas[rep_actidx] |= xn;
+    pure_shadow_pfmlas[rep_actidx] |= pure_shadow_pfmla;
+  }
 }
 

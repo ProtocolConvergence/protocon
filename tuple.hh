@@ -1,6 +1,6 @@
 
 #ifndef Tuple_HH_
-#define Tuple_HH
+#define Tuple_HH_
 
 namespace Cx {
 template <class T, uint N>

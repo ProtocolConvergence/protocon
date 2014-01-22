@@ -408,8 +408,7 @@ TestShadowColoring()
 
   topo.add_variables("x", npcs, 3, Xn::Vbl::Puppet);
   topo.add_variables("c", npcs, 3, Xn::Vbl::Shadow);
-  Xn::PcSymm* pc_symm = topo.add_processes("P", npcs);
-  pc_symm->idx_name = "i";
+  Xn::PcSymm* pc_symm = topo.add_processes("P", "i", npcs);
   Xn::NatMap indices(npcs);
 
   for (uint i = 0; i < npcs; ++i)

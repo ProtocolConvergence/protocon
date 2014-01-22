@@ -55,15 +55,19 @@ public:
   Map< Cx::String, const Xn::VblSymm* > vbl_map;
   Map< Cx::String, Sesp > scope_let_map;
   Xn::Sys* sys;
+  Xn::Spec* spec;
   SespCtx* spctx;
-  Xn::PcSymm* pc_symm;
+  Cx::Mem<Xn::PcSymm> pc_symm;
+  Cx::Mem<Xn::PcSymmSpec> pc_symm_spec;
 
   ProtoconFile(Xn::Sys* sys, XFile* xf)
     : allgood( true )
     , text_nlines(0)
     , pc_symm(0)
+    , pc_symm_spec(0)
   {
     this->sys = sys;
+    this->spec = sys->spec;
     this->sys->invariant = true;
     spctx = make_SespCtx ();
     xget_XFile (xf);

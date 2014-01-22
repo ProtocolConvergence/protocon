@@ -196,12 +196,15 @@ stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
     of.flush();
     return false;
   }
-  of << "Checking for weak convergence...\n";
-  of.flush();
-  if (!weak_convergence_ck(hi_xn, hi_invariant)) {
-    of << "Weak convergence does not hold...\n";
+  // Only check for weak convergence if it isn't implied.
+  if (!lo_xn.equiv_ck(hi_xn)) {
+    of << "Checking for weak convergence...\n";
     of.flush();
-    return false;
+    if (!weak_convergence_ck(hi_xn, hi_invariant)) {
+      of << "Weak convergence does not hold...\n";
+      of.flush();
+      return false;
+    }
   }
 #if 0
   const Xn::Net& topo = sys.topology;

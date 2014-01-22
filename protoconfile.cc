@@ -31,10 +31,10 @@ ProtoconFile::add_variables(Sesp vbl_name_sp, Sesp vbl_nmembs_sp, Sesp vbl_dom_s
   {
     Xn::VblSymm* symm = sys->topology.add_variables(name, nmembs, domsz, role);
     vbl_map[name] = symm;
-    symm->domsz_expression = "";
-    string_expression (symm->domsz_expression, cadr_of_Sesp (vbl_dom_sp));
-    symm->nmembs_expression = "";
-    string_expression (symm->nmembs_expression, cadr_of_Sesp (vbl_nmembs_sp));
+    symm->spec->domsz_expression = "";
+    string_expression (symm->spec->domsz_expression, cadr_of_Sesp (vbl_dom_sp));
+    symm->spec->nmembs_expression = "";
+    string_expression (symm->spec->nmembs_expression, cadr_of_Sesp (vbl_nmembs_sp));
   }
   return update_allgood (good);
 }
@@ -50,10 +50,10 @@ ProtoconFile::add_processes(Sesp pc_name, Sesp idx_name, Sesp npcs)
     uint domsz = 0;
     if (LegitCk(eval_nat (&domsz, cadr_of_Sesp (npcs)), good, "")) {
       this->pc_symm =
-        sys->topology.add_processes(name_a, (uint) domsz);
-      this->pc_symm->idx_name = name_b;
-      pc_symm->nmembs_expression = "";
-      string_expression (pc_symm->nmembs_expression, cadr_of_Sesp (npcs));
+        sys->topology.add_processes(name_a, name_b, (uint) domsz);
+      this->pc_symm_spec = pc_symm->spec;
+      pc_symm_spec->nmembs_expression = "";
+      string_expression (pc_symm_spec->nmembs_expression, cadr_of_Sesp (npcs));
     }
   }
   if (good) {
@@ -65,7 +65,6 @@ ProtoconFile::add_processes(Sesp pc_name, Sesp idx_name, Sesp npcs)
 ProtoconFile::add_constant(Sesp name_sp, Sesp val_sp)
 {
   Sign good = 1;
-  Xn::Net& topo = sys->topology;
 
   const char* name = ccstr_of_Sesp (name_sp);
   DoLegit( good, "" )
@@ -76,8 +75,8 @@ ProtoconFile::add_constant(Sesp name_sp, Sesp val_sp)
   DoLegit( good, "finding expression" )
     good = string_expression (val.expression, val_sp);
   DoLegit( good, "" )
-    if (!topo.constant_map.key_ck(name))
-      topo.constant_map.add(name, val);
+    if (!spec->constant_map.key_ck(name))
+      spec->constant_map.add(name, val);
 
   return update_allgood (good);
 }
@@ -90,7 +89,7 @@ ProtoconFile::add_let(Sesp name_sp, Sesp val_sp)
   DoLegit(  good, "" )
     good = !!name;
 
-  const Cx::String& idx_name = pc_symm->idx_name;
+  const Cx::String& idx_name = pc_symm_spec->idx_name;
   Xn::NatMap let_vals( pc_symm->membs.sz() );
   for (uint i = 0; good && i < pc_symm->membs.sz(); ++i) {
     index_map[idx_name] = i;
@@ -150,7 +149,7 @@ ProtoconFile::add_access(Sesp vbl_sp, Bit write)
   if (LegitCk( topo.pc_symms.sz() > 0, legit, "" ))
   {
     Cx::IntPFmla ipf;
-    const Cx::String& idx_name = pc_symm->idx_name;
+    const Cx::String& idx_name = pc_symm_spec->idx_name;
     Xn::NatMap indices( pc_symm->membs.sz() );
 
     for (uint i = 0; i < pc_symm->membs.sz(); ++i) {
@@ -167,10 +166,10 @@ ProtoconFile::add_access(Sesp vbl_sp, Bit write)
 
     if (legit) {
       if (write) {
-        topo.add_write_access(pc_symm, vbl_symm, indices);
+        topo.add_write_access(+pc_symm, vbl_symm, indices);
       }
       else {
-        topo.add_read_access(pc_symm, vbl_symm, indices);
+        topo.add_read_access(+pc_symm, vbl_symm, indices);
       }
     }
   }
@@ -189,14 +188,14 @@ ProtoconFile::add_action(Sesp act_sp, Xn::Vbl::ShadowPuppetRole role)
     return false;
   }
   Cx::PFmla act_pf( false );
-  const Cx::String& idx_name = pc_symm->idx_name;
+  const Cx::String& idx_name = pc_symm_spec->idx_name;
   DoLegit( good, "" )
   {
     if (role != Xn::Vbl::Puppet) {
       Cx::String act_expression;
       good = string_expression (act_expression, act_sp);
       if (good) {
-        pc_symm->shadow_act_strings.push(act_expression);
+        pc_symm_spec->shadow_act_strings.push(act_expression);
       }
     }
   }
@@ -276,7 +275,7 @@ ProtoconFile::add_pc_legit(Sesp legit_sp)
 
   if (LegitCk( topo.pc_symms.sz() > 0, good, "" ))
   {
-    const Cx::String& idx_name = pc_symm->idx_name;
+    const Cx::String& idx_name = pc_symm_spec->idx_name;
     Cx::PFmla pf;
 
     for (uint i = 0; i < pc_symm->membs.sz(); ++i) {
@@ -288,15 +287,15 @@ ProtoconFile::add_pc_legit(Sesp legit_sp)
     }
     Cx::String invariant_expression;
     if (LegitCk( string_expression(invariant_expression, legit_sp), good, "" )) {
-      if (sys->invariant_expression != "") {
-        sys->invariant_expression =
-          Cx::String("(") + sys->invariant_expression + ")\n  &&\n  ";
+      if (spec->invariant_expression != "") {
+        spec->invariant_expression =
+          Cx::String("(") + spec->invariant_expression + ")\n  &&\n  ";
       }
 
-      sys->invariant_expression += Cx::String("(forall ")
-        + idx_name + " <- Nat % " + pc_symm->nmembs_expression + " : ";
-      sys->invariant_expression += invariant_expression;;
-      sys->invariant_expression += ")";
+      spec->invariant_expression += Cx::String("(forall ")
+        + idx_name + " <- Nat % " + pc_symm_spec->nmembs_expression + " : ";
+      spec->invariant_expression += invariant_expression;;
+      spec->invariant_expression += ")";
     }
     index_map.erase(idx_name);
   }
@@ -336,11 +335,11 @@ ProtoconFile::add_legit(Sesp legit_sp)
 
   Cx::String invariant_expression;
   if (LegitCk( string_expression(invariant_expression, legit_sp), good, "" )) {
-    if (sys->invariant_expression != "") {
-      sys->invariant_expression =
-        Cx::String("(") + sys->invariant_expression + ")\n  &&\n  ";
+    if (spec->invariant_expression != "") {
+      spec->invariant_expression =
+        Cx::String("(") + spec->invariant_expression + ")\n  &&\n  ";
     }
-    sys->invariant_expression += invariant_expression;;
+    spec->invariant_expression += invariant_expression;;
   }
 
   return update_allgood (good);
@@ -946,12 +945,12 @@ ProtoconFile::lookup_int(int* ret, const Cx::String& name)
     return true;
   }
 
-  if (sys->topology.constant_map.key_ck(name)) {
-    *ret = sys->topology.constant_map.lookup(name)->membs[0];
+  if (spec->constant_map.key_ck(name)) {
+    *ret = spec->constant_map.lookup(name)->membs[0];
     return true;
   }
-  if (pc_symm) {
-    const int* pcidx = index_map.lookup(pc_symm->idx_name);
+  if ((bool)pc_symm) {
+    const int* pcidx = index_map.lookup(pc_symm_spec->idx_name);
     if (pcidx) {
       Xn::NatMap* vals = pc_symm->let_map.lookup(name);
       if (vals) {

@@ -73,17 +73,17 @@ AddConvergence(vector<uint>& ret_actions,
     }
 
     if (!inst.candidates_ck()) {
-      const bool early_return = false;
       StabilizationCkInfo info;
-      if (verify_solutions(inst, early_return ? 0 : &info))  break;
+      if (verify_solutions(inst, &info))  break;
 
-      if (!early_return) {
-        *inst.log << "backtrack from lvl:" << inst.bt_level << inst.log->endl();
-        if (info.livelock_exists) {
-          base_inst.ctx->conflicts.add_conflict(info.livelock_actions);
+      const bool early_return = !info.livelock_exists;
+      if (info.livelock_exists) {
+        if (!early_return) {
+          *inst.log << "backtrack from lvl:" << inst.bt_level << inst.log->endl();
         }
+        inst.ctx->conflicts.add_conflict(info.livelock_actions);
+        inst.add_small_conflict_set(inst.picks);
       }
-      inst.add_small_conflict_set(inst.picks);
       stack_idx = decmod(stack_idx, 1, bt_stack.sz());
       if (bt_stack[stack_idx].bt_level >= inst.bt_level) {
         base_inst.failed_bt_level = bt_stack[stack_idx].bt_level;

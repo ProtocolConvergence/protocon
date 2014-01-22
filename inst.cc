@@ -23,8 +23,7 @@ UnidirectionalRing(Xn::Net& topo, uint npcs, uint domsz,
   }
 
   if (symmetric) {
-    Xn::PcSymm* pc_symm = topo.add_processes("P", npcs);
-    pc_symm->idx_name = "i";
+    Xn::PcSymm* pc_symm = topo.add_processes("P", "i", npcs);
 
     // Make this f(i) = i-1
     Xn::NatMap indices(npcs);
@@ -45,8 +44,7 @@ UnidirectionalRing(Xn::Net& topo, uint npcs, uint domsz,
   else {
     // Create a new symmetry for each process.
     for (uint i = 0; i < npcs; ++i) {
-      Xn::PcSymm* pc_symm = topo.add_processes(Xn::String("P") + i, 1);
-      pc_symm->idx_name = "i";
+      Xn::PcSymm* pc_symm = topo.add_processes(Xn::String("P") + i, "i", 1);
 
       // Make this f(j) = i-1
       Xn::NatMap indices(1);
@@ -64,7 +62,7 @@ UnidirectionalRing(Xn::Net& topo, uint npcs, uint domsz,
   if (distinguished) {
     ++ npcs;
 
-    Xn::PcSymm* pc_symm = topo.add_processes("Bot", 1);
+    Xn::PcSymm* pc_symm = topo.add_processes("Bot", "i", 1);
 
     Xn::NatMap indices(1);
     indices.membs[0] = (int)npcs - 2;
@@ -90,7 +88,6 @@ BidirectionalRing(Xn::Net& topo, uint npcs, uint domsz,
 
   if (symmetric) {
     Xn::PcSymm* pc_symm = &topo.pc_symms[0];
-    pc_symm->idx_name = "i";
 
     // Make this f(i) = i+1
     Xn::NatMap indices(npcs);

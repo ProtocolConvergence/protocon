@@ -76,11 +76,11 @@ oput_pla_pc_acts (Cx::OFile& of, const Xn::PcSymm& pc_symm,
 
 static
   void
-oput_protocon_constants (Cx::OFile& of, const Xn::Net& topo)
+oput_protocon_constants (Cx::OFile& of, const Xn::Spec& spec)
 {
-  for (uint i = 0; i < topo.constant_map.keys.sz(); ++i) {
-    of << "constant " << topo.constant_map.keys[i];
-    of << " := " << topo.constant_map.vals[i].expression;
+  for (uint i = 0; i < spec.constant_map.keys.sz(); ++i) {
+    of << "constant " << spec.constant_map.keys[i];
+    of << " := " << spec.constant_map.vals[i].expression;
     of << ";\n";
   }
 }
@@ -101,6 +101,27 @@ static
 oput_protocon_pc_vbls (Cx::OFile& of, const Xn::PcSymm& pc_symm)
 {
   for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
+    bool obliv = false;
+    for (uint j = 0; j < pc_symm.spec->oblivious_specs.sz(); ++j) {
+      const Xn::ObliviousSpec& obliv_spec = pc_symm.spec->oblivious_specs[j];
+      if (obliv_spec.elem_ck(i)) {
+        of << "  for " << obliv_spec.let_expression
+          << " <- {# " << obliv_spec.multiset_expression << " #}\n";
+        of << "  {\n";
+        for (uint v = 0; v < obliv_spec.nvbls; ++v) {
+          uint vidx = obliv_spec(0, v);
+          of << "    "
+            << (pc_symm.write_flags[vidx] ? "write" : "read") << ": "
+            << pc_symm.spec->rvbl_symms[vidx]->name
+            << "[" << obliv_spec.index_expressions[v] << "];\n";
+        }
+        of << "  }\n";
+        i += obliv_spec.nlinks * obliv_spec.nvbls - 1;
+        obliv = true;
+        break;
+      }
+    }
+    if (obliv)  continue;
     of << "  " << (pc_symm.write_flags[i] ? "write" : "read") << ": ";
     of << pc_symm.vbl_name(i);
     of << ";\n";
@@ -195,10 +216,11 @@ oput_protocon_pc_acts (Cx::OFile& of, const Xn::PcSymm& pc_symm,
                        OSPc* ospc)
 {
   Sign good = 1;
-  if (pc_symm.shadow_act_strings.sz() > 0) {
+  const Xn::PcSymmSpec& pc_symm_spec = *pc_symm.spec;
+  if (pc_symm_spec.shadow_act_strings.sz() > 0) {
     of << "  shadow action:\n";
-    for (uint i = 0; i < pc_symm.shadow_act_strings.sz(); ++i) {
-      of << "    ( " << pc_symm.shadow_act_strings[i] << " )\n";
+    for (uint i = 0; i < pc_symm_spec.shadow_act_strings.sz(); ++i) {
+      of << "    ( " << pc_symm_spec.shadow_act_strings[i] << " )\n";
     }
     of << "    ;\n";
   }
@@ -290,7 +312,7 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys, const vector<uint>& actio
   ospc->cmd = cons1_AlphaTab ("espresso");
 
   const Xn::Net& topo = sys.topology;
-  oput_protocon_constants (of, topo);
+  oput_protocon_constants (of, *sys.spec);
   for (uint i = 0; i < topo.vbl_symms.sz(); ++i) {
     const Xn::VblSymm& vbl_symm = topo.vbl_symms[i];
     if (vbl_symm.shadow_puppet_role == Xn::Vbl::Shadow)
@@ -298,9 +320,9 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys, const vector<uint>& actio
     if (vbl_symm.shadow_puppet_role == Xn::Vbl::Puppet)
       of << "puppet\n";
 
-    of << "variable " << vbl_symm.name
-      << "[Nat % " << vbl_symm.nmembs_expression
-      << "] <- Nat % " << vbl_symm.domsz_expression << ";\n";
+    of << "variable " << vbl_symm.spec->name
+      << "[Nat % " << vbl_symm.spec->nmembs_expression
+      << "] <- Nat % " << vbl_symm.spec->domsz_expression << ";\n";
   }
 
   Cx::Table<Xn::ActSymm> acts( actions.size() );
@@ -310,8 +332,8 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys, const vector<uint>& actio
 
   for (uint i = 0; i < topo.pc_symms.sz(); ++i) {
     const Xn::PcSymm& pc_symm = topo.pc_symms[i];
-    of << "process " << pc_symm.name
-      << "[" << pc_symm.idx_name << " <- Nat % " << pc_symm.nmembs_expression << "]\n";
+    of << "process " << pc_symm.spec->name
+      << "[" << pc_symm.spec->idx_name << " <- Nat % " << pc_symm.spec->nmembs_expression << "]\n";
     of << "{\n";
     oput_protocon_pc_lets (of, pc_symm);
     oput_protocon_pc_vbls (of, pc_symm);
@@ -330,7 +352,7 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys, const vector<uint>& actio
   else
     of << "shadow";
 
-  of << " invariant:\n  " << sys.invariant_expression << "\n  ;\n";
+  of << " invariant:\n  " << sys.spec->invariant_expression << "\n  ;\n";
 
   lose_OSPc (ospc);
   return good;

@@ -14,7 +14,7 @@ LEG = leg
 CONFIG += ansi
 #CONFIG += errwarn
 CONFIG += debug
-CONFIG += snappy
+#CONFIG += snappy
 #CONFIG += profile
 #CONFIG += ultradebug
 #CONFIG += fast
@@ -63,7 +63,7 @@ all: $(ExeList) udp
 
 ProtoconObj = \
 	$(addprefix $(BldPath)/, pfmla.o pfmla-glu.o pfmla-bittable.o) \
-	$(addprefix $(BldPathCXX)/, pfmla.o xnsys.o inst.o) \
+	$(addprefix $(BldPathCXX)/, pfmla.o xnsys.o xnspec.o inst.o) \
 	$(addprefix $(BldPathCXX)/, opt.o stabilization.o) \
 	$(addprefix $(BldPathCXX)/, promela.o pla.o) \
 	$(addprefix $(BldPathCXX)/, conflictfamily.o) \
