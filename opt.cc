@@ -96,11 +96,13 @@ protocon_options_rec
       }
       exec_opt.model_ofilepath = argv[argi++];
     }
-    else if (eq_cstr (arg, "-simple")) {
-      opt.search_method = opt.SimpleBacktrackSearch;
+    else if (eq_cstr (arg, "-serial")) {
+      opt.search_method = opt.SerialBacktrackSearch;
+      opt.max_height = 0;
+      //opt.ntrials = 1;
     }
-    else if (eq_cstr (arg, "-random")) {
-      opt.search_method = opt.RandomBacktrackSearch;
+    else if (eq_cstr (arg, "-parallel")) {
+      opt.search_method = opt.ParallelBacktrackSearch;
     }
     else if (eq_cstr (arg, "-rank-shuffle")) {
       opt.search_method = opt.RankShuffleSearch;
@@ -270,6 +272,15 @@ protocon_options_rec
         failout_sysCx("Argument Usage: -max-conflict N");
       }
     }
+    else if (eq_cstr (arg, "-no-random")) {
+      opt.randomize_pick = false;
+    }
+    else if (eq_cstr (arg, "-sysrand")) {
+      opt.system_urandom = true;
+    }
+    else if (eq_cstr (arg, "-")) {
+      opt.randomize_pick = false;
+    }
     else if (eq_cstr (arg, "-max-depth")) {
       if (!xget_uint_cstr (&opt.max_depth, argv[argi++])) {
         failout_sysCx("Argument Usage: -max-depth N");
@@ -295,7 +306,7 @@ protocon_options_rec
         opt.pick_method = opt.LCVLitePick;
       }
       else if (eq_cstr (method, "fully-random")) {
-        opt.pick_method = opt.RandomPick;
+        opt.pick_method = opt.FullyRandomPick;
       }
       else if (eq_cstr (method, "conflict")) {
         opt.pick_method = opt.ConflictPick;

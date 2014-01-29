@@ -96,6 +96,7 @@ struct State
 
 State StateOfThisProcess;
 
+#undef BailOut
 #define BailOut( ret, msg ) \
 do \
 { \
@@ -132,18 +133,18 @@ ntoh_Packet (Packet* pkt)
   pkt->enabled = ntohl (pkt->enabled);
 }
 
-static int
+Bool
 randomize(void* p, uint size) {
   static uint8_t buf[4096];
   static uint off = sizeof(buf);
   const uint buf_size = sizeof(buf);
   ssize_t nbytes;
 
-  if (size == 0)  return 0;
+  if (size == 0)  return 1;
   if (size + off <= buf_size) {
     memcpy(p, CastOff(void, buf ,+, off), size);
     off += size;
-    return 0;
+    return 1;
   }
   if (off < buf_size) {
     size -= buf_size - off;
@@ -156,7 +157,7 @@ randomize(void* p, uint size) {
   {
     fd_t urandom_fd = open("/dev/urandom", O_RDONLY);
     if (urandom_fd < 0)
-      BailOut(-1, "Failed to open /dev/urandom");
+      BailOut(0, "Failed to open /dev/urandom");
 
     nbytes = read(urandom_fd, buf, buf_size);
     nbytes += read(urandom_fd, p, size);
@@ -164,12 +165,10 @@ randomize(void* p, uint size) {
   }
 
   if (nbytes != (int)(buf_size+size))
-    BailOut(-1, "Failed to read from /dev/urandom");
+    BailOut(0, "Failed to read from /dev/urandom");
 
-  return 0;
+  return 1;
 }
-
-#define Randomize(x)  randomize((x), sizeof(*(x)))
 
   Bool
 random_Bool()

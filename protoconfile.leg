@@ -68,8 +68,13 @@ VarDecl =
 ActionExpr =
   '(' WS?
    act:Expr WS? '-->' WS?  {act.sp = list2_ccstr_Sesp ("-->", act.sp);}
-   ( vbl:VblRef WS? ':=' WS? val:Expr END_STMT WS?
-     {pushlast_Sesp (act.sp, list3_ccstr_Sesp (":=", vbl.sp, val.sp));}
+   (vbl:VblRef WS? ':=' WS?
+    (  val:Expr
+       {pushlast_Sesp (act.sp, list3_ccstr_Sesp (":=", vbl.sp, val.sp));}
+     | val_wild:WILD
+       {pushlast_Sesp (act.sp, list3_ccstr_Sesp (":=", vbl.sp, val_wild.sp));}
+    )
+    END_STMT WS?
    )+
    ')'
    {$$ = act;}
@@ -96,6 +101,13 @@ PuppetActionDef =
   END_STMT
   ;
 
+ForbidActionDef =
+  'forbid' (WS ACTION | ':') WS? act:ActionExpr
+  {yy->st->forbid_action (act.sp);}
+  (WS? (',' WS?)? act2:ActionExpr {yy->st->forbid_action (act2.sp);} )*
+  END_STMT
+  ;
+
 ProcDecl =
   'process' WS pc_name:ID '[' WS? idx_name:ID WS? IN WS? npcs:NatDom WS? ']'
   {yy->st->add_processes(pc_name.sp, idx_name.sp, npcs.sp);}
@@ -112,7 +124,7 @@ ProcDecl =
     |
     SymmetricAccess WS?
   )+
-  ((ShadowActionDef | DirectActionDef | PuppetActionDef)
+  ((ShadowActionDef | DirectActionDef | PuppetActionDef | ForbidActionDef)
    WS?
   )*
   ( LEGIT WS? legit:Expr END_STMT WS?
@@ -127,8 +139,8 @@ ProcDecl =
 
 SymmetricAccess =
   'for' WS let_name:ID WS? IN WS?
-  '{#' WS? let_vals:ID  {let_vals.sp = list1_Sesp (let_vals.sp);}
-   WS? (',' WS? let_val:ID  {pushlast_Sesp (let_vals.sp, let_val.sp);} WS?)*
+  '{#' WS? let_vals:Expr  {let_vals.sp = list1_Sesp (let_vals.sp);}
+   WS? (',' WS? let_val:Expr  {pushlast_Sesp (let_vals.sp, let_val.sp);} WS?)*
   '#}' WS?
   '{' WS?
   {
@@ -141,7 +153,9 @@ SymmetricAccess =
       if (!obliv_spec.multiset_expression.empty_ck()) {
         obliv_spec.multiset_expression += ", ";
       }
-      obliv_spec.multiset_expression += ccstr_of_Sesp (car_of_Sesp (vals_sp));
+      Cx::String val_expression;
+      yy->st->string_expression(val_expression, car_of_Sesp (vals_sp));
+      obliv_spec.multiset_expression += val_expression;
       vals_sp = cdr_of_Sesp (vals_sp);
     }
   }
@@ -405,7 +419,13 @@ ACTION = 'act:' | 'action:' ;
 
 END_STMT = WS? ';' ;
 
-ID = < [A-Za-z_][0-9A-Za-z_]* >
+WILD = '_'
+  {
+    $$.sp = list1_Sesp (make_ccstr_Sesp (yy->st->spctx, "wild"));
+    $$.int_ck = 1;
+  }
+
+ID = < [A-Za-z][0-9A-Za-z_]* >
   {
     $$.sp = make_cstr_Sesp (yy->st->spctx, yytext);
     $$.int_ck = 1;

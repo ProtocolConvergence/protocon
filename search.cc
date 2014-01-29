@@ -3,7 +3,7 @@
 #include "xnsys.hh"
 #include <algorithm>
 
-#include "cx/urandom.h"
+#include "cx/urandom.hh"
 #include "cx/fileb.hh"
 #include "opt.hh"
 #include "pla.hh"
@@ -11,6 +11,7 @@
 #include "stabilization.hh"
 #include "synthesis.hh"
 #include <signal.h>
+#include <errno.h>
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -104,7 +105,7 @@ AddConvergence(vector<uint>& ret_actions,
     }
 
     uint next_idx;
-    if (!opt.random_one_shot || bt_stack.sz() < opt.max_height) {
+    if (opt.max_height == 0 || bt_stack.sz() < opt.max_height) {
       next_idx = stack_idx + 1;
       if (next_idx == bt_stack.sz())
         bt_stack.push(PartialSynthesis(&synctx));
@@ -327,6 +328,14 @@ static
 done_ck (void* dat)
 {
   (void) dat;
+
+  if (0 == remove("kill-protocon")) {
+    done_flag = true;;
+  }
+  else {
+    errno = 0;
+  }
+
   return done_flag;
 }
 
@@ -413,6 +422,7 @@ initialize_conflicts(ConflictFamily& conflicts,
   {
     conflicts.all_conflicts(flat_conflicts);
     Cx::URandom urandom;
+    urandom.use_system_urandom(global_opt.system_urandom);
     urandom.shuffle(&flat_conflicts[0], flat_conflicts.sz());
   }
   else
@@ -466,7 +476,7 @@ stabilization_search(vector<uint>& ret_actions,
   }
 
 #ifdef _OPENMP
-  if (global_opt.search_method == global_opt.SimpleBacktrackSearch)
+  if (global_opt.search_method == global_opt.SerialBacktrackSearch)
     omp_set_num_threads(1);
   if (exec_opt.task == ProtoconOpt::VerifyTask && exec_opt.xfilepaths.sz()==1)
     omp_set_num_threads(1);
@@ -487,12 +497,6 @@ stabilization_search(vector<uint>& ret_actions,
 #pragma omp barrier
   opt.sys_pcidx = PcIdx;
   opt.sys_npcs = NPcs;
-  opt.random_one_shot = true;
-
-  if (opt.search_method == opt.SimpleBacktrackSearch) {
-    opt.random_one_shot = false;
-    opt.ntrials = 1;
-  }
 
   if (!!exec_opt.log_ofilename) {
     Cx::String ofilename( exec_opt.log_ofilename );

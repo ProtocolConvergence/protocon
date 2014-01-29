@@ -123,6 +123,22 @@ interactive(const Xn::Sys& sys)
     {
       usim.assign(topo, line_xf);
     }
+    else if (skip_cstr_XFile(line_xf, "topo"))
+    {
+      for (uint pcidx = 0; pcidx < topo.pcs.sz(); ++pcidx) {
+        const Xn::Pc& pc = topo.pcs[pcidx];
+        of << name_of(pc) << " {";
+        for (uint i = 0; i < pc.rvbls.sz(); ++i) {
+          if (pc.symm->write_flags[i])
+            of << " write: ";
+          else
+            of << " read: ";
+          of << name_of(*pc.rvbls[i]) << ";";
+        }
+        of << " }" << of.endl();
+      }
+      of << of.endl();
+    }
     else if (skip_cstr_XFile(line_xf, "show-img"))
     {
       Cx::Table<Cx::String> lines;

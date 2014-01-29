@@ -117,6 +117,7 @@ public:
   uint guard(uint vbl_idx) const;
   uint assign(uint vbl_idx) const;
   uint aguard(uint vbl_idx) const;
+  void swap_vals(uint ridx_a, uint ridx_b);
 };
 
 class PcSymm {
@@ -136,6 +137,7 @@ public:
 
   Cx::PFmla shadow_pfmla;
   Cx::PFmla direct_pfmla;
+  Cx::PFmla forbid_pfmla;
 
   uint act_idx_offset;
   uint n_possible_acts;
@@ -147,6 +149,7 @@ public:
   PcSymm()
     : shadow_pfmla( false )
     , direct_pfmla( false )
+    , forbid_pfmla( false )
   {}
 
   String vbl_name(uint i) const {
@@ -162,12 +165,39 @@ public:
   void actions(Cx::Table<uint>& ret_actions, Cx::PFmlaCtx& ctx) const;
 };
 
+inline String name_of(const Pc& pc) {
+  return pc.symm->spec->name + "[" + pc.symm_idx + "]";
+}
+
 inline uint ActSymm::guard(uint vbl_idx) const
 { return this->vals[vbl_idx]; }
 inline uint ActSymm::assign(uint vbl_idx) const
 { return this->vals[this->pc_symm->rvbl_symms.sz() + vbl_idx]; }
 inline uint ActSymm::aguard(uint vbl_idx) const
 { return this->guard(this->pc_symm->wmap[vbl_idx]); }
+inline void ActSymm::swap_vals(uint ridx_a, uint ridx_b)
+{
+  SwapT( uint, this->vals[ridx_a], this->vals[ridx_b] );
+  if (this->pc_symm->write_flags[ridx_a] ||
+      this->pc_symm->write_flags[ridx_b])
+  {
+    Claim( this->pc_symm->write_flags[ridx_a] );
+    Claim( this->pc_symm->write_flags[ridx_b] );
+    uint widx_a = 0;
+    uint widx_b = 0;
+    for (uint i = 0; i < this->pc_symm->wmap.sz(); ++i) {
+      if (this->pc_symm->wmap[i] == ridx_a) {
+        widx_a = this->pc_symm->rvbl_symms.sz() + i;
+      }
+      if (this->pc_symm->wmap[i] == ridx_b) {
+        widx_b = this->pc_symm->rvbl_symms.sz() + i;
+      }
+    }
+    Claim2( widx_a ,!=, 0 );
+    Claim2( widx_b ,!=, 0 );
+    SwapT( uint, this->vals[widx_a], this->vals[widx_b] );
+  }
+}
 
 class Net {
 public:

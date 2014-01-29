@@ -22,6 +22,10 @@ public:
   Cx::PFmla deadlockPF;
   Set<uint> candidates;
 public:
+  DeadlockConstraint() :
+    deadlockPF(false)
+  {}
+
   explicit DeadlockConstraint(const Cx::PFmla& _deadlockPF) :
     deadlockPF(_deadlockPF)
   {}
@@ -37,7 +41,7 @@ public:
     LCVHeavyPick,
     LCVJankPick,
     QuickPick,
-    RandomPick,
+    FullyRandomPick,
     ConflictPick,
     NPickMethods
   };
@@ -48,9 +52,9 @@ public:
     NNicePolicies
   };
   enum SearchMethod {
-    SimpleBacktrackSearch,
+    SerialBacktrackSearch,
     RankShuffleSearch,
-    RandomBacktrackSearch,
+    ParallelBacktrackSearch,
     NSearchMethods
   };
 
@@ -62,7 +66,8 @@ public:
   bool verify_found;
 
   // For parallel algorithms.
-  bool random_one_shot;
+  bool randomize_pick;
+  bool system_urandom;
   uint max_depth;
   uint max_height;
   uint sys_pcidx;
@@ -75,12 +80,13 @@ public:
 
   AddConvergenceOpt() :
     pick_method( MCVLitePick )
-    , search_method( RandomBacktrackSearch )
+    , search_method( ParallelBacktrackSearch )
     , nicePolicy( NilNice )
     , pick_back_reach( false )
     , log( &DBogOF )
     , verify_found( true )
-    , random_one_shot( false )
+    , randomize_pick( true )
+    , system_urandom( false )
     , max_depth( 0 )
     , max_height( 3 )
     , sys_pcidx( 0 )

@@ -33,6 +33,9 @@ candidate_actions(vector<uint>& candidates, const Xn::Sys& sys)
     topo.action(act, actidx);
     const Xn::PcSymm& pc_symm = *act.pc_symm;
     const Cx::PFmla& act_pf = topo.action_pfmla(actidx);
+    if (add) {
+      add = !act_pf.overlap_ck(pc_symm.forbid_pfmla);
+    }
 
     // Check for self-loops.
     if (add) {
@@ -164,29 +167,53 @@ RankDeadlocksMCV(vector<DeadlockConstraint>& dlsets,
   dlsets.clear();
   dlsets.push_back(DeadlockConstraint(deadlockPF));
 
-  for (uint i = 0; i < actions.size(); ++i) {
-    PF guard( topo.action_pfmla(actions[i]).pre() );
+  Cx::LgTable< Set<uint> > actidcs;
+  {
+    Cx::Map< Cx::Tuple<uint,2>, uint > same_pre;
+    for (uint i = 0; i < actions.size(); ++i) {
+      const uint actidx = actions[i];
+      Xn::ActSymm act;
+      topo.action(act, actions[i]);
+      Cx::Tuple<uint,2> key;
+      key[0] = topo.pc_symms.index_of(act.pc_symm);
+      key[1] = act.pre_idx;
 
-    for (uint j = dlsets.size(); j > 0; --j) {
-      PF resolved( dlsets[j-1].deadlockPF & guard );
-
-      if (resolved.sat_ck()) {
-        dlsets[j-1].deadlockPF -= resolved;
-        if (j == dlsets.size()) {
-          dlsets.push_back(DeadlockConstraint(resolved));
-        }
-        else {
-          dlsets[j].deadlockPF |= resolved;
-        }
+      const uint* j = same_pre.lookup(key);
+      if (j) {
+        actidcs[*j] << actidx;
+      }
+      else {
+        same_pre[key] = actidcs.sz();
+        actidcs.push(Set<uint>(actidx));
       }
     }
   }
 
-  for (uint i = 0; i < actions.size(); ++i) {
-    PF guard( topo.action_pfmla(actions[i]).pre() );
+  for (uint i = 0; i < actidcs.sz(); ++i) {
+    const uint actidx = actidcs[i].elem();
+    const Cx::PFmla& guard = topo.action_pfmla(actidx).pre();
+
+    for (uint j = dlsets.size(); j > 0; --j) {
+      const Cx::PFmla& resolved = dlsets[j-1].deadlockPF & guard;
+
+      if (resolved.sat_ck()) {
+        //dlsets[j-1].deadlockPF -= guard;
+        dlsets[j-1].deadlockPF -= resolved;
+        const uint dst_idx = j-1 + actidcs[i].sz();
+        if (dst_idx >= dlsets.size()) {
+          dlsets.resize(dst_idx+1);
+        }
+        dlsets[dst_idx].deadlockPF |= resolved;
+      }
+    }
+  }
+
+  for (uint i = 0; i < actidcs.sz(); ++i) {
+    const uint actidx = actidcs[i].elem();
+    const Cx::PFmla& guard = topo.action_pfmla(actidx).pre();
     for (uint j = 0; j < dlsets.size(); ++j) {
-      if ((guard & dlsets[j].deadlockPF).sat_ck()) {
-        dlsets[j].candidates << actions[i];
+      if (guard.overlap_ck(dlsets[j].deadlockPF)) {
+        dlsets[j].candidates |= actidcs[i];
       }
     }
   }
@@ -259,18 +286,19 @@ ReviseDeadlocksMCV(vector<DeadlockConstraint>& dlsets,
 
       Set<uint>::iterator it;
 
-      uint minIdx = i;
+      uint minidx = i;
       for (it = diffCandidates1.begin(); it != diffCandidates1.end(); ++it) {
         const uint actId = *it;
         const PF& candidateGuardPF = topo.action_pfmla(actId).pre();
-        for (uint j = minIdx; j < diffDeadlockSets.size(); ++j) {
+        Claim2( minidx ,>, 0 );
+        for (uint j = minidx; j < diffDeadlockSets.size(); ++j) {
           const PF& diffPF =
             (candidateGuardPF & diffDeadlockSets[j].deadlockPF);
           if (!diffPF.tautology_ck(false)) {
             diffDeadlockSets[j-1].deadlockPF |= diffPF;
             diffDeadlockSets[j].deadlockPF -= diffPF;
-            if (j == minIdx) {
-              -- minIdx;
+            if (j == minidx) {
+              -- minidx;
             }
           }
         }
@@ -288,14 +316,14 @@ ReviseDeadlocksMCV(vector<DeadlockConstraint>& dlsets,
           diffDeadlockSets[i].candidates << actId;
           continue;
         }
-        for (uint j = minIdx; j < diffDeadlockSets.size(); ++j) {
+        for (uint j = minidx; j < diffDeadlockSets.size(); ++j) {
           if (candidateGuardPF.overlap_ck(diffDeadlockSets[j].deadlockPF)) {
             diffDeadlockSets[j].candidates << actId;
           }
         }
       }
 
-      for (uint j = minIdx; j < i; ++j) {
+      for (uint j = minidx; j < i; ++j) {
         dlsets[j].deadlockPF |= diffDeadlockSets[j].deadlockPF;
         dlsets[j].candidates |= diffDeadlockSets[j].candidates;
       }
@@ -326,7 +354,7 @@ PickActionMCV(uint& ret_actidx,
   typedef AddConvergenceOpt Opt;
   const Opt::PickActionHeuristic& pick_method = opt.pick_method;
 
-  if (pick_method == Opt::RandomPick) {
+  if (pick_method == Opt::FullyRandomPick) {
     for (uint inst_idx = 0; inst_idx < tape.sz(); ++inst_idx) {
       if (tape[inst_idx].candidates.size() > 0) {
         uint idx = tape[inst_idx].ctx->urandom.pick(tape[inst_idx].candidates.size());
@@ -376,6 +404,17 @@ PickActionMCV(uint& ret_actidx,
     }
   }
 
+  if (candidates.sz() == 0) {
+    for (uint inst_idx = 0; inst_idx < tape.sz(); ++inst_idx) {
+      if (tape[inst_idx].candidates.size() > 0) {
+        candidates |= Set<uint>(tape[inst_idx].candidates);
+        mcv_inst_idx = inst_idx;
+        break;
+      }
+    }
+  }
+  Claim2( candidates.sz() ,>, 0 );
+
   const PartialSynthesis& inst = tape[mcv_inst_idx];
   *inst.log
     << " (lvl " << inst.bt_level
@@ -385,7 +424,7 @@ PickActionMCV(uint& ret_actidx,
     << ") (rem-sz " << candidates.sz()
     << ")" << inst.log->endl();
 
-  if (opt.random_one_shot) {
+  if (opt.randomize_pick) {
     vector<uint> candidates_vec;
     candidates.fill(candidates_vec);
     uint idx = inst.ctx->urandom.pick(candidates_vec.size());
@@ -897,7 +936,9 @@ PartialSynthesis::check_forward(Set<uint>& adds, Set<uint>& dels, Set<uint>& rej
     uint actidx = this->candidates[i];
     if (dels.elem_ck(actidx))  continue;
 
-    if (topo.action_pfmla(actidx).subseteq_ck(lo_xn_pre))
+    const Cx::PFmla& act_xn = topo.action_pfmla(actidx);
+
+    if (act_xn.subseteq_ck(lo_xn_pre))
     {
       if (false) {
         Xn::ActSymm act;
@@ -1088,6 +1129,8 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels, Set<uin
     return false;
   }
 
+  const Cx::PFmla old_deadlock_pfmla( this->deadlockPF );
+
   this->deadlockPF =
     ((~this->hi_invariant) | sys.shadow_pfmla.pre())
     - this->lo_xn.pre();
@@ -1110,7 +1153,9 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels, Set<uin
   }
 
   bool revise = true;
-  if (sys.shadow_puppet_synthesis_ck()) {
+  if (sys.shadow_puppet_synthesis_ck() &&
+      !(this->deadlockPF.subseteq_ck(old_deadlock_pfmla)))
+  {
     RankDeadlocksMCV(this->mcv_deadlocks,
                      sys.topology,
                      this->candidates,
@@ -1197,6 +1242,7 @@ SynthesisCtx::init(const Xn::Sys& sys,
   SynthesisCtx& synctx = *this;
   synctx.opt = opt;
   synctx.log = opt.log;
+  urandom.use_system_urandom(opt.system_urandom);
 
   for (uint pcidx = 0; pcidx < topo.pc_symms.sz(); ++pcidx)
   {

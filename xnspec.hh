@@ -99,10 +99,10 @@ public:
   }
 
   uint& operator()(uint i, uint j)
-  { return t[i+j*nvbls]; }
+  { return t[i*nlinks+j]; }
 
   const uint& operator()(uint i, uint j) const
-  { return t[i+j*nvbls]; }
+  { return t[i*nlinks+j]; }
 
   bool elem_ck(uint e) const
   { return t.elem_ck(e); }
@@ -150,6 +150,7 @@ public:
   Cx::Table<ObliviousSpec> oblivious_specs;
   Cx::String nmembs_expression;
   Cx::Table<Cx::String> shadow_act_strings;
+  Cx::Table<Cx::String> forbid_act_strings;
 };
 
 class Spec {

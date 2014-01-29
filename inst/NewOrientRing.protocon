@@ -21,6 +21,8 @@ process P[i <- Nat % N]
     write: orientation[2*id+(j-id+1)/2];
   }
   write: color[id], phase[id];
+  forbid: ( 1==1 --> orientation[2*id]:=1; orientation[2*id+1]:=1; color[id]:=_; phase[id]:=_; );
+  forbid: ( 1==1 --> orientation[2*id]:=0; orientation[2*id+1]:=0; color[id]:=_; phase[id]:=_; );
   //legit: orientation[2*id] != orientation[2*id+1];
 }
 

@@ -178,28 +178,13 @@ ProtoconFile::add_access(Sesp vbl_sp, Bit write)
 }
 
   bool
-ProtoconFile::add_action(Sesp act_sp, Xn::Vbl::ShadowPuppetRole role)
+ProtoconFile::parse_action(Cx::PFmla& act_pf, Sesp act_sp)
 {
   Sign good = 1;
+  Claim( pc_symm );
   Xn::Net& topo = sys->topology;
-
-  if (!pc_symm) {
-    allgood = false;
-    return false;
-  }
-  Cx::PFmla act_pf( false );
+  act_pf = false;
   const Cx::String& idx_name = pc_symm_spec->idx_name;
-  DoLegit( good, "" )
-  {
-    if (role != Xn::Vbl::Puppet) {
-      Cx::String act_expression;
-      good = string_expression (act_expression, act_sp);
-      if (good) {
-        pc_symm_spec->shadow_act_strings.push(act_expression);
-      }
-    }
-  }
-
   for (uint i = 0; good && i < pc_symm->membs.sz(); ++i) {
     //Xn::Pc& pc = *pc_symm->membs[i];
     index_map[idx_name] = i;
@@ -231,21 +216,56 @@ ProtoconFile::add_action(Sesp act_sp, Xn::Vbl::ShadowPuppetRole role)
       Cx::IntPFmla val;
       DoLegit( good, "eval variable" )
         good = eval_vbl(&vbl, vbl_sp);
+      bool wild = false;
       DoLegit( good, "eval value" )
-        good = eval(val, val_sp);
+      {
+        if (list_ck_Sesp(val_sp) && eq_cstr ("wild", ccstr_of_Sesp (car_of_Sesp (val_sp))))
+          wild = true;
+        else
+          good = eval(val, val_sp);
+      }
       if (!good)  break;
-      val %= vbl->symm->domsz;
       const Cx::PFmlaVbl& pf_vbl = topo.pfmla_vbl(*vbl);
-      assign_pf = (assign_pf.smooth(pf_vbl)
-                   && pf_vbl.img_eq(val));
+      if (wild) {
+        assign_pf = assign_pf.smooth(pf_vbl);
+      }
+      else {
+        val %= vbl->symm->domsz;
+        assign_pf = (assign_pf.smooth(pf_vbl)
+                     && pf_vbl.img_eq(val));
+      }
     }
     act_pf |= guard_pf & assign_pf;
   }
-  DoLegit(good, "self-loop")
-  {
+  if (good)
     index_map.erase(idx_name);
-    good = !act_pf.overlap_ck(topo.identity_xn);
+  return update_allgood (good);
+}
+
+  bool
+ProtoconFile::add_action(Sesp act_sp, Xn::Vbl::ShadowPuppetRole role)
+{
+  Sign good = 1;
+  Claim( pc_symm );
+  Xn::Net& topo = sys->topology;
+
+  DoLegit( good, "" )
+  {
+    if (role != Xn::Vbl::Puppet) {
+      Cx::String act_expression;
+      good = string_expression (act_expression, act_sp);
+      if (good) {
+        pc_symm_spec->shadow_act_strings.push(act_expression);
+      }
+    }
   }
+
+  Cx::PFmla act_pf( false );
+  DoLegit( good, "parse action" )
+    good = parse_action(act_pf, act_sp);
+
+  DoLegit(good, "self-loop")
+    good = !act_pf.overlap_ck(topo.identity_xn);
 
   DoLegit(good, "")
   {
@@ -263,6 +283,31 @@ ProtoconFile::add_action(Sesp act_sp, Xn::Vbl::ShadowPuppetRole role)
       sys->direct_pfmla |= act_pf;
     }
   }
+
+  return update_allgood (good);
+}
+
+  bool
+ProtoconFile::forbid_action(Sesp act_sp)
+{
+  Sign good = 1;
+  Claim( pc_symm );
+
+  DoLegit( good, "" )
+  {
+    Cx::String act_expression;
+    good = string_expression (act_expression, act_sp);
+    if (good) {
+      pc_symm_spec->forbid_act_strings.push(act_expression);
+    }
+  }
+
+  Cx::PFmla act_pf( false );
+  DoLegit( good, "parse action" )
+    good = parse_action(act_pf, act_sp);
+
+  DoLegit( good, "" )
+    pc_symm->forbid_pfmla |= act_pf;
 
   return update_allgood (good);
 }
@@ -443,6 +488,10 @@ ProtoconFile::string_expression(Cx::String& ss, Sesp a)
       string_expression (ss, car_of_Sesp (b));
       ss += ";";
     }
+  }
+  else if (eq_cstr (key, "wild"))
+  {
+    ss += "_";
   }
   else if (eq_cstr (key, "NatDom")) {
     ss += "Nat % ";

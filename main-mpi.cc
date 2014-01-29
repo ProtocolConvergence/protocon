@@ -104,7 +104,6 @@ stabilization_search(vector<uint>& ret_actions,
 
   opt.sys_pcidx = PcIdx;
   opt.sys_npcs = NPcs;
-  opt.random_one_shot = true;
   if (!!exec_opt.log_ofilename) {
     Cx::String ofilename( exec_opt.log_ofilename );
     ofilename += ".";

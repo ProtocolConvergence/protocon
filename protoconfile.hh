@@ -95,7 +95,11 @@ public:
 
   bool add_access(Sesp vbl_sp, Bit write);
 
+  bool parse_action(Cx::PFmla& act_pf, Sesp act_sp);
+
   bool add_action(Sesp act_sp, Xn::Vbl::ShadowPuppetRole role);
+
+  bool forbid_action(Sesp act_sp);
 
   bool add_pc_legit(Sesp legit_sp);
 

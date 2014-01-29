@@ -224,6 +224,13 @@ oput_protocon_pc_acts (Cx::OFile& of, const Xn::PcSymm& pc_symm,
     }
     of << "    ;\n";
   }
+  if (pc_symm_spec.forbid_act_strings.sz() > 0) {
+    of << "  forbid action:\n";
+    for (uint i = 0; i < pc_symm_spec.forbid_act_strings.sz(); ++i) {
+      of << "    ( " << pc_symm_spec.forbid_act_strings[i] << " )\n";
+    }
+    of << "    ;\n";
+  }
 
   // Return early if there are no puppet actions.
   {
@@ -325,9 +332,11 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys, const vector<uint>& actio
       << "] <- Nat % " << vbl_symm.spec->domsz_expression << ";\n";
   }
 
-  Cx::Table<Xn::ActSymm> acts( actions.size() );
+  Cx::Table<Xn::ActSymm> acts;
   for (uint i = 0; i < actions.size(); ++i) {
-    topo.action(acts[i], actions[i]);
+    for (uint j = 0; j < topo.represented_actions[actions[i]].sz(); ++j) {
+      topo.action(acts.grow1(), topo.represented_actions[actions[i]][j]);
+    }
   }
 
   for (uint i = 0; i < topo.pc_symms.sz(); ++i) {

@@ -48,11 +48,15 @@ Net::commit_initialization()
   }
 
   this->n_possible_acts = ntotal;
+  represented_actions.resize(ntotal);
+  for (uint actidx = 0; actidx < ntotal; ++actidx) {
+    uint rep_actidx = representative_action_index(actidx);
+    represented_actions[rep_actidx].push(actidx);
+  }
   if (this->lightweight)
     return;
   act_pfmlas.resize(ntotal);
   pure_shadow_pfmlas.resize(ntotal);
-  represented_actions.resize(ntotal);
   for (uint i = 0; i < ntotal; ++i) {
     this->make_action_pfmla(i);
   }
@@ -115,7 +119,7 @@ Net::commit_variables()
     VblSymm& symm = vbl_symms[i];
     sizes[i][0] = symm.membs.sz();
     sizes[i][1] = i;
-    if (symm.membs.sz() > refsz) {
+    if (refsz == 1 && symm.membs.sz() > refsz) {
       refsz = symm.membs.sz();
     }
     if (symm.membs.sz() > 1 && symm.membs.sz() < refsz) {
@@ -336,9 +340,32 @@ Net::action_img_index(uint actidx) const
   uint
 Net::representative_action_index(uint actidx) const
 {
-  uint rep_actidx = actidx;
+  Xn::ActSymm act;
+  this->action(act, actidx);
+  const Xn::PcSymm& pc_symm = *act.pc_symm;
+  const Xn::PcSymmSpec& pc_symm_spec = *pc_symm.spec;
+
+  bool changed = true;
+  while (changed) {
+    changed = false;
+    for (uint obliv_idx = 0; obliv_idx < pc_symm_spec.oblivious_specs.sz(); ++obliv_idx) {
+      const ObliviousSpec& ob = pc_symm_spec.oblivious_specs[obliv_idx];
+
+      for (uint link_idx = 0; link_idx < ob.nlinks-1; ++link_idx) {
+        Xn::ActSymm act_tmp( act );
+        for (uint vbl_idx = 0; vbl_idx < ob.nvbls; ++vbl_idx) {
+          act_tmp.swap_vals(ob(vbl_idx, link_idx), ob(vbl_idx, link_idx+1));
+        }
+        if (act_tmp.vals < act.vals) {
+          act = act_tmp;
+          changed = true;
+        }
+      }
+    }
+  }
+
+  uint rep_actidx = this->action_index(act);
   Claim2( rep_actidx ,<=, actidx );
-  // TODO: much magic
   return rep_actidx;
 }
 
@@ -455,9 +482,11 @@ Sys::commit_initialization()
     const PcSymm& pc_symm = topo.pc_symms[i];
     Cx::Table<uint> tmp_actions;
     pc_symm.actions(tmp_actions, topo.pfmla_ctx);
+    Cx::Set<uint> tmp_action_set;
     for (uint j = 0; j < tmp_actions.sz(); ++j) {
-      this->actions.push_back(tmp_actions[j]);
+      tmp_action_set << topo.representative_action_index(tmp_actions[j]);
     }
+    this->actions.assign(tmp_action_set.begin(), tmp_action_set.end());
   }
 #else
   for (uint act_idx = 0; act_idx < topo.n_possible_acts; ++act_idx) {
@@ -675,7 +704,6 @@ Xn::Net::make_action_pfmla(uint actidx)
 
   uint rep_actidx = representative_action_index(actidx);
 
-  represented_actions[rep_actidx].push(actidx);
   if (rep_actidx == actidx) {
     act_pfmlas[actidx] = xn;
     pure_shadow_pfmlas[actidx] = pure_shadow_pfmla;
