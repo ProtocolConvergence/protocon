@@ -122,7 +122,7 @@ ProcDecl =
     )
     END_STMT WS?
     |
-    SymmetricAccess WS?
+    SymmetricLinks WS?
   )+
   ((ShadowActionDef | DirectActionDef | PuppetActionDef | ForbidActionDef)
    WS?
@@ -137,28 +137,30 @@ ProcDecl =
   '}'
   ;
 
-SymmetricAccess =
-  'for' WS let_name:ID WS? IN WS?
-  '{#' WS? let_vals:Expr  {let_vals.sp = list1_Sesp (let_vals.sp);}
-   WS? (',' WS? let_val:Expr  {pushlast_Sesp (let_vals.sp, let_val.sp);} WS?)*
+ValueList =
+  '(' WS? vals:Expr WS?  { vals.sp = list1_Sesp (vals.sp); }
+  (',' WS? val:Expr WS?  { pushlast_Sesp (vals.sp, val.sp); })*
+  ')'
+  { $$ = vals; }
+  ;
+
+SymmetricLinks =
+  'for' WS
+  (  let_names:ID  { let_names.sp = list1_Sesp (let_names.sp); }
+     WS? IN WS?
+     '{#' WS? let_vals_list:Expr WS?  {let_vals_list.sp = list1_Sesp (list1_Sesp (let_vals_list.sp));}
+     (',' WS? let_val:Expr WS?  {pushlast_Sesp (let_vals_list.sp, list1_Sesp (let_val.sp));} )*
+   |
+     '(' let_names:ID  { let_names.sp = list1_Sesp (let_names.sp); }
+     WS?
+     (',' WS? let_name:ID  {pushlast_Sesp (let_names.sp, let_name.sp);} WS?)*
+     ')' WS? IN WS? '{#' WS?
+     let_vals_list:ValueList WS?  {let_vals_list.sp = list1_Sesp (let_vals_list.sp);}
+     (',' WS? let_vals:ValueList WS?  {pushlast_Sesp (let_vals_list.sp, let_vals.sp);} )*
+  )
   '#}' WS?
   '{' WS?
-  {
-    yy->st->pc_symm_spec->oblivious_specs.push(Xn::ObliviousSpec(sz_of_Sesp (let_vals.sp)));
-    Xn::ObliviousSpec& obliv_spec = yy->st->pc_symm_spec->oblivious_specs.top();
-    obliv_spec.let_expression = ccstr_of_Sesp (let_name.sp);
-
-    Sesp vals_sp = let_vals.sp;
-    while (!nil_ck_Sesp (vals_sp)) {
-      if (!obliv_spec.multiset_expression.empty_ck()) {
-        obliv_spec.multiset_expression += ", ";
-      }
-      Cx::String val_expression;
-      yy->st->string_expression(val_expression, car_of_Sesp (vals_sp));
-      obliv_spec.multiset_expression += val_expression;
-      vals_sp = cdr_of_Sesp (vals_sp);
-    }
-  }
+  { yy->st->add_symmetric_links(let_names.sp, let_vals_list.sp); }
   ( (  'read:'  WS? u:VblRef WS?  {u.sp = list2_ccstr_Sesp ("r", u.sp);}
        (','     WS? v:VblRef WS?  {pushlast_Sesp (u.sp, v.sp);} )*
      | 'write:' WS? u:VblRef WS?  {u.sp = list2_ccstr_Sesp ("w", u.sp);}
@@ -166,27 +168,10 @@ SymmetricAccess =
     )
     END_STMT WS?
     {
-      Xn::ObliviousSpec& obliv_spec = yy->st->pc_symm_spec->oblivious_specs.top();
       Sesp vbls_sp = u.sp;
       Bool own = eq_cstr ("w", ccstr_of_Sesp (car_of_Sesp (vbls_sp)));
       vbls_sp = cdr_of_Sesp (vbls_sp);
-
-      while (!nil_ck_Sesp (vbls_sp)) {
-        Sesp vals_sp = let_vals.sp;
-        Cx::Table<uint> vbl_idcs;
-        while (!nil_ck_Sesp (vals_sp)) {
-          yy->st->add_scope_let(let_name.sp, car_of_Sesp (vals_sp));
-          vbl_idcs.push(yy->st->pc_symm_spec->rvbl_symms.sz());
-          yy->st->add_access(car_of_Sesp (vbls_sp), own ? 1 : 0);
-          vals_sp = cdr_of_Sesp (vals_sp);
-          yy->st->del_scope_let(let_name.sp);
-        }
-
-        Cx::String index_expression;
-        yy->st->string_expression(index_expression, caddar_of_Sesp (vbls_sp));
-        obliv_spec.add_oblivious(vbl_idcs, index_expression);
-        vbls_sp = cdr_of_Sesp (vbls_sp);
-      }
+      yy->st->add_symmetric_access(let_names.sp, let_vals_list.sp, vbls_sp, own);
     }
   )+
  '}'

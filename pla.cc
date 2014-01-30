@@ -109,7 +109,7 @@ oput_protocon_pc_vbls (Cx::OFile& of, const Xn::PcSymm& pc_symm)
           << " <- {# " << obliv_spec.multiset_expression << " #}\n";
         of << "  {\n";
         for (uint v = 0; v < obliv_spec.nvbls; ++v) {
-          uint vidx = obliv_spec(0, v);
+          uint vidx = obliv_spec(v, 0);
           of << "    "
             << (pc_symm.write_flags[vidx] ? "write" : "read") << ": "
             << pc_symm.spec->rvbl_symms[vidx]->name

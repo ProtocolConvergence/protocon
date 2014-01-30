@@ -95,6 +95,10 @@ public:
 
   bool add_access(Sesp vbl_sp, Bit write);
 
+  bool add_symmetric_links(Sesp let_names_sp, Sesp let_vals_list_sp);
+
+  bool add_symmetric_access(Sesp let_names_sp, Sesp let_vals_list_sp, Sesp vbls_sp, Bit write);
+
   bool parse_action(Cx::PFmla& act_pf, Sesp act_sp);
 
   bool add_action(Sesp act_sp, Xn::Vbl::ShadowPuppetRole role);

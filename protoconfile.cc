@@ -178,6 +178,105 @@ ProtoconFile::add_access(Sesp vbl_sp, Bit write)
 }
 
   bool
+ProtoconFile::add_symmetric_links(Sesp let_names_sp, Sesp let_vals_list_sp)
+{
+  Sign good = 1;
+  pc_symm_spec->oblivious_specs.push(Xn::ObliviousSpec(sz_of_Sesp (let_vals_list_sp)));
+  Xn::ObliviousSpec& obliv_spec = pc_symm_spec->oblivious_specs.top();
+  if (sz_of_Sesp (let_names_sp) == 1) {
+    obliv_spec.let_expression = ccstr_of_Sesp (car_of_Sesp (let_names_sp));
+    Sesp let_vals_sp = let_vals_list_sp;
+    while (!nil_ck_Sesp (let_vals_sp)) {
+      obliv_spec.multiset_expression.push_delim("", ", ");
+      Cx::String val_expression;
+      string_expression(val_expression, caar_of_Sesp (let_vals_sp));
+      obliv_spec.multiset_expression += val_expression;
+      let_vals_sp = cdr_of_Sesp (let_vals_sp);
+    }
+    return update_allgood (good);
+  }
+
+  Sesp let_name_sp = let_names_sp;
+  while (!nil_ck_Sesp (let_name_sp)) {
+    obliv_spec.let_expression.push_delim("(", ", ");
+
+    obliv_spec.let_expression += ccstr_of_Sesp (car_of_Sesp (let_name_sp));
+    let_name_sp = cdr_of_Sesp (let_name_sp);
+  }
+  obliv_spec.let_expression += ")";
+
+  Sesp let_vals_sp = let_vals_list_sp;
+  while (!nil_ck_Sesp (let_vals_sp)) {
+    obliv_spec.multiset_expression.push_delim("", ", ");
+
+    Cx::String tuple_expression;
+    Sesp let_val_sp = car_of_Sesp (let_vals_sp);
+    while (!nil_ck_Sesp (let_val_sp)) {
+      tuple_expression.push_delim("(", ", ");
+
+      Cx::String val_expression;
+      DoLegit( good, "" )
+        good = string_expression(val_expression, car_of_Sesp (let_val_sp));
+      if (!good)  break;
+      tuple_expression += val_expression;
+      let_val_sp = cdr_of_Sesp (let_val_sp);
+    }
+    tuple_expression += ")";
+
+    obliv_spec.multiset_expression += tuple_expression;
+    let_vals_sp = cdr_of_Sesp (let_vals_sp);
+  }
+
+  return update_allgood (good);
+}
+
+  bool
+ProtoconFile::add_symmetric_access(Sesp let_names_sp, Sesp let_vals_list_sp,
+                                   Sesp vbls_sp, Bit write)
+{
+  Sign good = 1;
+  Xn::ObliviousSpec& obliv_spec = pc_symm_spec->oblivious_specs.top();
+
+  while (!nil_ck_Sesp (vbls_sp)) {
+    Sesp let_vals_sp = let_vals_list_sp;
+    Cx::Table<uint> vbl_idcs;
+    while (!nil_ck_Sesp (let_vals_sp)) {
+      Sesp let_name_sp = let_names_sp;
+      Sesp let_val_sp = car_of_Sesp (let_vals_sp);
+      while (good && !nil_ck_Sesp (let_name_sp)) {
+        DoLegit( good, "Tuple must be of the same size!" )
+          good = !nil_ck_Sesp (let_val_sp);
+        if (!good)  break;
+
+        add_scope_let(car_of_Sesp (let_name_sp), car_of_Sesp (let_val_sp));
+        let_name_sp = cdr_of_Sesp (let_name_sp);
+        let_val_sp = cdr_of_Sesp (let_val_sp);
+      }
+      DoLegit( good, "Tuples must be of the same size!" )
+        good = nil_ck_Sesp (let_val_sp);
+      if (!good)  break;
+
+      vbl_idcs.push(pc_symm_spec->rvbl_symms.sz());
+      add_access(car_of_Sesp (vbls_sp), write);
+
+      let_name_sp = let_names_sp;
+      while (!nil_ck_Sesp (let_name_sp)) {
+        del_scope_let(car_of_Sesp (let_name_sp));
+        let_name_sp = cdr_of_Sesp (let_name_sp);
+      }
+      let_vals_sp = cdr_of_Sesp (let_vals_sp);
+    }
+    if (!good)  break;
+
+    Cx::String index_expression;
+    string_expression(index_expression, caddar_of_Sesp (vbls_sp));
+    obliv_spec.add_oblivious(vbl_idcs, index_expression);
+    vbls_sp = cdr_of_Sesp (vbls_sp);
+  }
+  return update_allgood (good);
+}
+
+  bool
 ProtoconFile::parse_action(Cx::PFmla& act_pf, Sesp act_sp)
 {
   Sign good = 1;
