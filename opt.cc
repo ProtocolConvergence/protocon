@@ -89,9 +89,10 @@ protocon_options_rec
   Cx::OFile of( stderr_OFile() );
   while (pfxeq_cstr ("-", argv[argi])) {
     const char* arg = argv[argi++];
-    if (eq_cstr (arg, "-o-model")) {
+    if (eq_cstr (arg, "-o-promela") ||
+        eq_cstr (arg, "-o-model")) {
       if (!argv[argi]) {
-        DBog0("No path given for -o-model!!!");
+        DBog1("No path given for %s!!!", arg);
         return false;
       }
       exec_opt.model_ofilepath = argv[argi++];
@@ -131,6 +132,9 @@ protocon_options_rec
     }
     else if (eq_cstr (arg, "-interactive")) {
       exec_opt.task = ProtoconOpt::InteractiveTask;
+    }
+    else if (eq_cstr (arg, "-nop")) {
+      exec_opt.task = ProtoconOpt::NoTask;
     }
     else if (eq_cstr (arg, "-h") || eq_cstr (arg, "-help")) {
       DBog0( "See the manpage for details: man ./doc/protocon.1" );

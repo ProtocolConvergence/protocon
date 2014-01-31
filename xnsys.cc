@@ -478,16 +478,16 @@ Sys::commit_initialization()
   }
 
 #if 1
+  Cx::Set<uint> tmp_action_set;
   for (uint i = 0; i < topo.pc_symms.sz(); ++i) {
     const PcSymm& pc_symm = topo.pc_symms[i];
     Cx::Table<uint> tmp_actions;
     pc_symm.actions(tmp_actions, topo.pfmla_ctx);
-    Cx::Set<uint> tmp_action_set;
     for (uint j = 0; j < tmp_actions.sz(); ++j) {
       tmp_action_set << topo.representative_action_index(tmp_actions[j]);
     }
-    this->actions.assign(tmp_action_set.begin(), tmp_action_set.end());
   }
+  this->actions.assign(tmp_action_set.begin(), tmp_action_set.end());
 #else
   for (uint act_idx = 0; act_idx < topo.n_possible_acts; ++act_idx) {
     const Cx::PFmla& act_pfmla = topo.action_pfmla(act_idx);

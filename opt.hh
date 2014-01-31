@@ -22,6 +22,7 @@ public:
     VerifyTask,
     MinimizeConflictsTask,
     InteractiveTask,
+    NoTask,
     NExecTasks
   };
   enum MinimizeConflictsOrder {

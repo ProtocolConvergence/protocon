@@ -39,6 +39,14 @@ public:
   uint index(uint i, uint m) const {
     return umod_int (eval (i), m);
   }
+
+  bool constant_ck() const {
+    for (uint i = 1; i < membs.sz(); ++i) {
+      if (membs[i] != membs[0])
+        return false;
+    }
+    return true;
+  }
 };
 
 class LetVblMap {
@@ -145,6 +153,7 @@ class PcSymmSpec {
 public:
   Cx::String name;
   Cx::String idx_name;
+  LetVblMap let_map;
   Cx::Table<const VblSymmSpec*> rvbl_symms;
   Cx::Table<const VblSymmSpec*> wvbl_symms;
   Cx::Table<ObliviousSpec> oblivious_specs;

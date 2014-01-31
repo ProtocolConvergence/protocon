@@ -89,9 +89,9 @@ static
   void
 oput_protocon_pc_lets (Cx::OFile& of, const Xn::PcSymm& pc_symm)
 {
-  for (uint i = 0; i < pc_symm.let_map.keys.sz(); ++i) {
-    of << "  let " << pc_symm.let_map.keys[i];
-    of << " := " << pc_symm.let_map.vals[i].expression;
+  for (uint i = 0; i < pc_symm.spec->let_map.keys.sz(); ++i) {
+    of << "  let " << pc_symm.spec->let_map.keys[i];
+    of << " := " << pc_symm.spec->let_map.vals[i].expression;
     of << ";\n";
   }
 }

@@ -100,7 +100,7 @@ ProtoconFile::add_let(Sesp name_sp, Sesp val_sp)
   DoLegit( good, "finding expression" )
     good = string_expression (let_vals.expression, val_sp);
   DoLegit( good, "" )
-    pc_symm->let_map.add(name, let_vals);
+    pc_symm_spec->let_map.add(name, let_vals);
   return update_allgood (good);
 }
 
@@ -1100,7 +1100,7 @@ ProtoconFile::lookup_int(int* ret, const Cx::String& name)
   if ((bool)pc_symm) {
     const int* pcidx = index_map.lookup(pc_symm_spec->idx_name);
     if (pcidx) {
-      Xn::NatMap* vals = pc_symm->let_map.lookup(name);
+      Xn::NatMap* vals = pc_symm_spec->let_map.lookup(name);
       if (vals) {
         *ret = vals->eval(*pcidx);
         return true;

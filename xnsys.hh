@@ -124,7 +124,6 @@ class PcSymm {
 public:
   Cx::Mem<PcSymmSpec> spec;
   Cx::Table< Pc* > membs;
-  LetVblMap let_map;
   /// The rvbls should include wvbls.
   Cx::Table< const VblSymm* > rvbl_symms;
   Cx::Table< const VblSymm* > wvbl_symms;

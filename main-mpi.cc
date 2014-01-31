@@ -273,6 +273,10 @@ stabilization_search(vector<uint>& ret_actions,
       ret_actions = actions;
       *opt.log << "SOLUTION FOUND!" << opt.log->endl();
     }
+    else {
+      if (!synctx.conflicts.sat_ck())
+        set_term_flag (1);
+    }
 
     synctx.conflicts.oput_conflict_sizes(*opt.log);
     if (opt.search_method == opt.RankShuffleSearch) {

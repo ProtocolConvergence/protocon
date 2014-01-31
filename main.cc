@@ -35,6 +35,8 @@ int main(int argc, char** argv)
     lose_sysCx ();
     return 0;
   }
+  else if (exec_opt.task == ProtoconOpt::NoTask) {
+  }
   else if (exec_opt.task == ProtoconOpt::InteractiveTask) {
     interactive(sys);
   }
@@ -70,6 +72,8 @@ int main(int argc, char** argv)
   }
   else if (exec_opt.task == ProtoconOpt::InteractiveTask) {
   }
+  else if (exec_opt.task == ProtoconOpt::NoTask) {
+  }
   else if (found) {
     DBog0("Solution found!");
     for (uint i = 0; i < sys.actions.size(); ++i) {
@@ -84,7 +88,7 @@ int main(int argc, char** argv)
     DBog0("No solution found...");
   }
 
-  if (found) {
+  if (found || exec_opt.task == ProtoconOpt::NoTask) {
     if (!exec_opt.model_ofilepath.empty_ck()) {
       const char* modelFilePath = exec_opt.model_ofilepath.cstr();
       std::fstream of(modelFilePath,
@@ -94,7 +98,7 @@ int main(int argc, char** argv)
       OPutPromelaModel(of, sys);
       of.close();
       DBog1("Model written to \"%s\".", modelFilePath);
-      DBog0("WARNING: The model is not working at this time.");
+      //DBog0("WARNING: The model is not working at this time.");
     }
     if (!exec_opt.ofilepath.empty_ck())
     {
@@ -107,6 +111,9 @@ int main(int argc, char** argv)
 
   lose_sysCx ();
   if (exec_opt.task == ProtoconOpt::InteractiveTask) {
+    return 0;
+  }
+  if (exec_opt.task == ProtoconOpt::NoTask) {
     return 0;
   }
   return found ? 0 : 2;
