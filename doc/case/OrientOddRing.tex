@@ -1,0 +1,138 @@
+
+\title{Orientation on Odd-Sized Rings}
+%\author{}
+\date{}
+
+\begin{document}
+
+The \ilfile{inst/OddOrientRing.protocon} file specifies a bidirectional ring topology where processes wish to agree with each other on a direction around the ring.
+The topology is taken from the paper by Hoepman titled \textit{Uniform Deterministic Self-Stabilizing Ring-Orientation on Odd-Length Rings}.
+
+\section{Problem Instance}
+\begin{code}
+// file: inst/OrientOddRing.protocon
+// Ring orientation using the state-reading model.
+// See inst-stabilizing/OrientRing.protocon for the stabilizing version.
+
+constant N := 5;
+
+puppet variable color[Nat % N] <- Nat % 2;
+puppet variable phase[Nat % N] <- Nat % 2;
+direct variable way[Nat % (2*N)] <- Nat % 2;
+
+process P[i <- Nat % N]
+{
+  for (hand_idx, j)  <- {# (2*i, i-1), (2*i+1, i+1) #}
+  {
+    write: way[hand_idx];
+    read: color[j], phase[j];
+  }
+  write: color[i], phase[i];
+  forbid: ( 1==1 --> way[2*i]:=1; way[2*i+1]:=1; color[i]:=_; phase[i]:=_; );
+  forbid: ( 1==1 --> way[2*i]:=0; way[2*i+1]:=0; color[i]:=_; phase[i]:=_; );
+  forbid: ( way[2*i]==way[2*i+1] --> way[2*i]:=_; way[2*i+1]:=_; color[i]:=_; phase[i]:=_; );
+}
+
+process OrientLink[i <- Nat % (2*N)]
+{
+  let j := if (i % 2 == 0) then (i+1) else (i-1);
+  read: way[j];
+  write: way[i];
+  puppet action:
+    ( way[i] == way[j] --> way[i] := 1-way[j]; )
+    ;
+}
+
+// Eventually, all processes are pointing in the same direction.
+shadow invariant:
+  (forall i <- Nat % N :
+   way[2*i] != way[2*i+1]
+   &&
+   way[2*i] == way[2*(i+1)])
+  ;
+\end{code}
+
+Each process \ttvbl{P[i]} reads \ttvbl{color[i-1]}, \ttvbl{color[i+1]}, \ttvbl{phase[i-1]}, and \ttvbl{phase[i+1]} and writes \ttvbl{color[i]}, \ttvbl{phase[i]}, \ttvbl{way[2*i]}, and \ttvbl{way[2*i+1]}.
+
+Eventually we want all the \ttvbl{way[2*i]} values to equal each other and differ from the \ttvbl{way[2*i+1]} values.
+That is, we want each process to agree on a direction.
+
+The \ttvbl{color} and \ttvbl{phase} variables are labeled as \ilcode{puppet} because we allow the protocol to use them to achieve convergence.
+
+The invariant is labeled as \ilcode{shadow} since we only require closure within a new invariant $I'$ rather than $I$.
+The new invariant $I'$ must be the same as $I$ after smoothing over the puppet variables.
+
+\section{Stabilizing Version}
+\begin{code}
+// Ring orientation protocol using the state-reading model defined in
+// Title: Uniform Deterministic Self-Stabilizing Ring-Orientation on Odd-Length Rings
+// Author: Jaap-Henk Hoepman
+// Year: 1994
+
+constant N := 5;
+
+puppet variable color[Nat % N] <- Nat % 2;
+puppet variable phase[Nat % N] <- Nat % 2;
+direct variable way[Nat % (2*N)] <- Nat % 2;
+
+process P[i <- Nat % N]
+{
+  for (hand_idx, j)  <- {# (2*i, i-1), (2*i+1, i+1) #}
+  {
+    write: way[hand_idx];
+    read: color[j], phase[j];
+  }
+  write: color[i], phase[i];
+  forbid: ( 1==1 --> way[2*i]:=1; way[2*i+1]:=1; color[i]:=_; phase[i]:=_; );
+  forbid: ( 1==1 --> way[2*i]:=0; way[2*i+1]:=0; color[i]:=_; phase[i]:=_; );
+  forbid: ( way[2*i]==way[2*i+1] --> way[2*i]:=_; way[2*i+1]:=_; color[i]:=_; phase[i]:=_; );
+
+  // Actions a,b,c,d from the paper
+  puppet action:
+    ( color[i-1]==color[i+1] && (color[i]==color[i-1] || phase[i]==1)
+     -->
+      color[i]:=1-color[i-1];
+      phase[i]:=0;
+    );
+
+  // Actions e,f from the paper
+  puppet action:
+    (    color[i-1]==color[i] && color[i]!=color[i+1] && phase[i-1]==1 && phase[i]==0 && phase[i+1]==0
+      || color[i+1]==color[i] && color[i]!=color[i-1] && phase[i+1]==1 && phase[i]==0 && phase[i-1]==0
+     -->
+      color[i] := 1-color[i];
+      phase[i] := 1;
+      way[2*i] := phase[i-1];
+      way[2*i+1] := phase[i+1];
+    );
+
+  // Actions g,h,i,j from the paper
+  puppet action:
+    (    color[i-1]==color[i] && phase[i-1]==phase[i] && color[i]!=color[i+1]
+      || color[i+1]==color[i] && phase[i+1]==phase[i] && color[i]!=color[i-1]
+     -->
+      phase[i] := 1-phase[i];
+    );
+}
+
+process OrientLink[i <- Nat % (2*N)]
+{
+  let j := if (i % 2 == 0) then (i+1) else (i-1);
+  read: way[j];
+  write: way[i];
+  puppet action:
+    ( way[i] == way[j] --> way[i] := 1-way[j]; )
+    ;
+}
+
+// Eventually, all processes are pointing in the same direction.
+shadow invariant:
+  (forall i <- Nat % N :
+   way[2*i] != way[2*i+1]
+   &&
+   way[2*i] == way[2*(i+1)])
+  ;
+\end{code}
+
+\end{document}
+

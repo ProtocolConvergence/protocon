@@ -1,6 +1,4 @@
 
-protocol Agreement;
-
 constant N := 5;
 constant M := N;
 
@@ -12,9 +10,10 @@ process P[i <- Nat % N]
   write: x[i];
   read: x[i+1];
   legit: (x[i-1] - x[i]) % M == (x[i] - x[i+1]) % M;
-  //legit: (x[i-1] == x[i]);
 }
 
+// For prime-sized rings, any solution leaves all x values unique.
+// A leader can be chosen by finding the process whose x[i]==0.
 //invariant:
 //  (unique i <- Nat % N : x[i] == 0)
 //  ;

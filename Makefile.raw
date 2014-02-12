@@ -139,5 +139,5 @@ clean:
 	rm -fr $(PfxBldPath)
 	rm -f $(ExeList) udp
 	rm -f deps.mk
-	$(MAKE) -C gui clean
+	if [ -f gui/Makefile ] ; then $(MAKE) -C gui distclean ; fi
 

@@ -6,36 +6,36 @@ constant N := 5;
 
 puppet variable color[Nat % N] <- Nat % 2;
 puppet variable phase[Nat % N] <- Nat % 2;
-direct variable lhs[Nat % (2*N)] <- Nat % 2;
+direct variable way[Nat % (2*N)] <- Nat % 2;
 
 process P[i <- Nat % N]
 {
   for (hand_idx, j)  <- {# (2*i, i-1), (2*i+1, i+1) #}
   {
-    write: lhs[hand_idx];
+    write: way[hand_idx];
     read: color[j], phase[j];
   }
   write: color[i], phase[i];
-  forbid: ( 1==1 --> lhs[2*i]:=1; lhs[2*i+1]:=1; color[i]:=_; phase[i]:=_; );
-  forbid: ( 1==1 --> lhs[2*i]:=0; lhs[2*i+1]:=0; color[i]:=_; phase[i]:=_; );
-  forbid: ( lhs[2*i]==lhs[2*i+1] --> lhs[2*i]:=_; lhs[2*i+1]:=_; color[i]:=_; phase[i]:=_; );
+  forbid: ( 1==1 --> way[2*i]:=1; way[2*i+1]:=1; color[i]:=_; phase[i]:=_; );
+  forbid: ( 1==1 --> way[2*i]:=0; way[2*i+1]:=0; color[i]:=_; phase[i]:=_; );
+  forbid: ( way[2*i]==way[2*i+1] --> way[2*i]:=_; way[2*i+1]:=_; color[i]:=_; phase[i]:=_; );
 }
 
 process OrientLink[i <- Nat % (2*N)]
 {
   let j := if (i % 2 == 0) then (i+1) else (i-1);
-  read: lhs[j];
-  write: lhs[i];
+  read: way[j];
+  write: way[i];
   puppet action:
-    ( lhs[i] == lhs[j] --> lhs[i] := 1-lhs[j]; )
+    ( way[i] == way[j] --> way[i] := 1-way[j]; )
     ;
 }
 
 // Eventually, all processes are pointing in the same direction.
 shadow invariant:
   (forall i <- Nat % N :
-   lhs[2*i] != lhs[2*i+1]
+   way[2*i] != way[2*i+1]
    &&
-   lhs[2*i] == lhs[2*(i+1)])
+   way[2*i] == way[2*(i+1)])
   ;
 

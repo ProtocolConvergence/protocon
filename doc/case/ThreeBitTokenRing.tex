@@ -4,32 +4,154 @@
 \date{}
 
 \begin{document}
+
+This shows how to synthesize a self-stabilizing token ring using the same topology given by 
+Gouda and Haddix in \textit{The Stabilizing Token Ring in Three Bits}.
+
+\section{Problem Instance}
+
+\begin{code}
+// file: inst/ThreeBitTokenRing.protocon
+constant N := 3;
+
+direct variable t[Nat % N] <- Nat % 2;
+puppet variable e[Nat % N] <- Nat % 2;
+puppet variable ready[Nat % N] <- Nat % 2;
+
+process Bot[i <- Nat % 1]
+{
+  read:  e[i-1], t[i-1];
+  write: e[i], t[i], ready[i];
+  shadow action: ( t[i-1] == t[i] --> t[i] := 1 - t[i-1]; );
+}
+
+process P[j <- Nat % (N-1)]
+{
+  let i := j+1;
+  read:  e[i-1], t[i-1];
+  write: e[i], t[i], ready[i];
+  shadow action: ( t[i-1] != t[i] --> t[i] := t[i-1]; );
+}
+
+direct invariant:
+  // One process has the token.
+  (unique i <- Nat % N :
+   i == 0 && t[i-1] == t[i]
+   ||
+   i != 0 && t[i-1] != t[i]
+  );
+\end{code}
+
+Each process can read \ttvbl{e[i-1]} and \ttvbl{t[i-1]} and can write \ttvbl{e[i]}, \ttvbl{t[i]}, and \ttvbl{ready[i]}.
+There is a distinguished process \ttvbl{Bot} which can act differently than the others.
+
+The invariant is specified as all states where exactly one process has a token.
+\ttvbl{Bot} is defined to have a token when \ilcode{t[0] == t[N-1]} and each other \ttvbl{P} process has a token when \ilcode{t[i] != t[i-1]}.
+
+With the shadow actions, we enforce that processes act like Dijkstra's token ring on one bit (the \ttvbl{t} variables).
+
+\section{Synthesis}
+
 Let's try to find a stabilizing token ring using three bits on a ring of size $5$.
 \begin{code}
-protocon -x inst/ThreeBitTokenRing.protocon -o found.protocon -def N 5
+protocon -x inst/ThreeBitTokenRing.protocon -o tmp/3bit.protocon -def N 5
 \end{code}
 
 Is the protocol stabilizing on a ring of size $3$?
 \begin{code}
-protocon -verify -x found.protocon -def N 3
+protocon -verify -x tmp/3bit.protocon -def N 3
 \end{code}
 
 How about of size $4$ or $6$?
 \begin{code}
-protocon -verify -x found.protocon -def N 4
-protocon -verify -x found.protocon -def N 6
+protocon -verify -x tmp/3bit.protocon -def N 4
+protocon -verify -x tmp/3bit.protocon -def N 6
 \end{code}
 
 Probably not.
 Let's try again, taking those sizes into account!
 \begin{code}
-protocon -x inst/ThreeBitTokenRing.protocon -o found.protocon -def N 5 -param N 3 -param N 4 -param N 6
+protocon -x inst/ThreeBitTokenRing.protocon -o tmp/3bit.protocon -def N 5 -param N 3 -param N 4 -param N 6
 \end{code}
 
 But what if we want to search up to size $7$, but it takes too long check a system of that size at each decision level?
 Use the \ilflag{-no-partial} flag to just verify the protocol on that system after finding a protocol which is self-stabilizing for all smaller sizes.
 \begin{code}
-protocon -x inst/ThreeBitTokenRing.protocon -o found.protocon -def N 5 -param N 3 -param N 4 -param N 6 -param [ -def N 7 -no-partial ]
+protocon -x inst/ThreeBitTokenRing.protocon -o tmp/3bit.protocon -def N 5 -param N 3 -param N 4 -param N 6 -param [ -def N 7 -no-partial ]
+\end{code}
+
+\section{Stabilizing Version}
+
+\begin{code}
+// Three bit token ring defined in
+// Title: The Stabilizing Token Ring in Three Bits
+// Author: Mohamed G. Gouda and F. Furman Haddix
+// Year: 1996
+
+constant N := 5;
+
+puppet variable e[Int % N] <- Int % 2;
+direct variable t[Int % N] <- Int % 2;
+puppet variable ready[Int % N] <- Int % 2;
+
+process Bot[i <- Int % 1]
+{
+  read:  e[i-1], t[i-1];
+  write: e[i], t[i], ready[i];
+  // Enforce this behavior within the invariant:
+  shadow action:( t[i-1] == t[i] --> t[i] := 1 - t[i-1]; );
+  // Use these actions:
+  puppet action:
+    ( e[i-1] == e[i] && t[i-1] != t[i]
+      --> e[i] := 1-e[i-1]; ready[i] := 0;
+    );
+  puppet action:
+    ( e[i-1] == e[i] && t[i-1] == t[i] && !(t[i] == 1 || ready[i] == 1)
+      --> e[i] := 1-e[i-1]; ready[i] := 1;
+    );
+  puppet action:
+    ( e[i-1] == e[i] && t[i-1] == t[i] &&  (t[i] == 1 || ready[i] == 1)
+      --> e[i] := 1-e[i-1]; t[i] := 1-t[i-1]; ready[i] := 0;
+    );
+}
+
+process P[j <- Int % (N-1)]
+{
+  let i := j+1;
+  read:  e[i-1], t[i-1];
+  write: e[i], t[i], ready[i];
+  // Enforce this behavior within the invariant:
+  shadow action:( t[i-1] != t[i] --> t[i] := t[i-1]; );
+  // Use these actions:
+  puppet action:
+    ( e[i-1] != e[i] && t[i-1] == t[i]
+      --> e[i] := e[i-1]; ready[i] := 0;
+    );
+  puppet action:
+    ( e[i-1] != e[i] && t[i-1] != t[i] && !(t[i] == 1 || ready[i] == 1)
+      --> e[i] := e[i-1]; ready[i] := 1;
+    );
+  puppet action:
+    ( e[i-1] != e[i] && t[i-1] != t[i] &&  (t[i] == 1 || ready[i] == 1)
+      --> e[i] := e[i-1]; t[i] := t[i-1]; ready[i] := 0;
+    );
+}
+
+// Make the invariant exactly this, no smoothing over puppet variables is allowed.
+direct invariant:
+  // One process has the token.
+  (unique i <- Int % N :
+      i == 0 && t[i-1] == t[i]
+   || i != 0 && t[i-1] != t[i]
+  )
+  //&&
+  //// Some process is enabled.
+  //// This (and the token-passing behavior) is enforced by the shadow actions.
+  //(exists i <- Int % N :
+  //    i == 0 && e[i-1] == e[i]
+  // || i != 0 && e[i-1] != e[i]
+  //)
+  ;
 \end{code}
 
 \end{document}

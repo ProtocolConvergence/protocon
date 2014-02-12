@@ -6,38 +6,105 @@
 \begin{document}
 
 The \ilfile{inst/ColorRing.protocon} file specifies a bidirectional ring topology where each process wishes to obtain a different value than its neighbors.
+Each process has $3$ colors to choose from.
+This is a very simple protocol and is useful for instruction.
 
-This is a very simple protocol, and is useful for instruction.
-Use the \ilflag{-simple} flag to see non-random run without OpenMP or restarts.
-Use the \ilflag{-def} flag to set the constant \illit{N} equal to $5$, corresponding to $5$ processes in the ring.
 \begin{code}
-protocon -simple -x inst/ColorRing.protocon -o found.protocon -def N 5
+// file: ColorRing.protocon
+constant N := 5;
+
+variable c[Nat % N] <- Nat % 3;
+
+process P[i <- Nat % N]
+{
+  read: c[i-1];
+  write: c[i];
+  read: c[i+1];
+  invariant: (c[i] != c[i-1]) && (c[i] != c[i+1]);
+}
+\end{code}
+The invariant can also be specified outside of the process definition as:
+\begin{code}
+invariant: forall i <- Nat % N : c[i] != c[i+1];
 \end{code}
 
-If there are more cores available, run
+The commands in this tutorial should be executed from within the top-level project directory on a Linux system.
+First make a directory \ilfile{tmp/} to store some files.
 \begin{code}
-protocon -x inst/ColorRing.protocon -o found.protocon -def N 5 -o-log search.log
+mkdir tmp
 \end{code}
-We use the \ilflag{-o-log} flag to create log files \ilfile{search.log.}\ilsym{tid} for each thread of index \ilsym{tid}.
+
+\quicksec{Synthesis}
+Synthesize a 3-coloring protocol that works on rings of size $3$, $4$, and $5$.
+\begin{code}
+./bin/protocon -serial -x inst/ColorRing.protocon -def N 3 -param N 4 -param N 5 -o tmp/color.protocon
+\end{code}
+
+\quicksec{Verification}
+Check if the protocol is self-stabilizing rings of size $7$. It should be fine!
+\begin{code}
+./bin/protocon -verify -x tmp/color.protocon -def N 7
+\end{code}
+
+\quicksec{Model Checking with Spin}
+We can also verify this protocol's correctness in the \href{http://spinroot.com}{Spin model checker} (here's a \href{../../tut/spin.html}{quick setup guide}).
+First output a model in the Promela language for a ring of $6$ processes.
+\begin{code}
+./bin/protocon -nop -x tmp/color.protocon -def N 6 -o-model tmp/color.pml
+\end{code}
+Now open the model in iSpin.
+\begin{code}
+cd tmp
+ispin color.pml
+\end{code}
+In the \ilkey{Edit/View} tab, add the following lines to the end of the file.
+This defines a predicate \ttvbl{Legit} which evaluates to true in all legitimate states.
+There are also two temporal properties which define closure and convergence.
+Closure ensures that once the ring has a valid coloring, no process will change its state in a way which violates that property.
+Convergence ensures that from any initial state, the ring will eventually reach a valid coloring.
+\begin{code}
+#define Legit \
+  (c[0] != c[1] && c[1] != c[2] && \
+   c[2] != c[3] && c[3] != c[4] && \
+   c[4] != c[5] && c[5] != c[0])
+ltl Closure { [] (Legit -> [] Legit) }
+ltl Convergence { [] <> Legit }
+\end{code}
+Perform a \ilkey{Syntax Check}; there should be nothing to report.
+Now switch to the \ilkey{Verification} tab so we can verify that closure and convergence hold.
+Under \ilkey{Liveness}, ensure that the \ilkey{acceptance cycles} bubble is filled.
+Next, under \ilkey{Never Claims}, click \ilkey{use claim} and type \ilkey{Closure} for the \ilkey{claim name}.
+Verify closure holds by clicking \ilkey{Run}.
+Now verify that covergence holds.
+\textit{Can you make a change to the 3-coloring protocol that breaks closure? How about convergence?}
+
+\quicksec{Parallel Search}
+When a problem instance is difficult, it may help to perform multiple searches at the same time.
+This is the default behavior, and can be made explicit with the \ilflag{-parallel} flag, but has a drawback that the search progress output is hidden.
+This is remedied with the \ilflag{-o-log} flag to create log files \ilfile{search.log.}\ilsym{tid} for each thread of index \ilsym{tid}.
+\begin{code}
+./bin/protocon -parallel -x inst/ColorRing.protocon -def N 3 -param N 4 -param N 5 -o tmp/color.protocon -o-log tmp/color.log
+\end{code}
 If these log files are not desired, simply do not give the flag.
 
-To use the default search method (using random choinces and restarts) with only one thread (and see the output), set the \ilname{$OMP_NUM_THREADS} environment variable to $1$.
+To control the number of threads used at runtime, set the \ilname{$OMP_NUM_THREADS} environment variable.
+For example, let's imagine we only want $1$ thread.
 
 In the \ilname{bash} shell:
 \begin{code}
 export OMP_NUM_THREADS=1
-protocon -x inst/ColorRing.protocon -def N 5
+./bin/protocon -x inst/ColorRing.protocon -def N 5
 unset OMP_NUM_THREADS
 \end{code}
-
 This can of course be accomplished on one line:
 \begin{code}
-OMP_NUM_THREADS=1 protocon -x inst/ColorRing.protocon -def N 5
+OMP_NUM_THREADS=1 ./bin/protocon -x inst/ColorRing.protocon -def N 5
 \end{code}
+
 The equivalent \ilname{csh} or \ilname{tcsh} shell commands are:
 \begin{code}
 setenv OMP_NUM_THREADS 1
-protocon -x inst/ColorRing.protocon -def N 5
+./bin/protocon -x inst/ColorRing.protocon -def N 5
 unsetenv
 \end{code}
 
