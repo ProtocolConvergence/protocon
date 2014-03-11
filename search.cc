@@ -603,7 +603,7 @@ stabilization_search(vector<uint>& ret_actions,
             *opt.log << "Writing system to: " << filepath  << opt.log->endl();
             Cx::OFileB ofb;
             ofb.open(filepath);
-            oput_protocon_file(ofb, sys, sys.actions);
+            oput_protocon_file(ofb, sys, exec_opt.use_espresso, sys.actions);
           }
         }
         else {
@@ -690,7 +690,7 @@ stabilization_search(vector<uint>& ret_actions,
       else if (!!exec_opt.ofilepath) {
         Cx::OFileB ofb;
         ofb.open(exec_opt.ofilepath + "." + PcIdx + "." + trial_idx);
-        oput_protocon_file (ofb, sys, actions);
+        oput_protocon_file (ofb, sys, exec_opt.use_espresso, actions);
       }
       solution_found = true;
       ret_actions = actions;

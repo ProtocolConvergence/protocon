@@ -44,8 +44,8 @@ ConstDecl =
 OptionalShadowPuppetRole =
   {$$.sp = 0;}
   (  'shadow' WS {$$.sp = make_ccstr_Sesp (yy->st->spctx, "shadow");}
-   | 'puppet' WS {$$.sp = make_ccstr_Sesp (yy->st->spctx, "puppet");}
-   | 'direct' WS
+   | ('puppet' | 'superposed') WS {$$.sp = make_ccstr_Sesp (yy->st->spctx, "puppet");}
+   | ('direct' | 'underlying') WS
   )?
   ;
 
@@ -81,7 +81,7 @@ ActionExpr =
    ;
 
 ShadowActionDef =
-  'shadow' (WS ACTION | ':') WS? act:ActionExpr
+  ('shadow' | 'underlying') (WS ACTION | ':') WS? act:ActionExpr
   {yy->st->add_action (act.sp, Xn::Vbl::Shadow);}
   (WS? (',' WS?)? act2:ActionExpr {yy->st->add_action (act2.sp, Xn::Vbl::Shadow);} )*
   END_STMT
@@ -95,7 +95,7 @@ DirectActionDef =
   ;
 
 PuppetActionDef =
-  'puppet' (WS ACTION | ':') WS? act:ActionExpr
+  ('puppet' | 'superposed') (WS ACTION | ':') WS? act:ActionExpr
   {yy->st->add_action (act.sp, Xn::Vbl::Puppet);}
   (WS? (',' WS?)? act2:ActionExpr {yy->st->add_action (act2.sp, Xn::Vbl::Puppet);} )*
   END_STMT
@@ -183,7 +183,7 @@ NamedPredicate =
   ;
 
 GlobalLegit =
-  (  'shadow' (WS LEGIT | ':') {yy->st->sys->direct_invariant_flag = false;}
+  (  ('shadow' | 'underlying') (WS LEGIT | ':') {yy->st->sys->direct_invariant_flag = false;}
    | 'direct' (WS LEGIT | ':')
    | LEGIT
   )

@@ -104,7 +104,7 @@ int main(int argc, char** argv)
     {
       Cx::OFileB ofb;
       ofb.open(exec_opt.ofilepath);
-      oput_protocon_file (ofb, sys);
+      oput_protocon_file (ofb, sys, exec_opt.use_espresso);
     }
   }
   DBogOF.flush();

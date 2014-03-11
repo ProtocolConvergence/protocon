@@ -372,7 +372,7 @@ void TestProtoconFile(bool agreement)
 
   ProtoconFileOpt infile_opt;
   if (agreement)
-    infile_opt.file_path = "inst/Agreement.protocon";
+    infile_opt.file_path = "inst/AgreeRing.protocon";
   else
     infile_opt.file_path = "inst/SumNotTwo.protocon";
   ReadProtoconFile(sys_f, infile_opt);

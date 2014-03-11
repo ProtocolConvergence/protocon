@@ -184,6 +184,11 @@ interactive(const Xn::Sys& sys)
       }
       of << of.endl();
     }
+    else if (skip_cstr_XFile(line_xf, "show-all-xn"))
+    {
+      topo.oput_all_xn(of, usim.xn);
+      of << of.endl();
+    }
     else if (skip_cstr_XFile(line_xf, "randomize")) {
       for (uint i = 0; i < topo.vbls.sz(); ++i) {
         usim.state[i] = usim.urandom.pick(topo.vbls[i].symm->domsz);

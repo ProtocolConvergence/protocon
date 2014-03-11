@@ -213,7 +213,8 @@ oput_protocon_pc_act (Cx::OFile& of, const Xn::ActSymm& act)
   bool
 oput_protocon_pc_acts (Cx::OFile& of, const Xn::PcSymm& pc_symm,
                        const Cx::Table<Xn::ActSymm>& acts,
-                       OSPc* ospc)
+                       OSPc* ospc,
+                       bool use_espresso)
 {
   Sign good = 1;
   const Xn::PcSymmSpec& pc_symm_spec = *pc_symm.spec;
@@ -256,8 +257,6 @@ oput_protocon_pc_acts (Cx::OFile& of, const Xn::PcSymm& pc_symm,
   for (uint i = 0; i < pc_symm.wvbl_symms.sz(); ++i) {
     assign_vbls[i] = pc_symm.vbl_name(pc_symm.wmap[i]);
   }
-
-  bool use_espresso = false;
 
   of << "  puppet action:\n";
   if (!use_espresso) {
@@ -308,7 +307,7 @@ oput_protocon_pc_acts (Cx::OFile& of, const Xn::PcSymm& pc_symm,
 }
 
   bool
-oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys, const vector<uint>& actions)
+oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys, bool use_espresso, const vector<uint>& actions)
 {
   Sign good = 1;
   OSPc ospc[1];
@@ -347,7 +346,7 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys, const vector<uint>& actio
     oput_protocon_pc_lets (of, pc_symm);
     oput_protocon_pc_vbls (of, pc_symm);
     DoLegit(good, "output actions")
-      good = oput_protocon_pc_acts (of, pc_symm, acts, ospc);
+      good = oput_protocon_pc_acts (of, pc_symm, acts, ospc, use_espresso);
     of << "}\n";
   }
 
@@ -368,8 +367,8 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys, const vector<uint>& actio
 }
 
   bool
-oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys)
+oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys, bool use_espresso)
 {
-  return oput_protocon_file (of, sys, sys.actions);
+  return oput_protocon_file (of, sys, use_espresso, sys.actions);
 }
 

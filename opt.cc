@@ -227,6 +227,9 @@ protocon_options_rec
       }
       exec_opt.ofilepath = argv[argi++];
     }
+    else if (eq_cstr (arg, "-espresso")) {
+      exec_opt.use_espresso = true;
+    }
     else if (eq_cstr (arg, "-x-test-known")) {
       Xn::Sys test_sys;
       ProtoconFileOpt file_opt;

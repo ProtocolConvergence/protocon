@@ -35,6 +35,7 @@ public:
   Cx::Table< ProtoconParamOpt > params;
   Cx::String log_ofilename;
   Cx::String ofilepath;
+  bool use_espresso;
   Cx::Table< Cx::String > xfilepaths;
   Cx::String model_ofilepath;
   Cx::String conflicts_xfilepath;
@@ -45,6 +46,7 @@ public:
   ProtoconOpt()
     : task(SearchTask)
     , params( 1 )
+    , use_espresso( false )
     , conflict_order( HiLoOrder )
   {}
 };
