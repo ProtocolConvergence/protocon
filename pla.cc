@@ -98,6 +98,17 @@ oput_protocon_pc_lets (Cx::OFile& of, const Xn::PcSymm& pc_symm)
 
 static
   void
+oput_protocon_pc_predicates (Cx::OFile& of, const Xn::PcSymm& pc_symm)
+{
+  for (uint i = 0; i < pc_symm.predicate_map.keys.sz(); ++i) {
+    of << "  predicate " << pc_symm.predicate_map.keys[i];
+    of << " := " << pc_symm.predicate_map.vals[i].expression;
+    of << ";\n";
+  }
+}
+
+static
+  void
 oput_protocon_pc_vbls (Cx::OFile& of, const Xn::PcSymm& pc_symm)
 {
   for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
@@ -345,6 +356,7 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys, bool use_espresso, const 
     of << "{\n";
     oput_protocon_pc_lets (of, pc_symm);
     oput_protocon_pc_vbls (of, pc_symm);
+    oput_protocon_pc_predicates (of, pc_symm);
     DoLegit(good, "output actions")
       good = oput_protocon_pc_acts (of, pc_symm, acts, ospc, use_espresso);
     of << "}\n";

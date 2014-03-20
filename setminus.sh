@@ -2,9 +2,10 @@
 
 ## This script removes duplicate protocol files.
 
-pfx=match/v6.protocon
+pfx_a=match/v6.protocon
+pfx_b=match/tmp/v7.protocon
 
-for f in $pfx.*
+for f in $pfx_a.*
 do
   if [ ! -f "$f" ]
   then
@@ -12,14 +13,16 @@ do
   fi
   tmpf=`mktemp`
   sort "$f" > "$tmpf"
-  for g in $(ls $pfx.* | grep -v $f)
+  for g in $(ls $pfx_b.*)
   do
     if sort "$g" | diff -q "$tmpf" - > /dev/null
     then
       echo $f $g
-      rm $g
+      rm $f $g
+      break
     fi
   done
   rm "$tmpf"
 done
+
 

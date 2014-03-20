@@ -3,7 +3,7 @@ constant N := 6;
 constant M := 4;
 
 variable x[Nat % N] <- Nat % M;
-variable lhs[Nat % (2*N)] <- Nat % 2;
+//variable lhs[Nat % (2*N)] <- Nat % 2;
 
 process P[i <- Nat % N]
 {
@@ -19,28 +19,30 @@ process P[i <- Nat % N]
   let idx0 := if (idx0_tmp % N != i) then (idx0_tmp) else (idx1_tmp);
   let idx1 := if (idx1_tmp % N != i) then (idx1_tmp) else (idx0_tmp);
 
-  for (lhs_idx, x_idx) <- {# (2*i, idx0), (2*i+1, idx1) #}
-  {
-    read: lhs[lhs_idx];
-    read: x[x_idx];
-  }
+  read: x[idx0];
+  read: x[idx1];
+  //#for (lhs_idx, x_idx) <- {# (2*i, idx0), (2*i+1, idx1) #}
+  //#{
+  //#  read: lhs[lhs_idx];
+  //#  read: x[x_idx];
+  //#}
   write: x[i];
-  forbid: ( lhs[2*i]==lhs[2*i+1] --> x[i]:=_; );
+  //forbid: ( lhs[2*i]==lhs[2*i+1] --> x[i]:=_; );
 }
 
-process OrientLink[i <- Nat % (2*N)]
-{
-  let j := if (i % 2 == 0) then (i+1) else (i-1);
-  read: lhs[j];
-  write: lhs[i];
-  puppet action:
-    ( lhs[i] == lhs[j] --> lhs[i] := 1-lhs[j]; )
-    ;
-}
+//#process OrientLink[i <- Nat % (2*N)]
+//#{
+//#  let j := if (i % 2 == 0) then (i+1) else (i-1);
+//#  read: lhs[j];
+//#  write: lhs[i];
+//#  puppet action:
+//#    ( lhs[i] == lhs[j] --> lhs[i] := 1-lhs[j]; )
+//#    ;
+//#}
 
 invariant:
-  (forall i <- Nat % N : lhs[2*i] != lhs[2*i+1])
-  &&
+//#  (forall i <- Nat % N : lhs[2*i] != lhs[2*i+1])
+//#  &&
   (forall i <- Nat % N :
    (forall q <- Nat % 2 :
     (i == -(2*i + q+1) % N)

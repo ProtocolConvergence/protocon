@@ -90,7 +90,11 @@
            <number>0</number>
           </property>
           <item>
-           <widget class="QListWidget" name="valueList"/>
+           <widget class="QListWidget" name="valueList">
+            <property name="editTriggers">
+             <set>QAbstractItemView::AnyKeyPressed|QAbstractItemView::DoubleClicked|QAbstractItemView::EditKeyPressed|QAbstractItemView::SelectedClicked</set>
+            </property>
+           </widget>
           </item>
          </layout>
         </widget>

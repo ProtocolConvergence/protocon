@@ -5,7 +5,8 @@
   bool
 ProtoconFile::update_allgood(bool good)
 {
-  if (good || !allgood)  return true;
+  if (!allgood)  return false;
+  if (good)  return true;
   allgood = false;
   DBog1( "Something terribly wrong before line:%u", this->text_nlines );
   return false;
@@ -281,11 +282,11 @@ ProtoconFile::parse_action(Cx::PFmla& act_pf, Sesp act_sp)
 {
   Sign good = 1;
   Claim( pc_symm );
-  Xn::Net& topo = sys->topology;
+  const Xn::Net& topo = sys->topology;
   act_pf = false;
   const Cx::String& idx_name = pc_symm_spec->idx_name;
   for (uint i = 0; good && i < pc_symm->membs.sz(); ++i) {
-    //Xn::Pc& pc = *pc_symm->membs[i];
+    const Xn::Pc& pc = *pc_symm->membs[i];
     index_map[idx_name] = i;
     Cx::PFmla guard_pf;
     DoLegit( good, "eval guard" )
@@ -315,6 +316,19 @@ ProtoconFile::parse_action(Cx::PFmla& act_pf, Sesp act_sp)
       Cx::IntPFmla val;
       DoLegit( good, "eval variable" )
         good = eval_vbl(&vbl, vbl_sp);
+
+      DoLegit( good, "non-writable variable in assignment" )
+      {
+        bool found = false;
+        for (uint j = 0; j < pc.wvbls.sz(); ++j) {
+          if (pc.wvbls[j] == vbl) {
+            found = true;
+            break;
+          }
+        }
+        good = found;
+      }
+
       bool wild = false;
       DoLegit( good, "eval value" )
       {
@@ -334,6 +348,7 @@ ProtoconFile::parse_action(Cx::PFmla& act_pf, Sesp act_sp)
                      && pf_vbl.img_eq(val));
       }
     }
+
     act_pf |= guard_pf & assign_pf;
   }
   if (good)
@@ -344,6 +359,7 @@ ProtoconFile::parse_action(Cx::PFmla& act_pf, Sesp act_sp)
   bool
 ProtoconFile::add_action(Sesp act_sp, Xn::Vbl::ShadowPuppetRole role)
 {
+  if (!allgood)  return false;
   Sign good = 1;
   Claim( pc_symm );
   Xn::Net& topo = sys->topology;
@@ -408,6 +424,29 @@ ProtoconFile::forbid_action(Sesp act_sp)
   DoLegit( good, "" )
     pc_symm->forbid_pfmla |= act_pf;
 
+  return update_allgood (good);
+}
+
+  bool
+ProtoconFile::add_pc_predicate(Sesp name_sp, Sesp val_sp)
+{
+  Sign good = 1;
+  const char* name = ccstr_of_Sesp (name_sp);
+  DoLegit(  good, "" )
+    good = !!name;
+
+  const Cx::String& idx_name = pc_symm_spec->idx_name;
+  Xn::NatPredicateMap let_vals( pc_symm->membs.sz() );
+  for (uint i = 0; good && i < pc_symm->membs.sz(); ++i) {
+    index_map[idx_name] = i;
+    DoLegit( good, "" )
+      good = eval (let_vals.membs[i], val_sp);
+  }
+  index_map.erase(idx_name);
+  DoLegit( good, "finding expression" )
+    good = string_expression (let_vals.expression, val_sp);
+  DoLegit( good, "" )
+    pc_symm->predicate_map.add(name, let_vals);
   return update_allgood (good);
 }
 
@@ -977,24 +1016,9 @@ ProtoconFile::eval(Cx::IntPFmla& ipf, Sesp a)
     }
   }
   else if (eq_cstr (key, "aref")) {
-    const char* name = 0;
-
-    if (LegitCk( b, good, "" ))
-      name = ccstr_of_Sesp (b);
-
-    const Xn::VblSymm* symm = 0;
-    if (LegitCk( name, good, "" ))
-    {
-      const Xn::VblSymm** tmp = vbl_map.lookup(name);
-      if (LegitCk( tmp, good, "" ))
-        symm = *tmp;
-    }
-
-    int idx_int = 0;
-    if (LegitCk( eval_int (&idx_int, c), good, "" ))
-    {
-      uint idx = umod_int (idx_int, symm->membs.sz());
-      ipf = Cx::IntPFmla(sys->topology.pfmla_vbl(*symm->membs[idx]));
+    Xn::Vbl* vbl = 0;
+    if (LegitCk( eval_vbl(&vbl, b, c), good, "" )) {
+      ipf = Cx::IntPFmla(sys->topology.pfmla_vbl(*vbl));
     }
   }
   else {
@@ -1050,27 +1074,51 @@ ProtoconFile::eval_vbl(Xn::Vbl** ret, Sesp a)
   bool
 ProtoconFile::eval_vbl(Xn::Vbl** ret, Sesp b, Sesp c)
 {
-  bool legit = true;
-  const char* name = 0;
+  Sign good = 1;
 
-  if (LegitCk( b, legit, "" ))
+  DoLegit( good, "null variable or index?!" )
+    good = b && c;
+
+  const char* name = 0;
+  DoLegit( good, "variable needs name" )
+  {
     name = ccstr_of_Sesp (b);
+    good = !!name;
+  }
 
   const Xn::VblSymm* symm = 0;
-  if (LegitCk( name, legit, "" ))
+  DoLegit( good, "variable lookup" )
   {
     const Xn::VblSymm** tmp = vbl_map.lookup(name);
-    if (LegitCk( tmp, legit, "" ))
+    good = !!tmp;
+    if (tmp)
       symm = *tmp;
   }
 
   int idx = 0;
-  if (LegitCk( eval_int (&idx, c), legit, "" ))
-  {
+  DoLegit( good, "eval array index" )
+    good = eval_int(&idx, c);
+
+  DoLegit( good, "" )
     *ret = symm->membs[umod_int (idx, symm->membs.sz())];
+
+  DoLegit( good, "process needs read access to variable" ) {
+    if ((bool)pc_symm) {
+      const int* pcidx = index_map.lookup(pc_symm_spec->idx_name);
+      if (pcidx) {
+        const Xn::Pc& pc = *pc_symm->membs[*pcidx];
+        bool found = false;
+        for (uint i = 0; !found && i < pc.rvbls.sz(); ++i) {
+          found = (pc.rvbls[i] == *ret);
+        }
+        good = found;
+      }
+    }
   }
-  if (LegitCk( legit, allgood, "" )) {}
-  return update_allgood (legit);
+
+  if (!good)
+    *ret = 0;
+  return update_allgood (good);
 }
 
   bool
@@ -1080,6 +1128,16 @@ ProtoconFile::lookup_pfmla(Cx::PFmla* ret, const Cx::String& name)
   if (pf) {
     *ret = *pf;
     return true;
+  }
+  if ((bool)pc_symm) {
+    const int* pcidx = index_map.lookup(pc_symm_spec->idx_name);
+    if (pcidx) {
+      Xn::NatPredicateMap* vals = pc_symm->predicate_map.lookup(name);
+      if (vals) {
+        *ret = vals->eval(*pcidx);
+        return true;
+      }
+    }
   }
   return update_allgood (false);
 }

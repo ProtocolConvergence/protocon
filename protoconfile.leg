@@ -108,6 +108,11 @@ ForbidActionDef =
   END_STMT
   ;
 
+ProcNamedPredicate =
+  'predicate' WS name:ID WS? ':=' WS? a:Expr END_STMT
+  {yy->st->add_pc_predicate(name.sp, a.sp);}
+  ;
+
 ProcDecl =
   'process' WS pc_name:ID '[' WS? idx_name:ID WS? IN WS? npcs:NatDom WS? ']'
   {yy->st->add_processes(pc_name.sp, idx_name.sp, npcs.sp);}
@@ -124,7 +129,11 @@ ProcDecl =
     |
     SymmetricLinks WS?
   )+
-  ((ShadowActionDef | DirectActionDef | PuppetActionDef | ForbidActionDef)
+  ((  ProcNamedPredicate
+    | ShadowActionDef
+    | DirectActionDef
+    | PuppetActionDef
+    | ForbidActionDef)
    WS?
   )*
   ( LEGIT WS? legit:Expr END_STMT WS?

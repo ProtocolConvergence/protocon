@@ -76,7 +76,10 @@ public:
   bool try_all;
   uint max_conflict_sz;
   bool snapshot_conflicts;
+  bool solution_as_conflict;
   vector<uint> known_solution;
+  Cx::String livelock_ofilepath;
+  uint n_livelock_ofiles;
 
   AddConvergenceOpt() :
     pick_method( MCVLitePick )
@@ -95,6 +98,8 @@ public:
     , try_all( false )
     , max_conflict_sz( 0 )
     , snapshot_conflicts( false )
+    , solution_as_conflict( false )
+    , n_livelock_ofiles( 0 )
   {}
 };
 

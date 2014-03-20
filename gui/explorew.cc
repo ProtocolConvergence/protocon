@@ -1,4 +1,5 @@
 
+#include <iostream>
 #include "explorew.hh"
 #include "ui_explorew.h"
 
@@ -18,6 +19,7 @@ ExploreW::ExploreW(QWidget *parent)
 
   connect(ui->randomizeButton, SIGNAL(clicked()), this, SLOT(randomize_state()));
   connect(ui->stepButton, SIGNAL(clicked()), this, SLOT(random_step()));
+  connect(ui->valueList, SIGNAL(itemChanged(QListWidgetItem*)), this, SLOT(vbl_assign(QListWidgetItem*)));
   connect(ui->imgList, SIGNAL(itemActivated(QListWidgetItem*)), this, SLOT(act_assign(QListWidgetItem*)));
   connect(ui->preList, SIGNAL(itemActivated(QListWidgetItem*)), this, SLOT(act_assign(QListWidgetItem*)));
 
@@ -61,8 +63,14 @@ ExploreW::ready_read()
     else if (list_widget) {
       list_widget->clear();
       list_widget->addItems(lines.split("\n"));
-
       if (list_widget == ui->valueList) {
+        vbl_names.clear();
+        for (uint i = 0; i < (uint)ui->valueList->count(); i++) {
+          QListWidgetItem* item = ui->valueList->item(i);
+          item->setFlags(item->flags() | Qt::ItemIsEditable);
+          vbl_names.push_back(item->text().section("==", 0, 0));
+        }
+
         list_widget = ui->imgList;
       }
       else if (list_widget == ui->imgList) {
@@ -106,6 +114,18 @@ ExploreW::act_assign(QListWidgetItem* item)
 {
   if (updating)  return;
   process->write(("assign " + item->text() + "\n").toAscii());
+  update_data();
+}
+
+  void
+ExploreW::vbl_assign(QListWidgetItem* item)
+{
+  if (updating)  return;
+  QString text = item->text();
+  text.remove(QRegExp(".*=="));
+  int row = ui->valueList->row(item);
+  process->write(("assign " + vbl_names[row] + ":=" + text + "\n").toAscii());
+  //std::cerr << ("assign " + vbl_names[row] + ":=" + text + "\n").toStdString();
   update_data();
 }
 

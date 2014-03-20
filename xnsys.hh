@@ -25,6 +25,54 @@ class PcSymm;
 class ActSymm;
 class Net;
 
+class NatPredicateMap {
+public:
+  Cx::Table< Cx::PFmla > membs;
+  String expression;
+
+  NatPredicateMap(uint nmembs) {
+    for (uint i = 0; i < nmembs; ++i) {
+      membs.push(Cx::PFmla(false));
+    }
+  }
+
+  Cx::PFmla eval(uint i) const {
+    Claim2( i ,<, membs.sz() );
+    return membs[i];
+  }
+
+  bool constant_ck() const {
+    for (uint i = 1; i < membs.sz(); ++i) {
+      if (!membs[0].equiv_ck(membs[i]))
+        return false;
+    }
+    return true;
+  }
+};
+
+class LetPredicateMap {
+public:
+  Cx::Table<String> keys;
+  Cx::Table<NatPredicateMap> vals;
+  Cx::Map<String,uint> map;
+
+  void add(const String& key, const NatPredicateMap& val) {
+    keys.push(key);
+    vals.push(val);
+    map[key] = keys.sz()-1;
+  }
+
+  NatPredicateMap* lookup(const String& key) {
+    uint* idx = map.lookup(key);
+    if (!idx)  return 0;
+    return &vals[*idx];
+  }
+
+  bool key_ck(const String& key) {
+    return !!map.lookup(key);
+  }
+};
+
 class PredicateMap {
 public:
   Cx::Table<String> keys;
@@ -137,6 +185,7 @@ public:
   Cx::PFmla shadow_pfmla;
   Cx::PFmla direct_pfmla;
   Cx::PFmla forbid_pfmla;
+  LetPredicateMap predicate_map;
 
   uint act_idx_offset;
   uint n_possible_acts;

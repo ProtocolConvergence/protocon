@@ -25,6 +25,11 @@ verify_solutions(const PartialSynthesis& inst, StabilizationCkInfo* info)
       continue;
     *inst.log << "Verifying solution for system " << i << "..." << inst.log->endl();
     if (!stabilization_ck(*inst[i].log, *inst[i].ctx->systems[i], inst[i].actions, info)) {
+      if (i == inst.sz()-1 && info && info->livelock_exists && !!inst.ctx->opt.livelock_ofilepath) {
+        Cx::OFileB ofb;
+        ofb.open(inst.ctx->opt.livelock_ofilepath + "." + inst.ctx->opt.sys_pcidx + "." + inst.ctx->opt.n_livelock_ofiles++);
+        oput_protocon_file(ofb, *inst.ctx->systems[i], false, inst[i].actions);
+      }
       *inst[i].log << "Solution was NOT self-stabilizing." << inst[i].log->endl();
       return false;
     }
@@ -684,14 +689,26 @@ stabilization_search(vector<uint>& ret_actions,
     {}
     else if (found)
     {
+      bool count_solution = true;
+      if (opt.solution_as_conflict) {
+        FlatSet<uint> flat_actions( actions );
+        if (conflicts.conflict_ck(flat_actions)) {
+          count_solution = false;
+        }
+        else {
+          conflicts.add_conflict(flat_actions);
+        }
+      }
+
       if (!global_opt.try_all) {
         set_done_flag (1);
       }
-      else if (!!exec_opt.ofilepath) {
+      else if (!!exec_opt.ofilepath && count_solution) {
         Cx::OFileB ofb;
         ofb.open(exec_opt.ofilepath + "." + PcIdx + "." + trial_idx);
         oput_protocon_file (ofb, sys, exec_opt.use_espresso, actions);
       }
+
       solution_found = true;
       ret_actions = actions;
       *opt.log << "SOLUTION FOUND!" << opt.log->endl();

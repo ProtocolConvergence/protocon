@@ -4,6 +4,7 @@
 
 #include <QDialog>
 #include <QString>
+#include <QStringList>
 
 namespace Ui {
   class ExploreW;
@@ -26,6 +27,7 @@ private slots:
   void randomize_state();
   void random_step();
   void act_assign(QListWidgetItem* item);
+  void vbl_assign(QListWidgetItem* item);
 
 public:
   void update_data();
@@ -37,6 +39,7 @@ private:
   bool updating;
   QString qbuf;
   bool gobble_section;
+  QStringList vbl_names;
   QListWidget* list_widget;
 };
 

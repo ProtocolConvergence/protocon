@@ -257,6 +257,15 @@ protocon_options_rec
     else if (eq_cstr (arg, "-try-all")) {
       opt.try_all = true;
     }
+    else if (eq_cstr (arg, "-solution-as-conflict")) {
+      opt.solution_as_conflict = true;
+    }
+    else if (eq_cstr (arg, "-o-livelock")) {
+      if (!argv[argi]) {
+        failout_sysCx("Not enuff arguments.");
+      }
+      opt.livelock_ofilepath = argv[argi++];
+    }
     else if (eq_cstr (arg, "-x-conflicts")) {
       exec_opt.conflicts_xfilepath = argv[argi++];
       if (!exec_opt.conflicts_xfilepath) {

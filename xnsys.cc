@@ -278,7 +278,7 @@ PcSymm::actions(Cx::Table<uint>& ret_actions, Cx::PFmlaCtx& ctx) const
     pfmla_wvbl_idcs.push(pc.wvbls[i]->pfmla_idx);
   }
 
-  Cx::PFmla pfmla( direct_pfmla & pc.act_unchanged_pfmla );
+  Cx::PFmla pfmla( direct_pfmla  & pc.act_unchanged_pfmla );
 
   ActSymm act;
   act.vals.grow(pc.rvbls.sz() + pc.wvbls.sz());

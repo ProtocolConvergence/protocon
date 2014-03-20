@@ -105,6 +105,8 @@ public:
 
   bool forbid_action(Sesp act_sp);
 
+  bool add_pc_predicate(Sesp name_sp, Sesp val_sp);
+
   bool add_pc_legit(Sesp legit_sp);
 
   bool add_predicate(Sesp name_sp, Sesp val_sp);

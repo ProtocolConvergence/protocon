@@ -1,0 +1,75 @@
+
+constant N := 3;
+
+direct variable c[Nat % N] <- Nat % 3;
+puppet variable tok[Nat % N] <- Nat % 3; // R S I
+direct variable way[Nat % (2*N)] <- Nat % 2;
+
+process PColor[i <- Nat % N]
+{
+  for j <- {# i-1, i+1 #}
+  {
+    read: c[j];
+  }
+  write: c[i];
+  predicate illegit := (c[i-1]==c[i] || c[i]==c[i+1]);
+  puppet action:
+    ( illegit && ((c[i-1] + c[i+1]) % 3 != 1) --> c[i] := 1+c[i-1]*c[i+1]; )
+    ( illegit && ((c[i-1] + c[i+1]) % 3 == 1) --> c[i] := 2+c[i-1]*c[i+1]; )
+    ;
+}
+
+process PWay[i <- Nat % (2*N)]
+{
+  let j := if (i % 2 == 0) then (i+1) else (i-1);
+  read: way[j];
+  write: way[i];
+  puppet action:
+    ( way[i] == way[j] --> way[i] := 1-way[j]; )
+    ;
+}
+
+process P[i <- Nat % N]
+{
+  for (j, way_idx, adj_way_idx, adj_way_idx_far)  <- {# (i-1, 2*i, 2*i-1, 2*i-2), (i+1, 2*i+1, 2*i+2, 2*i+3) #}
+  {
+    read: c[j];
+    read: tok[j];
+    read: way[adj_way_idx];
+    read: way[adj_way_idx_far];
+    write: way[way_idx];
+  }
+  read: c[i];
+  write: tok[i];
+
+  predicate depsat :=
+    way[2*i-2]!=way[2*i-1] && way[2*i+0]!=way[2*i+1] && way[2*i+2]!=way[2*i+3]
+    &&
+    c[i-1]!=c[i] && c[i]!=c[i+1]
+    ;
+
+  puppet action:
+    // 1
+    ( depsat && tok[i-1]==1 && way[2*i-1]==1 && tok[i]==2 --> tok[i]:=0; way[2*i+0]:=0; way[2*i+1]:=1; )
+    ( depsat && tok[i+1]==1 && way[2*i+2]==1 && tok[i]==2 --> tok[i]:=0; way[2*i+1]:=0; way[2*i+0]:=1; )
+    // 2
+    ( depsat && tok[i-1]==0 && way[2*i-1]==0 && tok[i]==1 && way[2*i+0]==1 && way[2*i+1]==0 --> tok[i]:=2; )
+    ( depsat && tok[i+1]==0 && way[2*i+2]==0 && tok[i]==1 && way[2*i+1]==1 && way[2*i+0]==0 --> tok[i]:=2; )
+    // 3
+    ( depsat && !(tok[i-1]==1 && way[2*i-1]==1) && tok[i]==0 && way[2*i+0]==0 --> tok[i]:=1; )
+    ( depsat && !(tok[i+1]==1 && way[2*i+2]==1) && tok[i]==0 && way[2*i+1]==0 --> tok[i]:=1; )
+    // 4
+    ( depsat && tok[i-1]==1 && way[2*i-1]==1 && tok[i]==1 && way[2*i+0]==1 && c[i-1]==(c[i]+1)%3 --> tok[i]:=0; way[2*i+0]:=0; way[2*i+1]:=1; )
+    ( depsat && tok[i+1]==1 && way[2*i+2]==1 && tok[i]==1 && way[2*i+1]==1 && c[i+1]==(c[i]+1)%3 --> tok[i]:=0; way[2*i+1]:=0; way[2*i+0]:=1; )
+    // 5
+    ( depsat && tok[i-1]==2 && way[2*i-1]==1 && tok[i]==2 && way[2*i+0]==1 && c[i-1]==(c[i]+1)%3 --> tok[i]:=1; )
+    ( depsat && tok[i+1]==2 && way[2*i+2]==1 && tok[i]==2 && way[2*i+1]==1 && c[i+1]==(c[i]+1)%3 --> tok[i]:=1; )
+    ;
+}
+
+shadow invariant:
+  (forall i <- Nat % N : c[i] != c[i-1])
+  &&
+  (forall i <- Nat % (2*N) : way[i] != way[i-1])
+  ;
+

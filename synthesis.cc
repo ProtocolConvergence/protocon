@@ -2,6 +2,8 @@
 #include "synthesis.hh"
 
 #include "stabilization.hh"
+#include "cx/fileb.hh"
+#include "pla.hh"
 
 typedef Cx::PFmla PF;
 
@@ -1119,6 +1121,21 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels, Set<uin
 #endif
       this->ctx->conflicts.add_conflict(conflict_set);
       *this->log << "cycle conflict size:" << conflict_set.sz() << this->log->endl();
+    }
+    if (!!this->ctx->opt.livelock_ofilepath && &sys == this->ctx->systems.top()) {
+      bool big_livelock = true;
+      for (uint i = 0; i < this->ctx->systems.sz()-1; ++i) {
+        if (!stabilization_ck(Cx::OFile::null(), *this->ctx->systems[i], actions)) {
+          *this->log << "still issues in system " << i << this->log->endl();
+          big_livelock = false;
+          break;
+        }
+      }
+      if (big_livelock) {
+        Cx::OFileB ofb;
+        ofb.open(this->ctx->opt.livelock_ofilepath + "." + this->ctx->opt.sys_pcidx + "." + this->ctx->opt.n_livelock_ofiles++);
+        oput_protocon_file(ofb, sys, false, this->actions);
+      }
     }
     return false;
   }
