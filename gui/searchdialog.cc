@@ -47,7 +47,7 @@ SearchDialog::search(QString xfilename, QString ofilename)
     QDir(QCoreApplication::applicationDirPath())
     .absoluteFilePath("protocon");
   QStringList args;
-  args.push_back("-simple");
+  args.push_back("-serial");
   args.push_back("-x");
   args.push_back(xfilename);
   if (!ofilename.isEmpty()) {

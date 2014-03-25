@@ -37,11 +37,11 @@ MainW::~MainW()
   bool
 MainW::open_file(QString fname)
 {
-  filename = fname;
   QFile f(fname);
   if (!f.open(QFile::ReadOnly | QFile::Text))
     return false;
 
+  filename = fname;
   QTextStream in(&f);
   ui->textEdit->setText(in.readAll());
   return true;

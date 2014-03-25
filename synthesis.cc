@@ -1016,6 +1016,9 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels, Set<uin
     Set<uint> tmp_dels;
     QuickTrim(tmp_dels, this->candidates, topo, actId);
     if (tmp_dels.overlap_ck(adds)) {
+      tmp_dels -= adds;
+    }
+    if (false) {
       *this->log << "QuickTrim() rejects an action!!!" << this->log->endl();
       Xn::ActSymm act;
       topo.action(act, actId);

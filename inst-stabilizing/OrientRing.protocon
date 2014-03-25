@@ -1,4 +1,10 @@
 
+// Ring orientation
+// Title: Uniform Self-Stabilizing Ring Orientation
+// Author: Amos Israeli
+// Author: Marc Jalfon
+// Year: 1993
+
 constant N := 3;
 
 direct variable c[Nat % N] <- Nat % 3;

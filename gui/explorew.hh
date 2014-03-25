@@ -21,13 +21,19 @@ public:
   ExploreW(QWidget *parent = 0);
   ~ExploreW();
 
+  enum CommandId { ShowState, ShowImg, ShowPre, ShowSat };
+
 private slots:
+  void closing();
   void ready_read();
   void ready_read_stderr();
   void randomize_state();
   void random_step();
   void act_assign(QListWidgetItem* item);
   void vbl_assign(QListWidgetItem* item);
+  void invariant_clicked(bool checked);
+  void deadlock_clicked(bool checked);
+  void livelock_clicked(bool checked);
 
 public:
   void update_data();
@@ -40,7 +46,7 @@ private:
   QString qbuf;
   bool gobble_section;
   QStringList vbl_names;
-  QListWidget* list_widget;
+  QList<CommandId> command_queue;
 };
 
 #endif

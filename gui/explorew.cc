@@ -17,11 +17,19 @@ ExploreW::ExploreW(QWidget *parent)
   connect(process, SIGNAL(readyReadStandardOutput()), this, SLOT(ready_read()));
   connect(process, SIGNAL(readyReadStandardError()), this, SLOT(ready_read_stderr()));
 
+  connect(this, SIGNAL(rejected()), this, SLOT(closing()));
+
   connect(ui->randomizeButton, SIGNAL(clicked()), this, SLOT(randomize_state()));
   connect(ui->stepButton, SIGNAL(clicked()), this, SLOT(random_step()));
   connect(ui->valueList, SIGNAL(itemChanged(QListWidgetItem*)), this, SLOT(vbl_assign(QListWidgetItem*)));
   connect(ui->imgList, SIGNAL(itemActivated(QListWidgetItem*)), this, SLOT(act_assign(QListWidgetItem*)));
   connect(ui->preList, SIGNAL(itemActivated(QListWidgetItem*)), this, SLOT(act_assign(QListWidgetItem*)));
+  connect(ui->invariantCheckBox, SIGNAL(clicked(bool)), this, SLOT(invariant_clicked(bool)));
+  connect(ui->deadlockCheckBox, SIGNAL(clicked(bool)), this, SLOT(deadlock_clicked(bool)));
+  connect(ui->livelockCheckBox, SIGNAL(clicked(bool)), this, SLOT(livelock_clicked(bool)));
+  ui->invariantLabel->hide();
+  ui->deadlockLabel->hide();
+  ui->livelockLabel->hide();
 
   process->setProcessChannelMode(QProcess::SeparateChannels);
 }
@@ -30,6 +38,14 @@ ExploreW::~ExploreW()
 {
   delete ui;
   delete process;
+}
+
+  void
+ExploreW::closing()
+{
+  process->write("exit\n");
+  process->closeWriteChannel();
+  process->waitForFinished();
 }
 
   void
@@ -60,24 +76,55 @@ ExploreW::ready_read()
     if (gobble_section) {
       gobble_section = false;
     }
-    else if (list_widget) {
-      list_widget->clear();
-      list_widget->addItems(lines.split("\n"));
-      if (list_widget == ui->valueList) {
+    else if (!command_queue.empty()) {
+      CommandId command = command_queue.front();
+      command_queue.pop_front();
+
+      if (command == ShowState) {
+        ui->valueList->clear();
+        ui->valueList->addItems(lines.split("\n"));
         vbl_names.clear();
         for (uint i = 0; i < (uint)ui->valueList->count(); i++) {
           QListWidgetItem* item = ui->valueList->item(i);
           item->setFlags(item->flags() | Qt::ItemIsEditable);
           vbl_names.push_back(item->text().section("==", 0, 0));
         }
+      }
+      else if (command == ShowImg) {
+        ui->imgList->clear();
+        ui->imgList->addItems(lines.split("\n"));
+      }
+      else if (command == ShowPre) {
+        ui->preList->clear();
+        ui->preList->addItems(lines.split("\n"));
+      }
+      else if (command == ShowSat) {
+        QStringList sats = lines.split("\n");
+        while (!sats.empty()) {
+          QString line = sats.front();
+          sats.pop_front();
+          if (line == "invariant 1") {
+            ui->invariantLabel->hide();
+          }
+          if (line == "invariant 0") {
+            ui->invariantLabel->show();
+          }
+          if (line == "deadlock 1") {
+            ui->deadlockLabel->hide();
+          }
+          if (line == "deadlock 0") {
+            ui->deadlockLabel->show();
+          }
+          if (line == "scc 1") {
+            ui->livelockLabel->hide();
+          }
+          if (line == "scc 0") {
+            ui->livelockLabel->show();
+          }
+        }
+      }
 
-        list_widget = ui->imgList;
-      }
-      else if (list_widget == ui->imgList) {
-        list_widget = ui->preList;
-      }
-      else if (list_widget == ui->preList) {
-        list_widget = 0;
+      if (command_queue.empty()) {
         qbuf.clear();
         updating = false;
         break;
@@ -130,10 +177,46 @@ ExploreW::vbl_assign(QListWidgetItem* item)
 }
 
   void
+ExploreW::invariant_clicked(bool checked)
+{
+  QString line("conj-invariant ");
+  line += checked ? "1" : "0";
+  line += '\n';
+  process->write(line.toAscii());
+  if (!checked)
+    ui->invariantLabel->hide();
+  update_data();
+}
+
+  void
+ExploreW::deadlock_clicked(bool checked)
+{
+  QString line("conj-deadlock ");
+  line += checked ? "1" : "0";
+  line += '\n';
+  process->write(line.toAscii());
+  if (!checked)
+    ui->deadlockLabel->hide();
+  update_data();
+}
+
+  void
+ExploreW::livelock_clicked(bool checked)
+{
+  QString line("conj-scc ");
+  line += checked ? "1" : "0";
+  line += '\n';
+  process->write(line.toAscii());
+  if (!checked)
+    ui->livelockLabel->hide();
+  update_data();
+}
+
+  void
 ExploreW::update_data()
 {
-  process->write("show-state\nshow-img\nshow-pre\n");
-  list_widget = ui->valueList;
+  process->write("show-state\nshow-img\nshow-pre\nshow-sat\n");
+  this->command_queue << ShowState << ShowImg << ShowPre << ShowSat;
   updating = true;
 }
 
