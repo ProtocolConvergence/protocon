@@ -1,0 +1,45 @@
+
+constant N := 6;
+constant M := 4;
+
+variable x[Nat % N] <- Nat % M;
+
+process P[i <- Nat % N]
+{
+  let bk_idx0_even := (N-1-i)/2;
+  let bk_idx1_even := bk_idx0_even + N/2;
+
+  let bk_idx0_odd  := (N-1)/2 * (i + 1);
+  let bk_idx1_odd  := (N-1)/2 * (i + 2);
+
+  let bk_idx0_tmp := if (N % 2 == 0) then (bk_idx0_even) else (bk_idx0_odd);
+  let bk_idx1_tmp := if (N % 2 == 0) then (bk_idx1_even) else (bk_idx1_odd);
+
+  let bk_idx0 := if (bk_idx0_tmp % N != i) then (bk_idx0_tmp) else (bk_idx1_tmp);
+  let bk_idx1 := if (bk_idx1_tmp % N != i) then (bk_idx1_tmp) else (bk_idx0_tmp);
+
+
+  let fw_idx0_tmp := -(2*i + 1) % N;
+  let fw_idx1_tmp := -(2*i + 2) % N;
+
+  let fw_idx0 := if (fw_idx0_tmp != i) then (fw_idx0_tmp) else (fw_idx1_tmp);
+  let fw_idx1 := if (fw_idx1_tmp != i) then (fw_idx1_tmp) else (fw_idx0_tmp);
+
+  for j <- {# bk_idx0, bk_idx1, fw_idx0, fw_idx1 #}
+  {
+    read: x[j];
+  }
+  write: x[i];
+}
+
+
+invariant:
+  (forall i <- Nat % N :
+   (forall q <- Nat % 2 :
+    (i == -(2*i + q+1) % N)
+    ||
+    (x[i] != x[-(2*i + q+1)])
+   )
+  )
+  ;
+

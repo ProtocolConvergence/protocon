@@ -28,12 +28,19 @@ private slots:
   void ready_read();
   void ready_read_stderr();
   void randomize_state();
-  void random_step();
+  void random_img_step();
+  void random_pre_step();
   void act_assign(QListWidgetItem* item);
   void vbl_assign(QListWidgetItem* item);
-  void invariant_clicked(bool checked);
-  void deadlock_clicked(bool checked);
-  void livelock_clicked(bool checked);
+
+  void cycle_find_clicked();
+  void predicate_influence_changed(const char* name, int idx);
+  void invariant_influence_changed(int idx)
+  { predicate_influence_changed("invariant", idx); }
+  void silent_influence_changed(int idx)
+  { predicate_influence_changed("silent", idx); }
+  void cycle_influence_changed(int idx)
+  { predicate_influence_changed("cycle", idx); }
 
 public:
   void update_data();

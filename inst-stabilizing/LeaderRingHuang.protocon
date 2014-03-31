@@ -1,5 +1,5 @@
 
-// Token passing around a ring defined in
+// Leader election in a prime-sized ring defined in
 // Title: Leader Election in Uniform Rings
 // Author: Shing-Tsaan Huang
 // Year: 1993

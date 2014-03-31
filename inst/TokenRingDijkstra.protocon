@@ -12,7 +12,7 @@ process Bot[i <- Nat % 1]
   read:  x[i-1];
   write: x[i];
   // Actions in the legitimate states:
-  action: ( x[i-1] == x[i] --> x[i] := x[i] + 1; );
+  direct action: ( x[i-1] == x[i] --> x[i] := x[i] + 1; );
   // Conjunct this into the invariant:
   invariant: x[i-1] == x[i] || x[i-1] == (x[i] - 1) % M;
 }
@@ -23,7 +23,7 @@ process P[j <- Nat % (N-1)]
   read:  x[i-1];
   write: x[i];
   // Actions in the legitimate states:
-  action: ( x[i-1] == (x[i] + 1) % M --> x[i] := x[i] + 1; );
+  direct action: ( x[i-1] == (x[i] + 1) % M --> x[i] := x[i] + 1; );
   // Conjunct this into the invariant:
   invariant: x[i-1] == (x[i] + 1) % M || x[i-1] == x[i];
 }

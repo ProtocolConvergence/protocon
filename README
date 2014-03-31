@@ -6,7 +6,7 @@ Build dependencies:
 - glu 2.4
     ftp://vlsi.colorado.edu/pub/vis/
     Library for multi-valued decision diagrams (MDDs).
-- Qt4
+- Qt4 4.8
     For the gui.
 
 Run dependencies:

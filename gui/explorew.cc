@@ -16,22 +16,32 @@ ExploreW::ExploreW(QWidget *parent)
   ui->setupUi(this);
   connect(process, SIGNAL(readyReadStandardOutput()), this, SLOT(ready_read()));
   connect(process, SIGNAL(readyReadStandardError()), this, SLOT(ready_read_stderr()));
+  process->setProcessChannelMode(QProcess::SeparateChannels);
 
   connect(this, SIGNAL(rejected()), this, SLOT(closing()));
 
   connect(ui->randomizeButton, SIGNAL(clicked()), this, SLOT(randomize_state()));
-  connect(ui->stepButton, SIGNAL(clicked()), this, SLOT(random_step()));
+  connect(ui->stepImgButton, SIGNAL(clicked()), this, SLOT(random_img_step()));
+  connect(ui->stepPreButton, SIGNAL(clicked()), this, SLOT(random_pre_step()));
   connect(ui->valueList, SIGNAL(itemChanged(QListWidgetItem*)), this, SLOT(vbl_assign(QListWidgetItem*)));
   connect(ui->imgList, SIGNAL(itemActivated(QListWidgetItem*)), this, SLOT(act_assign(QListWidgetItem*)));
   connect(ui->preList, SIGNAL(itemActivated(QListWidgetItem*)), this, SLOT(act_assign(QListWidgetItem*)));
-  connect(ui->invariantCheckBox, SIGNAL(clicked(bool)), this, SLOT(invariant_clicked(bool)));
-  connect(ui->deadlockCheckBox, SIGNAL(clicked(bool)), this, SLOT(deadlock_clicked(bool)));
-  connect(ui->livelockCheckBox, SIGNAL(clicked(bool)), this, SLOT(livelock_clicked(bool)));
-  ui->invariantLabel->hide();
-  ui->deadlockLabel->hide();
-  ui->livelockLabel->hide();
 
-  process->setProcessChannelMode(QProcess::SeparateChannels);
+  ui->invariantInfluenceGroup->setId(ui->invariantTrueBtn, 0);
+  ui->invariantInfluenceGroup->setId(ui->invariantDisplayBtn, 1);
+  ui->invariantInfluenceGroup->setId(ui->invariantFalseBtn, 2);
+  ui->silentInfluenceGroup->setId(ui->silentTrueBtn, 0);
+  ui->silentInfluenceGroup->setId(ui->silentDisplayBtn, 1);
+  ui->silentInfluenceGroup->setId(ui->silentFalseBtn, 2);
+  ui->cycleInfluenceGroup->setId(ui->cycleTrueBtn, 0);
+  ui->cycleInfluenceGroup->setId(ui->cycleDisplayBtn, 1);
+  ui->cycleInfluenceGroup->setId(ui->cycleFalseBtn, 2);
+  connect(ui->invariantInfluenceGroup, SIGNAL(buttonClicked(int)), this, SLOT(invariant_influence_changed(int)));
+  connect(ui->silentInfluenceGroup, SIGNAL(buttonClicked(int)), this, SLOT(silent_influence_changed(int)));
+  connect(ui->cycleInfluenceGroup, SIGNAL(buttonClicked(int)), this, SLOT(cycle_influence_changed(int)));
+
+  ui->cycleInfluenceLayout->hide();
+  connect(ui->cycleFindButton, SIGNAL(clicked()), this, SLOT(cycle_find_clicked()));
 }
 
 ExploreW::~ExploreW()
@@ -104,22 +114,22 @@ ExploreW::ready_read()
           QString line = sats.front();
           sats.pop_front();
           if (line == "invariant 1") {
-            ui->invariantLabel->hide();
+            ui->invariantStateLabel->setCurrentIndex(0);
           }
           if (line == "invariant 0") {
-            ui->invariantLabel->show();
+            ui->invariantStateLabel->setCurrentIndex(2);
           }
-          if (line == "deadlock 1") {
-            ui->deadlockLabel->hide();
+          if (line == "silent 1") {
+            ui->silentStateLabel->setCurrentIndex(0);
           }
-          if (line == "deadlock 0") {
-            ui->deadlockLabel->show();
+          if (line == "silent 0") {
+            ui->silentStateLabel->setCurrentIndex(2);
           }
-          if (line == "scc 1") {
-            ui->livelockLabel->hide();
+          if (line == "cycle 1") {
+            ui->cycleStateLabel->setCurrentIndex(0);
           }
-          if (line == "scc 0") {
-            ui->livelockLabel->show();
+          if (line == "cycle 0") {
+            ui->cycleStateLabel->setCurrentIndex(2);
           }
         }
       }
@@ -148,10 +158,19 @@ ExploreW::randomize_state()
 }
 
   void
-ExploreW::random_step()
+ExploreW::random_img_step()
 {
   if (updating)  return;
-  process->write("step\n");
+  process->write("step img\n");
+  gobble_section = true;
+  update_data();
+}
+
+  void
+ExploreW::random_pre_step()
+{
+  if (updating)  return;
+  process->write("step pre\n");
   gobble_section = true;
   update_data();
 }
@@ -177,38 +196,24 @@ ExploreW::vbl_assign(QListWidgetItem* item)
 }
 
   void
-ExploreW::invariant_clicked(bool checked)
+ExploreW::cycle_find_clicked()
 {
-  QString line("conj-invariant ");
-  line += checked ? "1" : "0";
-  line += '\n';
-  process->write(line.toAscii());
-  if (!checked)
-    ui->invariantLabel->hide();
+  ui->cycleInfluenceLayout->show();
+  process->write("predicate cycle display\n");
   update_data();
 }
 
   void
-ExploreW::deadlock_clicked(bool checked)
+ExploreW::predicate_influence_changed(const char* name, int idx)
 {
-  QString line("conj-deadlock ");
-  line += checked ? "1" : "0";
+  QString line("predicate ");
+  line += name;
+  line += ' ';
+  if      (idx == 0)  line += "true";
+  else if (idx == 1)  line += "display";
+  else if (idx == 2)  line += "false";
   line += '\n';
   process->write(line.toAscii());
-  if (!checked)
-    ui->deadlockLabel->hide();
-  update_data();
-}
-
-  void
-ExploreW::livelock_clicked(bool checked)
-{
-  QString line("conj-scc ");
-  line += checked ? "1" : "0";
-  line += '\n';
-  process->write(line.toAscii());
-  if (!checked)
-    ui->livelockLabel->hide();
   update_data();
 }
 
@@ -231,6 +236,8 @@ ExploreW::explore(QString xfilename)
   args.push_back("-x");
   args.push_back(xfilename);
   process->start(exepath, args, QProcess::ReadWrite);
+  process->write("predicate invariant display\n");
+  process->write("predicate silent display\n");
   update_data();
 }
 

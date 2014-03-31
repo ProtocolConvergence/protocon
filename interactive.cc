@@ -17,29 +17,35 @@ public:
   Cx::PFmla xn;
   Cx::PFmla mask_pfmla;
 
+  enum PredicateInfluence { WithinPredicate, DisplayPredicate, NotInPredicate, IgnorePredicate };
+
+  PredicateInfluence invariant_influence;
+  PredicateInfluence silent_influence;
+  PredicateInfluence cycle_influence;
+
   bool conj_invariant;
   bool conj_deadlock;
   bool conj_scc;
   Cx::PFmla* invariant_pfmla;
-  Cx::PFmla* deadlock_pfmla;
-  Cx::PFmla* scc_pfmla;
+  Cx::PFmla* silent_pfmla;
+  Cx::PFmla* cycle_pfmla;
 
   Interactive(const Xn::Sys& system)
     : sys(system)
     , topo(sys.topology)
-    , conj_invariant(false)
-    , conj_deadlock(false)
-    , conj_scc(false)
+    , invariant_influence(IgnorePredicate)
+    , silent_influence(IgnorePredicate)
+    , cycle_influence(IgnorePredicate)
     , invariant_pfmla(0)
-    , deadlock_pfmla(0)
-    , scc_pfmla(0)
+    , silent_pfmla(0)
+    , cycle_pfmla(0)
   {}
 
   ~Interactive()
   {
     delete invariant_pfmla;
-    delete deadlock_pfmla;
-    delete scc_pfmla;
+    delete silent_pfmla;
+    delete cycle_pfmla;
   }
 
   void assign(XFile* line_xf);
@@ -134,24 +140,39 @@ Interactive::pre_options(Cx::Table<Cx::String>& ret_lines) const
 Interactive::reset_mask_pfmla()
 {
   mask_pfmla = true;
-  if (conj_invariant) {
+  if (invariant_influence != IgnorePredicate) {
     if (!invariant_pfmla) {
       invariant_pfmla = new Cx::PFmla(sys.invariant);
     }
-    mask_pfmla &= *invariant_pfmla;
-  }
-  if (conj_deadlock) {
-    if (!deadlock_pfmla) {
-      deadlock_pfmla = new Cx::PFmla(~xn.pre());
+    if (invariant_influence == WithinPredicate) {
+      mask_pfmla &= *invariant_pfmla;
     }
-    mask_pfmla &= *deadlock_pfmla;
-  }
-  if (conj_scc) {
-    if (!scc_pfmla) {
-      scc_pfmla = new Cx::PFmla(false);
-      xn.cycle_ck(scc_pfmla);
+    else if (invariant_influence == NotInPredicate) {
+      mask_pfmla &= ~*invariant_pfmla;
     }
-    mask_pfmla &= *scc_pfmla;
+  }
+  if (silent_influence != IgnorePredicate) {
+    if (!silent_pfmla) {
+      silent_pfmla = new Cx::PFmla(~xn.pre());
+    }
+    if (silent_influence == WithinPredicate) {
+      mask_pfmla &= *silent_pfmla;
+    }
+    else if (silent_influence == NotInPredicate) {
+      mask_pfmla &= ~*silent_pfmla;
+    }
+  }
+  if (cycle_influence != IgnorePredicate) {
+    if (!cycle_pfmla) {
+      cycle_pfmla = new Cx::PFmla(false);
+      xn.cycle_ck(cycle_pfmla);
+    }
+    if (cycle_influence == WithinPredicate) {
+      mask_pfmla &= *cycle_pfmla;
+    }
+    else if (cycle_influence == NotInPredicate) {
+      mask_pfmla &= ~*cycle_pfmla;
+    }
   }
 }
 
@@ -254,32 +275,45 @@ interactive(const Xn::Sys& sys)
     else if (skip_cstr_XFile(line_xf, "show-sat"))
     {
       Cx::PFmla pf = usim.state_pfmla();
-      if (usim.conj_invariant) {
+      if (usim.invariant_influence != usim.IgnorePredicate) {
         of << "invariant "
           << (usim.invariant_pfmla->overlap_ck(pf) ? 1 : 0)
           << '\n';
       }
-      if (usim.conj_deadlock) {
-        of << "deadlock "
-          << (usim.deadlock_pfmla->overlap_ck(pf) ? 1 : 0)
+      if (usim.silent_influence != usim.IgnorePredicate) {
+        of << "silent "
+          << (usim.silent_pfmla->overlap_ck(pf) ? 1 : 0)
           << '\n';
       }
-      if (usim.conj_scc) {
-        of << "scc "
-          << (usim.scc_pfmla->overlap_ck(pf) ? 1 : 0)
+      if (usim.cycle_influence != usim.IgnorePredicate) {
+        of << "cycle "
+          << (usim.cycle_pfmla->overlap_ck(pf) ? 1 : 0)
           << '\n';
       }
       of << of.endl();
     }
     else if (skip_cstr_XFile(line_xf, "step")) {
       uint n = 0;
+      skipds_XFile(line_xf, 0);
+      bool forward = true;
+      if (skip_cstr_XFile(line_xf, "img")) {
+        forward = true;
+      }
+      else if (skip_cstr_XFile(line_xf, "pre")) {
+        forward = false;
+      }
       if (!xget_uint_XFile(line_xf, &n)) {
         n = 1;
       }
       while (n > 0) {
         n -= 1;
         Cx::Table<Cx::String> lines;
-        usim.img_options(lines);
+        if (forward) {
+          usim.img_options(lines);
+        }
+        else {
+          usim.pre_options(lines);
+        }
         if (lines.sz()==0)
           break;
         Cx::String line = lines[usim.urandom.pick(lines.sz())];
@@ -304,28 +338,33 @@ interactive(const Xn::Sys& sys)
     else if (skip_cstr_XFile(line_xf, "randomize")) {
       usim.randomize_state();
     }
-    else if (skip_cstr_XFile(line_xf, "conj-invariant")) {
-      uint flag = 0;
-      if (!xget_uint_XFile(line_xf, &flag)) {
-        flag = 1;
+    else if (skip_cstr_XFile(line_xf, "predicate")) {
+      char* predicate_name = nextok_XFile (line_xf, 0, 0);
+      char* predicate_influence = nextok_XFile (line_xf, 0, 0);
+      Interactive::PredicateInfluence influence = Interactive::IgnorePredicate;
+
+      if (eq_cstr(predicate_influence, "display")) {
+        influence = Interactive::DisplayPredicate;
       }
-      usim.conj_invariant = (flag == 1) ? true : false;
-      usim.reset_mask_pfmla();
-    }
-    else if (skip_cstr_XFile(line_xf, "conj-deadlock")) {
-      uint flag = 0;
-      if (!xget_uint_XFile(line_xf, &flag)) {
-        flag = 1;
+      else if (eq_cstr(predicate_influence, "ignore")) {
+        influence = Interactive::IgnorePredicate;
       }
-      usim.conj_deadlock = (flag == 1) ? true : false;
-      usim.reset_mask_pfmla();
-    }
-    else if (skip_cstr_XFile(line_xf, "conj-scc")) {
-      uint flag = 0;
-      if (!xget_uint_XFile(line_xf, &flag)) {
-        flag = 1;
+      else if (eq_cstr(predicate_influence, "true")) {
+        influence = Interactive::WithinPredicate;
       }
-      usim.conj_scc = (flag == 1) ? true : false;
+      else if (eq_cstr(predicate_influence, "false")) {
+        influence = Interactive::NotInPredicate;
+      }
+
+      if (eq_cstr(predicate_name, "invariant")) {
+        usim.invariant_influence = influence;
+      }
+      if (eq_cstr(predicate_name, "silent")) {
+        usim.silent_influence = influence;
+      }
+      if (eq_cstr(predicate_name, "cycle")) {
+        usim.cycle_influence = influence;
+      }
       usim.reset_mask_pfmla();
     }
     else if (skip_cstr_XFile(line_xf, "exit"))

@@ -1,0 +1,97 @@
+
+.SUFFIXES:
+SUFFIXES :=
+
+default: all
+
+
+GluPath = ../glu-2.4
+GluIncludePath = $(GluPath)/include
+LEG = ../peg-0.1.15/leg
+BinPath=../bin
+BldPath=bld
+
+
+CC=gcc
+CXX=g++
+#CFLAGS=-g -O2
+CFLAGS=-g
+
+CXXFLAGS=$(CFLAGS)
+LXXFLAGS += -L$(GluPath) -lcu -lglu -lcal -lm
+
+
+define DefCxxFile
+Objs += $(BldPath)/cxx/$(1).o
+
+$(BldPath)/cxx/$(1).o: $(1).cc
+	$(CXX) -c $(CXXFLAGS) $(2) $$< -o $$@
+
+$(BldPath)/cxx/$(1).o: | $(BldPath)/cxx
+
+endef
+
+define DefCFile
+Objs += $(BldPath)/$(1).o
+
+$(BldPath)/$(1).o: $(1).c
+	$(CC) -c $(CFLAGS) $(2) $$< -o $$@
+
+$(BldPath)/$(1).o: | $(BldPath)/cx
+
+endef
+
+$(eval \
+	$(call DefCxxFile,main) \
+	$(call DefCxxFile,pfmla) \
+	$(call DefCxxFile,xnsys) \
+	$(call DefCxxFile,xnspec) \
+	$(call DefCxxFile,pla) \
+	$(call DefCxxFile,promela) \
+	$(call DefCxxFile,protoconfile) \
+	$(call DefCxxFile,protoconfile.leg) \
+	$(call DefCxxFile,stabilization) \
+	)
+
+$(eval \
+	$(call DefCFile,pfmla) \
+	$(call DefCFile,pfmla-glu,-I$(GluIncludePath)) \
+	$(call DefCFile,cx/alphatab) \
+	$(call DefCFile,cx/bstree) \
+	$(call DefCFile,cx/fileb) \
+	$(call DefCFile,cx/ofile) \
+	$(call DefCFile,cx/ospc) \
+	$(call DefCFile,cx/rbtree) \
+	$(call DefCFile,cx/sesp) \
+	$(call DefCFile,cx/syscx) \
+	$(call DefCFile,cx/urandom) \
+	$(call DefCFile,cx/xfile) \
+	)
+
+protoconfile.leg.cc: protoconfile.leg
+	$(LEG) -o $@ $<
+
+all: $(BinPath)/example
+	#done
+
+$(BinPath)/example: $(Objs)
+	$(CXX) $(CXXFLAGS) $^ -o $@ $(LXXFLAGS)
+
+$(BinPath)/example: | $(BinPath)
+
+
+$(BinPath):
+	mkdir -p $@
+
+$(BldPath)/cx:
+	mkdir -p $@
+
+$(BldPath)/cxx:
+	mkdir -p $@
+
+
+.PHONY: clean
+clean:
+	rm -fr $(BldPath)
+	rm -fr protoconfile.leg.cc
+
