@@ -97,6 +97,9 @@ protocon_options_rec
       }
       exec_opt.model_ofilepath = argv[argi++];
     }
+    else if (eq_cstr (arg, "-o-graphviz")) {
+      exec_opt.graphviz_ofilepath = argv[argi++];
+    }
     else if (eq_cstr (arg, "-serial")) {
       opt.search_method = opt.SerialBacktrackSearch;
       opt.max_height = 0;

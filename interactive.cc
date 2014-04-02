@@ -323,6 +323,30 @@ interactive(const Xn::Sys& sys)
       }
       of << of.endl();
     }
+    else if (skip_cstr_XFile(line_xf, "sstep")) {
+      uint n = 0;
+      skipds_XFile(line_xf, 0);
+      bool forward = true;
+      if (!xget_uint_XFile(line_xf, &n)) {
+        n = 1;
+      }
+      while (n > 0) {
+        n -= 1;
+        Cx::Table<Cx::String> lines;
+        if (forward) {
+          usim.img_options(lines);
+        }
+        if (lines.sz()==0)
+          break;
+        for (uint i = 0; i < lines.sz(); ++i) {
+          Cx::String line = lines[i];
+          of << line << of.endl();
+          init_XFile_olay_cstr(line_xf, line.cstr());
+          usim.assign(line_xf);
+        }
+      }
+      of << of.endl();
+    }
     else if (skip_cstr_XFile(line_xf, "show-state"))
     {
       for (uint i = 0; i < topo.vbls.sz(); ++i) {

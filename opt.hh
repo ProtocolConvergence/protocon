@@ -38,6 +38,7 @@ public:
   bool use_espresso;
   Cx::Table< Cx::String > xfilepaths;
   Cx::String model_ofilepath;
+  Cx::String graphviz_ofilepath;
   Cx::String conflicts_xfilepath;
   Cx::String conflicts_ofilepath;
 

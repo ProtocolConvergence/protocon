@@ -29,6 +29,7 @@ private slots:
   void ready_read_stderr();
   void randomize_state();
   void random_img_step();
+  void sync_img_step();
   void random_pre_step();
   void act_assign(QListWidgetItem* item);
   void vbl_assign(QListWidgetItem* item);

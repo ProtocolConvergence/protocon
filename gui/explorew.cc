@@ -22,10 +22,11 @@ ExploreW::ExploreW(QWidget *parent)
 
   connect(ui->randomizeButton, SIGNAL(clicked()), this, SLOT(randomize_state()));
   connect(ui->stepImgButton, SIGNAL(clicked()), this, SLOT(random_img_step()));
+  connect(ui->syncStepImgButton, SIGNAL(clicked()), this, SLOT(sync_img_step()));
   connect(ui->stepPreButton, SIGNAL(clicked()), this, SLOT(random_pre_step()));
   connect(ui->valueList, SIGNAL(itemChanged(QListWidgetItem*)), this, SLOT(vbl_assign(QListWidgetItem*)));
-  connect(ui->imgList, SIGNAL(itemActivated(QListWidgetItem*)), this, SLOT(act_assign(QListWidgetItem*)));
-  connect(ui->preList, SIGNAL(itemActivated(QListWidgetItem*)), this, SLOT(act_assign(QListWidgetItem*)));
+  connect(ui->imgList, SIGNAL(itemClicked(QListWidgetItem*)), this, SLOT(act_assign(QListWidgetItem*)));
+  connect(ui->preList, SIGNAL(itemClicked(QListWidgetItem*)), this, SLOT(act_assign(QListWidgetItem*)));
 
   ui->invariantInfluenceGroup->setId(ui->invariantTrueBtn, 0);
   ui->invariantInfluenceGroup->setId(ui->invariantDisplayBtn, 1);
@@ -161,7 +162,22 @@ ExploreW::randomize_state()
 ExploreW::random_img_step()
 {
   if (updating)  return;
-  process->write("step img\n");
+  QString line( "step img " );
+  line += ui->nstepsSpinBox->cleanText();
+  line += '\n';
+  process->write(line.toAscii());
+  gobble_section = true;
+  update_data();
+}
+
+  void
+ExploreW::sync_img_step()
+{
+  if (updating)  return;
+  QString line( "sstep " );
+  line += ui->nstepsSpinBox->cleanText();
+  line += '\n';
+  process->write(line.toAscii());
   gobble_section = true;
   update_data();
 }
@@ -170,7 +186,10 @@ ExploreW::random_img_step()
 ExploreW::random_pre_step()
 {
   if (updating)  return;
-  process->write("step pre\n");
+  QString line( "step pre " );
+  line += ui->nstepsSpinBox->cleanText();
+  line += '\n';
+  process->write(line.toAscii());
   gobble_section = true;
   update_data();
 }

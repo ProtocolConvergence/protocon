@@ -6,6 +6,7 @@ extern "C" {
 #include "stabilization.hh"
 #include "synthesis.hh"
 #include "pla.hh"
+#include "graphviz.hh"
 #include "cx/fileb.hh"
 #include "opt.hh"
 #include "search.hh"
@@ -99,6 +100,11 @@ int main(int argc, char** argv)
       of.close();
       DBog1("Model written to \"%s\".", modelFilePath);
       //DBog0("WARNING: The model is not working at this time.");
+    }
+    if (!exec_opt.graphviz_ofilepath.empty_ck()) {
+      Cx::OFileB ofb;
+      ofb.open(exec_opt.graphviz_ofilepath);
+      oput_graphviz_file (ofb, sys.topology);
     }
     if (!exec_opt.ofilepath.empty_ck())
     {
