@@ -261,6 +261,10 @@ stabilization_search(vector<uint>& ret_actions,
     {}
     else if (found)
     {
+      if (opt.solution_as_conflict) {
+        FlatSet<uint> flat_actions( actions );
+        conflicts.add_conflict(flat_actions);
+      }
       if (!global_opt.try_all) {
         mpi_dissem->terminate();
       }
