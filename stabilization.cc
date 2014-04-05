@@ -184,17 +184,25 @@ stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
   }
   of << "Finding cycles..." << of.endl();
   Cx::PFmla scc( false );
-  uint nsteps = 0;
-  lo_xn.cycle_ck(&scc, &nsteps);
-  of << "Max async steps to cycle or silent state: " << nsteps << "\n";
+  if (info && info->count_convergence_steps) {
+    lo_xn.cycle_ck(&scc, &info->n_async_steps, &sys.invariant);
+    of << "Max async steps to converge: " << info->n_async_steps << "\n";
+  }
+  else {
+    uint nsteps = 0;
+    lo_xn.cycle_ck(&scc, &nsteps);
+    of << "Max async steps to cycle or silent state: " << nsteps << "\n";
+  }
   if (!scc.subseteq_ck(sys.invariant)) {
     of << "Livelock found.\n";
     if (info) {
       info->livelock_exists = true;
-      Cx::Table<Cx::PFmla> states;
-      info->livelock_actions = info->actions;
-      find_one_cycle(info->livelock_actions, lo_xn, scc, topo);
-      of << info->livelock_actions.size() << " actions involved in livelocks.\n";
+      if (info->find_livelock_actions) {
+        Cx::Table<Cx::PFmla> states;
+        info->livelock_actions = info->actions;
+        find_one_cycle(info->livelock_actions, lo_xn, scc, topo);
+        of << info->livelock_actions.size() << " actions involved in livelocks.\n";
+      }
     }
     if (false) {
       oput_one_cycle(of, lo_xn, scc, topo);

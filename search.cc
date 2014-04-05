@@ -599,7 +599,9 @@ stabilization_search(vector<uint>& ret_actions,
       sys.topology.lightweight = lightweight;
       if (ReadProtoconFile(sys, verif_infile_opt)) {
         StabilizationCkInfo info;
-        if (stabilization_ck(*opt.log, sys, lightweight ? 0 : &info)) {
+        info.find_livelock_actions = lightweight;
+        info.count_convergence_steps = exec_opt.count_convergence_steps;
+        if (stabilization_ck(*opt.log, sys, &info)) {
           solution_found = true;
           ret_actions = sys.actions;
           *opt.log << "System is stabilizing." << opt.log->endl();

@@ -18,9 +18,16 @@ public:
   Cx::Table<uint> actions;
   bool livelock_exists;
   Cx::Table<uint> livelock_actions;
+  uint n_async_steps;
+
+  bool find_livelock_actions;
+  bool count_convergence_steps;
 
   StabilizationCkInfo()
     : livelock_exists(false)
+    , n_async_steps(0)
+    , find_livelock_actions(false)
+    , count_convergence_steps(false)
   {}
 };
 
