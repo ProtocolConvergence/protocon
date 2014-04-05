@@ -57,14 +57,16 @@ PFmla::closure_within(const Cx::PFmla& pf) const
  * iteratively computing the image until it does not change.
  */
   bool
-PFmla::cycle_ck(Cx::PFmla* scc) const
+PFmla::cycle_ck(Cx::PFmla* scc, uint* ret_nsteps) const
 {
   Cx::PFmla span0( true, *this );
+  uint nsteps = 0;
 
   while (true) {
     const Cx::PFmla& span1 = this->img(span0);
     if (span0.equiv_ck(span1))  break;
     span0 = span1;
+    nsteps += 1;
   }
 
   while (true) {
@@ -75,6 +77,8 @@ PFmla::cycle_ck(Cx::PFmla* scc) const
 
   if (scc)
     *scc = span0;
+  if (ret_nsteps)
+    *ret_nsteps = nsteps;
 
   return span0.sat_ck();
 }

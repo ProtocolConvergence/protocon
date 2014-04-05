@@ -20,11 +20,13 @@ public:
   bool open_file(QString fname);
 
 private slots:
+  void open_output_file();
   void open();
   void new_file();
   bool save();
   bool saveas();
   void search();
+  void verify();
   void explore();
 
 private:

@@ -1304,6 +1304,9 @@ SynthesisCtx::add(const Xn::Sys& sys)
 
   inst.csp_pfmla = synctx.csp_base_pfmla;
 
+  if (topo.lightweight)
+    return true;
+
   bool good =
     candidate_actions(inst.candidates, sys);
   if (!good) {

@@ -58,7 +58,7 @@ Net::commit_initialization()
   act_pfmlas.resize(ntotal);
   pure_shadow_pfmlas.resize(ntotal);
   for (uint i = 0; i < ntotal; ++i) {
-    this->make_action_pfmla(i);
+    this->cache_action_pfmla(i);
   }
 }
 
@@ -522,6 +522,7 @@ Sys::integrityCk() const
     }
   }
 
+  if (false)
   if (this->shadow_pfmla.overlap_ck(this->shadow_self)) {
     DBog0( "Error: Shadow protocol contains self-loops!" );
     good = false;
@@ -535,6 +536,7 @@ Sys::integrityCk() const
     good = false;
   }
 
+  if (false)
   if (!(this->shadow_pfmla.img(this->invariant) <= this->invariant)) {
     DBog0( "Error: Protocol is not closed in the invariant!" );
     good = false;
@@ -641,12 +643,68 @@ oput_one_cycle(Cx::OFile& of, const Cx::PFmla& xn, const Cx::PFmla& scc, const X
   of.flush();
 }
 
-/**
- * Create a persistent PF for this action.
- * \sa commit_initialization()
- **/
+  Cx::PFmla
+Xn::Net::xn_of_pc(const Xn::ActSymm& act, uint pcidx) const
+{
+  const Xn::PcSymm& pc_symm = *act.pc_symm;
+  const Xn::Pc& pc = *pc_symm.membs[pcidx];
+  // Local transition whose guard is over puppet variables
+  // but does make an assignment to the writeable pure shadow variables.
+  Cx::PFmla xn(true);
+
+  for (uint i = 0; i < pc.wvbls.sz(); ++i) {
+    const Cx::PFmlaVbl& vbl = pfmla_vbl(*pc.wvbls[i]);
+    xn &= (vbl == act.aguard(i));
+    xn &= (vbl.img_eq(act.assign(i)));
+  }
+
+  for (uint i = 0; i < pc.rvbls.sz(); ++i) {
+    const Cx::PFmlaVbl& vbl = pfmla_vbl(*pc.rvbls[i]);
+    if (!pc_symm.write_flags[i] && pc_symm.rvbl_symms[i]->puppet_ck()) {
+      xn &= (vbl == act.guard(i));
+    }
+  }
+  return xn;
+}
+
+  Cx::PFmla
+Xn::Net::pure_shadow_xn_of_pc(const Xn::ActSymm& act, uint pcidx) const
+{
+  const Xn::PcSymm& pc_symm = *act.pc_symm;
+  const Xn::Pc& pc = *pc_symm.membs[pcidx];
+
+  // Fixed states for the pure shadow variables.
+  Cx::PFmla pure_shadow_pre(true);
+  Cx::PFmla pure_shadow_img(true);
+
+  for (uint i = 0; i < pc.wvbls.sz(); ++i) {
+    const Cx::PFmlaVbl& vbl = pfmla_vbl(*pc.wvbls[i]);
+    if (pc_symm.wvbl_symms[i]->pure_shadow_ck()) {
+      pure_shadow_pre &= (vbl == act.aguard(i));
+      pure_shadow_img &= (vbl == act.assign(i));
+    }
+  }
+
+  for (uint i = 0; i < pc.wvbls.sz(); ++i) {
+    const Cx::PFmlaVbl& vbl = pfmla_vbl(*pc.wvbls[i]);
+    if (pc_symm.wvbl_symms[i]->puppet_ck()) {
+      pure_shadow_pre |= (vbl != act.aguard(i));
+      pure_shadow_img |= (vbl != act.assign(i));
+    }
+  }
+
+  for (uint i = 0; i < pc.rvbls.sz(); ++i) {
+    const Cx::PFmlaVbl& vbl = pfmla_vbl(*pc.rvbls[i]);
+    if (!pc_symm.write_flags[i] && pc_symm.rvbl_symms[i]->puppet_ck()) {
+      pure_shadow_pre |= (vbl != act.guard(i));
+      pure_shadow_img |= (vbl != act.guard(i));
+    }
+  }
+  return (pure_shadow_pre & pure_shadow_img);
+}
+
   void
-Xn::Net::make_action_pfmla(uint actidx)
+Xn::Net::make_action_pfmla(Cx::PFmla* ret_xn, Cx::PFmla* ret_pure_shadow_xn, uint actidx) const
 {
   Xn::ActSymm act;
   this->action(act, actidx);
@@ -657,42 +715,8 @@ Xn::Net::make_action_pfmla(uint actidx)
 
   for (uint pc_memb_idx = 0; pc_memb_idx < pc_symm.membs.sz(); ++pc_memb_idx) {
     const Xn::Pc& pc = *pc_symm.membs[pc_memb_idx];
-    // Local transition whose guard is over puppet variables
-    // but does make an assignment to the writeable pure shadow variables.
-    Cx::PFmla actpf(true);
-    // Fixed states for the pure shadow variables.
-    Cx::PFmla pure_shadow_pre(true);
-    Cx::PFmla pure_shadow_img(true);
-
-    for (uint i = 0; i < pc.wvbls.sz(); ++i) {
-      const Cx::PFmlaVbl& vbl = pfmla_vbl(*pc.wvbls[i]);
-      actpf &= (vbl == act.aguard(i));
-      actpf &= (vbl.img_eq(act.assign(i)));
-      if (pc_symm.wvbl_symms[i]->pure_shadow_ck()) {
-        pure_shadow_pre &= (vbl == act.aguard(i));
-        pure_shadow_img &= (vbl == act.assign(i));
-      }
-    }
-
-    for (uint i = 0; i < pc.wvbls.sz(); ++i) {
-      const Cx::PFmlaVbl& vbl = pfmla_vbl(*pc.wvbls[i]);
-      if (pc_symm.wvbl_symms[i]->puppet_ck()) {
-        pure_shadow_pre |= (vbl != act.aguard(i));
-        pure_shadow_img |= (vbl != act.assign(i));
-      }
-    }
-
-    for (uint i = 0; i < pc.rvbls.sz(); ++i) {
-      const Cx::PFmlaVbl& vbl = pfmla_vbl(*pc.rvbls[i]);
-      if (!pc_symm.write_flags[i] && pc_symm.rvbl_symms[i]->puppet_ck()) {
-        actpf &= (vbl == act.guard(i));
-        pure_shadow_pre |= (vbl != act.guard(i));
-        pure_shadow_img |= (vbl != act.guard(i));
-      }
-    }
-
-    xn |= (pc.act_unchanged_pfmla & actpf);
-    pure_shadow_pfmla &= (pure_shadow_pre & pure_shadow_img);
+    xn |= (pc.act_unchanged_pfmla & this->xn_of_pc(act, pc_memb_idx));
+    pure_shadow_pfmla &= this->pure_shadow_xn_of_pc(act, pc_memb_idx);
   }
   Claim( pure_shadow_pfmla.sat_ck() );
 
@@ -701,6 +725,29 @@ Xn::Net::make_action_pfmla(uint actidx)
       xn = false;
     }
   }
+
+  *ret_xn = xn;
+  if (ret_pure_shadow_xn) {
+    *ret_pure_shadow_xn = pure_shadow_pfmla;
+  }
+}
+
+  void
+Xn::Net::make_action_pfmla(Cx::PFmla* xn, uint actidx) const
+{
+  this->make_action_pfmla(xn, 0, actidx);
+}
+
+/**
+ * Create a persistent PF for this action.
+ * \sa commit_initialization()
+ **/
+  void
+Xn::Net::cache_action_pfmla(uint actidx)
+{
+  Cx::PFmla xn;
+  Cx::PFmla pure_shadow_pfmla;
+  make_action_pfmla(&xn, &pure_shadow_pfmla, actidx);
 
   uint rep_actidx = representative_action_index(actidx);
 

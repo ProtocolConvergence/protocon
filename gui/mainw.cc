@@ -6,6 +6,7 @@
 #include "searchdialog.hh"
 
 #include <QFileDialog>
+#include <QMessageBox>
 #include <QTextStream>
 #include <stdio.h>
 
@@ -22,7 +23,9 @@ MainW::MainW(QWidget *parent)
   connect(ui->actionQuit, SIGNAL(triggered()), qApp, SLOT(quit()));
 
   connect(ui->searchButton, SIGNAL(clicked()), this, SLOT(search()));
+  connect(ui->verifyButton, SIGNAL(clicked()), this, SLOT(verify()));
   connect(ui->exploreButton, SIGNAL(clicked()), this, SLOT(explore()));
+  connect(ui->openOutputFileButton, SIGNAL(clicked()), this, SLOT(open_output_file()));
 }
 
 MainW::~MainW()
@@ -45,6 +48,24 @@ MainW::open_file(QString fname)
   QTextStream in(&f);
   ui->textEdit->setText(in.readAll());
   return true;
+}
+
+/**
+ * Open the output file.
+ */
+  void
+MainW::open_output_file()
+{
+  QString fname = ui->outputFileLineEdit->text();
+  QFile f(fname);
+  if (!f.open(QFile::ReadOnly | QFile::Text)) {
+    QMessageBox::critical(0, "File Not Found", "Cannot open: " + fname);
+    return;
+  }
+
+  filename = fname;
+  QTextStream in(&f);
+  ui->textEdit->setText(in.readAll());
 }
 
 /**
@@ -113,6 +134,15 @@ MainW::search()
     return;
   search_dialog->show();
   search_dialog->search(filename, ui->outputFileLineEdit->text());
+}
+
+  void
+MainW::verify()
+{
+  if (!this->save())
+    return;
+  search_dialog->show();
+  search_dialog->verify(filename);
 }
 
   void

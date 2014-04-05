@@ -379,6 +379,7 @@ ProtoconFile::add_action(Sesp act_sp, Xn::Vbl::ShadowPuppetRole role)
   DoLegit( good, "parse action" )
     good = parse_action(act_pf, act_sp);
 
+  if (false)
   DoLegit(good, "self-loop")
     good = !act_pf.overlap_ck(topo.identity_xn);
 

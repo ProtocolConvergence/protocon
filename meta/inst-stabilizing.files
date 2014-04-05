@@ -8,5 +8,6 @@ SumNotTarget.protocon
 TokenChainDijkstra.protocon
 TokenRingDijkstra.protocon
 TokenRingSixState.protocon
+TokenRingSixStateQuiet.protocon
 TokenRingThreeBit.protocon
 TokenRingThreeState.protocon

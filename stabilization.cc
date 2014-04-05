@@ -29,6 +29,17 @@ shadow_ck(Cx::PFmla* ret_invariant,
           const Cx::PFmla* lo_scc)
 {
   if (!sys.shadow_puppet_synthesis_ck()) {
+    // Closure.
+    if (!lo_xn.img(sys.invariant).subseteq_ck(sys.invariant)) {
+      return false;
+    }
+    // Shadow behavior.
+    if (!sys.shadow_pfmla.subseteq_ck(hi_xn)) {
+      return false;
+    }
+    if (!(lo_xn & sys.invariant).subseteq_ck(sys.shadow_pfmla)) {
+      return false;
+    }
     if (ret_invariant)
       *ret_invariant = sys.invariant;
     return true;
@@ -138,9 +149,19 @@ stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
                  StabilizationCkInfo* info)
 {
   const Xn::Net& topo = sys.topology;
-  of << "Checking for bad shadow...\n";
+  if (sys.shadow_puppet_synthesis_ck()) {
+    of << "Checking for bad shadow...\n";
+  }
+  else {
+    of << "Checking for self-loops...\n";
+  }
   if (lo_xn.img().overlap_ck(lo_xn & topo.proj_puppet(topo.identity_xn))) {
-    of << "Pure shadow behavior is not put together properly.\n";
+    if (sys.shadow_puppet_synthesis_ck()) {
+      of << "Pure shadow behavior is not put together properly.\n";
+    }
+    else {
+      of << "Self-loop found.\n";
+    }
     if (false) {
       const Cx::PFmla& puppet_self = lo_xn & topo.proj_puppet(topo.identity_xn);
       Cx::PFmla pf = (lo_xn.img() & puppet_self.pre()).pick_pre();
@@ -152,8 +173,7 @@ stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
     return false;
   }
 
-  of << "Checking for deadlocks...\n";
-  of.flush();
+  of << "Checking for deadlocks..." << of.endl();
   if (!(~sys.invariant).subseteq_ck(hi_xn.pre())) {
     of << "Deadlock found.\n";
     if (false) {
@@ -162,10 +182,11 @@ stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
     of.flush();
     return false;
   }
-  of << "Finding SCCs...\n";
-  of.flush();
+  of << "Finding cycles..." << of.endl();
   Cx::PFmla scc( false );
-  lo_xn.cycle_ck(&scc);
+  uint nsteps = 0;
+  lo_xn.cycle_ck(&scc, &nsteps);
+  of << "Max async steps to cycle or silent state: " << nsteps << "\n";
   if (!scc.subseteq_ck(sys.invariant)) {
     of << "Livelock found.\n";
     if (info) {
@@ -181,16 +202,16 @@ stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
     of.flush();
     return false;
   }
-  of << "Calculating invariant...\n";
-  of.flush();
+  of << "Checking behavior within the invariant..." << of.endl();
   Cx::PFmla hi_invariant( false );
   if (!shadow_ck(&hi_invariant, sys, lo_xn, hi_xn, &scc)) {
     of << "Invariant not valid, given the protocol and behavior.\n";
     of.flush();
     return false;
   }
-  of << "Checking for deadlocks in new invariant...\n";
-  of.flush();
+  if (sys.shadow_puppet_synthesis_ck()) {
+    of << "Checking for deadlocks in new invariant..." << of.endl();
+  }
   if (!(~hi_invariant).subseteq_ck(hi_xn.pre())) {
     of << "Deadlock found.\n";
     of.flush();
@@ -232,14 +253,30 @@ stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
   of << "Building transition relation...\n";
   of.flush();
   for (uint i = 0; i < actions.size(); ++i) {
-    lo_xn |= topo.action_pfmla(actions[i]);
-    lo_pure_shadow_pf &= topo.pure_shadow_pfmla(actions[i]);
+    if (!topo.lightweight) {
+      lo_xn |= topo.action_pfmla(actions[i]);
+      lo_pure_shadow_pf &= topo.pure_shadow_pfmla(actions[i]);
+    }
+    else {
+      Cx::PFmla act_xn;
+      Cx::PFmla pure_shadow_act_xn;
+      topo.make_action_pfmla(&act_xn, &pure_shadow_act_xn, actions[i]);
+      lo_xn |= act_xn;
+      lo_pure_shadow_pf &= pure_shadow_act_xn;
+    }
     //Claim( lo_pure_shadow_pf.sat_ck() );
   }
   Cx::PFmla hi_xn( lo_xn );
   Cx::PFmla hi_pure_shadow_pf( lo_pure_shadow_pf );
   for (uint i = 0; i < candidates.size(); ++i) {
-    hi_xn |= topo.action_pfmla(candidates[i]);
+    if (!topo.lightweight) {
+      hi_xn |= topo.action_pfmla(candidates[i]);
+    }
+    else {
+      Cx::PFmla act_xn;
+      topo.make_action_pfmla(&act_xn, candidates[i]);
+      hi_xn |= act_xn;
+    }
     // TODO
     //hi_pure_shadow_pf |= topo.pure_shadow_pfmla(candidates[i]);
   }

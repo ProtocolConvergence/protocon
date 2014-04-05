@@ -52,8 +52,28 @@ SearchDialog::search(QString xfilename, QString ofilename)
   args.push_back(xfilename);
   if (!ofilename.isEmpty()) {
     args.push_back("-o");
+    args.push_back(ofilename);
   }
-  args.push_back(ofilename);
+  process->start(exepath, args, QProcess::ReadOnly);
+}
+
+  void
+SearchDialog::verify(QString xfilename)
+{
+  ui->killButton->setEnabled(true);
+  ui->terminateButton->setEnabled(true);
+  ui->terminateButton->setDefault(true);
+  ui->closeButton->setEnabled(false);
+
+  ui->textEdit->clear();
+
+  QString exepath =
+    QDir(QCoreApplication::applicationDirPath())
+    .absoluteFilePath("protocon");
+  QStringList args;
+  args.push_back("-verify");
+  args.push_back("-x");
+  args.push_back(xfilename);
   process->start(exepath, args, QProcess::ReadOnly);
 }
 

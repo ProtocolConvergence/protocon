@@ -383,8 +383,13 @@ public:
   Cx::OFile& oput_one_pf(Cx::OFile& of, const Cx::PFmla& pf) const;
   Cx::OFile& oput_all_pf(Cx::OFile& of, const Cx::PFmla& pf) const;
 
+
+  Cx::PFmla xn_of_pc(const Xn::ActSymm& act, uint pcidx) const;
+  Cx::PFmla pure_shadow_xn_of_pc(const Xn::ActSymm& act, uint pcidx) const;
+  void make_action_pfmla(Cx::PFmla* ret_xn, Cx::PFmla* ret_pure_shadow_xn, uint actidx) const;
+  void make_action_pfmla(Cx::PFmla* ret_xn, uint actid) const;
 private:
-  void make_action_pfmla(uint actid);
+  void cache_action_pfmla(uint actid);
 };
 
 /** This holds the search problem and its solution.**/
@@ -398,10 +403,10 @@ public:
 
   /// Invariant to which we should converge.
   Cx::PFmla invariant;
-  /// Transition relation within the invariant.
   bool shadow_puppet_synthesis;
   bool direct_invariant_flag;
   Cx::PFmla shadow_pfmla;
+  /// Transition relation within the invariant.
   Cx::PFmla direct_pfmla;
   /// Self-loops in the invariant.
   Cx::PFmla shadow_self;

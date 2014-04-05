@@ -17,6 +17,7 @@ public:
   ~SearchDialog();
 
   void search(QString xfilename, QString ofilename);
+  void verify(QString xfilename);
 
 private slots:
   void append_output();
