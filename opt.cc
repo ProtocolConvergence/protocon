@@ -4,7 +4,6 @@ extern "C" {
 }
 
 #include "opt.hh"
-#include "stabilization.hh"
 #include "synthesis.hh"
 #include "pla.hh"
 #include "cx/fileb.hh"
@@ -19,6 +18,38 @@ enum ProblemInstance {
   AgreementRingInstance,
   NProblemInstances
 };
+
+static
+  bool
+handle_param_arg(ProtoconParamOpt& psys_opt, const char* arg, int& argi, int argc, char** argv)
+{
+  if (eq_cstr (arg, "-no-conflict")) {
+    psys_opt.conflict = false;
+  }
+  else if (eq_cstr (arg, "-no-conflicts")) {
+    psys_opt.conflict = false;
+  }
+  else if (eq_cstr (arg, "-synchronous")) {
+    psys_opt.stabilization_opt.synchronous = true;
+  }
+  else if (eq_cstr (arg, "-count-convergence-layers")) {
+    psys_opt.stabilization_opt.count_convergence_layers = true;
+  }
+  else if (eq_cstr (arg, "-max-nlayers")) {
+    uint x = 0;
+    if (argi >= argc) {
+      failout_sysCx("1 arguments needed for -max-nlayers.\n");
+    }
+    arg = argv[argi++];
+    if (!xget_uint_cstr (&x, arg))
+      failout_sysCx("Argument Usage: -max-nlayers NLAYERS\nWhere NLAYERS is an unsigned integer!");
+    psys_opt.stabilization_opt.max_nlayers = x;
+  }
+  else {
+    return false;
+  }
+  return true;
+}
 
 static
   bool
@@ -57,12 +88,8 @@ parse_param(ProtoconOpt& opt, int& argi, int argc, char** argv)
         failout_sysCx("Argument Usage: -def KEY VAL\nWhere VAL is an unsigned integer!");
       psys_opt.constant_map[key] = x;
     }
-    else if (eq_cstr (arg, "-no-conflict")) {
-      psys_opt.conflict = false;
-    }
-    else if (eq_cstr (arg, "-no-conflicts")) {
-      psys_opt.conflict = false;
-    }
+    else if (handle_param_arg (psys_opt, arg, argi, argc, argv))
+    {}
     else if (eq_cstr (arg, "-no-partial")) {
       psys_opt.partial = false;
     }
@@ -101,12 +128,19 @@ protocon_options_rec
       exec_opt.graphviz_ofilepath = argv[argi++];
     }
     else if (eq_cstr (arg, "-serial")) {
-      opt.search_method = opt.SerialBacktrackSearch;
-      opt.max_height = 0;
-      //opt.ntrials = 1;
+      exec_opt.nparallel = 1;
     }
     else if (eq_cstr (arg, "-parallel")) {
-      opt.search_method = opt.ParallelBacktrackSearch;
+      exec_opt.nparallel = 0;
+      if (argv[argi] && argv[argi][0] != '-') {
+        arg = argv[argi++];
+        if (!xget_uint_cstr (&exec_opt.nparallel, arg)) {
+          failout_sysCx("Number given to -parallel could not be parsed.\n");
+        }
+      }
+    }
+    else if (eq_cstr (arg, "-search")) {
+      opt.search_method = opt.BacktrackSearch;
     }
     else if (eq_cstr (arg, "-rank-shuffle")) {
       opt.search_method = opt.RankShuffleSearch;
@@ -153,12 +187,8 @@ protocon_options_rec
         failout_sysCx("Argument Usage: -def KEY VAL\nWhere VAL is an unsigned integer!");
       exec_opt.params[0].constant_map[key] = x;
     }
-    else if (eq_cstr (arg, "-no-conflict")) {
-      exec_opt.params[0].conflict = false;
-    }
-    else if (eq_cstr (arg, "-no-conflicts")) {
-      exec_opt.params[0].conflict = false;
-    }
+    else if (handle_param_arg (exec_opt.params[0], arg, argi, argc, argv))
+    {}
     else if (eq_cstr (arg, "-param")) {
       if (!parse_param(exec_opt, argi, argc, argv)) {
         return false;
@@ -232,9 +262,6 @@ protocon_options_rec
     }
     else if (eq_cstr (arg, "-espresso")) {
       exec_opt.use_espresso = true;
-    }
-    else if (eq_cstr (arg, "-count-convergence-steps")) {
-      exec_opt.count_convergence_steps = true;
     }
     else if (eq_cstr (arg, "-x-test-known")) {
       Xn::Sys test_sys;

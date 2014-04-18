@@ -34,7 +34,7 @@ shadow_ck(Cx::PFmla* ret_invariant,
       return false;
     }
     // Shadow behavior.
-    if (!sys.shadow_pfmla.subseteq_ck(hi_xn)) {
+    if (!(sys.shadow_pfmla & sys.invariant).subseteq_ck(hi_xn)) {
       return false;
     }
     if (!(lo_xn & sys.invariant).subseteq_ck(sys.shadow_pfmla)) {
@@ -144,6 +144,7 @@ shadow_ck(Cx::PFmla* ret_invariant,
 
   bool
 stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
+                 const StabilizationOpt& opt,
                  const Cx::PFmla& lo_xn,
                  const Cx::PFmla& hi_xn,
                  StabilizationCkInfo* info)
@@ -184,15 +185,20 @@ stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
   }
   of << "Finding cycles..." << of.endl();
   Cx::PFmla scc( false );
-  if (info && info->count_convergence_steps) {
-    lo_xn.cycle_ck(&scc, &info->n_async_steps, &sys.invariant);
-    of << "Max async steps to converge: " << info->n_async_steps << "\n";
+  uint nlayers = opt.max_nlayers;
+  lo_xn.cycle_ck(&scc, &nlayers,
+                 opt.count_convergence_layers ? &sys.invariant : 0);
+  if (info)  info->nlayers = nlayers;
+  if (opt.max_nlayers > 0 && nlayers > opt.max_nlayers) {
+    of << "Too many layers to "
+      << (opt.count_convergence_layers ? "converge" : "fixpoint")
+      << "." << of.endl();
+    return false;
   }
-  else {
-    uint nsteps = 0;
-    lo_xn.cycle_ck(&scc, &nsteps);
-    of << "Max async steps to cycle or silent state: " << nsteps << "\n";
-  }
+  of << "Max " << (opt.synchronous ? "sync" : "async") << " layers to "
+    << (opt.count_convergence_layers ? "converge" : "fixpoint")
+    << ": " << nlayers << "\n";
+
   if (!scc.subseteq_ck(sys.invariant)) {
     of << "Livelock found.\n";
     if (info) {
@@ -251,6 +257,7 @@ stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
 
   bool
 stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
+                 const StabilizationOpt& opt,
                  const vector<uint>& actions,
                  const vector<uint>& candidates,
                  StabilizationCkInfo* info)
@@ -297,27 +304,31 @@ stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
   if (info) {
     info->actions = actions;
   }
-  return stabilization_ck(of, sys, lo_xn, hi_xn, info);
+  return stabilization_ck(of, sys, opt, lo_xn, hi_xn, info);
 }
 
   bool
 stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
+                 const StabilizationOpt& opt,
                  const vector<uint>& actions,
                  StabilizationCkInfo* info)
 {
   const vector<uint> candidates;
-  return stabilization_ck(of, sys, actions, candidates, info);
+  return stabilization_ck(of, sys, opt, actions, candidates, info);
 }
 
   bool
 stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
+                 const StabilizationOpt& opt,
                  StabilizationCkInfo* info)
 {
-  if (info) {
-    return stabilization_ck(of, sys, sys.actions, info);
+  if (opt.synchronous) {
+    const Cx::PFmla xn = sys.topology.sync_xn(Cx::Table<uint>(sys.actions));
+    return stabilization_ck(of, sys, opt, xn, xn, info);
   }
-  else {
-    return stabilization_ck(of, sys, sys.direct_pfmla, sys.direct_pfmla, info);
+  if (!info || sys.topology.lightweight) {
+    return stabilization_ck(of, sys, opt, sys.direct_pfmla, sys.direct_pfmla, info);
   }
+  return stabilization_ck(of, sys, opt, sys.actions, info);
 }
 

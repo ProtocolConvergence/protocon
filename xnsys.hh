@@ -152,6 +152,7 @@ public:
     : symm(symmetry)
     , symm_idx(index)
   {}
+  void actions(Cx::Table<uint>& ret_actions, Cx::PFmlaCtx& ctx) const;
 };
 
 class ActSymm {
@@ -384,6 +385,7 @@ public:
   Cx::OFile& oput_all_pf(Cx::OFile& of, const Cx::PFmla& pf) const;
 
 
+  Cx::PFmla sync_xn(const Cx::Table<uint>& actidcs) const;
   Cx::PFmla xn_of_pc(const Xn::ActSymm& act, uint pcidx) const;
   Cx::PFmla pure_shadow_xn_of_pc(const Xn::ActSymm& act, uint pcidx) const;
   void make_action_pfmla(Cx::PFmla* ret_xn, Cx::PFmla* ret_pure_shadow_xn, uint actidx) const;

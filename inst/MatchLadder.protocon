@@ -23,7 +23,7 @@ process P[i <- Nat % (2*N-4)]
 
 
   // I'd like to replace all other lines for this process with the following:
-  //for (z_idx,e_idx) <- {# (pd,e_pd),(ac,e_ac),(sc,e_sc) #}
+  //symmetric (z_idx,e_idx) <- {# (pd,e_pd),(ac,e_ac),(sc,e_sc) #}
   //{
   //  read: z[z_idx];
   //  write: e[e_idx];

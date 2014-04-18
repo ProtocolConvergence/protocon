@@ -1,7 +1,6 @@
 
 #include "synthesis.hh"
 
-#include "stabilization.hh"
 #include "cx/fileb.hh"
 #include "pla.hh"
 
@@ -36,7 +35,8 @@ candidate_actions(vector<uint>& candidates, const Xn::Sys& sys)
     const Xn::PcSymm& pc_symm = *act.pc_symm;
     const Cx::PFmla& act_pf = topo.action_pfmla(actidx);
     if (add) {
-      add = !act_pf.overlap_ck(pc_symm.forbid_pfmla);
+      //add = !act_pf.overlap_ck(pc_symm.forbid_pfmla);
+      add = !act_pf.subseteq_ck(pc_symm.forbid_pfmla);
     }
 
     // Check for self-loops.
@@ -841,6 +841,12 @@ count_actions_in_cycle (const Cx::PFmla& scc, Cx::PFmla edg,
   return n;
 }
 
+  const StabilizationOpt&
+PartialSynthesis::stabilization_opt() const
+{
+  return ctx->stabilization_opts[sys_idx];
+}
+
   uint
 PartialSynthesis::add_small_conflict_set(const Cx::Table<uint>& delpicks)
 {
@@ -1107,7 +1113,12 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels, Set<uin
   }
 
   Cx::PFmla scc(false);
-  this->lo_xn.cycle_ck(&scc);
+  uint nlayers = this->stabilization_opt().max_nlayers;
+  this->lo_xn.cycle_ck(&scc, &nlayers);
+  if (this->stabilization_opt().max_nlayers > 0 && nlayers > this->stabilization_opt().max_nlayers) {
+    *this->log << "NLAYERS (maximum number of convergence layers exceeded)" << this->log->endl();
+    return false;
+  }
   if (!scc.subseteq_ck(sys.invariant)) {
     //oput_one_cycle(*this->log, this->lo_xn, scc, topo);
     //uint n = count_actions_in_cycle(scc, act_pf, this->actions, topo);
@@ -1128,7 +1139,9 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels, Set<uin
     if (!!this->ctx->opt.livelock_ofilepath && &sys == this->ctx->systems.top()) {
       bool big_livelock = true;
       for (uint i = 0; i < this->ctx->systems.sz()-1; ++i) {
-        if (!stabilization_ck(Cx::OFile::null(), *this->ctx->systems[i], actions)) {
+        if (!stabilization_ck(Cx::OFile::null(), *this->ctx->systems[i],
+                              this->ctx->stabilization_opts[i], actions))
+        {
           *this->log << "still issues in system " << i << this->log->endl();
           big_livelock = false;
           break;
@@ -1256,7 +1269,8 @@ PartialSynthesis::pick_action(uint act_idx)
  */
   bool
 SynthesisCtx::init(const Xn::Sys& sys,
-                   const AddConvergenceOpt& opt)
+                   const AddConvergenceOpt& opt,
+                   const StabilizationOpt& stabilization_opt)
 {
   const Xn::Net& topo = sys.topology;
   SynthesisCtx& synctx = *this;
@@ -1286,11 +1300,11 @@ SynthesisCtx::init(const Xn::Sys& sys,
         (synctx.csp_pfmla_ctx.vbl(act.pre_idx_of_img) == act.img_idx);
     }
   }
-  return synctx.add(sys);
+  return synctx.add(sys, stabilization_opt);
 }
 
   bool
-SynthesisCtx::add(const Xn::Sys& sys)
+SynthesisCtx::add(const Xn::Sys& sys, const StabilizationOpt& stabilization_opt)
 {
   const Xn::Net& topo = sys.topology;
   SynthesisCtx& synctx = *this;
@@ -1298,6 +1312,7 @@ SynthesisCtx::add(const Xn::Sys& sys)
     synctx.base_inst.instances.push( PartialSynthesis(&synctx, synctx.systems.sz()) );
   }
   synctx.systems.push(&sys);
+  synctx.stabilization_opts.push(stabilization_opt);
 
   PartialSynthesis& inst = synctx.base_inst[synctx.base_inst.sz()-1];
   inst.log = synctx.opt.log;

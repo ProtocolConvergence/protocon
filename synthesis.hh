@@ -11,6 +11,7 @@
 #include <fstream>
 #include "protoconfile.hh"
 #include "conflictfamily.hh"
+#include "stabilization.hh"
 
 class SynthesisCtx;
 class PartialSynthesis;
@@ -52,9 +53,8 @@ public:
     NNicePolicies
   };
   enum SearchMethod {
-    SerialBacktrackSearch,
+    BacktrackSearch,
     RankShuffleSearch,
-    ParallelBacktrackSearch,
     NSearchMethods
   };
 
@@ -83,7 +83,7 @@ public:
 
   AddConvergenceOpt() :
     pick_method( MCVLitePick )
-    , search_method( ParallelBacktrackSearch )
+    , search_method( BacktrackSearch )
     , nicePolicy( NilNice )
     , pick_back_reach( false )
     , log( &DBogOF )
@@ -167,6 +167,8 @@ public:
     return 1+instances.sz();
   }
 
+  const StabilizationOpt& stabilization_opt() const;
+
   void godeeper1() {
     for (uint i = 0; i < this->sz(); ++i) {
       (*this)[i].bt_level += 1;
@@ -199,6 +201,7 @@ public:
   Cx::PFmla csp_base_pfmla;
   Cx::URandom urandom;
   AddConvergenceOpt opt;
+  Cx::Table<StabilizationOpt> stabilization_opts;
   Bool (*done_ck_fn) (void*);
   void* done_ck_mem;
   ConflictFamily conflicts;
@@ -218,8 +221,9 @@ public:
     , done_ck_fn(0)
     , done_ck_mem(0)
   {}
-  bool init(const Xn::Sys& sys, const AddConvergenceOpt& opt);
-  bool add(const Xn::Sys& sys);
+  bool init(const Xn::Sys& sys, const AddConvergenceOpt& opt,
+            const StabilizationOpt& stabilization_opt);
+  bool add(const Xn::Sys& sys, const StabilizationOpt& opt);
   bool done_ck() const {
     if (!done_ck_fn)  return false;
     return (0 != done_ck_fn (done_ck_mem));

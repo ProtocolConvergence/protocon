@@ -19,7 +19,7 @@ process P[i <- Nat % N]
   let idx0 := if (idx0_tmp % N != i) then (idx0_tmp) else (idx1_tmp);
   let idx1 := if (idx1_tmp % N != i) then (idx1_tmp) else (idx0_tmp);
 
-  for (lhs_idx, x_idx) <- {# (2*i, idx0), (2*i+1, idx1) #}
+  symmetric (lhs_idx, x_idx) <- {# (2*i, idx0), (2*i+1, idx1) #}
   {
     read: way[lhs_idx];
     read: x[x_idx];

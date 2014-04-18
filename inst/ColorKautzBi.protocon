@@ -25,7 +25,7 @@ process P[i <- Nat % N]
   let fw_idx0 := if (fw_idx0_tmp != i) then (fw_idx0_tmp) else (fw_idx1_tmp);
   let fw_idx1 := if (fw_idx1_tmp != i) then (fw_idx1_tmp) else (fw_idx0_tmp);
 
-  for j <- {# bk_idx0, bk_idx1, fw_idx0, fw_idx1 #}
+  symmetric j <- {# bk_idx0, bk_idx1, fw_idx0, fw_idx1 #}
   {
     read: x[j];
   }

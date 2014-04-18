@@ -13,7 +13,7 @@ direct variable way[Nat % (2*N)] <- Nat % 2;
 
 process PColor[i <- Nat % N]
 {
-  for j <- {# i-1, i+1 #}
+  symmetric j <- {# i-1, i+1 #}
   {
     read: c[j];
   }
@@ -37,7 +37,8 @@ process PWay[i <- Nat % (2*N)]
 
 process P[i <- Nat % N]
 {
-  for (j, way_idx, adj_way_idx, adj_way_idx_far)  <- {# (i-1, 2*i, 2*i-1, 2*i-2), (i+1, 2*i+1, 2*i+2, 2*i+3) #}
+  symmetric (j, way_idx, adj_way_idx, adj_way_idx_far)
+    <- {# (i-1, 2*i, 2*i-1, 2*i-2), (i+1, 2*i+1, 2*i+2, 2*i+3) #}
   {
     read: c[j];
     read: tok[j];

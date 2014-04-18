@@ -116,7 +116,7 @@ oput_protocon_pc_vbls (Cx::OFile& of, const Xn::PcSymm& pc_symm)
     for (uint j = 0; j < pc_symm.spec->oblivious_specs.sz(); ++j) {
       const Xn::ObliviousSpec& obliv_spec = pc_symm.spec->oblivious_specs[j];
       if (obliv_spec.elem_ck(i)) {
-        of << "  for " << obliv_spec.let_expression
+        of << "  symmetric " << obliv_spec.let_expression
           << " <- {# " << obliv_spec.multiset_expression << " #}\n";
         of << "  {\n";
         for (uint v = 0; v < obliv_spec.nvbls; ++v) {

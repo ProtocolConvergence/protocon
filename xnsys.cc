@@ -235,6 +235,44 @@ PcSymm::action(ActSymm& act, uint actidx) const
 }
 
   void
+Pc::actions(Cx::Table<uint>& ret_actions, Cx::PFmlaCtx& ctx) const
+{
+  const Pc& pc = *this;
+  const PcSymm& pc_symm = *pc.symm;
+
+  Cx::Table<uint> pfmla_rvbl_idcs;
+  for (uint i = 0; i < pc.rvbls.sz(); ++i) {
+    pfmla_rvbl_idcs.push(pc.rvbls[i]->pfmla_idx);
+  }
+  Cx::Table<uint> pfmla_wvbl_idcs;
+  for (uint i = 0; i < pc.wvbls.sz(); ++i) {
+    pfmla_wvbl_idcs.push(pc.wvbls[i]->pfmla_idx);
+  }
+
+  Cx::PFmla pfmla( pc_symm.direct_pfmla  & pc.act_unchanged_pfmla );
+
+  ActSymm act;
+  act.vals.grow(pc.rvbls.sz() + pc.wvbls.sz());
+
+  while (pfmla.sat_ck()) {
+    uint* pre_state = &act.vals[0];
+    pfmla.state(pre_state, pfmla_rvbl_idcs);
+    Cx::PFmla pre_pf = ctx.pfmla_of_state(pre_state, pfmla_rvbl_idcs);
+    Cx::PFmla img_pf = pfmla.img(pre_pf);
+
+    while (img_pf.sat_ck()) {
+      uint* img_state = &act.vals[pc.rvbls.sz()];
+      img_pf.state(img_state, pfmla_wvbl_idcs);
+      uint actidx = pc_symm.act_idx_offset +
+        Cx::index_of_state (&act.vals[0], pc_symm.doms);
+      ret_actions.push(actidx);
+      img_pf -= ctx.pfmla_of_state(img_state, pfmla_wvbl_idcs);
+    }
+    pfmla -= pre_pf;
+  }
+}
+
+  void
 PcSymm::actions(Cx::Table<uint>& ret_actions, Cx::PFmlaCtx& ctx) const
 {
   uint pcidx = 0;
@@ -263,42 +301,27 @@ PcSymm::actions(Cx::Table<uint>& ret_actions, Cx::PFmlaCtx& ctx) const
     }
   }
 
-  if (!found) {
+  Cx::Table<uint> pcidcs;
+  if (found) {
+    pcidcs.push(pcidx);
+  }
+  else {
+    for (uint i = 0; i < membs.sz(); ++i) {
+      pcidcs.push(i);
+    }
     DBog0("System may not represent all actions!");
   }
 
-  const Pc& pc = *membs[pcidx];
-
-  Cx::Table<uint> pfmla_rvbl_idcs;
-  for (uint i = 0; i < pc.rvbls.sz(); ++i) {
-    pfmla_rvbl_idcs.push(pc.rvbls[i]->pfmla_idx);
-  }
-  Cx::Table<uint> pfmla_wvbl_idcs;
-  for (uint i = 0; i < pc.wvbls.sz(); ++i) {
-    pfmla_wvbl_idcs.push(pc.wvbls[i]->pfmla_idx);
-  }
-
-  Cx::PFmla pfmla( direct_pfmla  & pc.act_unchanged_pfmla );
-
-  ActSymm act;
-  act.vals.grow(pc.rvbls.sz() + pc.wvbls.sz());
-
-  while (pfmla.sat_ck()) {
-    uint* pre_state = &act.vals[0];
-    pfmla.state(pre_state, pfmla_rvbl_idcs);
-    Cx::PFmla pre_pf = ctx.pfmla_of_state(pre_state, pfmla_rvbl_idcs);
-    Cx::PFmla img_pf = pfmla.img(pre_pf);
-
-    while (img_pf.sat_ck()) {
-      uint* img_state = &act.vals[pc.rvbls.sz()];
-      img_pf.state(img_state, pfmla_wvbl_idcs);
-      uint actidx = this->act_idx_offset +
-        Cx::index_of_state (&act.vals[0], this->doms);
-      ret_actions.push(actidx);
-      img_pf -= ctx.pfmla_of_state(img_state, pfmla_wvbl_idcs);
+  Set<uint> action_set;
+  for (uint i = 0; i < pcidcs.sz(); ++i) {
+    Cx::Table<uint> actions;
+    membs[pcidcs[i]]->actions(actions, ctx);
+    for (uint j = 0; j < actions.sz(); ++j) {
+      action_set << actions[j];
     }
-    pfmla -= pre_pf;
   }
+
+  action_set.fill(ret_actions);
 }
 
   void
@@ -641,6 +664,37 @@ oput_one_cycle(Cx::OFile& of, const Cx::PFmla& xn, const Cx::PFmla& scc, const X
     topo.oput_pfmla(of, states[i], -1, true);
   }
   of.flush();
+}
+
+  Cx::PFmla
+Xn::Net::sync_xn(const Cx::Table<uint>& actidcs) const
+{
+  // Unidirectional ring.
+  Cx::Table<Cx::PFmla> pc_xns(this->pcs.sz(), Cx::PFmla(false));
+
+  for (uint i = 0; i < actidcs.sz(); ++i) {
+    ActSymm act;
+    this->action(act, actidcs[i]);
+    const Xn::PcSymm& pc_symm = *act.pc_symm;
+    for (uint symmidx = 0; symmidx < pc_symm.membs.sz(); ++symmidx) {
+      const uint pcidx = this->pcs.index_of(pc_symm.membs[symmidx]);
+      pc_xns[pcidx] |= xn_of_pc(act, symmidx);
+    }
+  }
+
+  Cx::PFmla xn(true);
+  for (uint pcidx = 0; pcidx < this->pcs.sz(); ++pcidx) {
+    const Xn::Pc& pc = this->pcs[pcidx];
+    Cx::PFmla self_loop( true );
+    for (uint i = 0; i < pc.wvbls.sz(); ++i) {
+      const Cx::PFmlaVbl& vbl = this->pfmla_vbl(*pc.wvbls[i]);
+      self_loop &= vbl.img_eq(vbl);
+    }
+    self_loop -= pc_xns[pcidx].pre();
+    xn &= (self_loop | pc_xns[pcidx]);
+  }
+  //xn -= this->identity_xn;
+  return xn;
 }
 
   Cx::PFmla

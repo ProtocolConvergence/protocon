@@ -12,7 +12,7 @@ process P[i <- Nat % N]
   let idx0 := if (idx0_tmp != i) then (idx0_tmp) else (idx1_tmp);
   let idx1 := if (idx1_tmp != i) then (idx1_tmp) else (idx0_tmp);
 
-  for j <- {# idx0, idx1 #}
+  symmetric j <- {# idx0, idx1 #}
   {
     read: x[j];
   }

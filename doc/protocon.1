@@ -1,4 +1,4 @@
-.TH PROTOCON 1 "March 2014" "Version 2014.03.30"
+.TH PROTOCON 1 "March 2014" "Version 2014.04.18"
 .LS 1
 .SH NAME
 protocon \- add convergence to shared memory protocols
@@ -14,12 +14,9 @@ protocon \- add convergence to shared memory protocols
 adds convergence to shared memory protocols.
 .SH RUN_MODE
 .TP
-.B -parallel
+.B -search
 Randomized backtracking with restarts.
 This is the default.
-.TP
-.B -serial
-Single-threaded backtracking without restarts.
 .TP
 .B -rank-shuffle
 Run the original swarm synthesis algorithm which ranks actions and permutes the actions within each rank.
@@ -45,6 +42,20 @@ Run integration tests.
 .TP
 .B -h
 Print a summary of available options and exit.
+(Doesn't actually do this :D)
+.TP
+.BI -parallel\  N \fR?\fI
+Use
+.I N
+threads for the task.
+If
+.I N
+is not given, then it is automatically detected by OpenMP or the value of the
+.B $OMP_NUM_THREADS
+environment variable.
+Note that this option is ignored when using
+.B protocon-mpi
+since the number of parallel processes is determined by the MPI runtime.
 .TP
 .BI -def\  key\ val
 Override or define a constant
@@ -96,8 +107,9 @@ Executions using this option are not reproducible.
 .TP
 .BR -no-random
 Do not use randomization in backtracking, simply make decisions in order.
-It only makes sense to use this flag in conjunction with
-.BR -serial .
+This does not make sense in conjunction with the
+.B -parallel
+flag.
 .TP
 .BR -pick\  ( mcv | lcv | fully-random | conflict | quick )
 .IP
@@ -181,7 +193,7 @@ Default is
 .IR 3 .
 A value of
 .I 0
-disables backtracking.
+disables restarts.
 .TP
 .BI -o-model\  model-file.pml
 Write a Promela model.
@@ -240,38 +252,6 @@ We use the
 .B -o-log
 flag to create log files for each search thread.
 If these are not desired, simply do not give the flag.
-
-To use the default search method with only one thread (and see the output), set the
-.B $OMP_NUM_THREADS
-environment variable to
-.IR 1 .
-In the
-.B bash
-shell:
-.nf
-    export OMP_NUM_THREADS=1
-    protocon -x inst/ColorRing.protocon -def N 5
-    unset OMP_NUM_THREADS
-.fi
-This can of course be accomplished on one line:
-.nf
-    OMP_NUM_THREADS=1 protocon -x inst/ColorRing.protocon -def N 5
-.fi
-The equivalent
-.B csh
-or
-.B tcsh
-shell commands are:
-.nf
-    setenv OMP_NUM_THREADS 1
-    protocon -x inst/ColorRing.protocon -def N 5
-    unsetenv
-.fi
-Equivalently, one can specify the
-.B -serial
-and
-.BI -max-height 3
-flags.
 
 .SH EXAMPLE: Agreement / Leader Election
 One particular instance of agreement on a ring poses some issues.

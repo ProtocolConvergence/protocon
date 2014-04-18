@@ -12,22 +12,34 @@ namespace Xn {
   class Sys;
 }
 
+class StabilizationOpt
+{
+public:
+  uint max_nlayers;
+  bool count_convergence_layers;
+  bool synchronous;
+
+  StabilizationOpt()
+    : max_nlayers( 0 )
+    , count_convergence_layers( false )
+    , synchronous( false )
+  {}
+};
+
 class StabilizationCkInfo
 {
 public:
   Cx::Table<uint> actions;
   bool livelock_exists;
   Cx::Table<uint> livelock_actions;
-  uint n_async_steps;
+  uint nlayers;
 
   bool find_livelock_actions;
-  bool count_convergence_steps;
 
   StabilizationCkInfo()
     : livelock_exists(false)
-    , n_async_steps(0)
+    , nlayers(0)
     , find_livelock_actions(false)
-    , count_convergence_steps(false)
   {}
 };
 
@@ -41,20 +53,24 @@ weak_convergence_ck(const Cx::PFmla& xn, const Cx::PFmla& invariant);
 
 bool
 stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
+                 const StabilizationOpt& opt,
                  const Cx::PFmla& lo_xn,
                  const Cx::PFmla& hi_xn,
                  StabilizationCkInfo* info = 0);
 bool
 stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
+                 const StabilizationOpt& opt,
                  const vector<uint>& actions,
                  const vector<uint>& candidates,
                  StabilizationCkInfo* info = 0);
 bool
 stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
+                 const StabilizationOpt& opt,
                  const vector<uint>& actions,
                  StabilizationCkInfo* info = 0);
 bool
 stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
+                 const StabilizationOpt& opt,
                  StabilizationCkInfo* info = 0);
 #endif
 

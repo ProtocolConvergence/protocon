@@ -5,6 +5,7 @@
 #include "cx/alphatab.hh"
 #include "cx/map.hh"
 #include "cx/table.hh"
+#include "stabilization.hh"
 
 namespace Xn {
   class Sys;
@@ -32,11 +33,12 @@ public:
   };
 
   ExecTask task;
+  uint nparallel;
   Cx::Table< ProtoconParamOpt > params;
   Cx::String log_ofilename;
   Cx::String ofilepath;
   bool use_espresso;
-  bool count_convergence_steps;
+  bool count_convergence_layers;
   Cx::Table< Cx::String > xfilepaths;
   Cx::String model_ofilepath;
   Cx::String graphviz_ofilepath;
@@ -47,9 +49,10 @@ public:
 
   ProtoconOpt()
     : task(SearchTask)
+    , nparallel( 1 )
     , params( 1 )
     , use_espresso( false )
-    , count_convergence_steps( false )
+    , count_convergence_layers( false )
     , conflict_order( HiLoOrder )
   {}
 };
@@ -59,6 +62,8 @@ public:
   Cx::Map<Cx::String, uint> constant_map;
   bool conflict;
   bool partial;
+  StabilizationOpt stabilization_opt;
+
   ProtoconParamOpt()
     : conflict( true )
     , partial( true )

@@ -24,7 +24,9 @@ verify_solutions(const PartialSynthesis& inst, StabilizationCkInfo* info)
     if (!inst[i].no_partial)
       continue;
     *inst.log << "Verifying solution for system " << i << "..." << inst.log->endl();
-    if (!stabilization_ck(*inst[i].log, *inst[i].ctx->systems[i], inst[i].actions, info)) {
+    if (!stabilization_ck(*inst[i].log, *inst[i].ctx->systems[i], inst[i].stabilization_opt(),
+                          inst[i].actions, info))
+    {
       if (i == inst.sz()-1 && info && info->livelock_exists && !!inst.ctx->opt.livelock_ofilepath) {
         Cx::OFileB ofb;
         ofb.open(inst.ctx->opt.livelock_ofilepath + "." + inst.ctx->opt.sys_pcidx + "." + inst.ctx->opt.n_livelock_ofiles++);
@@ -38,7 +40,9 @@ verify_solutions(const PartialSynthesis& inst, StabilizationCkInfo* info)
     if (inst[i].no_partial || !inst.ctx->opt.verify_found)
       continue;
     *inst.log << "Verifying solution for system " << i << "..." << inst.log->endl();
-    if (!stabilization_ck(*inst[i].log, *inst[i].ctx->systems[i], inst[i].actions, info)) {
+    if (!stabilization_ck(*inst[i].log, *inst[i].ctx->systems[i],
+                          inst[i].stabilization_opt(), inst[i].actions, info))
+    {
       *inst[i].log << "Solution was NOT self-stabilizing." << inst[i].log->endl();
       return false;
     }
@@ -172,7 +176,8 @@ AddConvergence(vector<uint>& ret_actions,
 AddConvergence(Xn::Sys& sys, const AddConvergenceOpt& opt)
 {
   SynthesisCtx synctx;
-  if (!synctx.init(sys, opt))
+  StabilizationOpt stabilization_opt;
+  if (!synctx.init(sys, opt, stabilization_opt))
     return false;
   PartialSynthesis& inst = synctx.base_inst;
 
@@ -481,8 +486,8 @@ stabilization_search(vector<uint>& ret_actions,
   }
 
 #ifdef _OPENMP
-  if (global_opt.search_method == global_opt.SerialBacktrackSearch)
-    omp_set_num_threads(1);
+  if (exec_opt.nparallel != 0)
+    omp_set_num_threads(exec_opt.nparallel);
   if (exec_opt.task == ProtoconOpt::VerifyTask && exec_opt.xfilepaths.sz()==1)
     omp_set_num_threads(1);
 #endif
@@ -532,7 +537,7 @@ stabilization_search(vector<uint>& ret_actions,
   DoLegit(good, "initialization")
   {
     if (exec_opt.task != ProtoconOpt::VerifyTask)
-      good = synctx.init(sys, opt);
+      good = synctx.init(sys, opt, exec_opt.params[0].stabilization_opt);
   }
 
   PartialSynthesis& synlvl = synctx.base_inst;
@@ -561,7 +566,8 @@ stabilization_search(vector<uint>& ret_actions,
     DoLegit(good, "reading param file")
       good = ReadProtoconFile(param_sys, param_infile_opt);
     DoLegit(good, "add param sys")
-      good = synctx.add(param_sys);
+      good = synctx.add(param_sys, exec_opt.params[i].stabilization_opt);
+
   }
 
   for (uint i = 0; good && i < exec_opt.params.sz(); ++i) {
@@ -599,9 +605,8 @@ stabilization_search(vector<uint>& ret_actions,
       sys.topology.lightweight = lightweight;
       if (ReadProtoconFile(sys, verif_infile_opt)) {
         StabilizationCkInfo info;
-        info.find_livelock_actions = lightweight;
-        info.count_convergence_steps = exec_opt.count_convergence_steps;
-        if (stabilization_ck(*opt.log, sys, &info)) {
+        info.find_livelock_actions = !lightweight;
+        if (stabilization_ck(*opt.log, sys, exec_opt.params[0].stabilization_opt, &info)) {
           solution_found = true;
           ret_actions = sys.actions;
           *opt.log << "System is stabilizing." << opt.log->endl();

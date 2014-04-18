@@ -154,7 +154,7 @@ ValueList =
   ;
 
 SymmetricLinks =
-  'for' WS
+  'symmetric' WS
   (  let_names:ID  { let_names.sp = list1_Sesp (let_names.sp); }
      WS? IN WS?
      '{#' WS? let_vals_list:Expr WS?  {let_vals_list.sp = list1_Sesp (list1_Sesp (let_vals_list.sp));}
