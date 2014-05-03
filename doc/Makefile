@@ -3,7 +3,7 @@
 #	tosat.pdf algo.pdf behavior.pdf
 
 default:
-	# This file doesn't do anything at the moment!
+	man2html protocon.1 > man.html
 
 CxPfx = ../../cx
 
@@ -25,8 +25,9 @@ CxPfx = ../../cx
 
 .PHONY: clean
 clean:
-	rm -f */*.aux */*.log */*.bbl */*.blg
-	rm -f *.aux *.log
+	rm -f man.html
+	#rm -f */*.aux */*.log */*.bbl */*.blg
+	#rm -f *.aux *.log
 
 .PHONY: distclean
 distclean: clean

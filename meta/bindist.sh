@@ -11,7 +11,7 @@ then
 fi
 
 mkdir -p "$distpath/bin"
-cp -a -t "$distpath/bin" "$toppath/bin/protocon" "$toppath/bin/protocon-gui"
+cp -a -t "$distpath/bin" "$toppath/bin/protocon" "$toppath/bin/protocon-gui" "$toppath/bin/protocon-mpi"
 
 mkdir -p "$distpath/inst"
 cat "$metapath/inst.files" | \
