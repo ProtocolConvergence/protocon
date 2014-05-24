@@ -5,7 +5,7 @@
 
 \begin{document}
 
-The \ilfile{inst/ColorRing.protocon} file specifies a bidirectional ring topology where each process wishes to obtain a different value than its neighbors.
+The \ilfile{examplespec/ColorRing.protocon} file specifies a bidirectional ring topology where each process wishes to obtain a different value than its neighbors.
 Each process has $3$ colors to choose from.
 This is a very simple protocol and is useful for instruction.
 
@@ -37,7 +37,7 @@ mkdir tmp
 \quicksec{Synthesis}
 Synthesize a 3-coloring protocol that works on rings of size $3$, $4$, and $5$.
 \begin{code}
-./bin/protocon -x inst/ColorRing.protocon -def N 3 -param N 4 -param N 5 -o tmp/color.protocon
+./bin/protocon -x examplespec/ColorRing.protocon -def N 3 -param N 4 -param N 5 -o tmp/color.protocon
 \end{code}
 
 \quicksec{Verification}
@@ -83,7 +83,7 @@ When a problem instance is difficult, it may help to perform multiple searches a
 Since multiple searches are occurring simultaneously, the search progress output is hidden.
 This is remedied with the \ilflag{-o-log} flag to create log files \ilfile{search.log.}\ilsym{tid} for each thread of index \ilsym{tid}.
 \begin{code}
-./bin/protocon -parallel -x inst/ColorRing.protocon -def N 3 -param N 4 -param N 5 -o tmp/color.protocon -o-log tmp/color.log
+./bin/protocon -parallel -x examplespec/ColorRing.protocon -def N 3 -param N 4 -param N 5 -o tmp/color.protocon -o-log tmp/color.log
 \end{code}
 If these log files are not desired, simply do not give the flag.
 
@@ -91,7 +91,7 @@ To control the number of threads used at runtime, simply give a number after the
 For example, imagine we want to use exactly $2$ threads.
 
 \begin{code}
-./bin/protocon -parallel 2 -x inst/ColorRing.protocon -def N 5
+./bin/protocon -parallel 2 -x examplespec/ColorRing.protocon -def N 5
 \end{code}
 
 \end{document}

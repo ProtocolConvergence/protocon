@@ -13,21 +13,21 @@ fi
 mkdir -p "$distpath/bin"
 cp -a -t "$distpath/bin" "$toppath/bin/protocon" "$toppath/bin/protocon-gui" "$toppath/bin/protocon-mpi"
 
-mkdir -p "$distpath/inst"
-cat "$metapath/inst.files" | \
+mkdir -p "$distpath/examplespec"
+cat "$metapath/examplespec.files" | \
 {
-  while read
+  while read f
   do
-    cp -a -t "$distpath/inst" "$toppath/protocon/inst/$REPLY"
+    cp -a -t "$distpath/examplespec" "$toppath/protocon/examplespec/$f"
   done
 }
 
-mkdir -p "$distpath/inst-stabilizing"
-cat "$metapath/inst-stabilizing.files" | \
+mkdir -p "$distpath/examplesoln"
+cat "$metapath/examplesoln.files" | \
 {
-  while read
+  while read f
   do
-    cp -a -t "$distpath/inst-stabilizing" "$toppath/protocon/inst-stabilizing/$REPLY"
+    cp -a -t "$distpath/examplesoln" "$toppath/protocon/examplesoln/$f"
   done
 }
 

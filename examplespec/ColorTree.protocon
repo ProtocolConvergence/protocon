@@ -1,0 +1,40 @@
+
+constant H := 3;
+
+variable x[Int % (2^H-1)] <- Int % 3;
+
+process Root[i <- Int % 1]
+{
+  read:  x[1];
+  read:  x[2];
+  write: x[0];
+
+  legit:
+    ( x[0] != x[1] && x[0] != x[2] )
+    ;
+}
+
+process P[j <- Int % (2^(H-1)-2)]
+{
+  let i := j + 1;
+  let parent_idx := (i-1)/2;
+  let left_idx := 2*(i+1)-1;
+  let right_idx := 2*(i+1);
+  read:  x[parent_idx];
+  read:  x[left_idx];
+  read:  x[right_idx];
+  write: x[i];
+
+  legit:
+    ( x[parent_idx] != x[i] && x[i] != x[left_idx] && x[i] != x[right_idx] )
+    ;
+}
+
+process Leaf[j <- Int % (2^(H-1))]
+{
+  let i := j + (2^(H-1)-1);
+  let parent_idx := (i-1)/2;
+  read:  x[parent_idx];
+  write: x[i];
+}
+

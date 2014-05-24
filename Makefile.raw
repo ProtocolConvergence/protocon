@@ -42,6 +42,8 @@ ifneq (,$(filter gui,$(CONFIG)))
 endif
 ExeList := $(addprefix $(BinPath)/,$(ExeList))
 
+BldPathList = $(PfxBldPath)/protocon/satsyn
+
 include $(CxPath)/include.mk
 
 QMAKE = $(call FindCmd,qmake-qt4 qmake)
@@ -82,7 +84,7 @@ $(BinPath)/protocon-mpi: \
 	$(addprefix $(BldPathCXX)/, main-mpi.o mpidissem.o)
 	$(MPICXX) $(CXXFLAGS) $^ -o $@ $(LXXFLAGS)
 
-$(call binexe,satsyn): $(BldPath)/satsyn.o $(BldPath)/xnsys.o \
+$(call binexe,satsyn): $(BldPath)/satsyn/satsyn.o $(BldPath)/satsyn/xnsys.o \
 	$(CxStdObjs) $(addprefix $(CxBldPath)/, bstree.o ospc.o rbtree.o)
 	$(CC) $(CFLAGS) -o $@ $^
 
@@ -132,7 +134,13 @@ deps.mk:
 		-e 's:\(.*\.\)\(c\|h\)\::$(BldPath)\/\1\2\::' \
 		-e 's:\: \(.*\.\)\(cc\|hh\)$$:\: $(BldPathCXX)/\1\2:' \
 		-e 's:\: \(.*\.\)\(c\|h\)$$:\: $(BldPath)/\1\2:' \
-		> deps.mk
+		> $@
+	grep '^#include *"' satsyn/*.c satsyn/*.h \
+		| grep -v -e 'mdd\.h' -e 'cx/' \
+		| sed -e 's/\(.*\):#include.*"\(.*\)".*/\1: \2/' \
+		-e 's:\(.*\.\)\(c\|h\)\::$(BldPath)\/\1\2\::' \
+		-e 's:\: \(.*\.\)\(c\|h\)$$:\: $(BldPath)\/satsyn/\1\2:' \
+		>> $@
 
 .PHONY: clean
 clean:

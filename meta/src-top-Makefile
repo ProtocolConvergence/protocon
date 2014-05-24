@@ -1,0 +1,56 @@
+
+default: all
+
+GluPath = glu-2.4
+PegPath = peg-0.1.15
+
+###### Cx ######
+
+bin/cx:
+	$(MAKE) -C cx cx
+
+###### Glu ######
+
+$(GluPath).tar.gz:
+	curl -o $@ ftp://vlsi.colorado.edu/pub/vis/$(GluPath).tar.gz
+
+$(GluPath)/configure: $(GluPath).tar.gz
+	tar xzf $<
+
+$(GluPath)/Makefile: $(GluPath)/configure
+	cd $(GluPath) && ./configure --enable-gcc
+
+$(GluPath)/libglu.a: $(GluPath)/Makefile
+	$(MAKE) -C $(GluPath)
+
+###### PEG ######
+
+$(PegPath).tar.gz:
+	curl -o $@ http://piumarta.com/software/peg/$(PegPath).tar.gz
+
+$(PegPath): $(PegPath).tar.gz
+	tar xzf $<
+
+$(PegPath)/leg:
+	$(MAKE) -C $(PegPath)
+
+$(PegPath)/leg: | $(PegPath)
+
+
+###### Protocon ######
+
+all: bin/cx $(GluPath)/libglu.a $(PegPath)/leg
+	$(MAKE) -C src LEG=../$(PegPath)/leg
+
+.PHONY: clean
+clean:
+	make -C src clean
+	make -C cx clean
+
+.PHONY: distclean
+distclean:
+	make -C src distclean
+	make -C cx distclean
+	rm -fr bin $(GluPath) $(PegPath) $(GluPath).tar.gz $(PegPath).tar.gz
+
+

@@ -372,9 +372,9 @@ void TestProtoconFile(bool agreement)
 
   ProtoconFileOpt infile_opt;
   if (agreement)
-    infile_opt.file_path = "inst/LeaderRingHuang.protocon";
+    infile_opt.file_path = "examplespec/LeaderRingHuang.protocon";
   else
-    infile_opt.file_path = "inst/SumNotTwo.protocon";
+    infile_opt.file_path = "examplespec/SumNotTwo.protocon";
   ReadProtoconFile(sys_f, infile_opt);
 
   uint npcs = topo_f.pcs.sz();

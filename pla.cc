@@ -112,27 +112,27 @@ static
 oput_protocon_pc_vbls (Cx::OFile& of, const Xn::PcSymm& pc_symm)
 {
   for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
-    bool obliv = false;
-    for (uint j = 0; j < pc_symm.spec->oblivious_specs.sz(); ++j) {
-      const Xn::ObliviousSpec& obliv_spec = pc_symm.spec->oblivious_specs[j];
-      if (obliv_spec.elem_ck(i)) {
-        of << "  symmetric " << obliv_spec.let_expression
-          << " <- {# " << obliv_spec.multiset_expression << " #}\n";
+    bool symmetric_link_case = false;
+    for (uint j = 0; j < pc_symm.spec->link_symmetries.sz(); ++j) {
+      const Xn::LinkSymmetry& link_symmetry = pc_symm.spec->link_symmetries[j];
+      if (link_symmetry.elem_ck(i)) {
+        of << "  symmetric " << link_symmetry.let_expression
+          << " <- {# " << link_symmetry.multiset_expression << " #}\n";
         of << "  {\n";
-        for (uint v = 0; v < obliv_spec.nvbls; ++v) {
-          uint vidx = obliv_spec(v, 0);
+        for (uint v = 0; v < link_symmetry.nvbls; ++v) {
+          uint vidx = link_symmetry(v, 0);
           of << "    "
             << (pc_symm.write_flags[vidx] ? "write" : "read") << ": "
             << pc_symm.spec->rvbl_symms[vidx]->name
-            << "[" << obliv_spec.index_expressions[v] << "];\n";
+            << "[" << link_symmetry.index_expressions[v] << "];\n";
         }
         of << "  }\n";
-        i += obliv_spec.nlinks * obliv_spec.nvbls - 1;
-        obliv = true;
+        i += link_symmetry.nlinks * link_symmetry.nvbls - 1;
+        symmetric_link_case = true;
         break;
       }
     }
-    if (obliv)  continue;
+    if (symmetric_link_case)  continue;
     of << "  " << (pc_symm.write_flags[i] ? "write" : "read") << ": ";
     of << pc_symm.vbl_name(i);
     of << ";\n";
@@ -317,6 +317,17 @@ oput_protocon_pc_acts (Cx::OFile& of, const Xn::PcSymm& pc_symm,
   return good;
 }
 
+static
+  bool
+oput_protocon_pc_invariant (Cx::OFile& of, const Xn::PcSymm& pc_symm)
+{
+  const Cx::String& invariant_expression = pc_symm.spec->invariant_expression;
+  if (invariant_expression.empty_ck())
+    return true;
+  of << "  invariant:\n    " << invariant_expression << ";\n";
+  return true;
+}
+
   bool
 oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys, bool use_espresso, const vector<uint>& actions)
 {
@@ -359,6 +370,8 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys, bool use_espresso, const 
     oput_protocon_pc_predicates (of, pc_symm);
     DoLegit(good, "output actions")
       good = oput_protocon_pc_acts (of, pc_symm, acts, ospc, use_espresso);
+    DoLegit(good, "output invariant")
+      good = oput_protocon_pc_invariant (of, pc_symm);
     of << "}\n";
   }
 
@@ -367,12 +380,14 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys, bool use_espresso, const 
       << " :=\n  " << sys.predicate_map.expressions[i] << ";\n";
   }
 
-  if (sys.direct_invariant_ck())
-    of << "direct";
-  else
-    of << "shadow";
+  if (!sys.spec->invariant_expression.empty_ck()) {
+    if (sys.direct_invariant_ck())
+      of << "direct";
+    else
+      of << "shadow";
 
-  of << " invariant:\n  " << sys.spec->invariant_expression << "\n  ;\n";
+    of << " invariant:\n  " << sys.spec->invariant_expression << "\n  ;\n";
+  }
 
   lose_OSPc (ospc);
   return good;

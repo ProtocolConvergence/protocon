@@ -182,16 +182,16 @@ ProtoconFile::add_access(Sesp vbl_sp, Bit write)
 ProtoconFile::add_symmetric_links(Sesp let_names_sp, Sesp let_vals_list_sp)
 {
   Sign good = 1;
-  pc_symm_spec->oblivious_specs.push(Xn::ObliviousSpec(sz_of_Sesp (let_vals_list_sp)));
-  Xn::ObliviousSpec& obliv_spec = pc_symm_spec->oblivious_specs.top();
+  pc_symm_spec->link_symmetries.push(Xn::LinkSymmetry(sz_of_Sesp (let_vals_list_sp)));
+  Xn::LinkSymmetry& link_symmetry = pc_symm_spec->link_symmetries.top();
   if (sz_of_Sesp (let_names_sp) == 1) {
-    obliv_spec.let_expression = ccstr_of_Sesp (car_of_Sesp (let_names_sp));
+    link_symmetry.let_expression = ccstr_of_Sesp (car_of_Sesp (let_names_sp));
     Sesp let_vals_sp = let_vals_list_sp;
     while (!nil_ck_Sesp (let_vals_sp)) {
-      obliv_spec.multiset_expression.push_delim("", ", ");
+      link_symmetry.multiset_expression.push_delim("", ", ");
       Cx::String val_expression;
       string_expression(val_expression, caar_of_Sesp (let_vals_sp));
-      obliv_spec.multiset_expression += val_expression;
+      link_symmetry.multiset_expression += val_expression;
       let_vals_sp = cdr_of_Sesp (let_vals_sp);
     }
     return update_allgood (good);
@@ -199,16 +199,16 @@ ProtoconFile::add_symmetric_links(Sesp let_names_sp, Sesp let_vals_list_sp)
 
   Sesp let_name_sp = let_names_sp;
   while (!nil_ck_Sesp (let_name_sp)) {
-    obliv_spec.let_expression.push_delim("(", ", ");
+    link_symmetry.let_expression.push_delim("(", ", ");
 
-    obliv_spec.let_expression += ccstr_of_Sesp (car_of_Sesp (let_name_sp));
+    link_symmetry.let_expression += ccstr_of_Sesp (car_of_Sesp (let_name_sp));
     let_name_sp = cdr_of_Sesp (let_name_sp);
   }
-  obliv_spec.let_expression += ")";
+  link_symmetry.let_expression += ")";
 
   Sesp let_vals_sp = let_vals_list_sp;
   while (!nil_ck_Sesp (let_vals_sp)) {
-    obliv_spec.multiset_expression.push_delim("", ", ");
+    link_symmetry.multiset_expression.push_delim("", ", ");
 
     Cx::String tuple_expression;
     Sesp let_val_sp = car_of_Sesp (let_vals_sp);
@@ -224,7 +224,7 @@ ProtoconFile::add_symmetric_links(Sesp let_names_sp, Sesp let_vals_list_sp)
     }
     tuple_expression += ")";
 
-    obliv_spec.multiset_expression += tuple_expression;
+    link_symmetry.multiset_expression += tuple_expression;
     let_vals_sp = cdr_of_Sesp (let_vals_sp);
   }
 
@@ -236,7 +236,7 @@ ProtoconFile::add_symmetric_access(Sesp let_names_sp, Sesp let_vals_list_sp,
                                    Sesp vbls_sp, Bit write)
 {
   Sign good = 1;
-  Xn::ObliviousSpec& obliv_spec = pc_symm_spec->oblivious_specs.top();
+  Xn::LinkSymmetry& link_symmetry = pc_symm_spec->link_symmetries.top();
 
   while (!nil_ck_Sesp (vbls_sp)) {
     Sesp let_vals_sp = let_vals_list_sp;
@@ -271,7 +271,7 @@ ProtoconFile::add_symmetric_access(Sesp let_names_sp, Sesp let_vals_list_sp,
 
     Cx::String index_expression;
     string_expression(index_expression, caddar_of_Sesp (vbls_sp));
-    obliv_spec.add_oblivious(vbl_idcs, index_expression);
+    link_symmetry.add_link_symmetry(vbl_idcs, index_expression);
     vbls_sp = cdr_of_Sesp (vbls_sp);
   }
   return update_allgood (good);
@@ -469,17 +469,15 @@ ProtoconFile::add_pc_legit(Sesp legit_sp)
         sys->invariant &= pf;
       }
     }
+
     Cx::String invariant_expression;
     if (LegitCk( string_expression(invariant_expression, legit_sp), good, "" )) {
-      if (spec->invariant_expression != "") {
-        spec->invariant_expression =
-          Cx::String("(") + spec->invariant_expression + ")\n  &&\n  ";
+      if (!pc_symm_spec->invariant_expression.empty_ck()) {
+        pc_symm_spec->invariant_expression =
+          Cx::String("(") + pc_symm_spec->invariant_expression + ") && ";
       }
+      pc_symm_spec->invariant_expression += invariant_expression;
 
-      spec->invariant_expression += Cx::String("(forall ")
-        + idx_name + " <- Nat % " + pc_symm_spec->nmembs_expression + " : ";
-      spec->invariant_expression += invariant_expression;;
-      spec->invariant_expression += ")";
     }
     index_map.erase(idx_name);
   }

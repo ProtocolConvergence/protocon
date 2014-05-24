@@ -371,8 +371,8 @@ Net::representative_action_index(uint actidx) const
   bool changed = true;
   while (changed) {
     changed = false;
-    for (uint obliv_idx = 0; obliv_idx < pc_symm_spec.oblivious_specs.sz(); ++obliv_idx) {
-      const ObliviousSpec& ob = pc_symm_spec.oblivious_specs[obliv_idx];
+    for (uint linksymm_idx = 0; linksymm_idx < pc_symm_spec.link_symmetries.sz(); ++linksymm_idx) {
+      const LinkSymmetry& ob = pc_symm_spec.link_symmetries[linksymm_idx];
 
       for (uint link_idx = 0; link_idx < ob.nlinks-1; ++link_idx) {
         Xn::ActSymm act_tmp( act );

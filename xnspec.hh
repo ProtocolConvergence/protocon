@@ -17,7 +17,7 @@ using Cx::String;
 class NatMap;
 class LetVblMap;
 class PcSymmSpec;
-class ObliviousSpec;
+class LinkSymmetry;
 class Spec;
 
 class NatMap {
@@ -79,7 +79,7 @@ public:
   String nmembs_expression;
 };
 
-class ObliviousSpec {
+class LinkSymmetry {
 private:
   Cx::Table<uint> t;
 public:
@@ -91,13 +91,13 @@ public:
   Cx::Table<Cx::String> index_expressions;
 
 public:
-  explicit ObliviousSpec(uint _nlinks)
+  explicit LinkSymmetry(uint _nlinks)
   : nlinks(_nlinks)
   , nvbls(0)
   {
   }
 
-  void add_oblivious(const Cx::Table<uint>& ob, const Cx::String& index_expression) {
+  void add_link_symmetry(const Cx::Table<uint>& ob, const Cx::String& index_expression) {
     Claim2( ob.sz() ,==, nlinks );
     ++nvbls;
     index_expressions.push(index_expression);
@@ -153,10 +153,11 @@ class PcSymmSpec {
 public:
   Cx::String name;
   Cx::String idx_name;
+  Cx::String invariant_expression;
   LetVblMap let_map;
   Cx::Table<const VblSymmSpec*> rvbl_symms;
   Cx::Table<const VblSymmSpec*> wvbl_symms;
-  Cx::Table<ObliviousSpec> oblivious_specs;
+  Cx::Table<LinkSymmetry> link_symmetries;
   Cx::String nmembs_expression;
   Cx::Table<Cx::String> shadow_act_strings;
   Cx::Table<Cx::String> forbid_act_strings;
