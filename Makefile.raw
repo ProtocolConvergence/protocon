@@ -61,7 +61,7 @@ LXXFLAGS += -L$(GluPath) -lcu -lglu -lcal -lm
 -include deps.mk
 
 
-all: $(ExeList) udp
+all: $(ExeList) udp deadfree
 
 ProtoconObj = \
 	$(addprefix $(BldPath)/, pfmla.o pfmla-glu.o pfmla-bittable.o) \
@@ -91,6 +91,9 @@ $(call binexe,satsyn): $(BldPath)/satsyn/satsyn.o $(BldPath)/satsyn/xnsys.o \
 $(BldPath)/pfmla-glu.o: $(BldPath)/pfmla-glu.c
 	$(CC) -c $(CFLAGS) -I$(GluIncludePath) $< -o $@
 
+#$(BldPath)/pfmla-genepi.o: $(BldPath)/pfmla-genepi.c
+#	$(CC) -c $(CFLAGS) $< -o $@
+
 $(BldPathCXX)/pfmla-minisat.o: $(BldPathCXX)/pfmla-minisat.cc
 	$(CXX) -c $(CXXFLAGS) -isystem $(MinisatIncludePath) $< -o $@
 
@@ -105,6 +108,12 @@ $(BldPath)/udp.o: $(BldPath)/udp.c
 
 udp: $(BldPath)/udp.o
 	$(CC) $(filter-out -pedantic,$(CFLAGS)) -D_POSIX_C_SOURCE=199309L -D_BSD_SOURCE $< -o $@ -lrt
+
+#deadfree: $(BldPathCXX)/deadfree.o $(BldPath)/pfmla-genepi.o $(ProtoconObj)
+#	$(CXX) $(CXXFLAGS) $^ -o $@ $(LXXFLAGS) -lgenepi
+
+deadfree: $(BldPathCXX)/deadfree.o $(ProtoconObj)
+	$(CXX) $(CXXFLAGS) $^ -o $@ $(LXXFLAGS)
 
 $(BldPathCXX)/protoconfile.leg.cc: protoconfile.leg
 	$(LEG) -o $@ $<
@@ -145,7 +154,7 @@ deps.mk:
 .PHONY: clean
 clean:
 	rm -fr $(PfxBldPath)
-	rm -f $(ExeList) udp
+	rm -f $(ExeList) udp deadfree
 	rm -f deps.mk
 	if [ -f gui/Makefile ] ; then $(MAKE) -C gui distclean ; fi
 

@@ -249,16 +249,28 @@ wipe_PFmla (PFmla* g)
 
 qual_inline
   void
+ensure_ctx_PFmla (PFmla* a, PFmlaCtx* ctx)
+{
+  Trit phase_a = phase_of_PFmla (*a);
+  if (phase_a == May)
+  {
+    Claim2( (*a)->ctx, ==, ctx);
+  }
+  else
+  {
+    *a = cons1_PFmla (ctx, phase_a == Yes);
+  }
+}
+
+qual_inline
+  void
 fill_ctx_PFmla (PFmla* a, PFmla* b)
 {
   Trit phase_a = phase_of_PFmla (*a);
   Trit phase_b = phase_of_PFmla (*b);
   if (phase_a == May)
   {
-    if (phase_b == May)
-      Claim2( (*a)->ctx, ==, (*b)->ctx);
-    else
-      *b = cons1_PFmla ((*a)->ctx, phase_b == Yes);
+    ensure_ctx_PFmla (b, (*a)->ctx);
   }
   else if (phase_b == May)
   {

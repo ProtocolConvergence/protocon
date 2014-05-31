@@ -278,12 +278,17 @@ ProtoconFile::add_symmetric_access(Sesp let_names_sp, Sesp let_vals_list_sp,
 }
 
   bool
-ProtoconFile::parse_action(Cx::PFmla& act_pf, Sesp act_sp)
+ProtoconFile::parse_action(Cx::PFmla& act_pf, Cx::Table<Cx::PFmla>& pc_xns, Sesp act_sp)
 {
   Sign good = 1;
   Claim( pc_symm );
   const Xn::Net& topo = sys->topology;
   act_pf = false;
+  pc_xns.resize(pc_symm->membs.sz());
+  for (uint i = 0; good && i < pc_symm->membs.sz(); ++i) {
+    pc_xns[i] = false;
+  }
+
   const Cx::String& idx_name = pc_symm_spec->idx_name;
   for (uint i = 0; good && i < pc_symm->membs.sz(); ++i) {
     const Xn::Pc& pc = *pc_symm->membs[i];
@@ -349,7 +354,8 @@ ProtoconFile::parse_action(Cx::PFmla& act_pf, Sesp act_sp)
       }
     }
 
-    act_pf |= guard_pf & assign_pf;
+    pc_xns[i] = guard_pf & assign_pf;
+    act_pf |= pc_xns[i];
   }
   if (good)
     index_map.erase(idx_name);
@@ -376,8 +382,15 @@ ProtoconFile::add_action(Sesp act_sp, Xn::Vbl::ShadowPuppetRole role)
   }
 
   Cx::PFmla act_pf( false );
+  Cx::Table<Cx::PFmla> pc_xns;
   DoLegit( good, "parse action" )
-    good = parse_action(act_pf, act_sp);
+    good = parse_action(act_pf, pc_xns, act_sp);
+
+  if (good) {
+    for (uint i = 0; i < pc_symm->membs.sz(); ++i) {
+      pc_symm->membs[i]->puppet_xn |= pc_xns[i];
+    }
+  }
 
   if (false)
   DoLegit(good, "self-loop")
@@ -419,8 +432,10 @@ ProtoconFile::forbid_action(Sesp act_sp)
   }
 
   Cx::PFmla act_pf( false );
-  DoLegit( good, "parse action" )
-    good = parse_action(act_pf, act_sp);
+  DoLegit( good, "parse action" ) {
+    Cx::Table<Cx::PFmla> pc_xns;
+    good = parse_action(act_pf, pc_xns, act_sp);
+  }
 
   DoLegit( good, "" )
     pc_symm->forbid_pfmla |= act_pf;
@@ -467,6 +482,7 @@ ProtoconFile::add_pc_legit(Sesp legit_sp)
       if (LegitCk( eval(pf, legit_sp), good, "" ))
       {
         sys->invariant &= pf;
+        pc_symm->membs[i]->invariant &= pf;
       }
     }
 

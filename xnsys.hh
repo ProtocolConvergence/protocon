@@ -147,10 +147,14 @@ public:
   Cx::Table< const Vbl* > rvbls;
   Cx::Table< const Vbl* > wvbls;
   Cx::PFmla act_unchanged_pfmla;
+  Cx::PFmla invariant;
+  Cx::PFmla puppet_xn;
 
   Pc(PcSymm* symmetry, uint index)
     : symm(symmetry)
     , symm_idx(index)
+    , invariant(true)
+    , puppet_xn(false)
   {}
   void actions(Cx::Table<uint>& ret_actions, Cx::PFmlaCtx& ctx) const;
 };
@@ -210,6 +214,7 @@ public:
     return write_flags[ridx];
   }
 
+  bool representative(uint* ret_pcidx) const;
   void action(ActSymm& act, uint actidx) const;
   void actions(Cx::Table<uint>& ret_actions, Cx::PFmlaCtx& ctx) const;
 };

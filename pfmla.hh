@@ -70,6 +70,8 @@ public:
 
   friend void fill_ctx (PFmla&, PFmla&);
 
+  void ensure_ctx (const PFmlaCtx& ctx);
+
   PFmla tautology(bool phase) const
   {
     PFmla a;
@@ -542,7 +544,16 @@ public:
                 uint setIdx,
                 const String& pfx = "",
                 const String& sfx = "") const;
+  friend void PFmla::ensure_ctx (const PFmlaCtx& ctx);
 };
+
+inline
+  void
+PFmla::ensure_ctx (const PFmlaCtx& ctx)
+{
+  ensure_ctx_PFmla (&g, ctx.ctx);
+}
+
 }
 
 Cx::PFmla

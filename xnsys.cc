@@ -204,6 +204,36 @@ Net::action_pcsymm_index(uint actidx) const
   return pc_symms.sz() - 1;
 }
 
+  bool
+PcSymm::representative(uint* ret_pcidx) const
+{
+  for (uint i = 0; i < membs.sz(); ++i) {
+    const Pc& pc = *membs[i];
+    bool use = true;
+    for (uint j = 0; j < pc.rvbls.sz(); ++j) {
+      for (uint k = j+1; k < pc.rvbls.sz(); ++k) {
+        if (pc.rvbls[j] == pc.rvbls[k]) {
+          use = false;
+        }
+      }
+    }
+    for (uint j = 0; j < pc.wvbls.sz(); ++j) {
+      for (uint k = j+1; k < pc.wvbls.sz(); ++k) {
+        if (pc.wvbls[j] == pc.wvbls[k]) {
+          use = false;
+        }
+      }
+    }
+    if (use) {
+      if (ret_pcidx) {
+        *ret_pcidx = i;
+      }
+      return true;
+    }
+  }
+  return false;
+}
+
 static
   void
 swap_pre_img (uint* vals, const Xn::PcSymm& pc_symm)
@@ -276,33 +306,9 @@ Pc::actions(Cx::Table<uint>& ret_actions, Cx::PFmlaCtx& ctx) const
 PcSymm::actions(Cx::Table<uint>& ret_actions, Cx::PFmlaCtx& ctx) const
 {
   uint pcidx = 0;
-  bool found = false;
-  for (uint i = 0; i < membs.sz(); ++i) {
-    const Pc& pc = *membs[i];
-    bool use = true;
-    for (uint j = 0; j < pc.rvbls.sz(); ++j) {
-      for (uint k = j+1; k < pc.rvbls.sz(); ++k) {
-        if (pc.rvbls[j] == pc.rvbls[k]) {
-          use = false;
-        }
-      }
-    }
-    for (uint j = 0; j < pc.wvbls.sz(); ++j) {
-      for (uint k = j+1; k < pc.wvbls.sz(); ++k) {
-        if (pc.wvbls[j] == pc.wvbls[k]) {
-          use = false;
-        }
-      }
-    }
-    if (use) {
-      pcidx = i;
-      found = true;
-      break;
-    }
-  }
 
   Cx::Table<uint> pcidcs;
-  if (found) {
+  if (this->representative(&pcidx)) {
     pcidcs.push(pcidx);
   }
   else {
