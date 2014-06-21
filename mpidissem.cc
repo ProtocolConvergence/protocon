@@ -90,34 +90,78 @@ gkautz_hood(Cx::Table<uint>& hood, uint vidx, uint degree, uint n)
   Claim2( hood.sz() ,==, 2*degree );
 }
 
+/**
+ * Generalized Kautz graph topology of degree {degree}.
+ * The {hood} parameter is filled by {x_degree}+{o_degree} nodes.
+ * The first {x_degree} nodes are sources for arcs whose destination node is {vidx},
+ * excluding {vidx} and duplicate source nodes.
+ * The second {o_degree} nodes are destinations for arcs whose source node is {vidx},
+ * excluding {vidx} and duplicate destination nodes.
+ *
+ * \return  The indegree {x_degree} of this node.
+ */
+static
+  uint
+gkautz_comm_hood(Cx::Table<uint>& hood, uint vidx, uint degree, uint n)
+{
+  gkautz_hood(hood, vidx, degree, n);
+  uint x_degree;
+  uint off = 0;
+  for (uint i = 0; i < degree; ++i) {
+    bool found = (vidx == hood[i]);
+    for (uint j = 0; j < off && !found; ++j) {
+      if (hood[j] == hood[i])
+        found = true;
+    }
+    if (!found)
+      hood[off++] = hood[i];
+  }
+  x_degree = off;
+  for (uint i = degree; i < 2*degree; ++i) {
+    bool found = (vidx == hood[i]);
+    for (uint j = x_degree; j < off && !found; ++j) {
+      if (hood[j] == hood[i])
+        found = true;
+    }
+    if (!found)
+      hood[off++] = hood[i];
+  }
+  if (hood.sz() != off) {
+    hood.resize(off);
+  }
+  return x_degree;
+}
+
 
 MpiDissem::MpiDissem(uint _PcIdx, uint NPcs, int _tag, MPI_Comm _comm)
   : done(false)
   , term(false)
-  , degree(4)
   , value(-1)
   , tag(_tag)
   , comm(_comm)
-    , PcIdx(_PcIdx)
+  , PcIdx(_PcIdx)
 {
+  const uint degree = 4;
   if (NPcs <= degree) {
-    degree = NPcs;
-    for (uint i = 0; i < NPcs; ++i)  hood.push(i);
-    for (uint i = 0; i < NPcs; ++i)  hood.push(i);
+    for (uint i = 0; i < NPcs; ++i)  if (i != PcIdx)  hood.push(i);
+    x_degree = hood.sz();
+    o_degree = hood.sz();
+    for (uint i = 0; i < NPcs; ++i)  if (i != PcIdx)  hood.push(i);
   }
   else {
-    gkautz_hood(this->hood, PcIdx, degree, NPcs);
+    x_degree = gkautz_comm_hood(this->hood, PcIdx, degree, NPcs);
+    o_degree = hood.sz() - x_degree;
   }
 
-  paysizes.grow(4*this->sz(), 0);
-  payloads.grow(2*this->sz());
-  requests.grow(2*this->sz(), MPI_REQUEST_NULL);
-  statuses.grow(2*this->sz());
-  done_flags.grow(2*this->sz(), 0);
-  next_o_payloads.grow(this->sz());
-  indices.grow(2*this->sz(), -1);
+  paysizes.grow(2*this->xo_sz(), 0);
+  payloads.grow(this->xo_sz());
+  requests.grow(this->xo_sz(), MPI_REQUEST_NULL);
+  statuses.grow(this->xo_sz());
+  done_flags.grow(this->xo_sz(), 0);
+  next_o_payloads.grow(this->o_sz());
+  indices.grow(this->xo_sz(), -1);
 
-  for (uint i = 0; i < this->sz(); ++i) {
+  for (uint i = 0; i < this->x_sz(); ++i) {
     MPI_Irecv(this->x_paysize(i), 2, MPI_UNSIGNED,
               this->x_hood(i), this->tag, this->comm,
               this->x_request(i));
@@ -196,7 +240,7 @@ MpiDissem::handle_send(uint i)
   bool
 MpiDissem::xtestlite(Cx::Table<uint>& ret)
 {
-  for (uint i = 0; i < this->sz(); ++i) {
+  for (uint i = 0; i < this->x_sz(); ++i) {
     if (*this->x_request(i) == MPI_REQUEST_NULL) {
       if (this->x_payload(i).sz() > 0) {
         ret = this->x_payload(i);
@@ -220,7 +264,7 @@ MpiDissem::xtest(Cx::Table<uint>& ret)
   if (this->xtestlite(ret))
     return true;
   int count = 0;
-  MPI_Testsome(2*this->sz(), &this->requests[0],
+  MPI_Testsome(this->xo_sz(), &this->requests[0],
                &count, &this->indices[0],
                &this->statuses[0]);
   if (count == MPI_UNDEFINED)
@@ -228,7 +272,7 @@ MpiDissem::xtest(Cx::Table<uint>& ret)
   bool some_recv = false;
   for (int indices_idx = 0; indices_idx < count; ++indices_idx) {
     uint i = (uint) this->indices[indices_idx];
-    if (i < this->sz()) {
+    if (i < this->x_sz()) {
       this->handle_recv(i);
       some_recv = true;
     }
@@ -248,23 +292,23 @@ MpiDissem::xwait(Cx::Table<uint>& ret)
   {
     int count = 0;
 #if 0
-    for (uint i = 0; i < 2*this->sz(); ++i) {
+    for (uint i = 0; i < this->xo_sz(); ++i) {
       DBog3("pc:%u req:%u pending:%u", PcIdx, i, this->requests[i] == MPI_REQUEST_NULL ? 0 : 1);
     }
 #endif
-    MPI_Waitsome(2*this->sz(), &this->requests[0],
+    MPI_Waitsome(this->xo_sz(), &this->requests[0],
                  &count, &this->indices[0],
                  &this->statuses[0]);
     if (count == MPI_UNDEFINED || count == 0)
       return false;
     for (int indices_idx = 0; indices_idx < count; ++indices_idx) {
       uint i = (uint) indices[indices_idx];
-      if (i < this->sz()) {
+      if (i < this->x_sz()) {
         /* DBog2("recv %u <- %u", PcIdx, x_hood(i)); */
         this->handle_recv(i);
       }
       else {
-        this->handle_send(i-this->sz());
+        this->handle_send(i-this->x_sz());
       }
     }
   }
@@ -275,10 +319,10 @@ MpiDissem::xwait(Cx::Table<uint>& ret)
 MpiDissem::maysend()
 {
   int count = 0;
-  MPI_Testsome(this->sz(), this->o_requests(),
+  MPI_Testsome(this->o_sz(), this->o_requests(),
                &count, &this->indices[0], this->o_statuses());
 
-  for (uint i = 0; i < this->sz(); ++i) {
+  for (uint i = 0; i < this->o_sz(); ++i) {
     this->handle_send(i);
   }
 }

@@ -290,6 +290,9 @@ protocon_options_rec
     else if (eq_cstr (arg, "-try-all")) {
       opt.try_all = true;
     }
+    else if (eq_cstr (arg, "-optimize")) {
+      opt.optimize_soln = true;
+    }
     else if (eq_cstr (arg, "-solution-as-conflict")) {
       opt.solution_as_conflict = true;
     }

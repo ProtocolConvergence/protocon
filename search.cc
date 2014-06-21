@@ -18,8 +18,10 @@
 #endif
 
 static bool
-verify_solutions(const PartialSynthesis& inst, StabilizationCkInfo* info)
+verify_solutions(const PartialSynthesis& inst, StabilizationCkInfo* info, uint* ret_nlayers_sum = 0)
 {
+  if (ret_nlayers_sum)
+    *ret_nlayers_sum = 0;
   for (uint i = 0; i < inst.sz(); ++i) {
     if (!inst[i].no_partial)
       continue;
@@ -35,6 +37,9 @@ verify_solutions(const PartialSynthesis& inst, StabilizationCkInfo* info)
       *inst[i].log << "Solution was NOT self-stabilizing." << inst[i].log->endl();
       return false;
     }
+    if (info && ret_nlayers_sum) {
+      *ret_nlayers_sum += info->nlayers;
+    }
   }
   for (uint i = 0; i < inst.sz(); ++i) {
     if (inst[i].no_partial || !inst.ctx->opt.verify_found)
@@ -45,6 +50,9 @@ verify_solutions(const PartialSynthesis& inst, StabilizationCkInfo* info)
     {
       *inst[i].log << "Solution was NOT self-stabilizing." << inst[i].log->endl();
       return false;
+    }
+    if (info && ret_nlayers_sum) {
+      *ret_nlayers_sum += info->nlayers;
     }
   }
   return true;
@@ -69,6 +77,7 @@ AddConvergence(vector<uint>& ret_actions,
   base_inst.failed_bt_level = 0;
   bt_stack.push(base_inst);
   uint stack_idx = 0;
+  uint nlayers_sum = 0;
 
   while (true) {
     PartialSynthesis& inst = bt_stack[stack_idx];
@@ -84,7 +93,7 @@ AddConvergence(vector<uint>& ret_actions,
 
     if (!inst.candidates_ck()) {
       StabilizationCkInfo info;
-      if (verify_solutions(inst, &info))  break;
+      if (verify_solutions(inst, &info, &nlayers_sum))  break;
 
       const bool early_return = !info.livelock_exists;
       if (info.livelock_exists) {
@@ -138,7 +147,7 @@ AddConvergence(vector<uint>& ret_actions,
       return false;
     }
 
-    while (!bt_stack[stack_idx].revise_actions(Set<uint>(), Set<uint>(actidx)))
+    while (!bt_stack[stack_idx].revise_actions(Set<uint>(), Set<uint>(actidx), &nlayers_sum))
     {
       PartialSynthesis& inst = bt_stack[stack_idx];
       *inst.log << "backtrack from lvl:" << inst.bt_level << inst.log->endl();
@@ -157,11 +166,15 @@ AddConvergence(vector<uint>& ret_actions,
       }
       actidx = inst.picks.top();
     }
+    if (base_inst.ctx->optimal_nlayers_sum > 0) {
+      Claim2( nlayers_sum ,<, base_inst.ctx->optimal_nlayers_sum );
+    }
   }
-
   PartialSynthesis& inst = bt_stack[stack_idx];
   Claim(!inst.deadlockPF.sat_ck());
   ret_actions = inst.actions;
+  Claim2( nlayers_sum ,>, 0 );
+  base_inst.ctx->optimal_nlayers_sum = nlayers_sum;
   return true;
 }
 
@@ -698,7 +711,7 @@ stabilization_search(vector<uint>& ret_actions,
     else if (found)
     {
       bool count_solution = true;
-      if (opt.solution_as_conflict) {
+      if (opt.solution_as_conflict || global_opt.optimize_soln) {
         FlatSet<uint> flat_actions( actions );
         if (conflicts.conflict_ck(flat_actions)) {
           count_solution = false;
@@ -708,7 +721,10 @@ stabilization_search(vector<uint>& ret_actions,
         }
       }
 
-      if (!global_opt.try_all) {
+      if (global_opt.optimize_soln) {
+        // Don't write out files when optimizing, but do keep going.
+      }
+      else if (!global_opt.try_all) {
         set_done_flag (1);
       }
       else if (!!exec_opt.ofilepath && count_solution) {
@@ -751,7 +767,8 @@ stabilization_search(vector<uint>& ret_actions,
       if (opt.search_method == opt.RankShuffleSearch)
         DBogOF << "pcidx:" << PcIdx << " trial:" << trial_idx+1 << " actions:" << actions.size() << '\n';
       else
-        DBogOF << "pcidx:" << PcIdx << " trial:" << trial_idx+1 << " depth:" << synlvl.failed_bt_level << '\n';
+        DBogOF << "pcidx:" << PcIdx << " trial:" << trial_idx+1 << " depth:" << synlvl.failed_bt_level
+          << " nlayers_sum:" << synctx.optimal_nlayers_sum << '\n';
       DBogOF.flush();
     }
     }
@@ -760,7 +777,8 @@ stabilization_search(vector<uint>& ret_actions,
     if (opt.search_method == opt.RankShuffleSearch)
       *opt.log << "pcidx:" << PcIdx << " trial:" << trial_idx+1 << " actions:" << actions.size() << '\n';
     else
-      *opt.log << "pcidx:" << PcIdx << " trial:" << trial_idx+1 << " depth:" << synlvl.failed_bt_level << '\n';
+      *opt.log << "pcidx:" << PcIdx << " trial:" << trial_idx+1 << " depth:" << synlvl.failed_bt_level
+        << " nlayers_sum:" << synctx.optimal_nlayers_sum << '\n';
     opt.log->flush();
 
     if (global_opt.snapshot_conflicts && !!exec_opt.conflicts_ofilepath)

@@ -38,7 +38,6 @@ public:
   Cx::String log_ofilename;
   Cx::String ofilepath;
   bool use_espresso;
-  bool count_convergence_layers;
   Cx::Table< Cx::String > xfilepaths;
   Cx::String model_ofilepath;
   Cx::String graphviz_ofilepath;
@@ -52,7 +51,6 @@ public:
     , nparallel( 1 )
     , params( 1 )
     , use_espresso( false )
-    , count_convergence_layers( false )
     , conflict_order( HiLoOrder )
   {}
 };

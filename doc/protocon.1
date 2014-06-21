@@ -172,6 +172,13 @@ There is no limit by default.
 Limit the number of trials per thread to
 .IR N .
 .TP
+.B -optimize
+Optimize the result by minimizing the number of asynchronous layers required to reach a fixpoint.
+The minimization applies to the sum of such layers of all systems being considered.
+This does not work with the
+.B parallel
+flag.
+.TP
 .B -try-all
 Keep searching, even if a solution is found.
 This is helpful for accumulating conflicts.

@@ -23,6 +23,28 @@ weak_convergence_ck(const Cx::PFmla& xn, const Cx::PFmla& invariant)
 }
 
   bool
+weak_convergence_ck(uint* ret_nlayers, const Cx::PFmla& xn, const Cx::PFmla& invariant)
+{
+  uint nlayers = 1;
+  Cx::PFmla visit( invariant );
+  Cx::PFmla layer( xn.pre(invariant) - visit );
+  while (layer.sat_ck()) {
+    visit |= layer;
+    layer = xn.pre(layer) - visit;
+    if (ret_nlayers) {
+      if (*ret_nlayers > 0 && nlayers > *ret_nlayers) {
+        *ret_nlayers = nlayers;
+        return false;
+      }
+      nlayers += 1;
+    }
+  }
+  if (ret_nlayers)
+    *ret_nlayers = nlayers;
+  return visit.tautology_ck();
+}
+
+  bool
 shadow_ck(Cx::PFmla* ret_invariant,
           const Xn::Sys& sys,
           const Cx::PFmla& lo_xn, const Cx::PFmla& hi_xn,

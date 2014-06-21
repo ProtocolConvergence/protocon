@@ -979,7 +979,8 @@ PartialSynthesis::check_forward(Set<uint>& adds, Set<uint>& dels, Set<uint>& rej
 
 /** Add actions to protocol and delete actions from candidate list.**/
   bool
-PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels, Set<uint>& rejs)
+PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
+                                       Set<uint>& rejs, uint* ret_nlayers)
 {
   const Xn::Sys& sys = *this->ctx->systems[this->sys_idx];
   const Xn::Net& topo = sys.topology;
@@ -999,6 +1000,9 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels, Set<uin
     }
     adds.clear();
     dels.clear();
+    if (ret_nlayers) {
+      *ret_nlayers = 0;
+    }
     return true;
   }
 
@@ -1112,12 +1116,22 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels, Set<uin
     OPut(*this->log, act) << this->log->endl();
   }
 
+  uint max_nlayers = this->stabilization_opt().max_nlayers;
+  if (ret_nlayers && *ret_nlayers > 0
+      && (max_nlayers == 0 || *ret_nlayers < max_nlayers))
+  {
+    max_nlayers = *ret_nlayers;
+  }
+  uint nlayers = max_nlayers;
   Cx::PFmla scc(false);
-  uint nlayers = this->stabilization_opt().max_nlayers;
   this->lo_xn.cycle_ck(&scc, &nlayers);
-  if (this->stabilization_opt().max_nlayers > 0 && nlayers > this->stabilization_opt().max_nlayers) {
-    *this->log << "NLAYERS (maximum number of convergence layers exceeded)" << this->log->endl();
+  if (max_nlayers > 0 && nlayers > max_nlayers) {
+    *this->log << "NLAYERS (maximum number of convergence layers exceeded: "
+      << max_nlayers << ")" << this->log->endl();
     return false;
+  }
+  if (ret_nlayers) {
+    *ret_nlayers = nlayers;
   }
   if (!scc.subseteq_ck(sys.invariant)) {
     //oput_one_cycle(*this->log, this->lo_xn, scc, topo);
@@ -1173,7 +1187,8 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels, Set<uin
     return false;
   }
 
-  if (!weak_convergence_ck(this->hi_xn, this->hi_invariant)) {
+  nlayers = max_nlayers;
+  if (!weak_convergence_ck(&nlayers, this->hi_xn, this->hi_invariant)) {
     *this->log << "REACH" << this->log->endl();
 #if 0
     Cx::PFmla pf( ~this->hi_xn.pre_reach(this->hi_invariant) );
@@ -1183,6 +1198,10 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels, Set<uin
     topo.oput_all_xn(*this->log, this->hi_xn);
 #endif
     return false;
+  }
+  if (ret_nlayers) {
+    if (*ret_nlayers < nlayers)
+      *ret_nlayers = nlayers;
   }
 
   bool revise = true;
@@ -1206,10 +1225,12 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels, Set<uin
 }
 
   bool
-PartialSynthesis::revise_actions(const Set<uint>& adds, const Set<uint>& dels)
+PartialSynthesis::revise_actions(const Set<uint>& adds, const Set<uint>& dels,
+                                 uint* ret_nlayers_sum)
 {
   Cx::Table< Set<uint> > all_adds( this->sz(), adds );
   Cx::Table< Set<uint> > all_dels( this->sz(), dels );
+  const uint max_nlayers_sum = this->ctx->optimal_nlayers_sum;
 
   // If both sets are empty, we should force a check anyway.
   bool force_revise = (adds.empty() && dels.empty());
@@ -1225,9 +1246,28 @@ PartialSynthesis::revise_actions(const Set<uint>& adds, const Set<uint>& dels)
       if (!force_revise && all_adds[i].empty() && all_dels[i].empty())
         continue;
 
-      PartialSynthesis& inst = (*this)[i];
+      if (max_nlayers_sum > 0) {
+        uint nlayers_sum = 0;
+        for (uint j = 0; j < this->sz(); ++j) {
+          nlayers_sum += (*this)[j].lo_nlayers;
+        }
+        if (nlayers_sum >= max_nlayers_sum) {
+          *this->log << "NLAYERS (maximum number of convergence layers exceeded: 0)"
+            << this->log->endl();
+          return false;
+        }
+        nlayers_sum -= (*this)[i].lo_nlayers;
+        Claim2( nlayers_sum+1 ,<, max_nlayers_sum );
+        (*this)[i].lo_nlayers = max_nlayers_sum - 1 - nlayers_sum;
+      }
+      else {
+        (*this)[i].lo_nlayers = 0;
+      }
+
+      PartialSynthesis& partial_soln = (*this)[i];
       Set<uint> rejs;
-      if (!inst.revise_actions_alone(all_adds[i], all_dels[i], rejs))
+      if (!partial_soln.revise_actions_alone(all_adds[i], all_dels[i], rejs,
+                                             &(*this)[i].lo_nlayers))
         return false;
       Claim( rejs.subseteq_ck(all_dels[i]) );
 
@@ -1246,6 +1286,13 @@ PartialSynthesis::revise_actions(const Set<uint>& adds, const Set<uint>& dels)
   }
   for (uint i = 0; i < this->sz()-1; ++i) {
     Claim2( (*this)[i].actions.size() ,==, (*this)[i+1].actions.size() );
+  }
+  if (ret_nlayers_sum) {
+    uint nlayers_sum = 0;
+    for (uint i = 0; i < this->sz(); ++i) {
+      nlayers_sum += (*this)[i].lo_nlayers;
+    }
+    *ret_nlayers_sum = nlayers_sum;
   }
   return true;
 }

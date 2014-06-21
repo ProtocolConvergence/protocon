@@ -1,13 +1,17 @@
 
 *.o
-bin
-tags
 Makefile
 deps.mk
 
 gui/moc_*.cpp
 gui/ui_*.h
 gui/gui
+
+tmp
+biring
+deadfree
+bld
+udp
 
 doc/*/main.pdf
 doc/*/quick.pdf

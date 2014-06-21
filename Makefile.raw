@@ -14,12 +14,12 @@ LEG = leg
 CONFIG += ansi
 #CONFIG += errwarn
 CONFIG += debug
-#CONFIG += snappy
+CONFIG += snappy
 #CONFIG += profile
 #CONFIG += ultradebug
 #CONFIG += fast
 #CONFIG += noassert
-CONFIG += openmp
+#CONFIG += openmp
 CONFIG += mpi
 CONFIG += gui
 #CONFIG += on-gilbert-cluster
@@ -61,7 +61,7 @@ LXXFLAGS += -L$(GluPath) -lcu -lglu -lcal -lm
 -include deps.mk
 
 
-all: $(ExeList) udp deadfree
+all: $(ExeList) udp deadfree biring
 
 ProtoconObj = \
 	$(addprefix $(BldPath)/, pfmla.o pfmla-glu.o pfmla-bittable.o) \
@@ -114,6 +114,13 @@ udp: $(BldPath)/udp.o
 
 deadfree: $(BldPathCXX)/deadfree.o $(ProtoconObj)
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(LXXFLAGS)
+
+$(BldPathCXX)/biring.o: $(BldPathCXX)/biring.cc
+	$(CC) -c $(CFLAGS) -isystem bliss $< -o $@
+
+biring: $(BldPathCXX)/biring.o $(CxObjs)
+	#$(CXX) $(CXXFLAGS) $^ -o $@ -Lbliss -lbliss -lm
+	$(CXX) $(CXXFLAGS) $^ -o $@ -lm
 
 $(BldPathCXX)/protoconfile.leg.cc: protoconfile.leg
 	$(LEG) -o $@ $<

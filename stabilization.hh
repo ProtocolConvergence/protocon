@@ -50,6 +50,9 @@ shadow_ck(Cx::PFmla* ret_invariant,
           const Cx::PFmla* lo_scc);
 bool
 weak_convergence_ck(const Cx::PFmla& xn, const Cx::PFmla& invariant);
+bool
+weak_convergence_ck(uint* ret_nlayers, const Cx::PFmla& xn,
+                   const Cx::PFmla& invariant);
 
 bool
 stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,

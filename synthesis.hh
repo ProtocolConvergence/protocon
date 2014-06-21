@@ -74,6 +74,7 @@ public:
   uint sys_npcs;
   uint ntrials;
   bool try_all;
+  bool optimize_soln;
   uint max_conflict_sz;
   bool snapshot_conflicts;
   bool solution_as_conflict;
@@ -96,6 +97,7 @@ public:
     , sys_npcs( 1 )
     , ntrials( 0 )
     , try_all( false )
+    , optimize_soln( false )
     , max_conflict_sz( 0 )
     , snapshot_conflicts( false )
     , solution_as_conflict( false )
@@ -127,6 +129,7 @@ public:
   Cx::PFmla lo_xn; ///< Under-approximation of the transition function.
   Cx::PFmla hi_xn; ///< Over-approximation of the transition function.
   Cx::PFmla hi_invariant;
+  uint lo_nlayers;
 
   Cx::PFmla csp_pfmla;
 
@@ -149,6 +152,7 @@ public:
     , lo_xn( false )
     , hi_xn( false )
     , hi_invariant( false )
+    , lo_nlayers( 1 )
   {}
 
   /// Deadlocks ranked by how many candidate actions can resolve them.
@@ -187,8 +191,8 @@ public:
 
   uint add_small_conflict_set(const Cx::Table<uint>& delpicks);
   bool check_forward(Set<uint>& adds, Set<uint>& dels, Set<uint>& rejs);
-  bool revise_actions_alone(Set<uint>& adds, Set<uint>& dels, Set<uint>& rejs);
-  bool revise_actions(const Set<uint>& adds, const Set<uint>& dels);
+  bool revise_actions_alone(Set<uint>& adds, Set<uint>& dels, Set<uint>& rejs, uint* ret_nlayers = 0);
+  bool revise_actions(const Set<uint>& adds, const Set<uint>& dels, uint* ret_nlayers = 0);
   bool pick_action(uint act_idx);
 };
 
@@ -202,6 +206,7 @@ public:
   Cx::URandom urandom;
   AddConvergenceOpt opt;
   Cx::Table<StabilizationOpt> stabilization_opts;
+  uint optimal_nlayers_sum;
   Bool (*done_ck_fn) (void*);
   void* done_ck_mem;
   ConflictFamily conflicts;
@@ -218,6 +223,7 @@ public:
     , log( &Cx::OFile::null() )
     , csp_base_pfmla(true)
     , urandom(pcidx, npcs)
+    , optimal_nlayers_sum(0)
     , done_ck_fn(0)
     , done_ck_mem(0)
   {}
