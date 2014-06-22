@@ -66,10 +66,6 @@ PFmla::cycle_ck(Cx::PFmla* scc, uint* ret_nlayers, const Cx::PFmla* invariant) c
     const Cx::PFmla& span1 = this->img(span0);
     if (span0.equiv_ck(span1))  break;
     if (ret_nlayers) {
-      if (*ret_nlayers > 0 && nlayers > *ret_nlayers) {
-        *ret_nlayers = nlayers;
-        return false;
-      }
       if (invariant) {
         if (!span0.subseteq_ck(*invariant)) {
           nlayers += 1;
@@ -77,6 +73,10 @@ PFmla::cycle_ck(Cx::PFmla* scc, uint* ret_nlayers, const Cx::PFmla* invariant) c
       }
       else {
         nlayers += 1;
+      }
+      if (*ret_nlayers > 0 && nlayers > *ret_nlayers) {
+        *ret_nlayers = nlayers;
+        return false;
       }
     }
     span0 = span1;

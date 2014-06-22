@@ -13,9 +13,15 @@ extern "C" {
 #include "tuple.hh"
 
 //#define UseBlissLib
+
 #ifdef UseBlissLib
 #include <graph.hh>
 #endif
+
+#ifdef UseBlissLib
+#define UseBitTableDB
+#endif
+
 
 class LocalConfig
 {
@@ -422,8 +428,8 @@ pc_config_of_enum_idx (uint* config, uint config_enum_idx, const uint domsz)
   uint doms[3];
   doms[0] = doms[1] = doms[2] = domsz;
   state_of_index (tmp, config_enum_idx, doms, 3);
-  config[1] = tmp[0];
   config[0] = tmp[1];
+  config[1] = tmp[0];
   config[2] = tmp[2];
 }
 
@@ -452,8 +458,8 @@ biring_continuations (uint* conts, uint config_enum_idx, const BitTable set, con
   config[0] = config[1];
   config[1] = config[2];
   for (uint i = 0; i < domsz; ++i) {
-    uint idx = enum_idx_of_pc_config (config, domsz);
     config[2] = i;
+    uint idx = enum_idx_of_pc_config (config, domsz);
     if (ck_BitTable (set, idx)) {
       conts[n++] = idx;
     }
@@ -461,17 +467,39 @@ biring_continuations (uint* conts, uint config_enum_idx, const BitTable set, con
   return n;
 }
 
+
+  void
+biring_fixpoint(BitTable img_set, uint domsz)
+{
+  Cx::Table<uint> conts(domsz);
+  BitTable pre_set = cons1_BitTable (img_set.sz);
+
+  do
+  {
+    op_BitTable (pre_set, BitOp_IDEN1, img_set);
+    wipe_BitTable (img_set, 0);
+    for (uint config_enum_idx = begidx_BitTable (pre_set);
+         config_enum_idx < pre_set.sz;
+         config_enum_idx = nextidx_BitTable (pre_set, config_enum_idx))
+    {
+      uint n = biring_continuations(&conts[0], config_enum_idx, pre_set, domsz);
+      for (uint i = 0; i < n; ++i) {
+        set1_BitTable (img_set, conts[i]);
+      }
+    }
+  } while (0 != cmp_BitTable (pre_set, img_set));
+  lose_BitTable (&pre_set);
+}
+
   bool
 biring_sat_ck (const BitTable set, const uint domsz)
 {
   Cx::BitTable reach_pre( set.sz, 0 );
   Cx::BitTable reach_img( set.sz, 0 );
-  const uint N = 3;
-  bool sats[N+1];
+  const uint N = set.sz;
+  const uint N_0 = 2;
+  Cx::BitTable sats( N+1, 0 );
   Cx::Table<uint> conts(domsz);
-  for (uint i = 0; i <= N; ++i) {
-    sats[i] = false;
-  }
 
   for (uint config_enum_idx = begidx_BitTable (set);
        config_enum_idx < set.sz;
@@ -495,11 +523,11 @@ biring_sat_ck (const BitTable set, const uint domsz)
         }
       }
       if (reach_img[config_enum_idx]) {
-        sats[step_idx+1] = true;
+        sats[step_idx+1] = 1;
       }
     }
-    for (uint i = 2; i < N+1; ++i) {
-      if (!sats[i])  break;
+    for (uint i = N_0; i < N+1; ++i) {
+      if (0 == sats[i])  break;
       if (i == N)  return true;
     }
   }
@@ -599,6 +627,26 @@ flat_canonical_hack (FlatDigraph& flat, const Cx::BitTable min_bt)
 }
 
   void
+oput_biring_invariant (Cx::OFile& ofile, const Cx::BitTable& legit, const uint domsz,
+                       const char* pfx = "", const char* delim = " || ")
+{
+  for (ujint config_enum_idx = legit.begidx();
+       config_enum_idx < legit.sz();
+       config_enum_idx = legit.nextidx(config_enum_idx))
+  {
+    ofile << pfx;
+    pfx = delim;
+
+    uint config[3];
+    pc_config_of_enum_idx (config, config_enum_idx, domsz);
+    ofile
+      << "(x[i-1]==" << config[0]
+      << " && x[i]==" << config[1]
+      << " && x[i+1]==" << config[2] << ")";
+  }
+}
+
+  void
 oput_biring_protocon_spec (const Cx::String& ofilepath, const Cx::String& ofilename,
                            const Cx::BitTable& legit, const uint domsz)
 {
@@ -613,25 +661,12 @@ oput_biring_protocon_spec (const Cx::String& ofilepath, const Cx::String& ofilen
     << "read: x[i-1];\n"
     << "write: x[i];\n"
     << "read: x[i+1];\n"
-    << "invariant: 0==1\n";
-  for (ujint config_enum_idx = legit.begidx();
-       config_enum_idx < legit.sz();
-       config_enum_idx = legit.nextidx(config_enum_idx))
-  {
-    uint config[3];
-    pc_config_of_enum_idx (config, config_enum_idx, domsz);
-    ofile << "|| "
-      << "x[i-1]==" << config[0]
-      << " && x[i]==" << config[1]
-      << " && x[i+1]==" << config[2]
-      << '\n';
-  }
+    << "invariant: 0==1";
+  oput_biring_invariant (ofile, legit, domsz, "\n|| ", "\n|| ");
   ofile
-    << ";\n"
+    << "\n;\n"
     << "}";
 }
-
-#define UseBitTableDB
 
   void
 #ifdef UseBitTableDB
@@ -642,20 +677,25 @@ recurse(const BitTable bt, const uint domsz, uint q, Cx::Set<FlatDigraph>& db)
 {
   //if (q < bt.sz - 15)  return;
 
+  BitTable set = cons1_BitTable (bt.sz);
+  op_BitTable (set, BitOp_IDEN1, bt);
+  biring_fixpoint (set, domsz);
+
   Cx::String ofilename;
   {
     Cx::C::OFile name_ofile;
     init_OFile (&name_ofile);
     {
       Cx::OFile tmp_ofile(&name_ofile);
-      tmp_ofile << bt;
+      tmp_ofile << set;
     }
     ofilename = ccstr1_of_OFile (&name_ofile, 0);
     lose_OFile (&name_ofile);
   }
   Cx::OFile stat_ofile( stdout_OFile () );
 
-  if (!biring_sat_ck (bt, domsz)) {
+  if (!biring_sat_ck (set, domsz)) {
+    lose_BitTable (&set);
     //stat_ofile << ofilename << " unsat\n";
     return;
   }
@@ -664,17 +704,17 @@ recurse(const BitTable bt, const uint domsz, uint q, Cx::Set<FlatDigraph>& db)
   {
     Cx::OFileB graph_ofile;
     graph_ofile.open("xbliss", ofilename);
-    dimacs_graph (graph_ofile, bt, domsz);
+    dimacs_graph (graph_ofile, set, domsz);
   }
 #endif
   {
     FlatDigraph digraph;
     Cx::BitTable min_bt;
 #if 0
-    flat_canonical_digraph(digraph, min_bt, bt, domsz);
+    flat_canonical_digraph(digraph, min_bt, set, domsz);
     flat_canonical_hack(digraph, min_bt);
 #else
-    canonical_set(min_bt, bt, domsz);
+    canonical_set(min_bt, set, domsz);
 #ifndef UseBitTableDB
     flat_canonical_hack(digraph, min_bt);
 #endif
@@ -686,6 +726,7 @@ recurse(const BitTable bt, const uint domsz, uint q, Cx::Set<FlatDigraph>& db)
     if (db.elem_ck(digraph)) {
 #endif
       //stat_ofile << ofilename << ' ' << min_bt << " visited\n";
+      lose_BitTable (&set);
       return;
     }
 #ifdef UseBitTableDB
@@ -693,14 +734,18 @@ recurse(const BitTable bt, const uint domsz, uint q, Cx::Set<FlatDigraph>& db)
 #else
     db << digraph;
 #endif
-    stat_ofile << ofilename << ' ' << min_bt << '\n';
+    //stat_ofile << ofilename << ' ' << min_bt << '\n';
+    //stat_ofile << bt << ' ' << min_bt << '\n';
+    stat_ofile << min_bt;
+    oput_biring_invariant (stat_ofile, min_bt, domsz, "\n", " || ");
+    stat_ofile << '\n';
     //oput_biring_protocon_spec ("../trial/ss3/spec", ofilename + ".protocon", min_bt, domsz);
   }
-  if (q == 0)
+  if (q == 0) {
+    lose_BitTable (&set);
     return;
+  }
 
-  BitTable set = cons1_BitTable (bt.sz);
-  op_BitTable (set, BitOp_IDEN1, bt);
   while (q > 0)
   {
     q -= 1;
@@ -714,7 +759,7 @@ recurse(const BitTable bt, const uint domsz, uint q, Cx::Set<FlatDigraph>& db)
 }
 
   void
-searchitgurl(const uint domsz)
+searchit(const uint domsz)
 {
   BitTable set = cons2_BitTable (domsz*domsz*domsz, 1);
   for (uint val = 0; val < domsz; ++val) {
@@ -750,7 +795,7 @@ int main(int argc, char** argv)
   //dimacs_graph(of, set, domsz);
   //lose_BitTable (&set);
 
-  searchitgurl(domsz);
+  searchit(domsz);
   lose_sysCx ();
   return 0;
 }

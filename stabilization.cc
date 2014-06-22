@@ -32,11 +32,11 @@ weak_convergence_ck(uint* ret_nlayers, const Cx::PFmla& xn, const Cx::PFmla& inv
     visit |= layer;
     layer = xn.pre(layer) - visit;
     if (ret_nlayers) {
+      nlayers += 1;
       if (*ret_nlayers > 0 && nlayers > *ret_nlayers) {
         *ret_nlayers = nlayers;
         return false;
       }
-      nlayers += 1;
     }
   }
   if (ret_nlayers)
