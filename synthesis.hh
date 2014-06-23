@@ -79,6 +79,7 @@ public:
   bool snapshot_conflicts;
   bool solution_as_conflict;
   vector<uint> known_solution;
+  Cx::Table< vector<uint> > solution_guesses;
   Cx::String livelock_ofilepath;
   uint n_livelock_ofiles;
 
@@ -194,6 +195,7 @@ public:
   bool revise_actions_alone(Set<uint>& adds, Set<uint>& dels, Set<uint>& rejs, uint* ret_nlayers = 0);
   bool revise_actions(const Set<uint>& adds, const Set<uint>& dels, uint* ret_nlayers = 0);
   bool pick_action(uint act_idx);
+  bool pick_actions(const vector<uint>& act_idcs);
 };
 
 class SynthesisCtx {

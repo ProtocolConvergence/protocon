@@ -79,6 +79,11 @@ AddConvergence(vector<uint>& ret_actions,
   uint stack_idx = 0;
   uint nlayers_sum = 0;
 
+  if (synctx.conflicts.conflict_ck(Cx::FlatSet<uint>(base_inst.actions))) {
+    synctx.conflicts.add_conflict(Cx::FlatSet<uint>());
+    return false;
+  }
+
   while (true) {
     PartialSynthesis& inst = bt_stack[stack_idx];
     if (synctx.done_ck()) {
@@ -166,15 +171,15 @@ AddConvergence(vector<uint>& ret_actions,
       }
       actidx = inst.picks.top();
     }
-    if (base_inst.ctx->optimal_nlayers_sum > 0) {
-      Claim2( nlayers_sum ,<, base_inst.ctx->optimal_nlayers_sum );
+    if (synctx.optimal_nlayers_sum > 0) {
+      Claim2( nlayers_sum ,<, synctx.optimal_nlayers_sum );
     }
   }
   PartialSynthesis& inst = bt_stack[stack_idx];
   Claim(!inst.deadlockPF.sat_ck());
   ret_actions = inst.actions;
   Claim2( nlayers_sum ,>, 0 );
-  base_inst.ctx->optimal_nlayers_sum = nlayers_sum;
+  synctx.optimal_nlayers_sum = nlayers_sum;
   return true;
 }
 
@@ -698,6 +703,12 @@ stabilization_search(vector<uint>& ret_actions,
         synctx.urandom.shuffle(&candidates[off], act_layers[i].sz());
       }
       found = try_order_synthesis(actions, tape);
+    }
+    else if (NPcs * trial_idx + PcIdx < global_opt.solution_guesses.sz()) {
+      PartialSynthesis tape( synlvl );
+      tape.pick_actions(global_opt.solution_guesses[NPcs * trial_idx + PcIdx]);
+      found = AddConvergence(actions, tape, opt);
+      synlvl.failed_bt_level = tape.failed_bt_level;
     }
     else
     {

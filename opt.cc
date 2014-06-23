@@ -216,6 +216,7 @@ protocon_options_rec
       else {
         infile_opt.file_path = arg;
       }
+      infile_opt.constant_map = exec_opt.params[0].constant_map;
     }
     else if (eq_cstr (arg, "-x-args")) {
       Cx::String args_xfilepath( argv[argi++] );
@@ -266,6 +267,7 @@ protocon_options_rec
     else if (eq_cstr (arg, "-x-test-known")) {
       Xn::Sys test_sys;
       ProtoconFileOpt file_opt;
+      file_opt.constant_map = exec_opt.params[0].constant_map;
       if (!argv[argi]) {
         failout_sysCx("Not enuff arguments for -x-test-known.");
       }
@@ -274,6 +276,19 @@ protocon_options_rec
         failout_sysCx("Reading -x-test-known file.");
       }
       opt.known_solution = test_sys.actions;
+    }
+    else if (eq_cstr (arg, "-x-try")) {
+      Xn::Sys try_sys;
+      ProtoconFileOpt file_opt;
+      file_opt.constant_map = exec_opt.params[0].constant_map;
+      if (!argv[argi]) {
+        failout_sysCx("Not enuff arguments for -x-try.");
+      }
+      file_opt.file_path = argv[argi++];
+      if (!ReadProtoconFile(try_sys, file_opt)) {
+        failout_sysCx("Reading -x-try file.");
+      }
+      opt.solution_guesses.push(try_sys.actions);
     }
     else if (eq_cstr (arg, "-o-log")) {
       exec_opt.log_ofilename = argv[argi++];
@@ -441,8 +456,6 @@ protocon_options
   if (argi < argc) {
     failout_sysCx("Too many arguments!");
   }
-
-  infile_opt.constant_map = exec_opt.params[0].constant_map;
 
   if (exec_opt.xfilepaths.sz() == 0) {
     if (!!infile_opt.file_path) {

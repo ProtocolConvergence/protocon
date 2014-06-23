@@ -1311,6 +1311,22 @@ PartialSynthesis::pick_action(uint act_idx)
   return true;
 }
 
+  bool
+PartialSynthesis::pick_actions(const vector<uint>& act_idcs)
+{
+  for (uint i = 0; i < this->sz(); ++i) {
+    for (uint j = 0; j < act_idcs.size(); ++j) {
+      (*this)[i].picks.push(act_idcs[j]);
+    }
+  }
+  if (!this->revise_actions(Set<uint>(act_idcs), Set<uint>())) {
+    this->add_small_conflict_set(this->picks);
+    return false;
+  }
+
+  return true;
+}
+
 /**
  * Initialize synthesis structures.
  */
