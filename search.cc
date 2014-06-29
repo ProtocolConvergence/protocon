@@ -59,58 +59,58 @@ verify_solutions(const PartialSynthesis& inst, StabilizationCkInfo* info, uint* 
 }
 
 /**
- * Add convergence to a system.
+ * Add stabilization to a protocol.
  * The system will therefore be self-stabilizing.
  * This is the recursive function.
  *
  * \return  True iff convergence could be added.
  */
   bool
-AddConvergence(vector<uint>& ret_actions,
-               PartialSynthesis& base_inst,
-               const AddConvergenceOpt& opt)
+AddStabilization(vector<uint>& ret_actions,
+                 PartialSynthesis& base_partial,
+                 const AddConvergenceOpt& opt)
 {
   Cx::LgTable<PartialSynthesis> bt_stack;
-  SynthesisCtx& synctx = *base_inst.ctx;
+  SynthesisCtx& synctx = *base_partial.ctx;
 
-  base_inst.bt_level = 0;
-  base_inst.failed_bt_level = 0;
-  bt_stack.push(base_inst);
+  base_partial.bt_level = 0;
+  base_partial.failed_bt_level = 0;
+  bt_stack.push(base_partial);
   uint stack_idx = 0;
   uint nlayers_sum = 0;
 
-  if (synctx.conflicts.conflict_ck(Cx::FlatSet<uint>(base_inst.actions))) {
+  if (synctx.conflicts.conflict_ck(Cx::FlatSet<uint>(base_partial.actions))) {
     synctx.conflicts.add_conflict(Cx::FlatSet<uint>());
     return false;
   }
 
   while (true) {
-    PartialSynthesis& inst = bt_stack[stack_idx];
+    PartialSynthesis& partial = bt_stack[stack_idx];
     if (synctx.done_ck()) {
-      base_inst.failed_bt_level = inst.failed_bt_level;
+      base_partial.failed_bt_level = partial.failed_bt_level;
       return false;
     }
 
-    if (opt.max_depth > 0 && inst.bt_level >= opt.max_depth) {
-      base_inst.failed_bt_level = opt.max_depth;
+    if (opt.max_depth > 0 && partial.bt_level >= opt.max_depth) {
+      base_partial.failed_bt_level = opt.max_depth;
       return false;
     }
 
-    if (!inst.candidates_ck()) {
+    if (!partial.candidates_ck()) {
       StabilizationCkInfo info;
-      if (verify_solutions(inst, &info, &nlayers_sum))  break;
+      if (verify_solutions(partial, &info, &nlayers_sum))  break;
 
       const bool early_return = !info.livelock_exists;
       if (info.livelock_exists) {
         if (!early_return) {
-          *inst.log << "backtrack from lvl:" << inst.bt_level << inst.log->endl();
+          *partial.log << "backtrack from lvl:" << partial.bt_level << partial.log->endl();
         }
-        inst.ctx->conflicts.add_conflict(info.livelock_actions);
-        inst.add_small_conflict_set(inst.picks);
+        partial.ctx->conflicts.add_conflict(info.livelock_actions);
+        partial.add_small_conflict_set(partial.picks);
       }
       stack_idx = decmod(stack_idx, 1, bt_stack.sz());
-      if (bt_stack[stack_idx].bt_level >= inst.bt_level) {
-        base_inst.failed_bt_level = bt_stack[stack_idx].bt_level;
+      if (bt_stack[stack_idx].bt_level >= partial.bt_level) {
+        base_partial.failed_bt_level = bt_stack[stack_idx].bt_level;
         return false;
       }
       if (early_return)
@@ -121,9 +121,9 @@ AddConvergence(vector<uint>& ret_actions,
 
     // Pick the action.
     uint actidx = 0;
-    if (!PickActionMCV(actidx, inst, opt)) {
+    if (!PickActionMCV(actidx, partial, opt)) {
       DBog0("Cannot resolve all deadlocks!");
-      inst.add_small_conflict_set(inst.picks);
+      partial.add_small_conflict_set(partial.picks);
       return false;
     }
 
@@ -137,7 +137,7 @@ AddConvergence(vector<uint>& ret_actions,
       next_idx = incmod(stack_idx, 1, bt_stack.sz());
     }
     PartialSynthesis& next = bt_stack[next_idx];
-    next = inst;
+    next = partial;
     next.godeeper1();
     next.failed_bt_level = next.bt_level;
 
@@ -148,36 +148,36 @@ AddConvergence(vector<uint>& ret_actions,
     }
 
     if (synctx.done_ck()) {
-      base_inst.failed_bt_level = inst.failed_bt_level;
+      base_partial.failed_bt_level = partial.failed_bt_level;
       return false;
     }
 
     while (!bt_stack[stack_idx].revise_actions(Set<uint>(), Set<uint>(actidx), &nlayers_sum))
     {
-      PartialSynthesis& inst = bt_stack[stack_idx];
-      *inst.log << "backtrack from lvl:" << inst.bt_level << inst.log->endl();
-      inst.add_small_conflict_set(inst.picks);
+      PartialSynthesis& partial = bt_stack[stack_idx];
+      *partial.log << "backtrack from lvl:" << partial.bt_level << partial.log->endl();
+      partial.add_small_conflict_set(partial.picks);
 
       stack_idx = decmod(stack_idx, 1, bt_stack.sz());
 
-      if (bt_stack[stack_idx].bt_level >= inst.bt_level) {
-        base_inst.failed_bt_level = bt_stack[stack_idx].bt_level;
+      if (bt_stack[stack_idx].bt_level >= partial.bt_level) {
+        base_partial.failed_bt_level = bt_stack[stack_idx].bt_level;
         return false;
       }
 
       if (synctx.done_ck()) {
-        base_inst.failed_bt_level = inst.failed_bt_level;
+        base_partial.failed_bt_level = partial.failed_bt_level;
         return false;
       }
-      actidx = inst.picks.top();
+      actidx = partial.picks.top();
     }
     if (synctx.optimal_nlayers_sum > 0) {
       Claim2( nlayers_sum ,<, synctx.optimal_nlayers_sum );
     }
   }
-  PartialSynthesis& inst = bt_stack[stack_idx];
-  Claim(!inst.deadlockPF.sat_ck());
-  ret_actions = inst.actions;
+  PartialSynthesis& partial = bt_stack[stack_idx];
+  Claim(!partial.deadlockPF.sat_ck());
+  ret_actions = partial.actions;
   Claim2( nlayers_sum ,>, 0 );
   synctx.optimal_nlayers_sum = nlayers_sum;
   return true;
@@ -191,16 +191,23 @@ AddConvergence(vector<uint>& ret_actions,
  * \return  True iff convergence could be added.
  */
   bool
-AddConvergence(Xn::Sys& sys, const AddConvergenceOpt& opt)
+AddStabilization(Xn::Sys& sys, const AddConvergenceOpt& opt)
 {
   SynthesisCtx synctx;
   StabilizationOpt stabilization_opt;
-  if (!synctx.init(sys, opt, stabilization_opt))
+  if (!synctx.init(opt))
     return false;
-  PartialSynthesis& inst = synctx.base_inst;
+
+  if (!synctx.add(sys, stabilization_opt))
+    return false;
+
+  PartialSynthesis& partial = synctx.base_partial;
+
+  if (!partial.revise_actions(Cx::Set<uint>(sys.actions), synctx.conflicts.impossible_set))
+    return false;
 
   vector<uint> ret_actions;
-  bool found = AddConvergence(ret_actions, inst, opt);
+  bool found = AddStabilization(ret_actions, partial, opt);
   if (!found)  return false;
 
   sys.actions = ret_actions;
@@ -376,7 +383,7 @@ try_known_solution(const ConflictFamily& conflicts,
   bool good = true;
   if (synctx.done_ck())  return true;
 
-  PartialSynthesis inst( synctx.base_inst );
+  PartialSynthesis inst( synctx.base_partial );
   FlatSet<uint> solution( synctx.opt.known_solution );
   for (uint i = 0; i < inst.sz(); ++i) {
     inst[i].no_conflict = true;
@@ -485,6 +492,100 @@ initialize_conflicts(ConflictFamily& conflicts,
 }
 
   bool
+stabilization_search_init
+  (SynthesisCtx& synctx,
+   Xn::Sys& sys,
+   Cx::LgTable<Xn::Sys>& systems,
+   Cx::OFileB& log_ofile,
+   AddConvergenceOpt& opt,
+   const ProtoconFileOpt& infile_opt,
+   const ProtoconOpt& exec_opt,
+   Cx::Table< Cx::Table<uint> >& act_layers
+   )
+{
+  Sign good = 1;
+
+  if (!!exec_opt.log_ofilename) {
+    Cx::String ofilename( exec_opt.log_ofilename );
+    ofilename += ".";
+    ofilename += opt.sys_pcidx;
+    log_ofile.open(ofilename);
+    opt.log = &log_ofile;
+  }
+  else if (opt.sys_npcs > 1) {
+    opt.log = &Cx::OFile::null();
+  }
+
+
+  DoLegit(good, "reading file")
+  {
+    if (exec_opt.task != ProtoconOpt::VerifyTask)
+      good = ReadProtoconFile(sys, infile_opt);
+  }
+
+  DoLegit(good, "ambiguous variable refs for all processes, try increasing system size")
+  {
+    for (uint i = 0; i < sys.topology.pc_symms.sz(); ++i) {
+      uint pcidx = 0;
+      if (!sys.topology.pc_symms[i].representative(&pcidx)) {
+        good = 0;
+      }
+    }
+  }
+
+  DoLegit(good, "initialization")
+  {
+    if (exec_opt.task != ProtoconOpt::VerifyTask)
+      good = synctx.init(opt);
+  }
+
+  if (exec_opt.task != ProtoconOpt::VerifyTask)
+  for (uint i = 0; good && i < exec_opt.params.sz(); ++i) {
+    ProtoconFileOpt param_infile_opt = infile_opt;
+    param_infile_opt.constant_map = exec_opt.params[i].constant_map;
+
+    Xn::Sys& param_sys = systems.grow1();
+    param_sys.topology.pfmla_ctx.use_context_of(sys.topology.pfmla_ctx);
+    param_sys.topology.lightweight = !exec_opt.params[i].partial_ck();
+    DoLegit(good, "reading param file")
+      good = ReadProtoconFile(param_sys, param_infile_opt);
+    DoLegit(good, "add param sys")
+      good = synctx.add(param_sys, exec_opt.params[i].stabilization_opt);
+  }
+
+  PartialSynthesis& synlvl = synctx.base_partial;
+
+  if (exec_opt.task != ProtoconOpt::VerifyTask)
+  DoLegit( good, "initializing actions" )
+  {
+    Set<uint> act_set(sys.actions);
+    good = synlvl.revise_actions(act_set, synctx.conflicts.impossible_set);
+    if (!good) {
+      DBog0("No actions apply!");
+    }
+  }
+
+
+  if (opt.search_method == opt.RankShuffleSearch)
+  {
+    DoLegit(good, "ranking actions")
+      good =
+      rank_actions (act_layers, sys.topology,
+                    synlvl.candidates,
+                    synlvl.hi_xn,
+                    synlvl.hi_invariant);
+  }
+
+
+  for (uint i = 0; good && i < exec_opt.params.sz(); ++i) {
+    synlvl[i].no_conflict = !exec_opt.params[i].conflict_ck();
+    synlvl[i].no_partial = !exec_opt.params[i].partial_ck();
+  }
+  return !!good;
+}
+
+
+  bool
 stabilization_search(vector<uint>& ret_actions,
                      const ProtoconFileOpt& infile_opt,
                      const ProtoconOpt& exec_opt,
@@ -523,75 +624,28 @@ stabilization_search(vector<uint>& ret_actions,
   }
 
 #pragma omp barrier
-  opt.sys_pcidx = PcIdx;
-  opt.sys_npcs = NPcs;
 
-  if (!!exec_opt.log_ofilename) {
-    Cx::String ofilename( exec_opt.log_ofilename );
-    ofilename += ".";
-    ofilename += PcIdx;
-    log_ofile.open(ofilename);
-    opt.log = &log_ofile;
-  }
-  else if (NPcs > 1) {
-    opt.log = &Cx::OFile::null();
-  }
   //opt.log = &DBogOF;
   //opt.verify_found = false;
 
+  opt.sys_pcidx = PcIdx;
+  opt.sys_npcs = NPcs;
 
   Xn::Sys sys;
-  DoLegit(good, "reading file")
-  {
-    if (exec_opt.task != ProtoconOpt::VerifyTask)
-      good = ReadProtoconFile(sys, infile_opt);
-  }
-
   Cx::LgTable<Xn::Sys> systems;
   SynthesisCtx synctx( PcIdx, NPcs );
-
   synctx.conflicts = conflicts;
 
-  DoLegit(good, "initialization")
-  {
-    if (exec_opt.task != ProtoconOpt::VerifyTask)
-      good = synctx.init(sys, opt, exec_opt.params[0].stabilization_opt);
+  Cx::Table< Cx::Table<uint> > act_layers;
+
+  DoLegit( good, "shared init call" ) {
+    good = stabilization_search_init
+      (synctx, sys, systems, log_ofile, opt, infile_opt, exec_opt, act_layers);
   }
 
-  PartialSynthesis& synlvl = synctx.base_inst;
-
+  PartialSynthesis& synlvl = synctx.base_partial;
   synctx.done_ck_fn = done_ck;
 
-  Cx::Table< Cx::Table<uint> > act_layers;
-  if (opt.search_method == opt.RankShuffleSearch)
-  {
-    DoLegit(good, "ranking actions")
-      good =
-      rank_actions (act_layers, sys.topology,
-                    synlvl.candidates,
-                    synlvl.hi_xn,
-                    synlvl.hi_invariant);
-  }
-
-  if (exec_opt.task != ProtoconOpt::VerifyTask)
-  for (uint i = 1; good && i < exec_opt.params.sz(); ++i) {
-    ProtoconFileOpt param_infile_opt = infile_opt;
-    param_infile_opt.constant_map = exec_opt.params[i].constant_map;
-
-    Xn::Sys& param_sys = systems.grow1();
-    param_sys.topology.pfmla_ctx.use_context_of(sys.topology.pfmla_ctx);
-    param_sys.topology.lightweight = !exec_opt.params[i].partial_ck();
-    DoLegit(good, "reading param file")
-      good = ReadProtoconFile(param_sys, param_infile_opt);
-    DoLegit(good, "add param sys")
-      good = synctx.add(param_sys, exec_opt.params[i].stabilization_opt);
-
-  }
-
-  for (uint i = 0; good && i < exec_opt.params.sz(); ++i) {
-    synlvl[i].no_conflict = !exec_opt.params[i].conflict_ck();
-    synlvl[i].no_partial = !exec_opt.params[i].partial_ck();
-  }
 
   if (!good)
   {
@@ -707,12 +761,12 @@ stabilization_search(vector<uint>& ret_actions,
     else if (NPcs * trial_idx + PcIdx < global_opt.solution_guesses.sz()) {
       PartialSynthesis tape( synlvl );
       tape.pick_actions(global_opt.solution_guesses[NPcs * trial_idx + PcIdx]);
-      found = AddConvergence(actions, tape, opt);
+      found = AddStabilization(actions, tape, opt);
       synlvl.failed_bt_level = tape.failed_bt_level;
     }
     else
     {
-      found = AddConvergence(actions, synlvl, opt);
+      found = AddStabilization(actions, synlvl, opt);
     }
 
 #pragma omp critical (DBog)
@@ -798,8 +852,13 @@ stabilization_search(vector<uint>& ret_actions,
     if (!synctx.done_ck()) {
       Set<uint> impossible( synctx.conflicts.impossible_set );
       impossible &= Set<uint>(synlvl.candidates);
-      if (!impossible.empty())
-        synlvl.revise_actions(Set<uint>(), impossible);
+      if (!impossible.empty()) {
+        if (!synlvl.revise_actions(Set<uint>(), impossible)) {
+          // No solution exists.
+          // Or no more solutions can be found.
+          set_done_flag (1);
+        }
+      }
     }
 
     //check_conflict_sets(conflict_sets);

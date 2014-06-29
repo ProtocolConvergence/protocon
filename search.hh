@@ -20,11 +20,11 @@ class ProtoconOpt;
 class ConflictFamily;
 
 bool
-AddConvergence(vector<uint>& ret_actions,
-               PartialSynthesis& base_inst,
-               const AddConvergenceOpt& opt);
+AddStabilization(vector<uint>& ret_actions,
+                 PartialSynthesis& base_inst,
+                 const AddConvergenceOpt& opt);
 bool
-AddConvergence(Xn::Sys& sys, const AddConvergenceOpt& opt);
+AddStabilization(Xn::Sys& sys, const AddConvergenceOpt& opt);
 bool
 try_order_synthesis(vector<uint>& ret_actions,
                     PartialSynthesis& tape);

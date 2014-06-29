@@ -1,5 +1,5 @@
 
-default: all
+default:
 
 CC = gcc
 CXX = g++
@@ -23,6 +23,8 @@ CONFIG += openmp
 CONFIG += mpi
 CONFIG += gui
 #CONFIG += on-gilbert-cluster
+
+DEPENDFILE = $(PfxBldPath)/deps.mk
 
 CxPath = ../cx
 BinPath = ../bin
@@ -58,10 +60,14 @@ MinisatIncludePath = /usr/include/minisat2
 CXXFLAGS += $(CFLAGS)
 LXXFLAGS += -L$(GluPath) -lcu -lglu -lcal -lm
 
--include deps.mk
+-include $(DEPENDFILE)
 
 
-all: $(ExeList) udp deadfree biring
+default: $(ExeList) udp deadfree biring
+
+all:
+	$(MAKE) depend
+	$(MAKE)
 
 ProtoconObj = \
 	$(addprefix $(BldPath)/, pfmla.o pfmla-glu.o pfmla-bittable.o) \
@@ -138,11 +144,8 @@ gui/Makefile:
 #$(CXX) -c $(filter-out -pedantic -Wall -Wextra,$(CXXFLAGS))
 
 .PHONY: depend
-depend: deps.mk
-
-$(BldPathCXX)/protoconfile.leg.cc: $(BldPathCXX)/protoconfile.hh
-
-deps.mk:
+depend:
+	mkdir -p bld
 	grep '^#include *"' *.cc *.hh *.c *.h \
 		| grep -v -e 'mdd\.h' -e 'cx/' \
 		| sed -e 's/\(.*\):#include.*"\(.*\)".*/\1: \2/' \
@@ -150,18 +153,20 @@ deps.mk:
 		-e 's:\(.*\.\)\(c\|h\)\::$(BldPath)\/\1\2\::' \
 		-e 's:\: \(.*\.\)\(cc\|hh\)$$:\: $(BldPathCXX)/\1\2:' \
 		-e 's:\: \(.*\.\)\(c\|h\)$$:\: $(BldPath)/\1\2:' \
-		> $@
+		> $(DEPENDFILE)
 	grep '^#include *"' satsyn/*.c satsyn/*.h \
 		| grep -v -e 'mdd\.h' -e 'cx/' \
 		| sed -e 's/\(.*\):#include.*"\(.*\)".*/\1: \2/' \
 		-e 's:\(.*\.\)\(c\|h\)\::$(BldPath)\/\1\2\::' \
 		-e 's:\: \(.*\.\)\(c\|h\)$$:\: $(BldPath)\/satsyn/\1\2:' \
-		>> $@
+		>> $(DEPENDFILE)
+
+
+$(BldPathCXX)/protoconfile.leg.cc: $(BldPathCXX)/protoconfile.hh
 
 .PHONY: clean
 clean:
 	rm -fr $(PfxBldPath)
 	rm -f $(ExeList) udp deadfree
-	rm -f deps.mk
 	if [ -f gui/Makefile ] ; then $(MAKE) -C gui distclean ; fi
 

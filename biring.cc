@@ -780,22 +780,79 @@ searchit(const uint domsz)
   lose_BitTable (&set);
 }
 
+static void
+xlate_stdin (uint domsz, bool echo_bittable)
+{
+  BitTable set = cons1_BitTable (domsz*domsz*domsz);
+  Cx::OFile ofile( stdout_OFile () );
+  XFile* xfile = stdin_XFile ();
+  XFile olay[1];
+  while (getlined_olay_XFile (olay, xfile, "\n")) {
+    bool skip = false;
+    skipds_XFile (olay, 0);
+    wipe_BitTable (set, 0);
+    for (uint i = 0; i < set.sz; ++i) {
+      char c;
+      if (!xget_char_XFile (olay, &c)) {
+        if (i == 0) {
+          skip = true;
+          break;
+        }
+        else {
+          failout_sysCx ("not enough characters!");
+        }
+      }
+      if (c == '1') {
+        set1_BitTable (set, i);
+      }
+    }
+    if (!skip) {
+      if (echo_bittable) {
+        ofile << set << '\n';
+      }
+      oput_biring_invariant (ofile, set, domsz, "", " || ");
+      ofile << '\n';
+    }
+  }
+
+  lose_BitTable (&set);
+}
+
 int main(int argc, char** argv)
 {
   int argi = (init_sysCx (&argc, &argv), 1);
-  if (argi < argc) {
-    failout_sysCx ("No arguments expected!");
+  bool xlate = false;
+  bool echo_bittable = false;
+  uint domsz = 3;
+  while (argi < argc) {
+    const char* arg = argv[argi++];
+    if (eq_cstr ("-xlate-invariant", arg)) {
+      xlate = true;
+      if (!xget_uint_cstr (&domsz, argv[argi++]))
+        failout_sysCx("Argument Usage: -xlate-invariant domsz\nWhere domsz is an unsigned integer!");
+    }
+    else if (eq_cstr ("-echo-bittable", arg)) {
+      echo_bittable = true;
+    }
+    else  {
+      DBog1( "Unrecognized option: %s", arg );
+      failout_sysCx (0);
+    }
   }
-  Cx::OFile of( stdout_OFile () );
-  const uint domsz = 3;
+  Cx::OFile ofile( stdout_OFile () );
   //BitTable set = cons2_BitTable (domsz*domsz*domsz, 0);
   //set1_BitTable (set, 1);
   //set1_BitTable (set, 2);
   //set1_BitTable (set, 3);
-  //dimacs_graph(of, set, domsz);
+  //dimacs_graph(ofile, set, domsz);
   //lose_BitTable (&set);
 
-  searchit(domsz);
+  if (xlate) {
+    xlate_stdin (domsz, echo_bittable);
+  }
+  else {
+    searchit(domsz);
+  }
   lose_sysCx ();
   return 0;
 }

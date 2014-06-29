@@ -71,6 +71,19 @@ complete_dissemination(ConflictFamily& conflicts)
   /* DBog1("done... %u", mpi_dissem->PcIdx); */
 }
 
+// Forward declaration
+bool
+stabilization_search_init
+  (SynthesisCtx& synctx,
+   Xn::Sys& sys,
+   Cx::LgTable<Xn::Sys>& systems,
+   Cx::OFileB& log_ofile,
+   AddConvergenceOpt& opt,
+   const ProtoconFileOpt& infile_opt,
+   const ProtoconOpt& exec_opt,
+   Cx::Table< Cx::Table<uint> >& act_layers
+   );
+
 static
   int
 stabilization_search(vector<uint>& ret_actions,
@@ -104,71 +117,22 @@ stabilization_search(vector<uint>& ret_actions,
 
   opt.sys_pcidx = PcIdx;
   opt.sys_npcs = NPcs;
-  if (!!exec_opt.log_ofilename) {
-    Cx::String ofilename( exec_opt.log_ofilename );
-    ofilename += ".";
-    ofilename += PcIdx;
-    log_ofile.open(ofilename);
-    opt.log = &log_ofile;
-  }
-  else if (NPcs > 1) {
-    opt.log = &Cx::OFile::null();
-  }
-  //opt.log = &DBogOF;
-  //opt.verify_found = false;
-
 
   Xn::Sys sys;
-  DoLegit(good, "reading file")
-  {
-    if (exec_opt.task != ProtoconOpt::VerifyTask)
-      good = ReadProtoconFile(sys, infile_opt);
-  }
-
   Cx::LgTable<Xn::Sys> systems;
   SynthesisCtx synctx( PcIdx, NPcs );
-
   synctx.conflicts = conflicts;
 
-  DoLegit(good, "initialization")
-  {
-    if (exec_opt.task != ProtoconOpt::VerifyTask)
-      good = synctx.init(sys, opt, exec_opt.params[0].stabilization_opt);
+  Cx::Table< Cx::Table<uint> > act_layers;
+
+  DoLegit( good, 0 ) {
+    good = stabilization_search_init
+      (synctx, sys, systems, log_ofile, opt, infile_opt, exec_opt, act_layers);
   }
 
-  PartialSynthesis& synlvl = synctx.base_inst;
-
+  PartialSynthesis& synlvl = synctx.base_partial;
   synctx.done_ck_fn = done_ck;
   synctx.done_ck_mem = &synctx.conflicts;
-
-  Cx::Table< Cx::Table<uint> > act_layers;
-  if (opt.search_method == opt.RankShuffleSearch)
-  {
-    DoLegit(good, "ranking actions")
-      good =
-      rank_actions (act_layers, sys.topology,
-                    synlvl.candidates,
-                    synlvl.hi_xn,
-                    synlvl.hi_invariant);
-  }
-
-  if (exec_opt.task != ProtoconOpt::VerifyTask)
-  for (uint i = 1; good && i < exec_opt.params.sz(); ++i) {
-    ProtoconFileOpt param_infile_opt = infile_opt;
-    param_infile_opt.constant_map = exec_opt.params[i].constant_map;
-
-    Xn::Sys& param_sys = systems.grow1();
-    param_sys.topology.pfmla_ctx.use_context_of(sys.topology.pfmla_ctx);
-    DoLegit(good, "reading param file")
-      good = ReadProtoconFile(param_sys, param_infile_opt);
-    DoLegit(good, "add param sys")
-      good = synctx.add(param_sys, exec_opt.params[i].stabilization_opt);
-  }
-
-  for (uint i = 0; good && i < exec_opt.params.sz(); ++i) {
-    synlvl[i].no_conflict = !exec_opt.params[i].conflict_ck();
-    synlvl[i].no_partial  = !exec_opt.params[i].partial_ck();
-  }
 
   if (!good)
     mpi_dissem->terminate();
@@ -188,7 +152,7 @@ stabilization_search(vector<uint>& ret_actions,
       if (ReadProtoconFile(sys, verif_infile_opt)) {
         StabilizationCkInfo info;
         info.find_livelock_actions = !lightweight;
-        if (stabilization_ck(*opt.log, sys, exec_opt.params[i].stabilization_opt, &info)) {
+        if (stabilization_ck(*opt.log, sys, exec_opt.params[0].stabilization_opt, &info)) {
           solution_found = true;
           ret_actions = sys.actions;
           *opt.log << "System is stabilizing." << opt.log->endl();
@@ -205,7 +169,7 @@ stabilization_search(vector<uint>& ret_actions,
           *opt.log << "System NOT stabilizing." << opt.log->endl();
           if (!lightweight && info.livelock_exists) {
             //synctx.conflicts.add_conflict(FlatSet<uint>(sys.actions));
-            synctx.conflicts.add_conflict(FlatSet<uint>(info.livelock_actions));
+            synctx.conflicts.add_conflict(info.livelock_actions);
           }
         }
       }
@@ -255,7 +219,7 @@ stabilization_search(vector<uint>& ret_actions,
     }
     else
     {
-      found = AddConvergence(actions, synlvl, opt);
+      found = AddStabilization(actions, synlvl, opt);
     }
 
     if (synctx.done_ck())
@@ -302,8 +266,13 @@ stabilization_search(vector<uint>& ret_actions,
     if (!synctx.done_ck()) {
       Set<uint> impossible( synctx.conflicts.impossible_set );
       impossible &= Set<uint>(synlvl.candidates);
-      if (!impossible.empty())
-        synlvl.revise_actions(Set<uint>(), impossible);
+      if (!impossible.empty()) {
+        if (!synlvl.revise_actions(Set<uint>(), impossible)) {
+          // No solution exists.
+          // Or no more solutions can be found.
+          mpi_dissem->terminate();
+        }
+      }
     }
   }
 

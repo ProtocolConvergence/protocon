@@ -873,16 +873,16 @@ PartialSynthesis::add_small_conflict_set(const Cx::Table<uint>& delpicks)
   }
   Set<uint> delpick_set( delpicks );
   for (uint i = 0; i < delpicks.sz(); ++i) {
-    PartialSynthesis inst( this->ctx->base_inst );
-    for (uint j = 0; j < inst.sz(); ++j) {
-      inst[j].log = &Cx::OFile::null();
-      inst[j].directly_add_conflicts = true;
-      if (inst[j].no_conflict) {
-        inst[j].no_partial = true;
+    PartialSynthesis partial( this->ctx->base_partial );
+    for (uint j = 0; j < partial.sz(); ++j) {
+      partial[j].log = &Cx::OFile::null();
+      partial[j].directly_add_conflicts = true;
+      if (partial[j].no_conflict) {
+        partial[j].no_partial = true;
       }
     }
     delpick_set -= delpicks[i];
-    if (inst.revise_actions(delpick_set, Set<uint>(delpicks[i]))) {
+    if (partial.revise_actions(delpick_set, Set<uint>(delpicks[i]))) {
       delpick_set << delpicks[i];
     }
     else {
@@ -1331,16 +1331,15 @@ PartialSynthesis::pick_actions(const vector<uint>& act_idcs)
  * Initialize synthesis structures.
  */
   bool
-SynthesisCtx::init(const Xn::Sys& sys,
-                   const AddConvergenceOpt& opt,
-                   const StabilizationOpt& stabilization_opt)
+SynthesisCtx::init(const AddConvergenceOpt& opt)
 {
-  const Xn::Net& topo = sys.topology;
   SynthesisCtx& synctx = *this;
   synctx.opt = opt;
   synctx.log = opt.log;
   urandom.use_system_urandom(opt.system_urandom);
 
+#if 0
+  const Xn::Net& topo = sys.topology;
   for (uint pcidx = 0; pcidx < topo.pc_symms.sz(); ++pcidx)
   {
     const Xn::PcSymm& pc_symm = topo.pc_symms[pcidx];
@@ -1363,7 +1362,8 @@ SynthesisCtx::init(const Xn::Sys& sys,
         (synctx.csp_pfmla_ctx.vbl(act.pre_idx_of_img) == act.img_idx);
     }
   }
-  return synctx.add(sys, stabilization_opt);
+#endif
+  return true;
 }
 
   bool
@@ -1372,62 +1372,56 @@ SynthesisCtx::add(const Xn::Sys& sys, const StabilizationOpt& stabilization_opt)
   const Xn::Net& topo = sys.topology;
   SynthesisCtx& synctx = *this;
   if (synctx.systems.sz() > 0) {
-    synctx.base_inst.instances.push( PartialSynthesis(&synctx, synctx.systems.sz()) );
+    synctx.base_partial.instances.push( PartialSynthesis(&synctx, synctx.systems.sz()) );
   }
   synctx.systems.push(&sys);
   synctx.stabilization_opts.push(stabilization_opt);
 
-  PartialSynthesis& inst = synctx.base_inst[synctx.base_inst.sz()-1];
-  inst.log = synctx.opt.log;
+  PartialSynthesis& partial = synctx.base_partial[synctx.base_partial.sz()-1];
+  partial.log = synctx.opt.log;
 
-  inst.csp_pfmla = synctx.csp_base_pfmla;
+  partial.csp_pfmla = synctx.csp_base_pfmla;
 
   if (topo.lightweight)
     return true;
 
   bool good =
-    candidate_actions(inst.candidates, sys);
+    candidate_actions(partial.candidates, sys);
   if (!good) {
     return false;
   }
-  if (good && inst.candidates.size() == 0) {
+  if (good && partial.candidates.size() == 0) {
     return true;
   }
 
-  for (uint i = 0; i < inst.candidates.size(); ++i) {
-    inst.hi_puppet_xn |= topo.action_pfmla(inst.candidates[i]);
+  for (uint i = 0; i < partial.candidates.size(); ++i) {
+    partial.hi_puppet_xn |= topo.action_pfmla(partial.candidates[i]);
   }
-  inst.hi_xn = inst.hi_puppet_xn;
+  partial.hi_xn = partial.hi_puppet_xn;
 
-  inst.deadlockPF = ~sys.invariant;
+  partial.deadlockPF = ~sys.invariant;
   if (sys.shadow_puppet_synthesis_ck()) {
-    inst.deadlockPF |= sys.shadow_pfmla.pre();
+    partial.deadlockPF |= sys.shadow_pfmla.pre();
   }
 
-  RankDeadlocksMCV(inst.mcv_deadlocks,
+  RankDeadlocksMCV(partial.mcv_deadlocks,
                    sys.topology,
-                   inst.candidates,
-                   inst.deadlockPF);
+                   partial.candidates,
+                   partial.deadlockPF);
 
-  if (inst.mcv_deadlocks.size() < 2) {
+  if (partial.mcv_deadlocks.size() < 2) {
     DBog0("Cannot resolve all deadlocks with known actions!");
     return false;
   }
 
-  Set<uint> act_set(sys.actions);
-  act_set |= Set<uint>(synctx.base_inst.actions);
-
-  if (!synctx.base_inst.revise_actions(act_set, this->conflicts.impossible_set)) {
-    DBog0("No actions apply!");
-    return false;
-  }
-
+#if 0
   if (!inst.deadlockPF.sat_ck() &&
       inst.actions.size() == sys.actions.size() &&
       inst.candidates.size() == 0)
   {
     DBog1("The given protocol is self-stabilizing for system %u.", inst.sys_idx);
   }
+#endif
   return good;
 }
 

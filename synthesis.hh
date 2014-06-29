@@ -200,7 +200,7 @@ public:
 
 class SynthesisCtx {
 public:
-  PartialSynthesis base_inst;
+  PartialSynthesis base_partial;
   Cx::Table<const Xn::Sys*> systems;
   Cx::OFile* log;
   Cx::PFmlaCtx csp_pfmla_ctx;
@@ -214,14 +214,14 @@ public:
   ConflictFamily conflicts;
 
   SynthesisCtx()
-    : base_inst( this )
+    : base_partial( this )
     , log( &Cx::OFile::null() )
     , csp_base_pfmla(true)
     , done_ck_fn(0)
     , done_ck_mem(0)
   {}
   SynthesisCtx(uint pcidx, uint npcs)
-    : base_inst( this )
+    : base_partial( this )
     , log( &Cx::OFile::null() )
     , csp_base_pfmla(true)
     , urandom(pcidx, npcs)
@@ -229,8 +229,7 @@ public:
     , done_ck_fn(0)
     , done_ck_mem(0)
   {}
-  bool init(const Xn::Sys& sys, const AddConvergenceOpt& opt,
-            const StabilizationOpt& stabilization_opt);
+  bool init(const AddConvergenceOpt& opt);
   bool add(const Xn::Sys& sys, const StabilizationOpt& opt);
   bool done_ck() const {
     if (!done_ck_fn)  return false;
