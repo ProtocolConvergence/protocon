@@ -145,6 +145,7 @@ stabilization_search(vector<uint>& ret_actions,
       if (synctx.done_ck())  break;
       Xn::Sys sys;
       ProtoconFileOpt verif_infile_opt( infile_opt );
+      verif_infile_opt.constant_map = exec_opt.params[0].constant_map;
       verif_infile_opt.file_path = exec_opt.xfilepaths[i].cstr();
       *opt.log << "VERIFYING: " << verif_infile_opt.file_path << opt.log->endl();
       const bool lightweight = !exec_opt.conflicts_ofilepath;
