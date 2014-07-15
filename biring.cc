@@ -489,6 +489,22 @@ biring_fixpoint(BitTable img_set, uint domsz)
     }
   } while (0 != cmp_BitTable (pre_set, img_set));
   lose_BitTable (&pre_set);
+
+  bool done = false;
+  while (!done)
+  {
+    done = true;
+    for (uint config_enum_idx = begidx_BitTable (img_set);
+         config_enum_idx < img_set.sz;
+         config_enum_idx = nextidx_BitTable (img_set, config_enum_idx))
+    {
+      uint n = biring_continuations(&conts[0], config_enum_idx, img_set, domsz);
+      if (n == 0) {
+        set0_BitTable (img_set, config_enum_idx);
+        done = false;
+      }
+    }
+  }
 }
 
   bool
@@ -737,8 +753,10 @@ recurse(const BitTable bt, const uint domsz, uint q, Cx::Set<FlatDigraph>& db)
     //stat_ofile << ofilename << ' ' << min_bt << '\n';
     //stat_ofile << bt << ' ' << min_bt << '\n';
     stat_ofile << min_bt;
-    oput_biring_invariant (stat_ofile, min_bt, domsz, "\n", " || ");
+    // Print the invariant.
+    //oput_biring_invariant (stat_ofile, min_bt, domsz, "\n", " || ");
     stat_ofile << '\n';
+
     //oput_biring_protocon_spec ("../trial/ss3/spec", ofilename + ".protocon", min_bt, domsz);
   }
   if (q == 0) {

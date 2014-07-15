@@ -163,6 +163,7 @@ depend:
 		-e 's:\(.*\.\)\(c\|h\)\::$(BldPath)\/\1\2\::' \
 		-e 's:\: \(.*\.\)\(c\|h\)$$:\: $(BldPath)\/satsyn/\1\2:' \
 		>> $(DEPENDFILE)
+	sed -i -e 's/\(.*\)\.\(cc\?\):\(.*\)\.\(hh\?\)/\1.\2:\3.\4\n\1.o:\3.\4/' $(DEPENDFILE)
 
 
 $(BldPathCXX)/protoconfile.leg.cc: $(BldPathCXX)/protoconfile.hh

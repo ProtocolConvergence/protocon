@@ -1,0 +1,13 @@
+-no-random
+-max-height 0
+-pick greedy
+-optimize
+-def N 2
+-param N 3
+-param N 4
+-param N 5
+-param [ -def N  6 -no-conflict ]
+-param [ -def N  7 -no-conflict ]
+-param [ -def N  9 -no-conflict ]
+-param [ -def N 11 -no-conflict ]
+-param [ -def N 13 -no-conflict ]
