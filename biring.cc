@@ -799,7 +799,38 @@ searchit(const uint domsz)
 }
 
 static void
-xlate_stdin (uint domsz, bool echo_bittable)
+oput_graphviz(Cx::OFile& ofile, const BitTable set, uint domsz)
+{
+  ofile << "digraph G {\n"
+    << " margin=0;\n"
+    << " edge [weight=5];\n\n";
+
+  for (uint config_enum_idx = begidx_BitTable (set);
+       config_enum_idx < set.sz;
+       config_enum_idx = nextidx_BitTable (set, config_enum_idx))
+  {
+    uint config[3];
+    pc_config_of_enum_idx (config, config_enum_idx, domsz);
+    ofile << "  config_" << config_enum_idx
+      << " [label=\"" << config[0] << config[1] << config[2] << "\"];\n";
+  }
+
+  Cx::Table<uint> conts(domsz);
+  for (uint config_enum_idx = begidx_BitTable (set);
+       config_enum_idx < set.sz;
+       config_enum_idx = nextidx_BitTable (set, config_enum_idx))
+  {
+    uint n = biring_continuations(&conts[0], config_enum_idx, set, domsz);
+
+    for (uint i = 0; i < n; ++i) {
+      ofile << "  config_" << config_enum_idx << " -> config_" << conts[i] << "\n";
+    }
+  }
+  ofile << "}\n";
+}
+
+static void
+xlate_stdin (uint domsz, bool echo_bittable, const char* graphviz_ofilename)
 {
   BitTable set = cons1_BitTable (domsz*domsz*domsz);
   Cx::OFile ofile( stdout_OFile () );
@@ -830,27 +861,42 @@ xlate_stdin (uint domsz, bool echo_bittable)
       }
       oput_biring_invariant (ofile, set, domsz, "", " || ");
       ofile << '\n';
+      if (graphviz_ofilename) {
+        Cx::OFileB graphviz_ofile;
+        graphviz_ofile.open(0, graphviz_ofilename);
+        oput_graphviz (graphviz_ofile, set, domsz);
+      }
     }
   }
 
   lose_BitTable (&set);
 }
 
+
 int main(int argc, char** argv)
 {
   int argi = (init_sysCx (&argc, &argv), 1);
   bool xlate = false;
+  const char* graphviz_ofilename = 0;
   bool echo_bittable = false;
   uint domsz = 3;
   while (argi < argc) {
     const char* arg = argv[argi++];
-    if (eq_cstr ("-xlate-invariant", arg)) {
-      xlate = true;
+    if (eq_cstr ("-domsz", arg)) {
       if (!xget_uint_cstr (&domsz, argv[argi++]))
-        failout_sysCx("Argument Usage: -xlate-invariant domsz\nWhere domsz is an unsigned integer!");
+        failout_sysCx("Argument Usage: -domsz n\nWhere n is an unsigned integer!");
+    }
+    else if (eq_cstr ("-xlate-invariant", arg)) {
+      xlate = true;
     }
     else if (eq_cstr ("-echo-bittable", arg)) {
       echo_bittable = true;
+    }
+    else if (eq_cstr ("-o-graphviz", arg)) {
+      xlate = true;
+      graphviz_ofilename = argv[argi++];
+      if (!graphviz_ofilename)
+        failout_sysCx("Argument Usage: -o-graphviz file");
     }
     else  {
       DBog1( "Unrecognized option: %s", arg );
@@ -866,7 +912,7 @@ int main(int argc, char** argv)
   //lose_BitTable (&set);
 
   if (xlate) {
-    xlate_stdin (domsz, echo_bittable);
+    xlate_stdin (domsz, echo_bittable, graphviz_ofilename);
   }
   else {
     searchit(domsz);

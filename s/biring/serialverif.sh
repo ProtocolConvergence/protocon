@@ -1,14 +1,16 @@
 #!/bin/sh
 
-cd $(dirname "$0")
+proj_path=$(dirname $(readlink -f "$0"))
+proj_path=$(dirname $(dirname "$proj_path"))
+protocon_exe="${proj_path}/../bin/protocon"
 
-old_pathpfx="$1"
+old_name="$1"
 N="$2"
 key="$3"
-xfile="$old_pathpfx/$key.protocon"
+xfile="${old_name}/${key}.protocon"
 logfile="log/verif${N}-${key}.log"
 
-/usr/bin/time -f %e -- ../../bin/protocon -verify -def N "$N" -x "$xfile" \
+/usr/bin/time -f %e -- "$protocon_exe" -verify -def N "$N" -x "$xfile" \
 1>"$logfile" 2>&1
 
 retcode=$?

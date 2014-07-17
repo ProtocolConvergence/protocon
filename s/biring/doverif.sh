@@ -1,15 +1,18 @@
 #!/bin/sh
 
-old_sfx="$1"
+proj_path=$(dirname $(readlink -f "$0"))
+proj_path=$(dirname $(dirname "$proj_path"))
+biring_exe="${proj_path}/biring"
+
+old_name="$1"
 N="$2"
-new_sfx="verif$N"
-old_pathpfx="$old_sfx"
+new_name="verif$N"
 idx=$(printf '%05u' $3)
 
-cat "./log/summary$old_sfx.log.$idx" \
+cat "./log/${old_name}.${idx}" \
 | grep -e "success" \
 | sed -e 's/^\([01]*\) .*$/\1/' \
-| xargs -n 1 -d '\n' ./serialverif.sh "$old_pathpfx" "$N" \
-| tee "log/summary$new_sfx.log.$idx" \
+| xargs -n 1 -d '\n' "${proj_path}/s/biring/serialverif.sh" "$old_name" "$N" \
+| tee "log/${new_name}.${idx}" \
 > /dev/null
 
