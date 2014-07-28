@@ -239,8 +239,6 @@ public:
 
 
 bool
-candidate_actions(vector<uint>& candidates, const Xn::Sys& sys);
-bool
 coexist_ck(const Xn::ActSymm& a, const Xn::ActSymm& b);
 void
 RankDeadlocksMCV(vector<DeadlockConstraint>& dlsets,

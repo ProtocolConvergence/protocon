@@ -1,0 +1,18 @@
+
+constant N := 4;
+
+variable x[Int % N] <- Int % 2;
+
+process P[i <- Int % N]
+{
+  read: x[i-1];
+  write: x[i];
+  read: x[i+1];
+  invariant:
+    (   x[i-1] == 0 && x[i] == 0 && x[i+1] == 1
+     || x[i-1] == 0 && x[i] == 1 && x[i+1] == 0
+     || x[i-1] == 1 && x[i] == 0 && x[i+1] == 1
+     || x[i-1] == 1 && x[i] == 0 && x[i+1] == 0
+    );
+}
+

@@ -33,6 +33,7 @@ public:
   void add_conflict(const FlatSet<uint>& b);
   void add_conflict(const Cx::Table<uint>& b);
   void add_conflict(const Cx::Set<uint>& b);
+  void add_impossible(uint e);
   void add_conflicts(const ConflictFamily& fam);
   void add_conflicts(const Cx::Table<uint>& flat_conflicts);
   void trim(uint max_sz);

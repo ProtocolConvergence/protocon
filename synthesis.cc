@@ -6,95 +6,6 @@
 
 typedef Cx::PFmla PF;
 
-  bool
-candidate_actions(vector<uint>& candidates, const Xn::Sys& sys)
-{
-  const Xn::Net& topo = sys.topology;
-
-  if (!sys.invariant.sat_ck()) {
-    DBog0( "Invariant is empty!" );
-    return false;
-  }
-
-  if (sys.invariant.tautology_ck()) {
-    DBog0( "All states are invariant!" );
-    if (!sys.shadow_puppet_synthesis_ck()) {
-      return true;
-    }
-  }
-
-  for (uint actidx = 0; actidx < topo.n_possible_acts; ++actidx) {
-    if (actidx != topo.representative_action_index(actidx)) {
-      continue;
-    }
-
-    bool add = true;
-
-    Xn::ActSymm act;
-    topo.action(act, actidx);
-    const Xn::PcSymm& pc_symm = *act.pc_symm;
-    const Cx::PFmla& act_pf = topo.action_pfmla(actidx);
-    if (add) {
-      //add = !act_pf.overlap_ck(pc_symm.forbid_pfmla);
-      add = !act_pf.subseteq_ck(pc_symm.forbid_pfmla);
-    }
-
-    // Check for self-loops.
-    if (add) {
-      bool selfloop = true;
-      bool shadow_exists = false;
-      bool shadow_selfloop = true;
-      for (uint j = 0; j < pc_symm.wvbl_symms.sz(); ++j) {
-        if (pc_symm.wvbl_symms[j]->pure_shadow_ck()) {
-          shadow_exists = true;
-          if (act.assign(j) != act.aguard(j)) {
-            shadow_selfloop = false;
-          }
-        }
-        else {
-          if (act.assign(j) != act.aguard(j)) {
-            selfloop = false;
-          }
-        }
-      }
-      add = !selfloop;
-      if (selfloop) {
-        if (shadow_exists && shadow_selfloop) {
-          add = true;
-        }
-      }
-      if (false && selfloop) {
-        OPut((DBogOF << "Action " << actidx << " is a self-loop: "), act) << '\n';
-      }
-    }
-
-    if (add && sys.direct_invariant_ck()) {
-      if (!act_pf.img(sys.invariant).subseteq_ck(sys.invariant)) {
-        add = false;
-        if (false) {
-          OPut((DBogOF << "Action " << actidx << " breaks closure: "), act) << '\n';
-        }
-      }
-      else if (!(act_pf & sys.invariant).subseteq_ck(sys.shadow_pfmla | sys.shadow_self)) {
-        add = false;
-        if (false) {
-          OPut((DBogOF << "Action " << actidx << " breaks shadow protocol: "), act) << '\n';
-        }
-      }
-    }
-
-    if (add) {
-      candidates.push_back(actidx);
-    }
-  }
-  if (candidates.size() == 0) {
-    DBog0( "No candidates actions!" );
-    return false;
-  }
-
-  return true;
-}
-
 /**
  * Check if two actions can coexist in a
  * deterministic protocol of self-disabling processes.
@@ -1385,8 +1296,13 @@ SynthesisCtx::add(const Xn::Sys& sys, const StabilizationOpt& stabilization_opt)
   if (topo.lightweight)
     return true;
 
+  Cx::Table<uint> rejs;
   bool good =
-    candidate_actions(partial.candidates, sys);
+    candidate_actions(partial.candidates, rejs, sys);
+  for (uint i = 0; i < rejs.sz(); ++i) {
+    synctx.conflicts.add_impossible(rejs[i]);
+  }
+
   if (!good) {
     return false;
   }

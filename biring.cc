@@ -22,6 +22,26 @@ extern "C" {
 #define UseBitTableDB
 #endif
 
+struct FilterOpt
+{
+  uint domsz;
+  bool count_ones;
+  bool subck_known;
+  bool ppgck;
+  bool xlate_invariant;
+  const char* spec_ofilename;
+  const char* graphviz_ofilename;
+
+  FilterOpt()
+    : domsz( 3 )
+    , count_ones( false )
+    , subck_known( false )
+    , ppgck( false )
+    , xlate_invariant( false )
+    , spec_ofilename( 0 )
+    , graphviz_ofilename( 0 )
+  {}
+};
 
 class LocalConfig
 {
@@ -467,7 +487,35 @@ biring_continuations (uint* conts, uint config_enum_idx, const BitTable set, con
   return n;
 }
 
+static bool
+biring_legit_enum_idx (const BitTable set, uint config_enum_idx, uint domsz,
+                       BitTable cache, BitTable frontier)
+{
+  Cx::Table<uint> conts(domsz);
+  wipe_BitTable (cache, 0);
+  set1_BitTable (cache, config_enum_idx);
+  wipe_BitTable (frontier, 0);
+  set1_BitTable (frontier, config_enum_idx);
+  bool found = false;
+  for (uint idx = config_enum_idx; idx < set.sz; idx = begidx_BitTable (frontier)) {
+    set0_BitTable (frontier, idx);
+    uint n = biring_continuations (&conts[0], idx, set, domsz);
+    for (uint i = 0; i < n; ++i) {
+      if (conts[i] == config_enum_idx) {
+        found = true;
+        break;
+      }
+      if (!ck_BitTable (cache, conts[i])) {
+        set1_BitTable (cache, conts[i]);
+        set1_BitTable (frontier, conts[i]);
+      }
+    }
+    if (found)  break;
+  }
+  return found;
+}
 
+#if 0
   void
 biring_fixpoint(BitTable img_set, uint domsz)
 {
@@ -506,6 +554,24 @@ biring_fixpoint(BitTable img_set, uint domsz)
     }
   }
 }
+#else
+  void
+biring_fixpoint(BitTable set, uint domsz)
+{
+  BitTable cache = cons1_BitTable (set.sz);
+  BitTable frontier = cons1_BitTable (set.sz);
+  for (uint config_enum_idx = begidx_BitTable (set);
+       config_enum_idx < set.sz;
+       config_enum_idx = nextidx_BitTable (set, config_enum_idx))
+  {
+    if (!biring_legit_enum_idx (set, config_enum_idx, domsz, cache, frontier)) {
+      set0_BitTable (set, config_enum_idx);
+    }
+  }
+  lose_BitTable (&cache);
+  lose_BitTable (&frontier);
+}
+#endif
 
   bool
 biring_sat_ck (const BitTable set, const uint domsz)
@@ -548,6 +614,46 @@ biring_sat_ck (const BitTable set, const uint domsz)
     }
   }
   return false;
+}
+
+static
+  bool
+local_propagation_syn(const BitTable set, const uint domsz)
+{
+  BitTable cache = cons1_BitTable (set.sz);
+  BitTable frontier = cons1_BitTable (set.sz);
+  BitTable tmp_set = cons1_BitTable (set.sz);
+  bool livesyn = true;
+  for (uint config_enum_idx = 0; livesyn && config_enum_idx < set.sz; ++config_enum_idx) {
+    uint config[3];
+    if (ck_BitTable (set, config_enum_idx))
+      continue;
+
+    pc_config_of_enum_idx (config, config_enum_idx, domsz);
+
+    livesyn = false;
+    for (uint c = 0; c < domsz; ++c) {
+      config[1] = c;
+      uint idx = enum_idx_of_pc_config (config, domsz);
+      if (ck_BitTable (set, idx)) {
+        // Can fix P[i] by assigning x[i]:=c
+        livesyn = true;
+        break;
+      }
+
+      op_BitTable (tmp_set, BitOp_IDEN1, set);
+      set1_BitTable (tmp_set, idx);
+      if (!biring_legit_enum_idx (tmp_set, idx, domsz, cache, frontier)) {
+        livesyn = true;
+        break;
+      }
+    }
+  }
+
+  lose_BitTable (&cache);
+  lose_BitTable (&frontier);
+  lose_BitTable (&tmp_set);
+  return livesyn;
 }
 
 #ifdef UseBlissLib
@@ -629,6 +735,35 @@ canonical_set(Cx::BitTable& min_bt, const BitTable set, const uint domsz)
   }
 }
 
+static bool
+subgraph_isomorphism_ck(const BitTable sub_a, const Cx::BitTable& b, uint domsz)
+{
+  Cx::BitTable a( sub_a );
+  Cx::Table<uint> perm_doms(domsz-1);
+  ujint nperms = 1;
+  for (uint i = 0; i < perm_doms.sz(); ++i) {
+    perm_doms[i] = domsz - i;
+    nperms *= perm_doms[i];
+  }
+  Cx::Table<uint> perm_vals(domsz-1);
+  Cx::Table<uint> perm_map(domsz);
+
+  for (ujint perm_idx = 0; perm_idx < nperms; ++perm_idx) {
+    state_of_index (&perm_vals[0], perm_idx, perm_doms);
+    for (uint i = 0; i < domsz; ++i) {
+      perm_map[i] = i;
+    }
+    for (uint i = 0; i < perm_vals.sz(); ++i) {
+      SwapT( uint, perm_map[i], perm_map[i+perm_vals[i]] );
+    }
+    permute_pc_config (a, sub_a, perm_map);
+    if (a.subseteq_ck(b)) {
+      return true;
+    }
+  }
+  return false;
+}
+
   void
 flat_canonical_hack (FlatDigraph& flat, const Cx::BitTable min_bt)
 {
@@ -674,8 +809,8 @@ oput_biring_protocon_spec (const Cx::String& ofilepath, const Cx::String& ofilen
     << "variable x[Nat % N] <- Nat % M;\n"
     << "process P[i <- Nat % N]\n"
     << "{\n"
-    << "read: x[i-1];\n"
     << "write: x[i];\n"
+    << "read: x[i-1];\n"
     << "read: x[i+1];\n"
     << "invariant: 0==1";
   oput_biring_invariant (ofile, legit, domsz, "\n|| ", "\n|| ");
@@ -737,10 +872,11 @@ recurse(const BitTable bt, const uint domsz, uint q, Cx::Set<FlatDigraph>& db)
 #endif
 
 #ifdef UseBitTableDB
-    if (db.elem_ck(min_bt)) {
+    if (db.elem_ck(min_bt))
 #else
-    if (db.elem_ck(digraph)) {
+    if (db.elem_ck(digraph))
 #endif
+    {
       //stat_ofile << ofilename << ' ' << min_bt << " visited\n";
       lose_BitTable (&set);
       return;
@@ -750,14 +886,15 @@ recurse(const BitTable bt, const uint domsz, uint q, Cx::Set<FlatDigraph>& db)
 #else
     db << digraph;
 #endif
-    //stat_ofile << ofilename << ' ' << min_bt << '\n';
-    //stat_ofile << bt << ' ' << min_bt << '\n';
-    stat_ofile << min_bt;
-    // Print the invariant.
-    //oput_biring_invariant (stat_ofile, min_bt, domsz, "\n", " || ");
-    stat_ofile << '\n';
-
-    //oput_biring_protocon_spec ("../trial/ss3/spec", ofilename + ".protocon", min_bt, domsz);
+    if (true || local_propagation_syn(set, domsz)) {
+      //oput_biring_protocon_spec ("../trial/ss3/spec", ofilename + ".protocon", min_bt, domsz);
+      //stat_ofile << ofilename << ' ' << min_bt << '\n';
+      //stat_ofile << bt << ' ' << min_bt << '\n';
+      stat_ofile << min_bt;
+      // Print the invariant.
+      //oput_biring_invariant (stat_ofile, min_bt, domsz, "\n", " || ");
+      stat_ofile << '\n';
+    }
   }
   if (q == 0) {
     lose_BitTable (&set);
@@ -811,8 +948,8 @@ oput_graphviz(Cx::OFile& ofile, const BitTable set, uint domsz)
   {
     uint config[3];
     pc_config_of_enum_idx (config, config_enum_idx, domsz);
-    ofile << "  config_" << config_enum_idx
-      << " [label=\"" << config[0] << config[1] << config[2] << "\"];\n";
+    ofile << "  config_" << config[0] << '_' << config[1]
+      << " [label=\"" << config[1] << "\"];\n";
   }
 
   Cx::Table<uint> conts(domsz);
@@ -820,90 +957,236 @@ oput_graphviz(Cx::OFile& ofile, const BitTable set, uint domsz)
        config_enum_idx < set.sz;
        config_enum_idx = nextidx_BitTable (set, config_enum_idx))
   {
+    uint config_src[3];
+    pc_config_of_enum_idx (config_src, config_enum_idx, domsz);
     uint n = biring_continuations(&conts[0], config_enum_idx, set, domsz);
 
+    Cx::Set< Cx::Tuple<uint, 2> > cache;
     for (uint i = 0; i < n; ++i) {
-      ofile << "  config_" << config_enum_idx << " -> config_" << conts[i] << "\n";
+      uint config_dst[3];
+      pc_config_of_enum_idx (config_dst, conts[i], domsz);
+      Cx::Tuple<uint,2> dst_tup(config_dst[0], config_dst[1]);
+      if (cache.elem_ck(dst_tup))  continue;
+      cache << dst_tup;
+      ofile << "  "
+        << "config_" << config_src[0] << '_' << config_src[1] << " -> "
+        << "config_" << config_dst[0] << '_' << config_dst[1] << "\n";
     }
   }
   ofile << "}\n";
 }
 
-static void
-xlate_stdin (uint domsz, bool echo_bittable, const char* graphviz_ofilename)
+static bool
+xget_BitTable (XFile* xfile, BitTable set)
 {
+  XFile olay[1];
+  if (!getlined_olay_XFile (olay, xfile, "\n"))
+    return false;
+  skipds_XFile (olay, 0);
+  wipe_BitTable (set, 0);
+  for (uint i = 0; i < set.sz; ++i) {
+    char c;
+    if (!xget_char_XFile (olay, &c)) {
+      if (i == 0) {
+        return false;
+      }
+      else {
+        failout_sysCx ("not enough characters!");
+      }
+    }
+    if (c == '1') {
+      set1_BitTable (set, i);
+    }
+  }
+  return true;
+}
+
+static bool
+subck_2match(const BitTable set, const uint domsz) {
+  uint pc_configs[][3] = {
+    { 0, 0, 1 },
+    { 1, 0, 1 },
+    { 0, 1, 0 },
+    { 1, 0, 0 }
+  };
+  BitTable matching_set = cons2_BitTable (domsz*domsz*domsz, 0);
+  for (uint i = 0; i < ArraySz(pc_configs); ++i) {
+    uint enum_idx =
+      enum_idx_of_pc_config (pc_configs[i], domsz);
+    set1_BitTable (matching_set, enum_idx);
+  }
+
+  bool ret = subgraph_isomorphism_ck (matching_set, set, domsz);
+  lose_BitTable (&matching_set);
+  return ret;
+}
+
+static bool
+subck_3match(const BitTable set, const uint domsz) {
+  uint pc_configs[][3] = {
+    { 0, 1, 0 },
+    { 0, 1, 2 },
+    { 1, 0, 1 },
+    { 1, 2, 0 },
+    { 2, 0, 1 }
+  };
+  BitTable matching_set = cons2_BitTable (domsz*domsz*domsz, 0);
+  for (uint i = 0; i < ArraySz(pc_configs); ++i) {
+    uint enum_idx =
+      enum_idx_of_pc_config (pc_configs[i], domsz);
+    set1_BitTable (matching_set, enum_idx);
+  }
+
+  bool ret = subgraph_isomorphism_ck (matching_set, set, domsz);
+  lose_BitTable (&matching_set);
+  return ret;
+}
+
+static bool
+subck_next7(const BitTable set, const uint domsz) {
+  uint pc_configs[][3] = {
+    { 0, 0, 1 },
+    { 0, 1, 0 },
+    { 0, 1, 2 },
+    { 1, 0, 0 },
+    { 1, 2, 1 },
+    { 2, 1, 0 },
+    { 2, 1, 2 }
+  };
+  // 010100000101000101000010000
+  BitTable matching_set = cons2_BitTable (domsz*domsz*domsz, 0);
+  for (uint i = 0; i < ArraySz(pc_configs); ++i) {
+    uint enum_idx =
+      enum_idx_of_pc_config (pc_configs[i], domsz);
+    set1_BitTable (matching_set, enum_idx);
+  }
+
+  bool ret = subgraph_isomorphism_ck (matching_set, set, domsz);
+  lose_BitTable (&matching_set);
+  return ret;
+}
+
+static bool
+subck_next10(const BitTable set, const uint domsz) {
+  Cx::Table<const char*> legit_strings;
+  legit_strings
+    << "010100110101000001000011100"
+    << "010101101100000100101000010"
+    << "010101111100000001100010000"
+    << "011100011101000000100001100"
+    << "011101000100000101001010010"
+    << "011101011100000001100010000"
+    << "010101101101000100100110000"
+    << "010101111101000100100010000"
+    << "011101011101000100100010000"
+    << "011100011101000100110010000"
+    << "010111110011100011100010000"
+    << "011111010010101101100010000"
+    << "010111101011100011101001010"
+    << "011110011010101101100001110"
+    ;
+  BitTable matching_set = cons2_BitTable (domsz*domsz*domsz, 0);
+  bool ret = false;
+  for (uint known_idx = 0; known_idx < legit_strings.sz(); ++known_idx) {
+    wipe_BitTable (matching_set, 0);
+    for (uint i = 0; i < matching_set.sz; ++i) {
+      if (legit_strings[known_idx][i] == '1') {
+        set1_BitTable (matching_set, i);
+      }
+    }
+    ret = subgraph_isomorphism_ck (matching_set, set, domsz);
+    if (ret)  break;
+  }
+  lose_BitTable (&matching_set);
+  return ret;
+}
+
+
+static void
+filter_stdin (const FilterOpt& opt)
+{
+  const uint domsz = opt.domsz;
   BitTable set = cons1_BitTable (domsz*domsz*domsz);
   Cx::OFile ofile( stdout_OFile () );
   XFile* xfile = stdin_XFile ();
-  XFile olay[1];
-  while (getlined_olay_XFile (olay, xfile, "\n")) {
-    bool skip = false;
-    skipds_XFile (olay, 0);
-    wipe_BitTable (set, 0);
-    for (uint i = 0; i < set.sz; ++i) {
-      char c;
-      if (!xget_char_XFile (olay, &c)) {
-        if (i == 0) {
-          skip = true;
-          break;
-        }
-        else {
-          failout_sysCx ("not enough characters!");
-        }
-      }
-      if (c == '1') {
-        set1_BitTable (set, i);
-      }
+  while (xget_BitTable (xfile, set)) {
+    ofile << set;
+    if (opt.count_ones) {
+      ofile << ' ' << count_BitTable (set);
     }
-    if (!skip) {
-      if (echo_bittable) {
-        ofile << set << '\n';
-      }
+    if (opt.subck_known) {
+      ofile << " 2match:" << (subck_2match (set, domsz) ? 'Y' : 'N');
+      ofile << " 3match:" << (subck_3match (set, domsz) ? 'Y' : 'N');
+      ofile << " next7:" << (subck_next7 (set, domsz) ? 'Y' : 'N');
+      ofile << " next10:" << (subck_next10 (set, domsz) ? 'Y' : 'N');
+    }
+    if (opt.ppgck) {
+      ofile << " ppg:" << (local_propagation_syn (set, domsz) ? 'Y' : 'N');
+    }
+    ofile << '\n';
+    if (opt.xlate_invariant) {
       oput_biring_invariant (ofile, set, domsz, "", " || ");
       ofile << '\n';
-      if (graphviz_ofilename) {
-        Cx::OFileB graphviz_ofile;
-        graphviz_ofile.open(0, graphviz_ofilename);
-        oput_graphviz (graphviz_ofile, set, domsz);
-      }
+    }
+    if (opt.spec_ofilename) {
+      oput_biring_protocon_spec ("", opt.spec_ofilename, set, domsz);
+    }
+    if (opt.graphviz_ofilename) {
+      Cx::OFileB graphviz_ofile;
+      graphviz_ofile.open(0, opt.graphviz_ofilename);
+      oput_graphviz (graphviz_ofile, set, domsz);
     }
   }
 
   lose_BitTable (&set);
 }
 
-
 int main(int argc, char** argv)
 {
   int argi = (init_sysCx (&argc, &argv), 1);
-  bool xlate = false;
-  const char* graphviz_ofilename = 0;
-  bool echo_bittable = false;
-  uint domsz = 3;
+  bool filter = false;
+  FilterOpt opt;
+
   while (argi < argc) {
     const char* arg = argv[argi++];
     if (eq_cstr ("-domsz", arg)) {
-      if (!xget_uint_cstr (&domsz, argv[argi++]))
+      if (!xget_uint_cstr (&opt.domsz, argv[argi++]))
         failout_sysCx("Argument Usage: -domsz n\nWhere n is an unsigned integer!");
     }
     else if (eq_cstr ("-xlate-invariant", arg)) {
-      xlate = true;
+      filter = true;
+      opt.xlate_invariant = true;
     }
-    else if (eq_cstr ("-echo-bittable", arg)) {
-      echo_bittable = true;
+    else if (eq_cstr ("-count-ones", arg)) {
+      filter = true;
+      opt.count_ones = true;
+    }
+    else if (eq_cstr ("-subck-known", arg)) {
+      filter = true;
+      opt.subck_known = true;
+    }
+    else if (eq_cstr ("-ppgck", arg)) {
+      filter = true;
+      opt.ppgck = true;
     }
     else if (eq_cstr ("-o-graphviz", arg)) {
-      xlate = true;
-      graphviz_ofilename = argv[argi++];
-      if (!graphviz_ofilename)
+      filter = true;
+      opt.graphviz_ofilename = argv[argi++];
+      if (!opt.graphviz_ofilename)
         failout_sysCx("Argument Usage: -o-graphviz file");
+    }
+    else if (eq_cstr ("-o-spec", arg)) {
+      filter = true;
+      opt.spec_ofilename = argv[argi++];
+      if (!opt.spec_ofilename)
+        failout_sysCx("Argument Usage: -o-spec file");
     }
     else  {
       DBog1( "Unrecognized option: %s", arg );
       failout_sysCx (0);
     }
   }
-  Cx::OFile ofile( stdout_OFile () );
+  //Cx::OFile ofile( stdout_OFile () );
   //BitTable set = cons2_BitTable (domsz*domsz*domsz, 0);
   //set1_BitTable (set, 1);
   //set1_BitTable (set, 2);
@@ -911,11 +1194,11 @@ int main(int argc, char** argv)
   //dimacs_graph(ofile, set, domsz);
   //lose_BitTable (&set);
 
-  if (xlate) {
-    xlate_stdin (domsz, echo_bittable, graphviz_ofilename);
+  if (filter) {
+    filter_stdin (opt);
   }
   else {
-    searchit(domsz);
+    searchit(opt.domsz);
   }
   lose_sysCx ();
   return 0;

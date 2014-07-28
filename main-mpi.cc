@@ -16,6 +16,7 @@ extern "C" {
 
 #define MpiTag_MpiDissem 1
 #define MpiTag_Conflict 2
+#define MpiTag_Reduce 3
 
 static MpiDissem* mpi_dissem = 0;
 
@@ -97,12 +98,10 @@ stabilization_search(vector<uint>& ret_actions,
   ConflictFamily conflicts;
   Cx::Table< FlatSet<uint> > flat_conflicts;
 
-  mpi_dissem = new MpiDissem(PcIdx, NPcs, MpiTag_MpiDissem, MPI_COMM_WORLD);
+  mpi_dissem = new MpiDissem(MpiTag_MpiDissem, MPI_COMM_WORLD);
 
   signal(SIGINT, set_term_flag);
   signal(SIGTERM, set_term_flag);
-  MPI_Info mpi_info;
-  MPI_Info_create(&mpi_info);
 
   if (!initialize_conflicts(conflicts, flat_conflicts, exec_opt, global_opt,
                             PcIdx == 0))
@@ -199,11 +198,11 @@ stabilization_search(vector<uint>& ret_actions,
     }
   }
 
-  vector<uint> actions;
   if (exec_opt.task == ProtoconOpt::SearchTask)
   for (uint trial_idx = 0; !synctx.done_ck() && (opt.ntrials == 0 || trial_idx < opt.ntrials); ++trial_idx)
   {
     bool found = false;
+    vector<uint> actions;
     if (opt.search_method == opt.RankShuffleSearch)
     {
       PartialSynthesis tape( synlvl );
@@ -317,7 +316,7 @@ stabilization_search(vector<uint>& ret_actions,
   {
     int send_pc = solution_found ? (int)PcIdx : -1;
     ret_pc = send_pc;
-    MPI_Allreduce(&send_pc, &ret_pc, MpiTag_MpiDissem,
+    MPI_Allreduce(&send_pc, &ret_pc, MpiTag_Reduce,
                   MPI_INT, MPI_MAX, MPI_COMM_WORLD);
   }
 

@@ -87,7 +87,7 @@ $(BinPath)/protocon: \
 
 $(BinPath)/protocon-mpi: \
 	$(ProtoconObj) \
-	$(addprefix $(BldPathCXX)/, main-mpi.o mpidissem.o mpidissemnet.o)
+	$(addprefix $(BldPathCXX)/, main-mpi.o mpidissem.o)
 	$(MPICXX) $(CXXFLAGS) $^ -o $@ $(LXXFLAGS)
 
 $(call binexe,satsyn): $(BldPath)/satsyn/satsyn.o $(BldPath)/satsyn/xnsys.o \
@@ -107,9 +107,6 @@ $(BldPathCXX)/main-mpi.o: $(BldPathCXX)/main-mpi.cc
 	$(MPICXX) -c $(CXXFLAGS) $< -o $@
 
 $(BldPathCXX)/mpidissem.o: $(BldPathCXX)/mpidissem.cc $(BldPathCXX)/mpidissem.hh
-	$(MPICXX) -c $(CXXFLAGS) $< -o $@
-
-$(BldPathCXX)/mpidissemnet.o: $(BldPathCXX)/mpidissemnet.cc $(BldPathCXX)/mpidissemnet.hh
 	$(MPICXX) -c $(CXXFLAGS) $< -o $@
 
 $(BldPath)/udp.o: $(BldPath)/udp.c

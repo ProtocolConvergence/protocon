@@ -471,7 +471,8 @@ void
 find_one_cycle(Cx::Table<uint>& actions, const Cx::PFmla& xn, const Cx::PFmla& scc, const Xn::Net& topo);
 void
 oput_one_cycle(Cx::OFile& of, const Cx::PFmla& xn, const Cx::PFmla& scc, const Xn::Net& topo);
-
+bool
+candidate_actions(std::vector<uint>& candidates, Cx::Table<uint>& rejs, const Xn::Sys& sys);
 
 #endif
 
