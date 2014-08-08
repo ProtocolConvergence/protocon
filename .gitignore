@@ -7,11 +7,12 @@ gui/moc_*.cpp
 gui/ui_*.h
 gui/gui
 
-./tmp
-./biring
-deadfree
-./bld
-./udp
+/tmp
+/biring
+/bld
+/deadfree
+/test
+/udp
 
 doc/*/main.pdf
 doc/*/quick.pdf

@@ -11,7 +11,6 @@ extern "C" {
 #include "opt.hh"
 #include "search.hh"
 #include "interactive.hh"
-#include "test.hh"
 
 /** Execute me now!*/
 int main(int argc, char** argv)
@@ -29,14 +28,7 @@ int main(int argc, char** argv)
   if (!good)  failout_sysCx ("Bad args.");
 
   bool found = false;
-  if (exec_opt.task == ProtoconOpt::TestTask) {
-    DBog0( "Running tests..." );
-    Test();
-    DBog0( "Done." );
-    lose_sysCx ();
-    return 0;
-  }
-  else if (exec_opt.task == ProtoconOpt::NoTask) {
+  if (exec_opt.task == ProtoconOpt::NoTask) {
   }
   else if (exec_opt.task == ProtoconOpt::InteractiveTask) {
     interactive(sys);

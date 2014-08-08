@@ -23,14 +23,14 @@ weak_convergence_ck(const Cx::PFmla& xn, const Cx::PFmla& invariant)
 }
 
   bool
-weak_convergence_ck(uint* ret_nlayers, const Cx::PFmla& xn, const Cx::PFmla& invariant)
+weak_convergence_ck(uint* ret_nlayers, const Cx::PFmla& xn, const Cx::PFmla& invariant, const Cx::PFmla& assumed)
 {
   uint nlayers = 1;
   Cx::PFmla visit( invariant );
   Cx::PFmla layer( xn.pre(invariant) - visit );
   while (layer.sat_ck()) {
     visit |= layer;
-    layer = xn.pre(layer) - visit;
+    layer = (xn.pre(layer) - visit) & assumed;
     if (ret_nlayers) {
       nlayers += 1;
       if (*ret_nlayers > 0 && nlayers > *ret_nlayers) {
@@ -41,7 +41,13 @@ weak_convergence_ck(uint* ret_nlayers, const Cx::PFmla& xn, const Cx::PFmla& inv
   }
   if (ret_nlayers)
     *ret_nlayers = nlayers;
-  return visit.tautology_ck();
+  return assumed.subseteq_ck(visit);
+}
+
+  bool
+weak_convergence_ck(uint* ret_nlayers, const Cx::PFmla& xn, const Cx::PFmla& invariant)
+{
+  return weak_convergence_ck(ret_nlayers, xn, invariant, Cx::PFmla(true));
 }
 
   bool
@@ -197,10 +203,11 @@ stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
   }
 
   of << "Checking for deadlocks..." << of.endl();
-  if (!(~sys.invariant).subseteq_ck(hi_xn.pre())) {
+  if (!(~sys.invariant & sys.closed_assume).subseteq_ck(hi_xn.pre())) {
     of << "Deadlock found.\n";
     if (false) {
-      topo.oput_all_pf(of, (~sys.invariant) - (hi_xn.pre()));
+      Cx::PFmla pf = (~sys.invariant & sys.closed_assume) - hi_xn.pre();
+      topo.oput_all_pf(of, pf);
     }
     of.flush();
     return false;
@@ -209,7 +216,8 @@ stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
   Cx::PFmla scc( false );
   uint nlayers = opt.max_nlayers;
   lo_xn.cycle_ck(&scc, &nlayers,
-                 opt.count_convergence_layers ? &sys.invariant : 0);
+                 (opt.count_convergence_layers ? &sys.invariant : 0),
+                 &sys.closed_assume);
   if (info)  info->nlayers = nlayers;
   if (opt.max_nlayers > 0 && nlayers > opt.max_nlayers) {
     of << "Too many layers to "
@@ -248,7 +256,7 @@ stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
   if (sys.shadow_puppet_synthesis_ck()) {
     of << "Checking for deadlocks in new invariant..." << of.endl();
   }
-  if (!(~hi_invariant).subseteq_ck(hi_xn.pre())) {
+  if (!(~hi_invariant & sys.closed_assume).subseteq_ck(hi_xn.pre())) {
     of << "Deadlock found.\n";
     of.flush();
     return false;
@@ -257,7 +265,7 @@ stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
   if (!lo_xn.equiv_ck(hi_xn)) {
     of << "Checking for weak convergence...\n";
     of.flush();
-    if (!weak_convergence_ck(hi_xn, hi_invariant)) {
+    if (!weak_convergence_ck(0, hi_xn, hi_invariant, sys.closed_assume)) {
       of << "Weak convergence does not hold...\n";
       of.flush();
       return false;

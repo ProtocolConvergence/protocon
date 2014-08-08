@@ -1,6 +1,7 @@
 
 
 #include "protoconfile.hh"
+#include "cx/bittable.hh"
 
   bool
 ProtoconFile::update_allgood(bool good)
@@ -298,7 +299,7 @@ ProtoconFile::parse_action(Cx::PFmla& act_pf, Cx::Table<Cx::PFmla>& pc_xns, Sesp
       good = eval(guard_pf, cadr_of_Sesp (act_sp));
     if (!good)  continue;
 
-    Cx::PFmla assign_pf( topo.identity_xn );
+    Cx::PFmla assign_pf( true );
     Sesp assign_sp = cddr_of_Sesp (act_sp);
 
 #if 0
@@ -309,6 +310,8 @@ ProtoconFile::parse_action(Cx::PFmla& act_pf, Cx::Table<Cx::PFmla>& pc_xns, Sesp
       }
     }
 #endif
+
+    Cx::BitTable wvbl_assigned( pc.wvbls.sz(), 0 );
 
     while (!nil_ck_Sesp (assign_sp)) {
       Sesp sp = car_of_Sesp (assign_sp);
@@ -322,12 +325,14 @@ ProtoconFile::parse_action(Cx::PFmla& act_pf, Cx::Table<Cx::PFmla>& pc_xns, Sesp
       DoLegit( good, "eval variable" )
         good = eval_vbl(&vbl, vbl_sp);
 
+      uint vblidx;
       DoLegit( good, "non-writable variable in assignment" )
       {
         bool found = false;
         for (uint j = 0; j < pc.wvbls.sz(); ++j) {
           if (pc.wvbls[j] == vbl) {
             found = true;
+            vblidx = j;
             break;
           }
         }
@@ -343,19 +348,24 @@ ProtoconFile::parse_action(Cx::PFmla& act_pf, Cx::Table<Cx::PFmla>& pc_xns, Sesp
           good = eval(val, val_sp);
       }
       if (!good)  break;
-      const Cx::PFmlaVbl& pf_vbl = topo.pfmla_vbl(*vbl);
-      if (wild) {
-        assign_pf = assign_pf.smooth(pf_vbl);
-      }
-      else {
+
+      wvbl_assigned[vblidx] = 1;
+      if (!wild) {
+        const Cx::PFmlaVbl& pf_vbl = topo.pfmla_vbl(*vbl);
         val %= vbl->symm->domsz;
-        assign_pf = (assign_pf.smooth(pf_vbl)
-                     && pf_vbl.img_eq(val));
+        assign_pf &= pf_vbl.img_eq(val);
+      }
+    }
+
+    for (uint j = 0; j < pc.wvbls.sz(); ++j) {
+      if (!wvbl_assigned[j]) {
+        const Cx::PFmlaVbl& pf_vbl = topo.pfmla_vbl(*pc.wvbls[j]);
+        assign_pf &= pf_vbl.img_eq(pf_vbl);
       }
     }
 
     pc_xns[i] = guard_pf & assign_pf;
-    act_pf |= pc_xns[i];
+    act_pf |= pc_xns[i] & pc.act_unchanged_pfmla;
   }
   if (good)
     index_map.erase(idx_name);
@@ -408,7 +418,13 @@ ProtoconFile::add_action(Sesp act_sp, Xn::Vbl::ShadowPuppetRole role)
 
 
     if (role != Xn::Vbl::Shadow) {
+#if 0
+      uint rep_pcidx = 0;
+      pc_symm->representative(&rep_pcidx);
+      pc_symm->direct_pfmla |= pc_xns[rep_pcidx];
+#else
       pc_symm->direct_pfmla |= act_pf;
+#endif
       sys->direct_pfmla |= act_pf;
     }
   }
@@ -432,13 +448,46 @@ ProtoconFile::forbid_action(Sesp act_sp)
   }
 
   Cx::PFmla act_pf( false );
+  Cx::Table<Cx::PFmla> pc_xns;
   DoLegit( good, "parse action" ) {
-    Cx::Table<Cx::PFmla> pc_xns;
     good = parse_action(act_pf, pc_xns, act_sp);
   }
 
+  DoLegit( good, "" ) {
+    uint rep_pcidx = 0;
+    pc_symm->representative(&rep_pcidx);
+    pc_symm->forbid_pfmla |= pc_xns[rep_pcidx];
+  }
+
+  return update_allgood (good);
+}
+
+  bool
+ProtoconFile::permit_action(Sesp act_sp)
+{
+  Sign good = 1;
+  Claim( pc_symm );
+
   DoLegit( good, "" )
-    pc_symm->forbid_pfmla |= act_pf;
+  {
+    Cx::String act_expression;
+    good = string_expression (act_expression, act_sp);
+    if (good) {
+      pc_symm_spec->permit_act_strings.push(act_expression);
+    }
+  }
+
+  Cx::PFmla act_pf( false );
+  Cx::Table<Cx::PFmla> pc_xns;
+  DoLegit( good, "parse action" ) {
+    good = parse_action(act_pf, pc_xns, act_sp);
+  }
+
+  DoLegit( good, "" ) {
+    uint rep_pcidx = 0;
+    pc_symm->representative(&rep_pcidx);
+    pc_symm->permit_pfmla &= pc_xns[rep_pcidx];
+  }
 
   return update_allgood (good);
 }
@@ -501,6 +550,15 @@ ProtoconFile::add_pc_legit(Sesp legit_sp)
 }
 
   bool
+ProtoconFile::finish_pc_def()
+{
+  bool good = true;
+  this->pc_symm = 0;
+  this->pc_symm_spec = 0;
+  return update_allgood (good);
+}
+
+  bool
 ProtoconFile::add_predicate(Sesp name_sp, Sesp val_sp)
 {
   Sign good = 1;
@@ -523,21 +581,54 @@ ProtoconFile::add_predicate(Sesp name_sp, Sesp val_sp)
 }
 
   bool
-ProtoconFile::add_legit(Sesp legit_sp)
+ProtoconFile::add_assume(Sesp assume_sp)
 {
-  bool good = true;
+  Sign good = 1;
 
   Cx::PFmla pf;
-  if (LegitCk( eval(pf, legit_sp), good, "" ))
+  DoLegit( good, "parse invariant" )
+    good = eval(pf, assume_sp);
+
+  DoLegit( good, "" )
+    sys->closed_assume &= pf;
+
+  Cx::String str;
+  DoLegit( good, "convert invariant expression to string" )
+    good = string_expression(str, assume_sp);
+
+  DoLegit( good, "" ) {
+    if (spec->closed_assume_expression != "") {
+      spec->closed_assume_expression =
+        Cx::String("(") + spec->closed_assume_expression + ")\n  &&\n  ";
+    }
+    spec->closed_assume_expression += str;
+  }
+
+  return update_allgood (good);
+}
+
+  bool
+ProtoconFile::add_legit(Sesp legit_sp)
+{
+  Sign good = 1;
+
+  Cx::PFmla pf;
+  DoLegit( good, "parse invariant" )
+    good = eval(pf, legit_sp);
+
+  DoLegit( good, "" )
     sys->invariant &= pf;
 
   Cx::String invariant_expression;
-  if (LegitCk( string_expression(invariant_expression, legit_sp), good, "" )) {
+  DoLegit( good, "convert invariant expression to string" )
+    good = string_expression(invariant_expression, legit_sp);
+
+  DoLegit( good, "" ) {
     if (spec->invariant_expression != "") {
       spec->invariant_expression =
         Cx::String("(") + spec->invariant_expression + ")\n  &&\n  ";
     }
-    spec->invariant_expression += invariant_expression;;
+    spec->invariant_expression += invariant_expression;
   }
 
   return update_allgood (good);
@@ -679,7 +770,7 @@ ProtoconFile::string_expression(Cx::String& ss, Sesp a)
   }
   else {
     good = false;
-    DBog1( "No matching string, key is: \"%s\"", key );;
+    DBog1( "No matching string, key is: \"%s\"", key );
   }
 
   return update_allgood (good);
@@ -873,7 +964,7 @@ ProtoconFile::eval(Cx::PFmla& pf, Sesp a)
   }
   else {
     good = false;
-    DBog1( "No matching string, key is: \"%s\"", key );;
+    DBog1( "No matching string, key is: \"%s\"", key );
   }
 
   return update_allgood (good);
@@ -1038,7 +1129,7 @@ ProtoconFile::eval(Cx::IntPFmla& ipf, Sesp a)
   }
   else {
     good = false;
-    DBog1( "No matching string, key is: \"%s\"", key );;
+    DBog1( "No matching string, key is: \"%s\"", key );
   }
 
   return update_allgood (good);
@@ -1061,7 +1152,7 @@ ProtoconFile::eval_int(int* ret, Sesp sp)
 ProtoconFile::eval_nat(uint* ret, Sesp sp)
 {
   int x = 0;
-  bool legit = eval_int (&x, sp);;
+  bool legit = eval_int (&x, sp);
   if (LegitCk( x >= 0, legit, "" )) {
     *ret = (uint) x;
   }
@@ -1072,7 +1163,7 @@ ProtoconFile::eval_nat(uint* ret, Sesp sp)
 ProtoconFile::eval_gtz(uint* ret, Sesp sp)
 {
   int x = 0;
-  bool legit = eval_int (&x, sp);;
+  bool legit = eval_int (&x, sp);
   if (LegitCk( x > 0, legit, "" )) {
     *ret = (uint) x;
   }

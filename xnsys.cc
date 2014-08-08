@@ -279,7 +279,11 @@ Pc::actions(Cx::Table<uint>& ret_actions, Cx::PFmlaCtx& ctx) const
     pfmla_wvbl_idcs.push(pc.wvbls[i]->pfmla_idx);
   }
 
+#if 1
   Cx::PFmla pfmla( pc_symm.direct_pfmla  & pc.act_unchanged_pfmla );
+#else
+  Cx::PFmla pfmla( pc_symm.direct_pfmla );
+#endif
 
   ActSymm act;
   act.vals.grow(pc.rvbls.sz() + pc.wvbls.sz());
@@ -307,6 +311,7 @@ PcSymm::actions(Cx::Table<uint>& ret_actions, Cx::PFmlaCtx& ctx) const
 {
   uint pcidx = 0;
 
+#if 1
   Cx::Table<uint> pcidcs;
   if (this->representative(&pcidx)) {
     pcidcs.push(pcidx);
@@ -328,6 +333,30 @@ PcSymm::actions(Cx::Table<uint>& ret_actions, Cx::PFmlaCtx& ctx) const
   }
 
   action_set.fill(ret_actions);
+#else
+  if (!this->representative(&pcidx)) {
+    DBog0("System may not represent all actions!");
+  }
+  const Xn::Pc& pc = *this->membs[pcidx];
+  Cx::PFmla xn = pc.direct_pfmla;
+  while (xn.sat_ck()) {
+    uint* pre_state = &act.vals[0];
+    xn.state(pre_state, pfmla_rvbl_idcs);
+    Cx::PFmla pre_pf = ctx.pfmla_of_state(pre_state, pfmla_rvbl_idcs);
+    Cx::PFmla img_pf = pfmla.img(pre_pf);
+
+    while (img_pf.sat_ck()) {
+      uint* img_state = &act.vals[pc.rvbls.sz()];
+      img_pf.state(img_state, pfmla_wvbl_idcs);
+      uint actidx = pc_symm.act_idx_offset +
+        Cx::index_of_state (&act.vals[0], pc_symm.doms);
+      ret_actions.push(actidx);
+      img_pf -= ctx.pfmla_of_state(img_state, pfmla_wvbl_idcs);
+    }
+    pfmla -= pre_pf;
+  }
+#endif
+
 }
 
   void
@@ -699,7 +728,7 @@ Xn::Net::sync_xn(const Cx::Table<uint>& actidcs) const
     self_loop -= pc_xns[pcidx].pre();
     xn &= (self_loop | pc_xns[pcidx]);
   }
-  //xn -= this->identity_xn;
+  xn -= this->identity_xn;
   return xn;
 }
 
@@ -850,14 +879,24 @@ candidate_actions(std::vector<uint>& candidates, Cx::Table<uint>& rejs, const Xn
     Xn::ActSymm act;
     topo.action(act, actidx);
     const Xn::PcSymm& pc_symm = *act.pc_symm;
+
+    uint rep_pcidx = 0;
+    pc_symm.representative(&rep_pcidx);
+    const Cx::PFmla& pc_xn = topo.xn_of_pc(act, rep_pcidx);
+
     const Cx::PFmla& act_pf = topo.action_pfmla(actidx);
     if (!act_pf.sat_ck()) {
       add = false;
     }
     if (add) {
-      //add = !act_pf.overlap_ck(pc_symm.forbid_pfmla);
-      add = !act_pf.subseteq_ck(pc_symm.forbid_pfmla);
+      add = !pc_xn.subseteq_ck(pc_symm.forbid_pfmla);
       if (!add) {
+        rejs << actidx;
+      }
+    }
+    if (add) {
+      if (!pc_xn.subseteq_ck(pc_symm.permit_pfmla)) {
+        add = false;
         rejs << actidx;
       }
     }
@@ -894,6 +933,10 @@ candidate_actions(std::vector<uint>& candidates, Cx::Table<uint>& rejs, const Xn
       }
     }
 
+    if (add && !act_pf.img(sys.closed_assume).subseteq_ck(sys.closed_assume)) {
+      add = false;
+      rejs << actidx;
+    }
     if (add && sys.direct_invariant_ck()) {
       if (!act_pf.img(sys.invariant).subseteq_ck(sys.invariant)) {
         add = false;
@@ -909,6 +952,9 @@ candidate_actions(std::vector<uint>& candidates, Cx::Table<uint>& rejs, const Xn
           OPut((DBogOF << "Action " << actidx << " breaks shadow protocol: "), act) << '\n';
         }
       }
+    }
+    if (add && !act_pf.pre().overlap_ck(sys.closed_assume)) {
+      add = false;
     }
 
     if (add) {

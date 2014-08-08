@@ -26,7 +26,7 @@ deadlock_freedom_ck(const Xn::Sys& sys)
   Sign good = 1;
   Cx::Table<uint> actions;
   const Xn::Net& topo = sys.topology;
-  const Xn::PcSymm& pc_symm = topo.pc_symms[0];;
+  const Xn::PcSymm& pc_symm = topo.pc_symms[0];
   uint pcidx = 0;
 
   DoLegit( good, "No representative process." )

@@ -139,7 +139,7 @@ Interactive::pre_options(Cx::Table<Cx::String>& ret_lines) const
   void
 Interactive::reset_mask_pfmla()
 {
-  mask_pfmla = true;
+  mask_pfmla = sys.closed_assume;
   if (invariant_influence != IgnorePredicate) {
     if (!invariant_pfmla) {
       invariant_pfmla = new Cx::PFmla(sys.invariant);
@@ -153,7 +153,7 @@ Interactive::reset_mask_pfmla()
   }
   if (silent_influence != IgnorePredicate) {
     if (!silent_pfmla) {
-      silent_pfmla = new Cx::PFmla(~xn.pre());
+      silent_pfmla = new Cx::PFmla(sys.closed_assume & ~xn.pre());
     }
     if (silent_influence == WithinPredicate) {
       mask_pfmla &= *silent_pfmla;
@@ -165,7 +165,7 @@ Interactive::reset_mask_pfmla()
   if (cycle_influence != IgnorePredicate) {
     if (!cycle_pfmla) {
       cycle_pfmla = new Cx::PFmla(false);
-      xn.cycle_ck(cycle_pfmla);
+      xn.cycle_ck(cycle_pfmla, sys.closed_assume);
     }
     if (cycle_influence == WithinPredicate) {
       mask_pfmla &= *cycle_pfmla;
@@ -217,7 +217,7 @@ interactive(const Xn::Sys& sys)
   Interactive usim(sys);
   const Xn::Net& topo = sys.topology;
   usim.xn = sys.direct_pfmla;
-  usim.mask_pfmla = true;
+  usim.mask_pfmla = sys.closed_assume;
   usim.all_vbls.grow(topo.vbls.sz(), 0);
   usim.state.grow(topo.vbls.sz(), 0);
   for (uint i = 0; i < topo.vbls.sz(); ++i) {

@@ -43,6 +43,7 @@ ifneq (,$(filter gui,$(CONFIG)))
 	ExeList += protocon-gui
 endif
 ExeList := $(addprefix $(BinPath)/,$(ExeList))
+ExeList += test udp deadfree biring
 
 BldPathList = $(PfxBldPath)/protocon/satsyn
 
@@ -63,7 +64,7 @@ LXXFLAGS += -L$(GluPath) -lcu -lglu -lcal -lm
 -include $(DEPENDFILE)
 
 
-default: $(ExeList) udp deadfree biring
+default: $(ExeList)
 
 all:
 	$(MAKE) depend
@@ -73,7 +74,7 @@ ProtoconObj = \
 	$(addprefix $(BldPath)/, pfmla.o pfmla-glu.o pfmla-bittable.o) \
 	$(addprefix $(BldPathCXX)/, pfmla.o xnsys.o xnspec.o inst.o) \
 	$(addprefix $(BldPathCXX)/, opt.o stabilization.o) \
-	$(addprefix $(BldPathCXX)/, promela.o pla.o graphviz.o) \
+	$(addprefix $(BldPathCXX)/, promela.o pla.o graphviz.o kautz.o) \
 	$(addprefix $(BldPathCXX)/, conflictfamily.o) \
 	$(addprefix $(BldPathCXX)/, search.o synthesis.o) \
 	$(addprefix $(BldPathCXX)/, protoconfile.o protoconfile.leg.o) \
@@ -82,7 +83,10 @@ ProtoconObj = \
 
 $(BinPath)/protocon: \
 	$(ProtoconObj) \
-	$(addprefix $(BldPathCXX)/, main.o test.o)
+	$(addprefix $(BldPathCXX)/, main.o)
+	$(CXX) $(CXXFLAGS) $^ -o $@ $(LXXFLAGS)
+
+test: $(BldPathCXX)/test.o $(ProtoconObj)
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(LXXFLAGS)
 
 $(BinPath)/protocon-mpi: \
@@ -168,6 +172,6 @@ $(BldPathCXX)/protoconfile.leg.cc: $(BldPathCXX)/protoconfile.hh
 .PHONY: clean
 clean:
 	rm -fr $(PfxBldPath)
-	rm -f $(ExeList) udp deadfree
+	rm -f $(ExeList)
 	if [ -f gui/Makefile ] ; then $(MAKE) -C gui distclean ; fi
 

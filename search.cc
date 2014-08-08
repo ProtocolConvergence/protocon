@@ -365,7 +365,7 @@ done_ck (void* dat)
   (void) dat;
 
   if (0 == remove("kill-protocon")) {
-    done_flag = true;;
+    done_flag = true;
   }
   else {
     errno = 0;

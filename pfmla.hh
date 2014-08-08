@@ -272,7 +272,10 @@ public:
   PFmla pre_reach(const PFmla& pf) const;
   PFmla img_reach(const PFmla& pf) const;
   PFmla closure_within(const PFmla& pf) const;
-  bool cycle_ck(PFmla* scc, uint* ret_nlayers = 0, const Cx::PFmla* invariant = 0) const;
+  bool cycle_ck(PFmla* scc, uint* ret_nlayers = 0,
+                const Cx::PFmla* invariant = 0,
+                const Cx::PFmla* assumed = 0) const;
+  bool cycle_ck(Cx::PFmla* scc, const Cx::PFmla& pf, const Cx::PFmla& assumed) const;
   bool cycle_ck(PFmla* scc, const PFmla& pf) const;
   bool cycle_ck(const PFmla& pf) const;
 

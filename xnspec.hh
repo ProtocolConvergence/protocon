@@ -161,6 +161,7 @@ public:
   Cx::String nmembs_expression;
   Cx::Table<Cx::String> shadow_act_strings;
   Cx::Table<Cx::String> forbid_act_strings;
+  Cx::Table<Cx::String> permit_act_strings;
 };
 
 class Spec {
@@ -170,6 +171,7 @@ public:
 
   LetVblMap constant_map;
   Cx::String invariant_expression;
+  Cx::String closed_assume_expression;
 };
 }
 

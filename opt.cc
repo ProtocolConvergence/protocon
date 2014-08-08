@@ -145,9 +145,6 @@ protocon_options_rec
     else if (eq_cstr (arg, "-rank-shuffle")) {
       opt.search_method = opt.RankShuffleSearch;
     }
-    else if (eq_cstr (arg, "-test")) {
-      exec_opt.task = ProtoconOpt::TestTask;
-    }
     else if (eq_cstr (arg, "-verify")) {
       exec_opt.task = ProtoconOpt::VerifyTask;
     }
@@ -407,9 +404,6 @@ protocon_options
   uint npcs = 4;
   if (!protocon_options_rec (argi, argc, argv, opt, infile_opt, exec_opt, problem))
     return false;
-
-  if (exec_opt.task == ProtoconOpt::TestTask)
-    return true;
 
   if (problem == FromFileInstance) {
   }

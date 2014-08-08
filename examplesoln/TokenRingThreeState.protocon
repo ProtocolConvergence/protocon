@@ -34,7 +34,7 @@ process P[j <- Int % (N-2)]
     )
     ;
 }
-        
+
 
 process Top[j <- Int % 1]
 {

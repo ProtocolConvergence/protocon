@@ -23,7 +23,7 @@ process P[j <- Nat % (N-1)]
   shadow action: ( t[i-1] != t[i] --> t[i] := t[i-1]; );
 }
 
-direct invariant:
+(future & closed) direct
   // One process has the token.
   (unique i <- Nat % N :
    i == 0 && t[i-1] == t[i]

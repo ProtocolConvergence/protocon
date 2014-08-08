@@ -2,7 +2,14 @@
 #ifndef TEST_HH_
 #define TEST_HH_
 
-void Test();
+#include "cx/alphatab.hh"
+#include "cx/set.hh"
+
+namespace Cx {
+  class OFile;
+}
+
+void Test(Cx::OFile& olog, const Cx::Set<Cx::String>& only);
 
 #endif
 

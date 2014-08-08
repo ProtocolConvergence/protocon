@@ -189,6 +189,7 @@ public:
 
   Cx::PFmla shadow_pfmla;
   Cx::PFmla direct_pfmla;
+  Cx::PFmla permit_pfmla;
   Cx::PFmla forbid_pfmla;
   LetPredicateMap predicate_map;
 
@@ -202,6 +203,7 @@ public:
   PcSymm()
     : shadow_pfmla( false )
     , direct_pfmla( false )
+    , permit_pfmla( true )
     , forbid_pfmla( false )
   {}
 
@@ -410,6 +412,8 @@ public:
 
   /// Invariant to which we should converge.
   Cx::PFmla invariant;
+  /// Invariant to which we should converge.
+  Cx::PFmla closed_assume;
   bool shadow_puppet_synthesis;
   bool direct_invariant_flag;
   Cx::PFmla shadow_pfmla;
@@ -424,6 +428,7 @@ private:
 public:
   Sys()
     : invariant( true )
+    , closed_assume( true )
     , shadow_puppet_synthesis(false)
     , direct_invariant_flag(true)
     , shadow_pfmla(false)

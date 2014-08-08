@@ -52,7 +52,11 @@ bool
 weak_convergence_ck(const Cx::PFmla& xn, const Cx::PFmla& invariant);
 bool
 weak_convergence_ck(uint* ret_nlayers, const Cx::PFmla& xn,
-                   const Cx::PFmla& invariant);
+                    const Cx::PFmla& invariant,
+                    const Cx::PFmla& assumed);
+bool
+weak_convergence_ck(uint* ret_nlayers, const Cx::PFmla& xn,
+                    const Cx::PFmla& invariant);
 
 bool
 stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,

@@ -236,6 +236,13 @@ oput_protocon_pc_acts (Cx::OFile& of, const Xn::PcSymm& pc_symm,
     }
     of << "    ;\n";
   }
+  if (pc_symm_spec.permit_act_strings.sz() > 0) {
+    of << "  permit action:\n";
+    for (uint i = 0; i < pc_symm_spec.permit_act_strings.sz(); ++i) {
+      of << "    ( " << pc_symm_spec.permit_act_strings[i] << " )\n";
+    }
+    of << "    ;\n";
+  }
   if (pc_symm_spec.forbid_act_strings.sz() > 0) {
     of << "  forbid action:\n";
     for (uint i = 0; i < pc_symm_spec.forbid_act_strings.sz(); ++i) {
@@ -324,7 +331,7 @@ oput_protocon_pc_invariant (Cx::OFile& of, const Xn::PcSymm& pc_symm)
   const Cx::String& invariant_expression = pc_symm.spec->invariant_expression;
   if (invariant_expression.empty_ck())
     return true;
-  of << "  invariant:\n    " << invariant_expression << ";\n";
+  of << "  (future & closed)\n    (" << invariant_expression << ");\n";
   return true;
 }
 
@@ -380,13 +387,18 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys, bool use_espresso, const 
       << " :=\n  " << sys.predicate_map.expressions[i] << ";\n";
   }
 
-  if (!sys.spec->invariant_expression.empty_ck()) {
-    if (sys.direct_invariant_ck())
-      of << "direct";
-    else
-      of << "shadow";
+  if (!!sys.spec->closed_assume_expression) {
+    of << "(assume & closed)\n (" << sys.spec->closed_assume_expression << ")\n ;\n";
+  }
 
-    of << " invariant:\n  " << sys.spec->invariant_expression << "\n  ;\n";
+  if (!sys.spec->invariant_expression.empty_ck()) {
+    of << "(future & closed)";
+    if (sys.direct_invariant_ck())
+      of << " direct";
+    else
+      of << " shadow";
+
+    of << "\n  (" << sys.spec->invariant_expression << ");\n";
   }
 
   lose_OSPc (ospc);

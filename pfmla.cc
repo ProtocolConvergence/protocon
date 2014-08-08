@@ -57,9 +57,12 @@ PFmla::closure_within(const Cx::PFmla& pf) const
  * iteratively computing the image until it does not change.
  */
   bool
-PFmla::cycle_ck(Cx::PFmla* scc, uint* ret_nlayers, const Cx::PFmla* invariant) const
+PFmla::cycle_ck(Cx::PFmla* scc, uint* ret_nlayers, const Cx::PFmla* invariant, const Cx::PFmla* assumed) const
 {
   Cx::PFmla span0( true, *this );
+  if (assumed)
+    span0 = *assumed;
+
   uint nlayers = 1;
 
   while (true) {

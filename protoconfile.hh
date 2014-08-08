@@ -59,12 +59,14 @@ public:
   SespCtx* spctx;
   Cx::Mem<Xn::PcSymm> pc_symm;
   Cx::Mem<Xn::PcSymmSpec> pc_symm_spec;
+  Cx::PFmla permit_xn;
 
   ProtoconFile(Xn::Sys* sys, XFile* xf)
     : allgood( true )
     , text_nlines(0)
     , pc_symm(0)
     , pc_symm_spec(0)
+    , permit_xn(false)
   {
     this->sys = sys;
     this->spec = sys->spec;
@@ -104,13 +106,17 @@ public:
   bool add_action(Sesp act_sp, Xn::Vbl::ShadowPuppetRole role);
 
   bool forbid_action(Sesp act_sp);
+  bool permit_action(Sesp act_sp);
 
   bool add_pc_predicate(Sesp name_sp, Sesp val_sp);
 
   bool add_pc_legit(Sesp legit_sp);
 
+  bool finish_pc_def();
+
   bool add_predicate(Sesp name_sp, Sesp val_sp);
 
+  bool add_assume(Sesp assume_sp);
   bool add_legit(Sesp legit_sp);
 
   bool string_expression(Cx::String& ss, Sesp a);

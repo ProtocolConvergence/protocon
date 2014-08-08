@@ -1,4 +1,8 @@
 
+extern "C" {
+#include "cx/syscx.h"
+}
+
 #include "test.hh"
 
 #include "cx/synhax.hh"
@@ -15,6 +19,7 @@ extern "C" {
 #include "conflictfamily.hh"
 #include "protoconfile.hh"
 #include "stabilization.hh"
+#include "kautz.hh"
 #include <stdio.h>
 
 
@@ -166,6 +171,23 @@ TestIntPFmla()
       pf &= ((x != i) | (y != decmod(target, i, domsz)));
     }
     Claim( pf.equiv_ck(x + y != (int) target) );
+  }
+
+  // Ensure the action (x < y --> x:=y; y:=x;)
+  // can be specified using img_eq(IntPFmla).
+  pf = (x < y);
+  Cx::IntPFmla ipf;
+  ipf = y;  pf &= x.img_eq(ipf);
+  ipf = x;  pf &= y.img_eq(ipf);
+  for (uint a = 0; a < n; ++a) {
+    for (uint b = 0; b < n; ++b) {
+      if (a < b) {
+        Claim( ((x == b) & (y == a)).equiv_ck(pf.img((x == a) & (y == b))) );
+      }
+      else {
+        Claim( !pf.img((x == a) & (y == b)).sat_ck() );
+      }
+    }
   }
 }
 
@@ -486,21 +508,59 @@ TestShadowColoring()
   }
 }
 
+static
+  void
+OPutKautz()
+{
+  Cx::OFile ofile( stdout_OFile () );
+  oput_graphviz_kautz(ofile, 4, 25);
+}
+
 /**
  * Test dat code.
  */
-void Test()
+void Test(Cx::OFile& olog, const Cx::Set<Cx::String>& only)
 {
-  TestTable();
-  TestLgTable();
-  TestFlatSet();
-  TestPFmla();
-  TestIntPFmla();
-  TestConflictFamily();
-  TestXnSys();
-  TestTokenRingClosure();
-  TestProtoconFile(true);
-  TestProtoconFile(false);
-  TestShadowColoring();
+  olog << "Running tests...\n";
+#define W(testname) \
+do { \
+  if (only.empty() || only.elem_ck(Stringify(testname))) { \
+    olog << "#### Running: " << Stringify(testname) << '\n'; \
+    testname; \
+  } \
+} while (0)
+
+  W( TestTable() );
+  W( TestLgTable() );
+  W( TestFlatSet() );
+  W( TestPFmla() );
+  W( TestIntPFmla() );
+  W( TestConflictFamily() );
+  W( TestXnSys() );
+  W( TestTokenRingClosure() );
+  W( TestProtoconFile(true) );
+  W( TestProtoconFile(false) );
+  W( TestShadowColoring() );
+  if (!only.empty())
+    W( OPutKautz() );
+
+#undef W
+
+  olog << "... Done running tests.\n";
+}
+
+int main(int argc, char** argv)
+{
+  int argi = (init_sysCx (&argc, &argv), 1);
+  Cx::OFile olog( stderr_OFile () );
+  Cx::Set<Cx::String> only;
+
+  while (argi < argc) {
+    only << argv[argi++];
+  }
+
+  Test(olog, only);
+  lose_sysCx ();
+  return 0;
 }
 

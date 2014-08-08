@@ -22,13 +22,18 @@ extern "C" {
 %}
 
 ProtoconFile =
-  (WS? Protocol)?
-  (WS? ConstDecl)*
-  (WS? VarDecl)+
-  (WS? ProcDecl)+
-  (WS? NamedPredicate)*
-  (WS? GlobalLegit)?
-  WS? END_OF_FILE
+  WS?
+  (Protocol WS?)?
+  (ConstDecl WS?)*
+  (VarDecl WS?)+
+  (ProcDecl WS?)+
+  ((  NamedPredicate
+    | GlobalAssume
+    | GlobalLegit
+   )
+   WS?
+  )*
+  END_OF_FILE
   ;
 
 Protocol = 'protocol' WS name:ID END_STMT {}
@@ -101,6 +106,13 @@ PuppetActionDef =
   END_STMT
   ;
 
+PermitActionDef =
+  'permit' (WS ACTION | ':') WS? act:ActionExpr
+  {yy->st->permit_action (act.sp);}
+  (WS? (',' WS?)? act2:ActionExpr {yy->st->permit_action (act2.sp);} )*
+  END_STMT
+  ;
+
 ForbidActionDef =
   'forbid' (WS ACTION | ':') WS? act:ActionExpr
   {yy->st->forbid_action (act.sp);}
@@ -133,15 +145,15 @@ ProcDecl =
     | ShadowActionDef
     | DirectActionDef
     | PuppetActionDef
+    | PermitActionDef
     | ForbidActionDef)
    WS?
   )*
-  ( LEGIT WS? legit:Expr END_STMT WS?
+  ( legit:LegitStmt WS?
     {yy->st->add_pc_legit(legit.sp);}
   )?
   {
-    yy->st->pc_symm = 0;
-    yy->st->pc_symm_spec = 0;
+    yy->st->finish_pc_def();
   }
   '}'
   ;
@@ -191,13 +203,35 @@ NamedPredicate =
   {yy->st->add_predicate(name.sp, a.sp);}
   ;
 
+GlobalAssume =
+  '(' WS? ASSUME_AND_CLOSED WS? ')' WS?
+  '(' WS? a:Expr WS? ')' END_STMT
+  {yy->st->add_assume(a.sp);}
+  ;
+
 GlobalLegit =
-  (  ('shadow' | 'underlying') (WS LEGIT | ':') {yy->st->sys->direct_invariant_flag = false;}
-   | 'direct' (WS LEGIT | ':')
-   | LEGIT
-  )
-  WS? a:Expr END_STMT
-  {yy->st->add_legit(a.sp);}
+    ('shadow' | 'underlying') (WS LEGIT | ':') WS? a:Expr END_STMT
+    {yy->st->sys->direct_invariant_flag = false;}
+    {yy->st->add_legit(a.sp);}
+  | '(' WS? FUTURE_AND_CLOSED WS? ')' WS?
+    (  ('shadow' | 'underlying') WS? {yy->st->sys->direct_invariant_flag = false;}
+     | 'direct' WS?
+     | {/*No op.*/}
+    )
+    '(' WS? a:Expr WS? ')' END_STMT
+    {yy->st->add_legit(a.sp);}
+  | '(' WS? FUTURE_AND_CLOSED WS? ')' WS?  '(' WS? a:Expr WS? ')' END_STMT
+    {yy->st->add_legit(a.sp);}
+  | (LEGIT | 'direct' (WS LEGIT | ':')) WS? a:Expr END_STMT
+    {yy->st->add_legit(a.sp);}
+  ;
+
+LegitStmt =
+    LEGIT WS? legit:Expr END_STMT
+    {$$ = legit;}
+  | WS? '(' WS? FUTURE_AND_CLOSED WS? ')' WS?
+    '(' WS? legit:Expr ')' END_STMT
+    {$$ = legit;}
   ;
 
 ConstExpr = a:ConstSum {$$ = a;}
@@ -397,17 +431,21 @@ NAT = < [0-9]+ >
 IN = '<-'
   ;
 
+LEGIT = 'legit:' | 'invariant:' ;
 
-EVENTUALLY_ALWAYS = 'eventually' WS 'always'
+ASSUME_AND_CLOSED =
+    ASSUME WS? '&' WS? CLOSED
+  | CLOSED WS? '&' WS? ASSUME
   ;
 
-EVENTUALLY_AND_INVARIANT =
-  'eventually' WS? '&' WS? 'invariant'
+FUTURE_AND_CLOSED =
+    FUTURE WS? '&' WS? CLOSED
+  | CLOSED WS? '&' WS? FUTURE
   ;
 
-LEGIT =
-  'legit:' | 'invariant:'
-  ;
+FUTURE = 'eventually' | 'future' | '<>' ;
+CLOSED = 'closed' ;
+ASSUME = 'assume' ;
 
 ACTION = 'act:' | 'action:' ;
 

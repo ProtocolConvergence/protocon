@@ -18,7 +18,6 @@ class ProtoconParamOpt;
 class ProtoconOpt {
 public:
   enum ExecTask {
-    TestTask,
     SearchTask,
     VerifyTask,
     MinimizeConflictsTask,

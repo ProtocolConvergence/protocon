@@ -1035,7 +1035,7 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
   }
   uint nlayers = max_nlayers;
   Cx::PFmla scc(false);
-  this->lo_xn.cycle_ck(&scc, &nlayers);
+  this->lo_xn.cycle_ck(&scc, &nlayers, 0, &sys.closed_assume);
   if (max_nlayers > 0 && nlayers > max_nlayers) {
     *this->log << "NLAYERS (maximum number of convergence layers exceeded: "
       << max_nlayers << ")" << this->log->endl();
@@ -1090,7 +1090,7 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
   const Cx::PFmla old_deadlock_pfmla( this->deadlockPF );
 
   this->deadlockPF =
-    ((~this->hi_invariant) | sys.shadow_pfmla.pre())
+    (((~this->hi_invariant) | sys.shadow_pfmla.pre()) & sys.closed_assume)
     - this->lo_xn.pre();
 
   if (!this->deadlockPF.subseteq_ck(this->hi_xn.pre())) {
@@ -1099,7 +1099,7 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
   }
 
   nlayers = max_nlayers;
-  if (!weak_convergence_ck(&nlayers, this->hi_xn, this->hi_invariant)) {
+  if (!weak_convergence_ck(&nlayers, this->hi_xn, this->hi_invariant, sys.closed_assume)) {
     *this->log << "REACH" << this->log->endl();
 #if 0
     Cx::PFmla pf( ~this->hi_xn.pre_reach(this->hi_invariant) );
@@ -1315,7 +1315,7 @@ SynthesisCtx::add(const Xn::Sys& sys, const StabilizationOpt& stabilization_opt)
   }
   partial.hi_xn = partial.hi_puppet_xn;
 
-  partial.deadlockPF = ~sys.invariant;
+  partial.deadlockPF = ~sys.invariant & sys.closed_assume;
   if (sys.shadow_puppet_synthesis_ck()) {
     partial.deadlockPF |= sys.shadow_pfmla.pre();
   }
