@@ -53,7 +53,7 @@ static void
 action_pre_assign(PcIden pc, const uint8_t* x);
 #define Max_NChannels 2
 #define Max_NVariables 4
-#include "udp-act.c"
+#include "udp-act.h"
 
 typedef struct Packet Packet;
 typedef struct Channel Channel;
@@ -353,6 +353,7 @@ randomize_State(State* st)
 init_State(State* st, uint PcIdx, uint NPcs)
 {
   struct sockaddr_in host[1];
+  socklen_t sz = sizeof(*host);
   memset(st, 0, sizeof(*st));
   st->pc.idx = PcIdx;
   st->pc.npcs = NPcs;
@@ -366,7 +367,6 @@ init_State(State* st, uint PcIdx, uint NPcs)
     BailOut(-1, "bind()");
 
   /* Fill in the host address and port.*/
-  socklen_t sz = sizeof(*host);
   if (0 > getsockname(st->fd, (struct sockaddr*)host, &sz))
     BailOut(-1, "getsockname()");
 

@@ -7,6 +7,7 @@ PegPath = peg-0.1.15
 ###### Cx ######
 
 bin/cx:
+	cd cx && cmake .
 	$(MAKE) -C cx cx
 
 ###### Glu ######
@@ -40,17 +41,20 @@ $(PegPath)/leg: | $(PegPath)
 ###### Protocon ######
 
 all: bin/cx $(GluPath)/libglu.a $(PegPath)/leg
-	$(MAKE) -C src LEG=../$(PegPath)/leg
+	mkdir -p src/bld
+	cd src/bld && cmake -D PegExe:string="$(PWD)/$(PegPath)/leg" ..
+	$(MAKE) -C src/bld
 
 .PHONY: clean
 clean:
-	make -C src clean
+	make -C src/bld clean
 	make -C cx clean
 
 .PHONY: distclean
 distclean:
-	make -C src distclean
-	make -C cx distclean
+	make -C src/bld clean
+	rm -fr src/bld
+	make -C cx clean
 	rm -fr bin $(GluPath) $(PegPath) $(GluPath).tar.gz $(PegPath).tar.gz
 
 

@@ -21,10 +21,8 @@ git clone "$toppath/protocon" src
 rm -fr src/.git
 
 cp -a "$metapath/src-top-Makefile" Makefile
-rm -f cx/CMakeLists.txt
-rm -f src/CMakeLists.txt
-mv cx/Makefile.raw cx/Makefile
-mv src/Makefile.raw src/Makefile
+rm -f cx/Makefile.raw
+rm -f src/Makefile.raw
 
 mkdir -p "examplespec"
 cat "$metapath/examplespec.files" | \

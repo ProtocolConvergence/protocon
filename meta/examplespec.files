@@ -13,6 +13,8 @@ OrientOddRing.protocon
 Sat.protocon
 SumNotTarget.protocon
 SumNotTwo.protocon
+SortChain.protocon
+SortRing.protocon
 TokenRingDijkstra.protocon
 TokenRingSixState.protocon
 TokenRingThreeBit.protocon

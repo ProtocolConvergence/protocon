@@ -14,11 +14,9 @@ process P[i <- Nat % N]
     ( 1==1 --> x[i]:=x[i+1]; x[i+1]:=x[i]; )
     ;
 
-  // Equivalent to the above.
-  //permit:
-  //  ( 1==1 --> x[i]:=x[i+1]; x[i+1]:=_; )
-  //  ( 1==1 --> x[i+1]:=x[i]; x[i]:=_; )
-  //  ;
+  puppet action:
+    ( x[i+1]!=0 && x[i] > x[i+1] --> x[i]:=x[i+1]; x[i+1]:=x[i]; )
+    ;
 }
 
 // Assumed initial states.
