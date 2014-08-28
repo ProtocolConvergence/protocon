@@ -101,7 +101,7 @@ public:
 
   bool add_symmetric_access(Sesp let_names_sp, Sesp let_vals_list_sp, Sesp vbls_sp, Bit write);
 
-  bool parse_action(Cx::PFmla& act_pf, Cx::Table<Cx::PFmla>& pc_xns, Sesp act_sp);
+  bool parse_action(Cx::PFmla& act_pf, Cx::Table<Cx::PFmla>& pc_xns, Sesp act_sp, bool selfloop);
 
   bool add_action(Sesp act_sp, Xn::Vbl::ShadowPuppetRole role);
 

@@ -1,6 +1,5 @@
 
 cmake_minimum_required (VERSION 2.8)
-
 set(CMAKE_DISABLE_SOURCE_CHANGES ON)
 set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
 
@@ -9,6 +8,7 @@ project (protocon)
 #set (CMAKE_BUILD_TYPE RELEASE)
 #set (CMAKE_BUILD_TYPE RelWithDebInfo)
 
+find_library (M_LIB m)
 find_package(MPI)
 find_package(OpenMP)
 
@@ -32,7 +32,7 @@ list (APPEND HFiles
   pfmla.h pfmla-glu.h pfmla-bittable.h)
 
 list (APPEND CFiles udp.c)
-list (APPEND HFiles udp-act.h)
+list (APPEND HFiles udp-act.h testlist.h)
 
 list (APPEND CCFiles
   pfmla.cc xnsys.cc xnspec.cc
@@ -51,7 +51,7 @@ list (APPEND CCFiles
 list (APPEND HHFiles
   pfmla.hh xnsys.hh xnspec.hh
   opt.hh search.hh
-  test.hh inst.hh
+  inst.hh
   mpidissem.hh
   promela.hh pla.hh graphviz.hh kautz.hh
   interactive.hh
@@ -61,7 +61,6 @@ list (APPEND HHFiles
   protoconfile.hh tuple.hh
   )
 
-include_directories (${GluIncludePath})
 include (${CxPath}/include.cmake)
 
 set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${BinPath})
@@ -81,8 +80,6 @@ add_custom_command (
   COMMAND ${PegExe} -o ${BldPath}/protoconfile.leg.cc ${CMAKE_CURRENT_SOURCE_DIR}/protoconfile.leg
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/protoconfile.leg)
 set_source_files_properties (${BldPath}/protoconfile.leg.cc PROPERTIES GENERATED TRUE)
-set_property (SOURCE ${BldPath}/protoconfile.leg.cc
-  APPEND PROPERTY OBJECT_DEPENDS ${CxFullHFiles} ${CxFullHHFiles} ${FullHFiles} ${FullHHFiles})
 
 list (APPEND ProtoconSources
   pfmla.cc xnsys.cc inst.cc
@@ -98,11 +95,12 @@ list (APPEND ProtoconSources
 
 link_directories(${GluPath})
 
-addbinexe (test test.cc ${ProtoconSources})
-set_target_properties (test PROPERTIES
+addbinexe (test_exe test.cc ${ProtoconSources})
+set_target_properties (test_exe PROPERTIES
   OUTPUT_NAME test
   RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries (test cu glu cal m)
+target_include_directories (test_exe PUBLIC ${GluIncludePath})
+target_link_libraries (test_exe cu glu cal ${M_LIB})
 
 addbinexe (protocon
   ${ProtoconSources}
@@ -114,7 +112,8 @@ if (OPENMP_FOUND)
   set_property (TARGET protocon
     APPEND PROPERTY LINK_FLAGS ${OpenMP_C_FLAGS})
 endif ()
-target_link_libraries (protocon cu glu cal m)
+target_include_directories (protocon PUBLIC ${GluIncludePath})
+target_link_libraries (protocon cu glu cal ${M_LIB})
 
 addbinexe (biring biring.cc)
 set_target_properties (biring PROPERTIES
@@ -122,32 +121,35 @@ set_target_properties (biring PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
 addbinexe (deadfree ${ProtoconSources} deadfree.cc)
-target_link_libraries (deadfree cu glu cal m)
+target_include_directories (deadfree PUBLIC ${GluIncludePath})
+target_link_libraries (deadfree cu glu cal ${M_LIB})
 set_target_properties (deadfree PROPERTIES
   OUTPUT_NAME deadfree
   RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
-addbinexe (udp udp.c)
-target_link_libraries (udp rt)
-set_property (TARGET udp
-  APPEND PROPERTY COMPILE_DEFINITIONS _POSIX_C_SOURCE=199309L)
-set_property (TARGET udp
-  APPEND PROPERTY COMPILE_DEFINITIONS _BSD_SOURCE)
+if (UNIX)
+  addbinexe (udp udp.c)
+  target_link_libraries (udp rt)
+  set_property (TARGET udp
+    APPEND PROPERTY COMPILE_DEFINITIONS _POSIX_C_SOURCE=199309L)
+  set_property (TARGET udp
+    APPEND PROPERTY COMPILE_DEFINITIONS _BSD_SOURCE)
 
-set_target_properties (udp PROPERTIES
-  OUTPUT_NAME udp
-  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+  set_target_properties (udp PROPERTIES
+    OUTPUT_NAME udp
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+endif ()
 
-#target_link_libraries (chatty rt)
 
 if (MPI_FOUND)
-  include_directories(${MPI_INCLUDE_PATH})
   addbinexe (protocon-mpi
     ${ProtoconSources}
     main-mpi.cc mpidissem.cc
     )
+  target_include_directories (protocon-mpi PUBLIC ${GluIncludePath})
+  target_include_directories (protocon-mpi PUBLIC ${MPI_INCLUDE_PATH})
   target_link_libraries (protocon-mpi ${MPI_LIBRARIES})
-  target_link_libraries (protocon-mpi cu glu cal m)
+  target_link_libraries (protocon-mpi cu glu cal ${M_LIB})
 
   if(MPI_COMPILE_FLAGS)
     set_target_properties (protocon-mpi PROPERTIES
@@ -159,4 +161,69 @@ if (MPI_FOUND)
       LINK_FLAGS "${MPI_LINK_FLAGS}")
   endif()
 endif ()
+
+enable_testing ()
+#include (CTest)
+
+cat_parenthesized (TestNames "${CMAKE_CURRENT_SOURCE_DIR}/testlist.h")
+
+foreach (testname ${TestNames})
+  add_test (NAME ${testname}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    COMMAND test_exe ${testname})
+endforeach ()
+
+set (ExampleSpecs
+  ColorRing
+  MatchingRing
+  OldOrientRing
+  OrientOddRing
+  SortChain
+  SumNotTarget
+  TokenRingSixState
+  TokenRingThreeBit
+  )
+
+foreach (f ${ExampleSpecs})
+  add_test (NAME Synth3_${f}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    COMMAND protocon -x examplespec/${f}.protocon -def N 3)
+endforeach ()
+
+foreach (f SortRing TokenRingDijkstra)
+  list (APPEND ExampleSpecs ${f})
+  add_test (NAME Synth_${f}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    COMMAND protocon -x examplespec/${f}.protocon)
+endforeach ()
+
+foreach (f LeaderRingHuang)
+  list (APPEND ExampleSpecs ${f})
+  add_test (NAME SynthOpenMP_${f}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    COMMAND protocon -parallel 4 -x examplespec/${f}.protocon)
+  set_tests_properties (SynthOpenMP_${f} PROPERTIES PROCESSORS 4)
+
+  if (MPI_FOUND)
+    add_test (NAME SynthMPI_${f}
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+      COMMAND ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} 4 ${MPIEXEC_PREFLAGS}
+      ${BinPath}/protocon-mpi ${MPIEXEC_POSTFLAGS} -x examplespec/${f}.protocon)
+    set_tests_properties (SynthMPI_${f} PROPERTIES PROCESSORS 4)
+  endif ()
+endforeach ()
+
+list (APPEND ExampleSpecs
+  FoundThreeBitTokenRing
+  OrientRing
+  TokenChainDijkstra
+  TokenRingSixStateQuiet
+  TokenRingThreeState
+  )
+
+foreach (f ${ExampleSpecs})
+  add_test (NAME Verif5_${f}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    COMMAND protocon -verify -x examplesoln/${f}.protocon -def N 5)
+endforeach ()
 

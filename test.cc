@@ -3,8 +3,6 @@ extern "C" {
 #include "cx/syscx.h"
 }
 
-#include "test.hh"
-
 #include "cx/synhax.hh"
 
 extern "C" {
@@ -21,71 +19,6 @@ extern "C" {
 #include "stabilization.hh"
 #include "kautz.hh"
 #include <stdio.h>
-
-
-/**
- * Test dat code.
- */
-static void
-TestTable()
-{
-  Cx::Table<uint> t;
-  t.push(1);
-  t.push(2);
-  Claim2_uint( t[1] ,==, 2 );
-  Claim2_uint( t[0] ,==, 1 );
-}
-
-/**
- * Test dat code.
- */
-static void
-TestLgTable()
-{
-  Cx::LgTable<uint> t;
-  t.push(1);
-  t.push(2);
-  Claim2_uint( t[1] ,==, 2 );
-  Claim2_uint( t[0] ,==, 1 );
-}
-
-static void
-TestFlatSet()
-{
-  Cx::Table<uint> tab_b;
-  tab_b.push(3);
-  tab_b.push(2);
-  tab_b.push(7);
-  tab_b.push(11);
-  tab_b.push(4);
-  tab_b.push(6);
-  tab_b.push(15);
-  tab_b.push(0);
-
-  Cx::Set<uint> set_b(tab_b);
-  Cx::FlatSet<uint> flat_a( tab_b );
-  Claim( flat_a.elem_ck(3) );
-  Claim( flat_a.elem_ck(15) );
-
-  {
-    Cx::FlatSet<uint> flat_b( tab_b );
-    Claim( flat_a.subseteq_ck(flat_b) );
-    Claim( flat_b.subseteq_ck(flat_a) );
-  }
-  set_b << 50;
-  {
-    Cx::FlatSet<uint> flat_b( set_b );
-    Claim( flat_a.subseteq_ck(flat_b) );
-    Claim( !flat_b.subseteq_ck(flat_a) );
-  }
-  set_b -= Set<uint>(50);
-  set_b << 10;
-  {
-    Cx::FlatSet<uint> flat_b( set_b );
-    Claim( flat_a.subseteq_ck(flat_b) );
-    Claim( !flat_b.subseteq_ck(flat_a) );
-  }
-}
 
 static void
 TestPFmla()
@@ -380,7 +313,8 @@ TestTokenRingClosure()
   Claim( sys.integrityCk() );
 }
 
-void TestProtoconFile(bool agreement)
+static void
+TestProtoconFile(bool agreement)
 {
   Xn::Sys sys_f; //< From file.
   Xn::Sys sys_c; //< From code.
@@ -419,7 +353,20 @@ void TestProtoconFile(bool agreement)
   Claim( pf.equiv_ck(sys_f.invariant) );
 }
 
-  void
+static void
+TestProtoconFileSumNotTwo()
+{
+  TestProtoconFile(false);
+}
+
+static void
+TestProtoconFileAgreement()
+{
+  TestProtoconFile(true);
+}
+
+
+static void
 TestShadowColoring()
 {
   Cx::OFile& of = Cx::OFile::null();
@@ -508,58 +455,71 @@ TestShadowColoring()
   }
 }
 
-static
-  void
-OPutKautz()
+static void
+TestOPutKautz()
 {
   Cx::OFile ofile( stdout_OFile () );
   oput_graphviz_kautz(ofile, 4, 25);
 }
 
-/**
- * Test dat code.
- */
-void Test(Cx::OFile& olog, const Cx::Set<Cx::String>& only)
+static void TestTestOrder();
+static void TestAll();
+
+struct TestInfo
 {
-  olog << "Running tests...\n";
-#define W(testname) \
-do { \
-  if (only.empty() || only.elem_ck(Stringify(testname))) { \
-    olog << "#### Running: " << Stringify(testname) << '\n'; \
-    testname; \
-  } \
-} while (0)
+  const char* name;
+  void (*fn) ();
+};
 
-  W( TestTable() );
-  W( TestLgTable() );
-  W( TestFlatSet() );
-  W( TestPFmla() );
-  W( TestIntPFmla() );
-  W( TestConflictFamily() );
-  W( TestXnSys() );
-  W( TestTokenRingClosure() );
-  W( TestProtoconFile(true) );
-  W( TestProtoconFile(false) );
-  W( TestShadowColoring() );
-  if (!only.empty())
-    W( OPutKautz() );
+static int CmpTestInfo(const void* a, const void* b)
+{
+  return strcmp(((TestInfo*)a)->name, ((TestInfo*)b)->name);
+}
 
+#define W(testname)  ,{ Stringify(testname), Test##testname }
+static const TestInfo AllTests[] = {
+  { "", TestAll }
+#include "testlist.h"
+};
 #undef W
 
-  olog << "... Done running tests.\n";
+void TestTestOrder()
+{
+  for (uint i = 1; i < ArraySz(AllTests); ++i)
+    Claim2( 0 ,>, CmpTestInfo(&AllTests[i-1], &AllTests[i]) );
 }
+
+void TestAll()
+{
+  for (uint i = 1; i < ArraySz(AllTests); ++i)
+    AllTests[i].fn();
+}
+
+static void Test(const char testname[])
+{
+  TestInfo key;
+  key.name = testname;
+  key.fn = 0;
+  const TestInfo* t = (TestInfo*) bsearch
+    (&key, AllTests, ArraySz(AllTests), sizeof(AllTests[0]), CmpTestInfo);
+  Claim( t );
+  t->fn();
+}
+
 
 int main(int argc, char** argv)
 {
   int argi = (init_sysCx (&argc, &argv), 1);
-  Cx::OFile olog( stderr_OFile () );
-  Cx::Set<Cx::String> only;
 
-  while (argi < argc) {
-    only << argv[argi++];
+  if (argi == argc) {
+    TestAll();
+  }
+  else {
+    while (argi < argc) {
+      Test(argv[argi++]);
+    }
   }
 
-  Test(olog, only);
   lose_sysCx ();
   return 0;
 }

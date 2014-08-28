@@ -1,33 +1,27 @@
 
-*.o
-Makefile
-deps.mk
+/Makefile
 
-gui/moc_*.cpp
-gui/ui_*.h
-gui/gui
-
-/tmp
+/bld/
 /biring
-/bld
 /deadfree
 /test
 /udp
 
-doc/*/main.pdf
-doc/*/quick.pdf
-doc/*/full.pdf
-doc/*/*.aux
-doc/*/*.bbl
-doc/*/*.blg
-doc/*/*.log
-doc/*/*.nav
-doc/*/*.out
-doc/*/*.snm
-doc/*/*.toc
-doc/*/*.vrb
-doc/*.pdf
-doc/*.aux
-doc/*.log
-doc/*.out
+/doc/*/main.pdf
+/doc/*/quick.pdf
+/doc/*/full.pdf
+/doc/*/*.aux
+/doc/*/*.bbl
+/doc/*/*.blg
+/doc/*/*.log
+/doc/*/*.nav
+/doc/*/*.out
+/doc/*/*.snm
+/doc/*/*.toc
+/doc/*/*.vrb
+/doc/man.html
+/doc/*.pdf
+/doc/*.aux
+/doc/*.log
+/doc/*.out
 

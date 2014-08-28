@@ -279,7 +279,7 @@ ProtoconFile::add_symmetric_access(Sesp let_names_sp, Sesp let_vals_list_sp,
 }
 
   bool
-ProtoconFile::parse_action(Cx::PFmla& act_pf, Cx::Table<Cx::PFmla>& pc_xns, Sesp act_sp)
+ProtoconFile::parse_action(Cx::PFmla& act_pf, Cx::Table<Cx::PFmla>& pc_xns, Sesp act_sp, bool selfloop)
 {
   Sign good = 1;
   Claim( pc_symm );
@@ -291,9 +291,9 @@ ProtoconFile::parse_action(Cx::PFmla& act_pf, Cx::Table<Cx::PFmla>& pc_xns, Sesp
   }
 
   const Cx::String& idx_name = pc_symm_spec->idx_name;
-  for (uint i = 0; good && i < pc_symm->membs.sz(); ++i) {
-    const Xn::Pc& pc = *pc_symm->membs[i];
-    index_map[idx_name] = i;
+  for (uint pcidx = 0; good && pcidx < pc_symm->membs.sz(); ++pcidx) {
+    const Xn::Pc& pc = *pc_symm->membs[pcidx];
+    index_map[idx_name] = pcidx;
     Cx::PFmla guard_pf;
     DoLegit( good, "eval guard" )
       good = eval(guard_pf, cadr_of_Sesp (act_sp));
@@ -302,16 +302,7 @@ ProtoconFile::parse_action(Cx::PFmla& act_pf, Cx::Table<Cx::PFmla>& pc_xns, Sesp
     Cx::PFmla assign_pf( true );
     Sesp assign_sp = cddr_of_Sesp (act_sp);
 
-#if 0
-    for (uint j = 0; j < pc.wvbls.sz(); ++j) {
-      const Xn::Vbl& vbl = *pc.wvbls[j];
-      if (vbl.symm->pure_puppet_ck() && role == Xn::Vbl::Shadow) {
-        assign_pf = assign_pf.smooth(topo.pfmla_vbl(vbl));
-      }
-    }
-#endif
-
-    Cx::BitTable wvbl_assigned( pc.wvbls.sz(), 0 );
+    Cx::BitTable wvbl_assigned( pc.wvbls.sz(), (selfloop ? 0 : 1) );
 
     while (!nil_ck_Sesp (assign_sp)) {
       Sesp sp = car_of_Sesp (assign_sp);
@@ -322,21 +313,14 @@ ProtoconFile::parse_action(Cx::PFmla& act_pf, Cx::Table<Cx::PFmla>& pc_xns, Sesp
 
       Xn::Vbl* vbl = 0;
       Cx::IntPFmla val;
-      DoLegit( good, "eval variable" )
-        good = eval_vbl(&vbl, vbl_sp);
 
-      uint vblidx;
-      DoLegit( good, "non-writable variable in assignment" )
+      bool wild_vbl = false;
+      DoLegit( good, "eval variable" )
       {
-        bool found = false;
-        for (uint j = 0; j < pc.wvbls.sz(); ++j) {
-          if (pc.wvbls[j] == vbl) {
-            found = true;
-            vblidx = j;
-            break;
-          }
-        }
-        good = found;
+        if (list_ck_Sesp(vbl_sp) && eq_cstr ("wild", ccstr_of_Sesp (car_of_Sesp (vbl_sp))))
+          wild_vbl = true;
+        else
+          good = eval_vbl(&vbl, vbl_sp);
       }
 
       bool wild = false;
@@ -344,28 +328,50 @@ ProtoconFile::parse_action(Cx::PFmla& act_pf, Cx::Table<Cx::PFmla>& pc_xns, Sesp
       {
         if (list_ck_Sesp(val_sp) && eq_cstr ("wild", ccstr_of_Sesp (car_of_Sesp (val_sp))))
           wild = true;
+        else if (wild_vbl)
+          good = false;
         else
           good = eval(val, val_sp);
       }
+
+      DoLegit( good, "non-writable variable in assignment" )
+      {
+        bool found = false;
+        for (uint i = 0; i < pc.wvbls.sz(); ++i) {
+          if (wild_vbl) {
+            found = true;
+            wvbl_assigned[i] = 1;
+          }
+          else if (pc.wvbls[i] == vbl) {
+            found = true;
+            wvbl_assigned[i] = 1;
+            break;
+          }
+        }
+        good = found;
+      }
       if (!good)  break;
 
-      wvbl_assigned[vblidx] = 1;
-      if (!wild) {
+      if (wild_vbl) {
+        assign_pf = true;
+      }
+      else if (!wild) {
         const Cx::PFmlaVbl& pf_vbl = topo.pfmla_vbl(*vbl);
         val %= vbl->symm->domsz;
         assign_pf &= pf_vbl.img_eq(val);
       }
+
     }
 
-    for (uint j = 0; j < pc.wvbls.sz(); ++j) {
-      if (!wvbl_assigned[j]) {
-        const Cx::PFmlaVbl& pf_vbl = topo.pfmla_vbl(*pc.wvbls[j]);
+    for (uint i = 0; i < pc.wvbls.sz(); ++i) {
+      if (!wvbl_assigned[i]) {
+        const Cx::PFmlaVbl& pf_vbl = topo.pfmla_vbl(*pc.wvbls[i]);
         assign_pf &= pf_vbl.img_eq(pf_vbl);
       }
     }
 
-    pc_xns[i] = guard_pf & assign_pf;
-    act_pf |= pc_xns[i] & pc.act_unchanged_pfmla;
+    pc_xns[pcidx] = guard_pf & assign_pf;
+    act_pf |= pc_xns[pcidx] & pc.act_unchanged_pfmla;
   }
   if (good)
     index_map.erase(idx_name);
@@ -394,7 +400,7 @@ ProtoconFile::add_action(Sesp act_sp, Xn::Vbl::ShadowPuppetRole role)
   Cx::PFmla act_pf( false );
   Cx::Table<Cx::PFmla> pc_xns;
   DoLegit( good, "parse action" )
-    good = parse_action(act_pf, pc_xns, act_sp);
+    good = parse_action(act_pf, pc_xns, act_sp, true);
 
   if (good) {
     for (uint i = 0; i < pc_symm->membs.sz(); ++i) {
@@ -450,7 +456,7 @@ ProtoconFile::forbid_action(Sesp act_sp)
   Cx::PFmla act_pf( false );
   Cx::Table<Cx::PFmla> pc_xns;
   DoLegit( good, "parse action" ) {
-    good = parse_action(act_pf, pc_xns, act_sp);
+    good = parse_action(act_pf, pc_xns, act_sp, false);
   }
 
   DoLegit( good, "" ) {
@@ -480,7 +486,7 @@ ProtoconFile::permit_action(Sesp act_sp)
   Cx::PFmla act_pf( false );
   Cx::Table<Cx::PFmla> pc_xns;
   DoLegit( good, "parse action" ) {
-    good = parse_action(act_pf, pc_xns, act_sp);
+    good = parse_action(act_pf, pc_xns, act_sp, false);
   }
 
   DoLegit( good, "" ) {

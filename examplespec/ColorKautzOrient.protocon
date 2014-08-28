@@ -25,7 +25,7 @@ process P[i <- Nat % N]
     read: x[x_idx];
   }
   write: x[i];
-  forbid: ( way[2*i]==way[2*i+1] --> x[i]:=_; );
+  forbid: ( way[2*i]==way[2*i+1] --> _; );
 }
 
 process OrientLink[i <- Nat % (2*N)]

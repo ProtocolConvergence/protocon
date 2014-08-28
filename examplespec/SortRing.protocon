@@ -16,8 +16,8 @@ process P[i <- Nat % N]
 
   // Equivalent to the above.
   //permit:
-  //  ( 1==1 --> x[i]:=x[i+1]; x[i+1]:=_; )
-  //  ( 1==1 --> x[i+1]:=x[i]; x[i]:=_; )
+  //  ( 1==1 --> x[i]:=x[i+1]; )
+  //  ( 1==1 --> x[i+1]:=x[i]; )
   //  ;
 }
 

@@ -80,7 +80,8 @@ ActionExpr =
        {pushlast_Sesp (act.sp, list3_ccstr_Sesp (":=", vbl.sp, val_wild.sp));}
     )
     END_STMT WS?
-   )+
+    | (wild:WILD WS? END_STMT WS? {pushlast_Sesp (act.sp, list3_ccstr_Sesp (":=", wild.sp, wild.sp));})
+   )*
    ')'
    {$$ = act;}
    ;
