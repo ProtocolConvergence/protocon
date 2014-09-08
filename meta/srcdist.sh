@@ -30,7 +30,6 @@ cat "$metapath/examplespec.files" | \
   while read f
   do
     cp -a -t examplespec "$srcpath/examplespec/$f.protocon"
-    #mv "src/examplespec/$f" examplespec
   done
 }
 rm -fr src/examplespec
@@ -41,10 +40,11 @@ cat "$metapath/examplesoln.files" | \
   while read f
   do
     cp -a -t examplesoln "$srcpath/examplesoln/$f.protocon"
-    #mv "src/examplesoln/$f" examplesoln
   done
 }
 rm -fr src/examplesoln
+
+rm -fr src/verif/include.cmake
 
 rm -fr src/meta
 mv src/doc doc

@@ -7,8 +7,9 @@ PegPath = peg-0.1.15
 ###### Cx ######
 
 bin/cx:
-	cd cx && cmake .
-	$(MAKE) -C cx cx
+	mkdir -p cx/bld
+	cd cx/bld && cmake ..
+	$(MAKE) -C cx/bld cx
 
 ###### Glu ######
 

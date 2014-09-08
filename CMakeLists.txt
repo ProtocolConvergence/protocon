@@ -100,7 +100,8 @@ addbinexe (test_exe test.cc search.cc ${ProtoconSources})
 set_target_properties (test_exe PROPERTIES
   OUTPUT_NAME test
   RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-target_include_directories (test_exe PUBLIC ${GluIncludePath})
+set_property (TARGET test_exe
+  APPEND PROPERTY INCLUDE_DIRECTORIES ${GluIncludePath})
 target_link_libraries (test_exe cu glu cal ${M_LIB})
 
 addbinexe (protocon
@@ -108,7 +109,8 @@ addbinexe (protocon
   search.cc
   ${ProtoconSources}
   )
-target_include_directories (protocon PUBLIC ${GluIncludePath})
+set_property (TARGET protocon
+  APPEND PROPERTY INCLUDE_DIRECTORIES ${GluIncludePath})
 target_link_libraries (protocon cu glu cal ${M_LIB})
 
 addbinexe (biring biring.cc)
@@ -117,7 +119,8 @@ set_target_properties (biring PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
 addbinexe (deadfree deadfree.cc ${ProtoconSources})
-target_include_directories (deadfree PUBLIC ${GluIncludePath})
+set_property (TARGET deadfree
+  APPEND PROPERTY INCLUDE_DIRECTORIES ${GluIncludePath})
 target_link_libraries (deadfree cu glu cal ${M_LIB})
 set_target_properties (deadfree PROPERTIES
   OUTPUT_NAME deadfree
@@ -143,8 +146,8 @@ if (MPI_FOUND)
     search.cc
     ${ProtoconSources}
     )
-  target_include_directories (protocon-mpi PUBLIC ${GluIncludePath})
-  target_include_directories (protocon-mpi PUBLIC ${MPI_INCLUDE_PATH})
+  set_property (TARGET protocon-mpi
+    APPEND PROPERTY INCLUDE_DIRECTORIES ${GluIncludePath} ${MPI_INCLUDE_PATH})
   target_link_libraries (protocon-mpi ${MPI_LIBRARIES})
   target_link_libraries (protocon-mpi cu glu cal ${M_LIB})
 
@@ -168,102 +171,7 @@ if (OPENMP_FOUND)
   endforeach ()
 endif ()
 
-enable_testing ()
-#include (CTest)
-
-cat_parenthesized (TestNames "${CMAKE_CURRENT_SOURCE_DIR}/testlist.h")
-
-## Unit tests.
-foreach (testname ${TestNames})
-  add_test (NAME ${testname}
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    COMMAND test_exe ${testname})
-endforeach ()
-
-cat_parenthesized (DistribSpecs "${CMAKE_CURRENT_SOURCE_DIR}/meta/examplespec.files")
-cat_parenthesized (DistribSolns "${CMAKE_CURRENT_SOURCE_DIR}/meta/examplesoln.files")
-
-## Ensure that the specifications that we distribute can be parsed.
-foreach (f ${DistribSpecs})
-  add_test (NAME ofile_spec_${f}
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    COMMAND "${CMAKE_COMMAND}"
-    -Dprotocon_exe=$<TARGET_FILE:protocon>
-    -Dxfile=examplespec/${f}.protocon
-    -P ${CMAKE_CURRENT_SOURCE_DIR}/verif/ofile.cmake
-    )
-endforeach ()
-
-## Ensure that the solutions that we distribute can be parsed.
-foreach (f ${DistribSolns})
-  add_test (NAME ofile_soln_${f}
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    COMMAND "${CMAKE_COMMAND}"
-    -Dprotocon_exe=$<TARGET_FILE:protocon>
-    -Dxfile=examplesoln/${f}.protocon
-    -P ${CMAKE_CURRENT_SOURCE_DIR}/verif/ofile.cmake
-    )
-endforeach ()
-
-set (ExampleSpecs
-  ColorRing
-  ColorTree
-  MatchRing
-  MatchRingOneBit
-  OldOrientRing
-  OrientOddRing
-  SortChain
-  SumNotTarget
-  TokenRingSixState
-  TokenRingThreeBit
-  )
-
-foreach (f ${ExampleSpecs})
-  add_test (NAME Synth3_${f}
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    COMMAND protocon -x examplespec/${f}.protocon -def N 3)
-endforeach ()
-
-foreach (f SortRing TokenRingDijkstra)
-  list (APPEND ExampleSpecs ${f})
-  add_test (NAME Synth_${f}
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    COMMAND protocon -x examplespec/${f}.protocon)
-endforeach ()
-
-foreach (f LeaderRingHuang)
-  list (APPEND ExampleSpecs ${f})
-  add_test (NAME SynthOpenMP_${f}
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    COMMAND protocon -parallel 4 -x examplespec/${f}.protocon)
-  set_tests_properties (SynthOpenMP_${f} PROPERTIES PROCESSORS 4)
-
-  if (MPI_FOUND)
-    add_test (NAME SynthMPI_${f}
-      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-      COMMAND ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} 4 ${MPIEXEC_PREFLAGS}
-      ${BinPath}/protocon-mpi ${MPIEXEC_POSTFLAGS} -x examplespec/${f}.protocon)
-    set_tests_properties (SynthMPI_${f} PROPERTIES PROCESSORS 4)
-  endif ()
-endforeach ()
-
-list (APPEND ExampleSpecs
-  FoundThreeBitTokenRing
-  OrientRing
-  TokenChainDijkstra
-  TokenRingSixStateQuiet
-  TokenRingThreeState
-  )
-
-foreach (f ${ExampleSpecs})
-  add_test (NAME Verif5_${f}
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    COMMAND protocon -verify -x examplesoln/${f}.protocon -def N 5)
-endforeach ()
-
-## Ensure our tests can actually detect failure.
-add_test (NAME Verif4_OrientOddRing
-  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-  COMMAND protocon -verify -x examplesoln/OrientOddRing.protocon -def N 4)
-set_tests_properties (Verif4_OrientOddRing PROPERTIES WILL_FAIL TRUE)
+if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/verif/include.cmake)
+  include (${CMAKE_CURRENT_SOURCE_DIR}/verif/include.cmake)
+endif ()
 
