@@ -174,9 +174,9 @@ endif ()
 if (OPENMP_FOUND)
   foreach (target_name protocon test_exe)
     set_property (TARGET ${target_name}
-      APPEND PROPERTY COMPILE_FLAGS ${OpenMP_C_FLAGS})
+      APPEND_STRING PROPERTY COMPILE_FLAGS " ${OpenMP_C_FLAGS}")
     set_property (TARGET ${target_name}
-      APPEND PROPERTY LINK_FLAGS ${OpenMP_C_FLAGS})
+      APPEND_STRING PROPERTY LINK_FLAGS " ${OpenMP_C_FLAGS}")
   endforeach ()
 endif ()
 
