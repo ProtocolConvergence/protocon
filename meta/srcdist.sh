@@ -29,7 +29,7 @@ cat "$metapath/examplespec.files" | \
 {
   while read f
   do
-    cp -a -t examplespec "$srcpath/examplespec/$f"
+    cp -a -t examplespec "$srcpath/examplespec/$f.protocon"
     #mv "src/examplespec/$f" examplespec
   done
 }
@@ -40,7 +40,7 @@ cat "$metapath/examplesoln.files" | \
 {
   while read f
   do
-    cp -a -t examplesoln "$srcpath/examplesoln/$f"
+    cp -a -t examplesoln "$srcpath/examplesoln/$f.protocon"
     #mv "src/examplesoln/$f" examplesoln
   done
 }

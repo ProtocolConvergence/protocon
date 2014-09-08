@@ -6,6 +6,7 @@ extern "C" {
 #include "cx/synhax.hh"
 
 extern "C" {
+#include "cx/fileb.h"
 #include "cx/sesp.h"
 }
 #include "cx/alphatab.hh"
@@ -326,12 +327,18 @@ TestProtoconFile(bool agreement)
 
   Cx::PFmla pf;
 
-  ProtoconFileOpt infile_opt;
+  const char* filename;
   if (agreement)
-    infile_opt.file_path = "examplespec/LeaderRingHuang.protocon";
+    filename = "examplespec/LeaderRingHuang.protocon";
   else
-    infile_opt.file_path = "examplespec/SumNotTwo.protocon";
-  ReadProtoconFile(sys_f, infile_opt);
+    filename = "examplespec/SumNotTwo.protocon";
+
+  ProtoconFileOpt infile_opt;
+  infile_opt.text = textfile_AlphaTab (0, filename);
+
+  if (!ReadProtoconFile(sys_f, infile_opt)) {
+    Claim( 0 && "Can't parse file" );
+  }
 
   uint npcs = topo_f.pcs.sz();
   Claim2( npcs ,>=, 3 );
@@ -400,7 +407,7 @@ TestShadowColoring()
   indices.expression = "i";
   topo.add_write_access(pc_symm, &topo.vbl_symms[1], indices);
 
-  sys.direct_invariant_flag = false;
+  sys.spec->invariant_style = Xn::FutureAndShadowModPuppet;
   sys.commit_initialization();
   for (uint i = 0; i < npcs; ++i) {
     sys.invariant &=

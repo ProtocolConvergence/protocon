@@ -12,6 +12,7 @@ process P[i <- Nat % (2*N)]
   read:  x[i+N];
   read:  x[i+1];
   write: x[i];
-  invariant: (x[i] != x[i-1]) && (x[i] != x[i+N]) && (x[i] != x[i+1]);
+  (future & silent)
+    ( x[i] != x[i-1] && x[i] != x[i+N] && x[i] != x[i+1] );
 }
 

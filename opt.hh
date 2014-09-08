@@ -35,6 +35,7 @@ public:
   uint nparallel;
   Cx::Table< ProtoconParamOpt > params;
   Cx::String log_ofilename;
+  Cx::String xfilepath;
   Cx::String ofilepath;
   bool use_espresso;
   Cx::Table< Cx::String > xfilepaths;

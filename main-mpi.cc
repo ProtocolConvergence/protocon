@@ -142,37 +142,10 @@ stabilization_search(vector<uint>& ret_actions,
   {
     for (uint i = PcIdx; i < exec_opt.xfilepaths.sz(); i += NPcs) {
       if (synctx.done_ck())  break;
-      Xn::Sys sys;
-      ProtoconFileOpt verif_infile_opt( infile_opt );
-      verif_infile_opt.constant_map = exec_opt.params[0].constant_map;
-      verif_infile_opt.file_path = exec_opt.xfilepaths[i].cstr();
-      *opt.log << "VERIFYING: " << verif_infile_opt.file_path << opt.log->endl();
-      const bool lightweight = !exec_opt.conflicts_ofilepath;
-      sys.topology.lightweight = lightweight;
-      if (ReadProtoconFile(sys, verif_infile_opt)) {
-        StabilizationCkInfo info;
-        info.find_livelock_actions = !lightweight;
-        if (stabilization_ck(*opt.log, sys, exec_opt.params[0].stabilization_opt, &info)) {
-          solution_found = true;
-          ret_actions = sys.actions;
-          *opt.log << "System is stabilizing." << opt.log->endl();
-
-          if (!!exec_opt.ofilepath) {
-            Cx::String filepath( exec_opt.ofilepath + "." + i );
-            *opt.log << "Writing system to: " << filepath  << opt.log->endl();
-            Cx::OFileB ofb;
-            ofb.open(filepath);
-            oput_protocon_file(ofb, sys, exec_opt.use_espresso, sys.actions);
-          }
-        }
-        else {
-          *opt.log << "System NOT stabilizing." << opt.log->endl();
-          if (!lightweight && info.livelock_exists) {
-            //synctx.conflicts.add_conflict(FlatSet<uint>(sys.actions));
-            synctx.conflicts.add_conflict(info.livelock_actions);
-          }
-        }
-      }
+      multi_verify_stabilization
+        (i, synctx, ret_actions,
+         solution_found,
+         infile_opt, exec_opt, opt);
     }
   }
   if (exec_opt.task == ProtoconOpt::MinimizeConflictsTask)
@@ -346,6 +319,9 @@ int main(int argc, char** argv)
     protocon_options
     (sys, argi, argc, argv, opt, infile_opt, exec_opt);
   if (!good)  failout_sysCx ("Bad args.");
+  if (opt.optimize_soln) {
+    failout_sysCx ("protocon-mpi does not yet support -optimize flag.");
+  }
 
   int found_papc =
     stabilization_search(sys.actions, infile_opt, exec_opt, opt, PcIdx, NPcs);
@@ -361,9 +337,7 @@ int main(int argc, char** argv)
 
     if (!exec_opt.ofilepath.empty_ck())
     {
-      Cx::OFileB ofb;
-      ofb.open(exec_opt.ofilepath);
-      oput_protocon_file (ofb, sys, exec_opt.use_espresso);
+      oput_protocon_file (exec_opt.ofilepath, sys, exec_opt.use_espresso);
     }
   }
   else if (found_papc < 0 && PcIdx == 0) {

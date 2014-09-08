@@ -12,9 +12,6 @@ extern "C" {
 #define YY_CTX_MEMBERS \
   ProtoconFile* st;
 
-//  int yyc = fgetc(yy->infile);
-//  result= (EOF == yyc) ? 0 : (*(buf) = yyc, 1);
-
 #define YY_INPUT(yy, buf, result, max_size) \
 { \
   result = xget_char_XFile (&yy->st->xf, buf) ? 1 : 0; \
@@ -26,10 +23,10 @@ ProtoconFile =
   (Protocol WS?)?
   (ConstDecl WS?)*
   (VarDecl WS?)+
-  (ProcDecl WS?)+
   ((  NamedPredicate
     | GlobalAssume
     | GlobalLegit
+    | ProcDecl
    )
    WS?
   )*
@@ -80,7 +77,7 @@ ActionExpr =
        {pushlast_Sesp (act.sp, list3_ccstr_Sesp (":=", vbl.sp, val_wild.sp));}
     )
     END_STMT WS?
-    | (wild:WILD WS? END_STMT WS? {pushlast_Sesp (act.sp, list3_ccstr_Sesp (":=", wild.sp, wild.sp));})
+    | (wild:WILD WS? END_STMT WS? {pushlast_Sesp (act.sp, wild.sp);})
    )*
    ')'
    {$$ = act;}
@@ -126,6 +123,26 @@ ProcNamedPredicate =
   {yy->st->add_pc_predicate(name.sp, a.sp);}
   ;
 
+ProcAssume =
+  '(' WS? ASSUME_AND_CLOSED WS? ')' WS?
+  '(' WS? a:Expr WS? ')' END_STMT
+  {yy->st->add_pc_assume(a.sp);}
+  ;
+
+LegitStmt =
+    LEGIT ':' WS? legit:Expr END_STMT
+    {$$ = legit;}
+  | '(' WS?
+    (FUTURE_AND_CLOSED | FUTURE_AND_SILENT | FUTURE_AND_SHADOW | FUTURE_AND_SHADOW_MOD_PUPPET)
+    WS? ')' WS?
+    '(' WS? legit:Expr WS? ')' END_STMT
+    {$$ = legit;}
+  ;
+
+ProcLegit =
+  legit:LegitStmt {yy->st->add_pc_legit(legit.sp);}
+  ;
+
 ProcDecl =
   'process' WS pc_name:ID '[' WS? idx_name:ID WS? IN WS? npcs:NatDom WS? ']'
   {yy->st->add_processes(pc_name.sp, idx_name.sp, npcs.sp);}
@@ -143,6 +160,8 @@ ProcDecl =
     SymmetricLinks WS?
   )+
   ((  ProcNamedPredicate
+    | ProcAssume
+    | ProcLegit
     | ShadowActionDef
     | DirectActionDef
     | PuppetActionDef
@@ -150,9 +169,6 @@ ProcDecl =
     | ForbidActionDef)
    WS?
   )*
-  ( legit:LegitStmt WS?
-    {yy->st->add_pc_legit(legit.sp);}
-  )?
   {
     yy->st->finish_pc_def();
   }
@@ -211,28 +227,26 @@ GlobalAssume =
   ;
 
 GlobalLegit =
-    ('shadow' | 'underlying') (WS LEGIT | ':') WS? a:Expr END_STMT
-    {yy->st->sys->direct_invariant_flag = false;}
-    {yy->st->add_legit(a.sp);}
-  | '(' WS? FUTURE_AND_CLOSED WS? ')' WS?
-    (  ('shadow' | 'underlying') WS? {yy->st->sys->direct_invariant_flag = false;}
-     | 'direct' WS?
-     | {/*No op.*/}
+    (  LEGIT {yy->st->sys->spec->invariant_style = Xn::FutureAndShadow;}
+     | ( 'direct'
+         {yy->st->sys->spec->invariant_style = Xn::FutureAndShadow;}
+       | ('shadow' | 'underlying')
+         {yy->st->sys->spec->invariant_style = Xn::FutureAndShadowModPuppet;}
+       )
+      (WS LEGIT)?
     )
+    ':'
+    WS? a:Expr END_STMT
+    {yy->st->add_legit(a.sp);}
+  | '(' WS?
+    (  FUTURE_AND_CLOSED {yy->st->sys->spec->invariant_style = Xn::FutureAndClosed;}
+     | FUTURE_AND_SILENT {yy->st->sys->spec->invariant_style = Xn::FutureAndSilent;}
+     | FUTURE_AND_SHADOW {yy->st->sys->spec->invariant_style = Xn::FutureAndShadow;}
+     | FUTURE_AND_SHADOW_MOD_PUPPET {yy->st->sys->spec->invariant_style = Xn::FutureAndShadowModPuppet;}
+    )
+    WS? ')' WS?
     '(' WS? a:Expr WS? ')' END_STMT
     {yy->st->add_legit(a.sp);}
-  | '(' WS? FUTURE_AND_CLOSED WS? ')' WS?  '(' WS? a:Expr WS? ')' END_STMT
-    {yy->st->add_legit(a.sp);}
-  | (LEGIT | 'direct' (WS LEGIT | ':')) WS? a:Expr END_STMT
-    {yy->st->add_legit(a.sp);}
-  ;
-
-LegitStmt =
-    LEGIT WS? legit:Expr END_STMT
-    {$$ = legit;}
-  | WS? '(' WS? FUTURE_AND_CLOSED WS? ')' WS?
-    '(' WS? legit:Expr ')' END_STMT
-    {$$ = legit;}
   ;
 
 ConstExpr = a:ConstSum {$$ = a;}
@@ -432,7 +446,23 @@ NAT = < [0-9]+ >
 IN = '<-'
   ;
 
-LEGIT = 'legit:' | 'invariant:' ;
+LEGIT = 'legit' | 'invariant' ;
+FUTURE = 'future' | 'eventually' | '<>' ;
+SHADOW = 'shadow' ;
+PUPPET = 'puppet' | 'superposed' ;
+CLOSED = 'closed' ;
+ASSUME = 'assume' ;
+SILENT = 'silent' ;
+ACTIVE = 'active' ;
+
+FUTURE_AND_SHADOW =
+    FUTURE WS? '&' WS? SHADOW
+  | SHADOW WS? '&' WS? FUTURE
+  ;
+
+FUTURE_AND_SHADOW_MOD_PUPPET =
+  '(' WS? FUTURE_AND_SHADOW WS? ')' WS? '%' WS? PUPPET
+  ;
 
 ASSUME_AND_CLOSED =
     ASSUME WS? '&' WS? CLOSED
@@ -444,9 +474,26 @@ FUTURE_AND_CLOSED =
   | CLOSED WS? '&' WS? FUTURE
   ;
 
-FUTURE = 'eventually' | 'future' | '<>' ;
-CLOSED = 'closed' ;
-ASSUME = 'assume' ;
+FUTURE_AND_SILENT =
+    FUTURE WS? '&' WS? SILENT
+  | SILENT WS? '&' WS? FUTURE
+  ;
+
+FUTURE_AND_ACTIVE =
+    FUTURE WS? '&' WS? ACTIVE
+  | ACTIVE WS? '&' WS? FUTURE
+  ;
+
+CLOSED_AND_ACTIVE =
+    CLOSED WS? '&' WS? ACTIVE
+  | ACTIVE WS? '&' WS? CLOSED
+  ;
+
+FUTURE_AND_CLOSED_AND_ACTIVE =
+    FUTURE_AND_CLOSED WS? '&' WS? ACTIVE
+  | FUTURE_AND_ACTIVE WS? '&' WS? CLOSED
+  | CLOSED_AND_ACTIVE WS? '&' WS? FUTURE
+  ;
 
 ACTION = 'act:' | 'action:' ;
 
@@ -481,12 +528,11 @@ ReadProtoconFile(Xn::Sys& sys, const ProtoconFileOpt& opt)
   bool good = true;
   yycontext yyctx;
   memset (&yyctx, 0, sizeof (yyctx));
-  Claim(!opt.file_path.empty_ck());
-  XFileB xfb;
-  init_XFileB (&xfb);
-  open_FileB (&xfb.fb, 0, opt.file_path.cstr());
-  //yyctx.infile = fopen(opt.file_path.cstr(), "rb");
-  yyctx.st = new ProtoconFile(&sys, &xfb.xf);
+  AlphaTab text = dflt_AlphaTab ();
+  text << opt.text;
+  XFile xfile[1];
+  init_XFile_olay_AlphaTab (xfile, &text);
+  yyctx.st = new ProtoconFile(&sys, xfile);
   for (Cx::Map<Cx::String,uint>::const_iterator itr = opt.constant_map.begin();
        itr != opt.constant_map.end();
        ++itr)
@@ -498,9 +544,9 @@ ReadProtoconFile(Xn::Sys& sys, const ProtoconFileOpt& opt)
   }
   if (!yyparse(&yyctx) || !yyctx.st->allgood) {
     good = false;
-    DBog1( "Error parsing the file: %s", opt.file_path.cstr() );
+    DBog0( "Error parsing file." );
   }
-  lose_XFileB (&xfb);
+  lose_AlphaTab (&text);
   delete yyctx.st;
   yyrelease(&yyctx);
   sys.commit_initialization();

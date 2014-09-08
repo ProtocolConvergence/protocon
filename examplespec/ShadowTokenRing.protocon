@@ -30,6 +30,8 @@ process ShadowP[i <- Int % N]
     ( tok[i] == 1 --> tok[i] := 0; tok[i+1] := 1; );
 }
 
-shadow invariant:
-  unique i <- Int % N : (tok[i] == 1);
+((future & silent) % puppet)
+(
+  unique i <- Int % N : (tok[i] == 1)
+);
 

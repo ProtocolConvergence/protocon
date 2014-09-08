@@ -25,22 +25,12 @@ process P[i <- Nat % N]
     read: x[x_idx];
   }
   write: x[i];
-  forbid: ( way[2*i]==way[2*i+1] --> _; );
+
+  (assume & closed)
+    (way[2*i]!=way[2*i+1]);
 }
 
-process OrientLink[i <- Nat % (2*N)]
-{
-  let j := if (i % 2 == 0) then (i+1) else (i-1);
-  read: way[j];
-  write: way[i];
-  puppet action:
-    ( way[i] == way[j] --> way[i] := 1-way[j]; )
-    ;
-}
-
-invariant:
-  (forall i <- Nat % N : way[2*i] != way[2*i+1])
-  &&
+(future & silent)
   (forall i <- Nat % N :
    (forall q <- Nat % 2 :
     (i == -(2*i + q+1) % N)

@@ -18,7 +18,7 @@ cat "$metapath/examplespec.files" | \
 {
   while read f
   do
-    cp -a -t "$distpath/examplespec" "$toppath/protocon/examplespec/$f"
+    cp -a -t "$distpath/examplespec" "$toppath/protocon/examplespec/$f.protocon"
   done
 }
 
@@ -27,7 +27,7 @@ cat "$metapath/examplesoln.files" | \
 {
   while read f
   do
-    cp -a -t "$distpath/examplesoln" "$toppath/protocon/examplesoln/$f"
+    cp -a -t "$distpath/examplesoln" "$toppath/protocon/examplesoln/$f.protocon"
   done
 }
 

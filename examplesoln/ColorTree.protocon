@@ -1,4 +1,5 @@
 
+// By default, use a tree tall enough to contain all three types of processes.
 constant H := 3;
 
 variable x[Int % (2^H-1)] <- Int % 3;
@@ -10,7 +11,7 @@ process Root[i <- Int % 1]
   write: x[0];
 
   (future & silent)
-    ( x[0] != x[1] && x[0] != x[2] )
+    (x[0] != x[1] && x[0] != x[2])
     ;
 }
 
@@ -26,7 +27,11 @@ process P[j <- Int % (2^(H-1)-2)]
   write: x[i];
 
   (future & silent)
-    ( x[parent_idx] != x[i] && x[i] != x[left_idx] && x[i] != x[right_idx] )
+    (x[parent_idx] != x[i] && x[i] != x[left_idx] && x[i] != x[right_idx])
+    ;
+
+  puppet action:
+    ( x[i]==x[parent_idx] --> x[i]:=x[i]+1; )
     ;
 }
 
@@ -36,5 +41,9 @@ process Leaf[j <- Int % (2^(H-1))]
   let parent_idx := (i-1)/2;
   read:  x[parent_idx];
   write: x[i];
+
+  puppet action:
+    ( x[i]==x[parent_idx] --> x[i]:=x[i]+1; )
+    ;
 }
 

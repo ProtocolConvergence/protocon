@@ -28,8 +28,7 @@ process P[i <- Nat % N]
 
 // Want to converge to a state where each next value in the
 // ring is one greater than the last (modulo N).
-// Could also use "invariant:" keyword.
-(future & closed)
+(future & silent)
   (forall i <- Nat % N :
    (x[i]+1) % N == x[i+1]);
 

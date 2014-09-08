@@ -3,6 +3,7 @@ extern "C" {
 #include "cx/syscx.h"
 }
 #include "pla.hh"
+#include "cx/fileb.hh"
 
 extern "C" {
 #include "cx/ospc.h"
@@ -326,12 +327,46 @@ oput_protocon_pc_acts (Cx::OFile& of, const Xn::PcSymm& pc_symm,
 
 static
   bool
-oput_protocon_pc_invariant (Cx::OFile& of, const Xn::PcSymm& pc_symm)
+oput_protocon_pc_assume (Cx::OFile& of, const Xn::PcSymm& pc_symm)
+{
+  const Cx::String& assume_expression = pc_symm.spec->closed_assume_expression;
+  if (assume_expression.empty_ck())
+    return true;
+  of << "  (assume & closed)\n    (" << assume_expression << ");\n";
+  return true;
+}
+
+static
+  const char*
+string_of_invariant_style (Xn::InvariantStyle style)
+{
+  switch (style)
+  {
+    case Xn::FutureAndClosed:
+      return "(future & closed)";
+    case Xn::FutureAndSilent:
+      return "(future & silent)";
+    case Xn::FutureAndShadow:
+      return "(future & shadow)";
+    case Xn::FutureAndShadowModPuppet:
+      return "((future & shadow) % puppet)";
+    case Xn::NInvariantStyles:
+      Claim( 0 );
+  }
+  return 0;
+}
+
+static
+  bool
+oput_protocon_pc_invariant (Cx::OFile& of, const Xn::PcSymm& pc_symm,
+                            Xn::InvariantStyle invariant_style)
 {
   const Cx::String& invariant_expression = pc_symm.spec->invariant_expression;
   if (invariant_expression.empty_ck())
     return true;
-  of << "  (future & closed)\n    (" << invariant_expression << ");\n";
+
+  of << "  " << string_of_invariant_style (invariant_style)
+    << "\n    (" << invariant_expression << ");\n";
   return true;
 }
 
@@ -375,10 +410,12 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys, bool use_espresso, const 
     oput_protocon_pc_lets (of, pc_symm);
     oput_protocon_pc_vbls (of, pc_symm);
     oput_protocon_pc_predicates (of, pc_symm);
+    DoLegit(good, "output assume")
+      good = oput_protocon_pc_assume (of, pc_symm);
+    DoLegit(good, "output invariant")
+      good = oput_protocon_pc_invariant (of, pc_symm, sys.spec->invariant_style);
     DoLegit(good, "output actions")
       good = oput_protocon_pc_acts (of, pc_symm, acts, ospc, use_espresso);
-    DoLegit(good, "output invariant")
-      good = oput_protocon_pc_invariant (of, pc_symm);
     of << "}\n";
   }
 
@@ -392,12 +429,7 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys, bool use_espresso, const 
   }
 
   if (!sys.spec->invariant_expression.empty_ck()) {
-    of << "(future & closed)";
-    if (sys.direct_invariant_ck())
-      of << " direct";
-    else
-      of << " shadow";
-
+    of << string_of_invariant_style (sys.spec->invariant_style);
     of << "\n  (" << sys.spec->invariant_expression << ");\n";
   }
 
@@ -409,5 +441,25 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys, bool use_espresso, const 
 oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys, bool use_espresso)
 {
   return oput_protocon_file (of, sys, use_espresso, sys.actions);
+}
+
+  bool
+oput_protocon_file (const Cx::String& ofilename, const Xn::Sys& sys,
+                    bool use_espresso, const vector<uint>& actions)
+{
+  if (ofilename == "-") {
+    Cx::OFile ofile( stdout_OFile () );
+    return oput_protocon_file (ofile, sys, use_espresso, actions);
+  }
+  Cx::OFileB ofb;
+  ofb.open(ofilename);
+  return oput_protocon_file (ofb, sys, use_espresso, actions);
+}
+
+  bool
+oput_protocon_file (const Cx::String& ofilename, const Xn::Sys& sys,
+                    bool use_espresso)
+{
+  return oput_protocon_file (ofilename, sys, use_espresso, sys.actions);
 }
 

@@ -98,25 +98,31 @@ AddStabilization(vector<uint>& ret_actions,
 
     if (!partial.candidates_ck()) {
       StabilizationCkInfo info;
-      if (verify_solutions(partial, &info, &nlayers_sum))  break;
-
-      const bool early_return = !info.livelock_exists;
-      if (info.livelock_exists) {
-        if (!early_return) {
-          *partial.log << "backtrack from lvl:" << partial.bt_level << partial.log->endl();
+      bool early_return = true;
+      if (verify_solutions(partial, &info, &nlayers_sum)) {
+        if (synctx.optimal_nlayers_sum == 0 || nlayers_sum < synctx.optimal_nlayers_sum) {
+          break;
         }
+        early_return = false;
+        *partial.log << "SUBOPTIMAL (exceeding best known number of convergence layers: "
+          << nlayers_sum << " >= " << synctx.optimal_nlayers_sum << ")" << partial.log->endl();
+      }
+
+      early_return = early_return && !info.livelock_exists;
+      if (early_return)
+        return false;
+
+      *partial.log << "backtrack from lvl:" << partial.bt_level << partial.log->endl();
+      partial.add_small_conflict_set(partial.picks);
+      if (info.livelock_exists) {
         partial.ctx->conflicts.add_conflict(info.livelock_actions);
-        partial.add_small_conflict_set(partial.picks);
       }
       stack_idx = decmod(stack_idx, 1, bt_stack.sz());
       if (bt_stack[stack_idx].bt_level >= partial.bt_level) {
         base_partial.failed_bt_level = bt_stack[stack_idx].bt_level;
         return false;
       }
-      if (early_return)
-        return false;
-      else
-        continue;
+      continue;
     }
 
     // Pick the action.
@@ -555,6 +561,11 @@ stabilization_search_init
 
   PartialSynthesis& synlvl = synctx.base_partial;
 
+  for (uint i = 0; good && i < exec_opt.params.sz(); ++i) {
+    synlvl[i].no_conflict = !exec_opt.params[i].conflict_ck();
+    synlvl[i].no_partial = !exec_opt.params[i].partial_ck();
+  }
+
   if (exec_opt.task != ProtoconOpt::VerifyTask)
   DoLegit( good, "initializing actions" )
   {
@@ -564,7 +575,6 @@ stabilization_search_init
       DBog0("No actions apply!");
     }
   }
-
 
   if (opt.search_method == opt.RankShuffleSearch)
   {
@@ -576,12 +586,58 @@ stabilization_search_init
                     synlvl.hi_invariant);
   }
 
-
-  for (uint i = 0; good && i < exec_opt.params.sz(); ++i) {
-    synlvl[i].no_conflict = !exec_opt.params[i].conflict_ck();
-    synlvl[i].no_partial = !exec_opt.params[i].partial_ck();
-  }
   return !!good;
+}
+
+
+void
+  multi_verify_stabilization
+( uint i,
+  SynthesisCtx& synctx,
+  vector<uint>& ret_actions,
+  bool& solution_found,
+  const ProtoconFileOpt& infile_opt,
+  const ProtoconOpt& exec_opt,
+  AddConvergenceOpt& opt
+)
+{
+  Xn::Sys sys;
+  ProtoconFileOpt verif_infile_opt( infile_opt );
+  verif_infile_opt.constant_map = exec_opt.params[0].constant_map;
+  const Cx::String& xfilepath = exec_opt.xfilepaths[i];
+  if (xfilepath != exec_opt.xfilepath) {
+    verif_infile_opt.text = textfile_AlphaTab (0, xfilepath.cstr());
+  }
+  *opt.log << "VERIFYING: " << xfilepath << opt.log->endl();
+  const bool lightweight = !exec_opt.conflicts_ofilepath;
+  sys.topology.lightweight = lightweight;
+  if (ReadProtoconFile(sys, verif_infile_opt)) {
+    StabilizationCkInfo info;
+    info.find_livelock_actions = !lightweight;
+    if (stabilization_ck(*opt.log, sys, exec_opt.params[0].stabilization_opt, &info)) {
+      solution_found = true;
+      ret_actions = sys.actions;
+      *opt.log << "System is stabilizing." << opt.log->endl();
+
+      if (!!exec_opt.ofilepath) {
+        Cx::String filepath( exec_opt.ofilepath + "." + i );
+        *opt.log << "Writing system to: " << filepath  << opt.log->endl();
+        Cx::OFileB ofb;
+        ofb.open(filepath);
+        oput_protocon_file(ofb, sys, exec_opt.use_espresso, sys.actions);
+      }
+    }
+    else {
+      *opt.log << "System NOT stabilizing." << opt.log->endl();
+      if (!lightweight && info.livelock_exists) {
+        //synctx.conflicts.add_conflict(FlatSet<uint>(sys.actions));
+        synctx.conflicts.add_conflict(info.livelock_actions);
+      }
+    }
+  }
+  else {
+    *opt.log << "Error reading file: " << xfilepath << opt.log->endl();
+  }
 }
 
 
@@ -669,37 +725,10 @@ stabilization_search(vector<uint>& ret_actions,
 #pragma omp for schedule(dynamic)
     for (uint i = 0; i < exec_opt.xfilepaths.sz(); ++i) {
       if (synctx.done_ck())  continue;
-      Xn::Sys sys;
-      ProtoconFileOpt verif_infile_opt( infile_opt );
-      verif_infile_opt.constant_map = exec_opt.params[0].constant_map;
-      verif_infile_opt.file_path = exec_opt.xfilepaths[i].cstr();
-      *opt.log << "VERIFYING: " << verif_infile_opt.file_path << opt.log->endl();
-      const bool lightweight = !exec_opt.conflicts_ofilepath;
-      sys.topology.lightweight = lightweight;
-      if (ReadProtoconFile(sys, verif_infile_opt)) {
-        StabilizationCkInfo info;
-        info.find_livelock_actions = !lightweight;
-        if (stabilization_ck(*opt.log, sys, exec_opt.params[0].stabilization_opt, &info)) {
-          solution_found = true;
-          ret_actions = sys.actions;
-          *opt.log << "System is stabilizing." << opt.log->endl();
-
-          if (!!exec_opt.ofilepath) {
-            Cx::String filepath( exec_opt.ofilepath + "." + i );
-            *opt.log << "Writing system to: " << filepath  << opt.log->endl();
-            Cx::OFileB ofb;
-            ofb.open(filepath);
-            oput_protocon_file(ofb, sys, exec_opt.use_espresso, sys.actions);
-          }
-        }
-        else {
-          *opt.log << "System NOT stabilizing." << opt.log->endl();
-          if (!lightweight && info.livelock_exists) {
-            //synctx.conflicts.add_conflict(FlatSet<uint>(sys.actions));
-            synctx.conflicts.add_conflict(info.livelock_actions);
-          }
-        }
-      }
+      multi_verify_stabilization
+        (i, synctx, ret_actions,
+         solution_found,
+         infile_opt, exec_opt, opt);
     }
 
 #pragma omp critical (DBog)

@@ -17,9 +17,6 @@ process P[i <- Nat % N]
     read: color[j], phase[j];
   }
   write: color[i], phase[i];
-  forbid: ( 1==1 --> way[2*i]:=1; way[2*i+1]:=1; );
-  forbid: ( 1==1 --> way[2*i]:=0; way[2*i+1]:=0; );
-  forbid: ( way[2*i]==way[2*i+1] --> );
 
   // Actions a,b,c,d from the paper
   puppet action:
@@ -47,23 +44,14 @@ process P[i <- Nat % N]
      -->
       phase[i] := 1-phase[i];
     );
-}
 
-process OrientLink[i <- Nat % (2*N)]
-{
-  let j := if (i % 2 == 0) then (i+1) else (i-1);
-  read: way[j];
-  write: way[i];
-  puppet action:
-    ( way[i] == way[j] --> way[i] := 1-way[j]; )
-    ;
+  (assume & closed)
+    (way[2*i] != way[2*i+1]);
 }
 
 // Eventually, all processes are pointing in the same direction.
-shadow invariant:
+((future & shadow) % puppet)
   (forall i <- Nat % N :
-   way[2*i] != way[2*i+1]
-   &&
    way[2*i] == way[2*(i+1)])
   ;
 

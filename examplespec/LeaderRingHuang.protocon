@@ -11,7 +11,8 @@ process P[i <- Nat % N]
   read: x[i+1];
 }
 
-invariant:
+(future & silent)
+(
   (forall i <- Nat % N :
    (x[i-1] - x[i]) % M == (x[i] - x[i+1]) % M
   )
@@ -24,5 +25,5 @@ invariant:
   //  i == j || x[i] != x[j]
   // )
   //)
-  ;
+);
 

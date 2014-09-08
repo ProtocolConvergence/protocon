@@ -20,6 +20,14 @@ class PcSymmSpec;
 class LinkSymmetry;
 class Spec;
 
+enum InvariantStyle {
+  FutureAndClosed,
+  FutureAndSilent,
+  FutureAndShadow,
+  FutureAndShadowModPuppet,
+  NInvariantStyles
+};
+
 class NatMap {
 public:
   Cx::Table< int > membs;
@@ -153,6 +161,7 @@ class PcSymmSpec {
 public:
   Cx::String name;
   Cx::String idx_name;
+  Cx::String closed_assume_expression;
   Cx::String invariant_expression;
   LetVblMap let_map;
   Cx::Table<const VblSymmSpec*> rvbl_symms;
@@ -170,8 +179,13 @@ public:
   Cx::LgTable<VblSymmSpec> vbl_symms;
 
   LetVblMap constant_map;
-  Cx::String invariant_expression;
+  InvariantStyle invariant_style;
   Cx::String closed_assume_expression;
+  Cx::String invariant_expression;
+
+  Spec()
+    : invariant_style( Xn::FutureAndShadow )
+  {}
 };
 }
 

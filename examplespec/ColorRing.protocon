@@ -11,6 +11,7 @@ process P[i <- Int % N]
   read: c[i-1];
   write: c[i];
   read: c[i+1];
-  invariant: (c[i] != c[i-1]) && (c[i] != c[i+1]);
+  (future & silent)
+    (c[i-1] != c[i] && c[i] != c[i+1]);
 }
 

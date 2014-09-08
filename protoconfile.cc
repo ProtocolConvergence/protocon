@@ -306,7 +306,16 @@ ProtoconFile::parse_action(Cx::PFmla& act_pf, Cx::Table<Cx::PFmla>& pc_xns, Sesp
 
     while (!nil_ck_Sesp (assign_sp)) {
       Sesp sp = car_of_Sesp (assign_sp);
-      Claim( eq_cstr (":=", ccstr_of_Sesp (car_of_Sesp (sp))) );
+      Claim( list_ck_Sesp (sp) );
+
+      bool all_wild = false;
+      if (eq_cstr ("wild", ccstr_of_Sesp (car_of_Sesp (sp)))) {
+        all_wild = true;
+      }
+      else {
+        Claim( eq_cstr (":=", ccstr_of_Sesp (car_of_Sesp (sp))) );
+      }
+
       Sesp vbl_sp = cadr_of_Sesp (sp);
       Sesp val_sp = caddr_of_Sesp (sp);
       assign_sp = cdr_of_Sesp (assign_sp);
@@ -314,31 +323,30 @@ ProtoconFile::parse_action(Cx::PFmla& act_pf, Cx::Table<Cx::PFmla>& pc_xns, Sesp
       Xn::Vbl* vbl = 0;
       Cx::IntPFmla val;
 
-      bool wild_vbl = false;
       DoLegit( good, "eval variable" )
       {
-        if (list_ck_Sesp(vbl_sp) && eq_cstr ("wild", ccstr_of_Sesp (car_of_Sesp (vbl_sp))))
-          wild_vbl = true;
-        else
+        if (!all_wild)
           good = eval_vbl(&vbl, vbl_sp);
       }
 
       bool wild = false;
       DoLegit( good, "eval value" )
       {
-        if (list_ck_Sesp(val_sp) && eq_cstr ("wild", ccstr_of_Sesp (car_of_Sesp (val_sp))))
+        if (all_wild) {
+        }
+        else if (list_ck_Sesp(val_sp) && eq_cstr ("wild", ccstr_of_Sesp (car_of_Sesp (val_sp)))) {
           wild = true;
-        else if (wild_vbl)
-          good = false;
-        else
+        }
+        else {
           good = eval(val, val_sp);
+        }
       }
 
       DoLegit( good, "non-writable variable in assignment" )
       {
         bool found = false;
         for (uint i = 0; i < pc.wvbls.sz(); ++i) {
-          if (wild_vbl) {
+          if (all_wild) {
             found = true;
             wvbl_assigned[i] = 1;
           }
@@ -352,7 +360,7 @@ ProtoconFile::parse_action(Cx::PFmla& act_pf, Cx::Table<Cx::PFmla>& pc_xns, Sesp
       }
       if (!good)  break;
 
-      if (wild_vbl) {
+      if (all_wild) {
         assign_pf = true;
       }
       else if (!wild) {
@@ -522,36 +530,71 @@ ProtoconFile::add_pc_predicate(Sesp name_sp, Sesp val_sp)
 }
 
   bool
+ProtoconFile::add_pc_assume(Sesp assume_sp)
+{
+  Sign good = 1;
+
+  const Cx::String& idx_name = pc_symm_spec->idx_name;
+  Cx::PFmla pf;
+
+  for (uint i = 0; i < pc_symm->membs.sz(); ++i) {
+    index_map[idx_name] = i;
+    DoLegit( good, "" )
+      good = eval(pf, assume_sp);
+
+    if (!good)  break;
+    sys->closed_assume &= pf;
+  }
+
+  Cx::String assume_expression;
+  DoLegit( good, "" )
+    good = string_expression(assume_expression, assume_sp);
+
+  DoLegit( good, "" )
+  {
+    if (!pc_symm_spec->closed_assume_expression.empty_ck()) {
+      pc_symm_spec->closed_assume_expression =
+        Cx::String("(") + pc_symm_spec->closed_assume_expression + ") && ";
+    }
+    pc_symm_spec->closed_assume_expression += assume_expression;
+  }
+  index_map.erase(idx_name);
+  return update_allgood (good);
+}
+
+  bool
 ProtoconFile::add_pc_legit(Sesp legit_sp)
 {
-  bool good = true;
-  Xn::Net& topo = sys->topology;
+  Sign good = 1;
 
-  if (LegitCk( topo.pc_symms.sz() > 0, good, "" ))
-  {
-    const Cx::String& idx_name = pc_symm_spec->idx_name;
-    Cx::PFmla pf;
+  const Cx::String& idx_name = pc_symm_spec->idx_name;
+  Cx::PFmla pf;
 
-    for (uint i = 0; i < pc_symm->membs.sz(); ++i) {
-      index_map[idx_name] = i;
-      if (LegitCk( eval(pf, legit_sp), good, "" ))
-      {
-        sys->invariant &= pf;
-        pc_symm->membs[i]->invariant &= pf;
-      }
+  for (uint i = 0; i < pc_symm->membs.sz(); ++i) {
+    index_map[idx_name] = i;
+    DoLegit( good, "" )
+      good = eval(pf, legit_sp);
+
+    DoLegit( good, "" )
+    {
+      sys->invariant &= pf;
+      pc_symm->membs[i]->invariant &= pf;
     }
-
-    Cx::String invariant_expression;
-    if (LegitCk( string_expression(invariant_expression, legit_sp), good, "" )) {
-      if (!pc_symm_spec->invariant_expression.empty_ck()) {
-        pc_symm_spec->invariant_expression =
-          Cx::String("(") + pc_symm_spec->invariant_expression + ") && ";
-      }
-      pc_symm_spec->invariant_expression += invariant_expression;
-
-    }
-    index_map.erase(idx_name);
   }
+
+  Cx::String invariant_expression;
+  DoLegit( good, "" )
+    good = string_expression(invariant_expression, legit_sp);
+
+  DoLegit( good, "" )
+  {
+    if (!pc_symm_spec->invariant_expression.empty_ck()) {
+      pc_symm_spec->invariant_expression =
+        Cx::String("(") + pc_symm_spec->invariant_expression + ") && ";
+    }
+    pc_symm_spec->invariant_expression += invariant_expression;
+  }
+  index_map.erase(idx_name);
   return update_allgood (good);
 }
 
@@ -1279,5 +1322,4 @@ ProtoconFile::lookup_int(int* ret, const Cx::String& name)
   }
   return update_allgood (false);
 }
-
 

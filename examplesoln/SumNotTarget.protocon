@@ -20,7 +20,7 @@ process P[i <- Nat % N]
     ( x[i-1] + x[i] == Target --> x[i] := Target + 1 - x[i-1]; );
 }
 
-invariant:
+(future & silent)
   (forall i <- Nat % N : x[i-1] + x[i] != Target)
   ;
 

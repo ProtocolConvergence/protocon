@@ -42,13 +42,13 @@ int main(int argc, char** argv)
   }
   else if (exec_opt.task == ProtoconOpt::MinimizeConflictsTask)
   {
-    if (infile_opt.file_path.empty_ck()) {
+    if (exec_opt.xfilepath.empty_ck()) {
       failout_sysCx ("Need to use input file with random or -minimize-conflicts method!");
     }
     stabilization_search(sys.actions, infile_opt, exec_opt, opt);
   }
   else {
-    if (infile_opt.file_path.empty_ck()) {
+    if (exec_opt.xfilepath.empty_ck()) {
       failout_sysCx ("Need to use input file with random or rank/shuffle method!");
     }
     found =
@@ -100,9 +100,7 @@ int main(int argc, char** argv)
     }
     if (!exec_opt.ofilepath.empty_ck())
     {
-      Cx::OFileB ofb;
-      ofb.open(exec_opt.ofilepath);
-      oput_protocon_file (ofb, sys, exec_opt.use_espresso);
+      oput_protocon_file (exec_opt.ofilepath, sys, exec_opt.use_espresso);
     }
   }
   DBogOF.flush();

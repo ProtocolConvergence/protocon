@@ -4,7 +4,7 @@
 // Author: Edsger W. Dijkstra
 // Year: 1974
 
-constant N := 7;
+constant N := 5;
 
 variable up[Int % N] <- Int % 2;
 variable z[Int % N] <- Int % 2;
@@ -43,7 +43,8 @@ process Top[j <- Int % 1]
        );
 }
 
-legit:
+(future & shadow)
+(
   // The bottom and top processes have fixed up values.
   up[0] == 1 && up[N-1] == 0 &&
   // Some process is enabled.
@@ -69,5 +70,6 @@ legit:
     || (i == N-1 &&
         z[i-1] != z[i])
    )
-  );
+  )
+);
 

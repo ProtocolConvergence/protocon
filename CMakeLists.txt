@@ -5,6 +5,7 @@ set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
 
 project (protocon)
 
+#set (CMAKE_BUILD_TYPE DEBUG)
 #set (CMAKE_BUILD_TYPE RELEASE)
 #set (CMAKE_BUILD_TYPE RelWithDebInfo)
 
@@ -83,7 +84,7 @@ set_source_files_properties (${BldPath}/protoconfile.leg.cc PROPERTIES GENERATED
 
 list (APPEND ProtoconSources
   pfmla.cc xnsys.cc inst.cc
-  opt.cc search.cc
+  opt.cc
   promela.cc pla.cc graphviz.cc kautz.cc
   stabilization.cc
   synthesis.cc
@@ -95,7 +96,7 @@ list (APPEND ProtoconSources
 
 link_directories(${GluPath})
 
-addbinexe (test_exe test.cc ${ProtoconSources})
+addbinexe (test_exe test.cc search.cc ${ProtoconSources})
 set_target_properties (test_exe PROPERTIES
   OUTPUT_NAME test
   RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
@@ -103,15 +104,10 @@ target_include_directories (test_exe PUBLIC ${GluIncludePath})
 target_link_libraries (test_exe cu glu cal ${M_LIB})
 
 addbinexe (protocon
-  ${ProtoconSources}
   main.cc
+  search.cc
+  ${ProtoconSources}
   )
-if (OPENMP_FOUND)
-  set_property (TARGET protocon
-    APPEND PROPERTY COMPILE_FLAGS ${OpenMP_C_FLAGS})
-  set_property (TARGET protocon
-    APPEND PROPERTY LINK_FLAGS ${OpenMP_C_FLAGS})
-endif ()
 target_include_directories (protocon PUBLIC ${GluIncludePath})
 target_link_libraries (protocon cu glu cal ${M_LIB})
 
@@ -120,7 +116,7 @@ set_target_properties (biring PROPERTIES
   OUTPUT_NAME biring
   RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
-addbinexe (deadfree ${ProtoconSources} deadfree.cc)
+addbinexe (deadfree deadfree.cc ${ProtoconSources})
 target_include_directories (deadfree PUBLIC ${GluIncludePath})
 target_link_libraries (deadfree cu glu cal ${M_LIB})
 set_target_properties (deadfree PROPERTIES
@@ -143,8 +139,9 @@ endif ()
 
 if (MPI_FOUND)
   addbinexe (protocon-mpi
-    ${ProtoconSources}
     main-mpi.cc mpidissem.cc
+    search.cc
+    ${ProtoconSources}
     )
   target_include_directories (protocon-mpi PUBLIC ${GluIncludePath})
   target_include_directories (protocon-mpi PUBLIC ${MPI_INCLUDE_PATH})
@@ -162,20 +159,57 @@ if (MPI_FOUND)
   endif()
 endif ()
 
+if (OPENMP_FOUND)
+  foreach (target_name protocon test_exe)
+    set_property (TARGET ${target_name}
+      APPEND PROPERTY COMPILE_FLAGS ${OpenMP_C_FLAGS})
+    set_property (TARGET ${target_name}
+      APPEND PROPERTY LINK_FLAGS ${OpenMP_C_FLAGS})
+  endforeach ()
+endif ()
+
 enable_testing ()
 #include (CTest)
 
 cat_parenthesized (TestNames "${CMAKE_CURRENT_SOURCE_DIR}/testlist.h")
 
+## Unit tests.
 foreach (testname ${TestNames})
   add_test (NAME ${testname}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMAND test_exe ${testname})
 endforeach ()
 
+cat_parenthesized (DistribSpecs "${CMAKE_CURRENT_SOURCE_DIR}/meta/examplespec.files")
+cat_parenthesized (DistribSolns "${CMAKE_CURRENT_SOURCE_DIR}/meta/examplesoln.files")
+
+## Ensure that the specifications that we distribute can be parsed.
+foreach (f ${DistribSpecs})
+  add_test (NAME ofile_spec_${f}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    COMMAND "${CMAKE_COMMAND}"
+    -Dprotocon_exe=$<TARGET_FILE:protocon>
+    -Dxfile=examplespec/${f}.protocon
+    -P ${CMAKE_CURRENT_SOURCE_DIR}/verif/ofile.cmake
+    )
+endforeach ()
+
+## Ensure that the solutions that we distribute can be parsed.
+foreach (f ${DistribSolns})
+  add_test (NAME ofile_soln_${f}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    COMMAND "${CMAKE_COMMAND}"
+    -Dprotocon_exe=$<TARGET_FILE:protocon>
+    -Dxfile=examplesoln/${f}.protocon
+    -P ${CMAKE_CURRENT_SOURCE_DIR}/verif/ofile.cmake
+    )
+endforeach ()
+
 set (ExampleSpecs
   ColorRing
-  MatchingRing
+  ColorTree
+  MatchRing
+  MatchRingOneBit
   OldOrientRing
   OrientOddRing
   SortChain
@@ -226,4 +260,10 @@ foreach (f ${ExampleSpecs})
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMAND protocon -verify -x examplesoln/${f}.protocon -def N 5)
 endforeach ()
+
+## Ensure our tests can actually detect failure.
+add_test (NAME Verif4_OrientOddRing
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+  COMMAND protocon -verify -x examplesoln/OrientOddRing.protocon -def N 4)
+set_tests_properties (Verif4_OrientOddRing PROPERTIES WILL_FAIL TRUE)
 

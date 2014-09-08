@@ -54,7 +54,8 @@ process P[j <- Int % (N-1)]
 }
 
 // Make the invariant exactly this, no smoothing over puppet variables is allowed.
-direct invariant:
+((future & shadow) % puppet)
+(
   // One process has the token.
   (unique i <- Int % N :
       i == 0 && t[i-1] == t[i]
@@ -67,5 +68,5 @@ direct invariant:
   //    i == 0 && e[i-1] == e[i]
   // || i != 0 && e[i-1] != e[i]
   //)
-  ;
+);
 

@@ -14,10 +14,11 @@ namespace Xn {
   class Sys;
 }
 class AddConvergenceOpt;
+class ConflictFamily;
 class PartialSynthesis;
 class ProtoconFileOpt;
 class ProtoconOpt;
-class ConflictFamily;
+class SynthesisCtx;
 
 bool
 AddStabilization(vector<uint>& ret_actions,
@@ -44,6 +45,15 @@ initialize_conflicts(ConflictFamily& conflicts,
                      const ProtoconOpt& exec_opt,
                      const AddConvergenceOpt& global_opt,
                      bool do_output);
+void
+multi_verify_stabilization
+ (uint i,
+  SynthesisCtx& synctx,
+  vector<uint>& ret_actions,
+  bool& solution_found,
+  const ProtoconFileOpt& infile_opt,
+  const ProtoconOpt& exec_opt,
+  AddConvergenceOpt& opt);
 bool
 stabilization_search(vector<uint>& ret_actions,
                      const ProtoconFileOpt& infile_opt,

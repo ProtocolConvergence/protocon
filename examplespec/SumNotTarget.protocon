@@ -11,7 +11,7 @@ process P[i <- Nat % N]
   write: x[i];
 }
 
-invariant:
+(future & silent)
   (forall i <- Nat % N :
    x[i-1] + x[i] != Target
   );

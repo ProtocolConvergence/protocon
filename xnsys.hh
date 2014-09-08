@@ -410,12 +410,11 @@ public:
 
   PredicateMap predicate_map;
 
+  /// Assumed state predicate which must remain closed.
+  Cx::PFmla closed_assume;
   /// Invariant to which we should converge.
   Cx::PFmla invariant;
-  /// Invariant to which we should converge.
-  Cx::PFmla closed_assume;
   bool shadow_puppet_synthesis;
-  bool direct_invariant_flag;
   Cx::PFmla shadow_pfmla;
   /// Transition relation within the invariant.
   Cx::PFmla direct_pfmla;
@@ -427,10 +426,9 @@ private:
 
 public:
   Sys()
-    : invariant( true )
-    , closed_assume( true )
+    : closed_assume( true )
+    , invariant( true )
     , shadow_puppet_synthesis(false)
-    , direct_invariant_flag(true)
     , shadow_pfmla(false)
     , direct_pfmla(false)
   {
@@ -446,7 +444,7 @@ public:
     return this->shadow_puppet_synthesis;
   }
   bool direct_invariant_ck() const {
-    return this->direct_invariant_flag;
+    return spec->invariant_style != Xn::FutureAndShadowModPuppet;
   }
 
   void niceIdxFo(uint pcIdx, uint niceIdx) {
@@ -471,9 +469,16 @@ public:
 Cx::OFile&
 OPut(Cx::OFile& of, const Xn::ActSymm& act);
 void
-find_one_cycle(Cx::Table<Cx::PFmla>& states, const Cx::PFmla& xn, const Cx::PFmla& scc);
+find_one_cycle(Cx::Table<Cx::PFmla>& states,
+               const Cx::PFmla& xn, const Cx::PFmla& scc,
+               const Cx::PFmla& initial);
 void
-find_one_cycle(Cx::Table<uint>& actions, const Cx::PFmla& xn, const Cx::PFmla& scc, const Xn::Net& topo);
+find_one_cycle(Cx::Table<Cx::PFmla>& states,
+               const Cx::PFmla& xn, const Cx::PFmla& scc);
+void
+find_livelock_actions(Cx::Table<uint>& actions, const Cx::PFmla& xn,
+                      const Cx::PFmla& scc, const Cx::PFmla& invariant,
+                      const Xn::Net& topo);
 void
 oput_one_cycle(Cx::OFile& of, const Cx::PFmla& xn, const Cx::PFmla& scc, const Xn::Net& topo);
 bool

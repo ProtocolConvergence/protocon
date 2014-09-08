@@ -15,7 +15,7 @@ process P[i <- Int % N]
   write: c[i];
 }
 
-shadow invariant:
+((future & silent) % puppet)
   (forall i <- Nat % N :
    (c[i] != c[i-1]) && (c[i] != c[i+1])
   )

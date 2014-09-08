@@ -2,7 +2,7 @@
 // Dijkstra's self-stabilizing token ring.
 // But without the stabilizing actions.
 
-constant N := 6;
+constant N := 5;
 constant M := N;
 
 variable x[Nat % N] <- Nat % M;
@@ -13,8 +13,10 @@ process Bot[i <- Nat % 1]
   write: x[i];
   // Actions in the legitimate states:
   direct action: ( x[i-1] == x[i] --> x[i] := x[i] + 1; );
+
   // Conjunct this into the invariant:
-  invariant: x[i-1] == x[i] || x[i-1] == (x[i] - 1) % M;
+  (future & shadow)
+    (x[i-1] == x[i] || x[i-1] == (x[i] - 1) % M);
 }
 
 process P[j <- Nat % (N-1)]
@@ -24,14 +26,18 @@ process P[j <- Nat % (N-1)]
   write: x[i];
   // Actions in the legitimate states:
   direct action: ( x[i-1] == (x[i] + 1) % M --> x[i] := x[i] + 1; );
+
   // Conjunct this into the invariant:
-  invariant: x[i-1] == (x[i] + 1) % M || x[i-1] == x[i];
+  (future & shadow)
+    (x[i-1] == (x[i] + 1) % M || x[i-1] == x[i]);
 }
 
-invariant:
+(future & shadow)
   (unique i <- Nat % N :
-   i == 0 && x[i-1] == x[i] ||
-   i != 0 && x[i-1] == (x[i] + 1) % M
+   (i == 0 && x[i-1] == x[i]
+    ||
+    i != 0 && x[i-1] == (x[i] + 1) % M
+   )
   )
   ;
 

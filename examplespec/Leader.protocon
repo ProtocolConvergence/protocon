@@ -1,6 +1,4 @@
 
-protocol Leader;
-
 constant N := 3;
 constant M := 5;
 
@@ -14,6 +12,6 @@ process P[i <- Int % N]
   read:  d[i+1], x[i+1];
 }
 
-shadow invariant:
+((future & shadow) % puppet)
   (unique i <- Int % N : d[i] == 1);
 

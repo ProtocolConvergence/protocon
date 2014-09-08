@@ -637,10 +637,10 @@ OPut(Cx::OFile& of, const Xn::ActSymm& act)
 }
 
   void
-find_one_cycle(Cx::Table<Cx::PFmla>& states, const Cx::PFmla& xn, const Cx::PFmla& scc)
+find_one_cycle(Cx::Table<Cx::PFmla>& states, const Cx::PFmla& xn, const Cx::PFmla& scc, const Cx::PFmla& initial)
 {
   states.clear();
-  states.push( scc.pick_pre() );
+  states.push( initial.pick_pre() );
   Cx::PFmla visit( false );
 
   while (true) {
@@ -669,12 +669,33 @@ find_one_cycle(Cx::Table<Cx::PFmla>& states, const Cx::PFmla& xn, const Cx::PFml
 }
 
   void
-find_one_cycle(Cx::Table<uint>& ret_actions, const Cx::PFmla& xn, const Cx::PFmla& scc, const Xn::Net& topo)
+find_one_cycle(Cx::Table<Cx::PFmla>& states, const Cx::PFmla& xn, const Cx::PFmla& scc)
 {
-  Cx::Table<Cx::PFmla> states;
-  find_one_cycle(states, xn, scc);
+  find_one_cycle(states, xn, scc, scc);
+}
+
+  void
+find_livelock_actions(Cx::Table<uint>& ret_actions, const Cx::PFmla& xn,
+                      const Cx::PFmla& scc, const Cx::PFmla& invariant,
+                      const Xn::Net& topo)
+{
   Cx::Table<uint> actions(ret_actions);
   ret_actions.clear();
+  Cx::Table<Cx::PFmla> states;
+  find_one_cycle(states, xn, scc, scc - invariant);
+  bool livelock_found = false;
+  for (uint i = 0; i < states.sz()-1 && !livelock_found; ++i) {
+    if (!states[i].overlap_ck(invariant)) {
+      livelock_found = true;;
+    }
+  }
+
+  if (!livelock_found) {
+    states.resize(2);
+    states[0] = scc;
+    states[1] = scc;
+  }
+
   for (uint i = 0; i < states.sz()-1; ++i) {
     for (uint j = 0; j < actions.size(); ++j) {
       uint actidx = actions[j];

@@ -17,7 +17,7 @@ process P[i <- Nat % (N-1)]
 }
 
 // Want to converge to a state where the array is sorted.
-(future & closed)
+(future & silent)
   (forall i <- Nat % (N-1) :
    x[i] <= x[i+1]);
 

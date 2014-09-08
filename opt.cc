@@ -20,6 +20,25 @@ enum ProblemInstance {
 };
 
 static
+  void
+ReadFileText (Cx::String& ret_text, const char* filename)
+{
+  const bool use_stdin = eq_cstr ("-", filename);
+  AlphaTab text = textfile_AlphaTab (0, use_stdin ? 0 : filename);
+  if (text.sz == 0) {
+    if (use_stdin) {
+      failout_sysCx ("Could not read standard input.");
+    }
+    else {
+      Cx::String msg( "Could not read file: " );
+      msg += filename;
+      failout_sysCx (msg.cstr());
+    }
+  }
+  ret_text = text;
+}
+
+static
   bool
 handle_param_arg(ProtoconParamOpt& psys_opt, const char* arg, int& argi, int argc, char** argv)
 {
@@ -192,7 +211,6 @@ protocon_options_rec
       }
     }
     else if (eq_cstr (arg, "-x")) {
-      DBog0("Instance: From File");
       problem = FromFileInstance;
       arg = argv[argi++];
       if (!arg) {
@@ -205,13 +223,13 @@ protocon_options_rec
             break;
           }
           exec_opt.xfilepaths.push(arg);
-          if (!infile_opt.file_path) {
-            infile_opt.file_path = arg;
+          if (!exec_opt.xfilepath) {
+            exec_opt.xfilepath = arg;
           }
         }
       }
       else {
-        infile_opt.file_path = arg;
+        exec_opt.xfilepath = arg;
       }
       infile_opt.constant_map = exec_opt.params[0].constant_map;
     }
@@ -265,10 +283,11 @@ protocon_options_rec
       Xn::Sys test_sys;
       ProtoconFileOpt file_opt;
       file_opt.constant_map = exec_opt.params[0].constant_map;
-      if (!argv[argi]) {
+      const char* const filename = argv[argi++];
+      if (!filename) {
         failout_sysCx("Not enuff arguments for -x-test-known.");
       }
-      file_opt.file_path = argv[argi++];
+      ReadFileText (file_opt.text, filename);
       if (!ReadProtoconFile(test_sys, file_opt)) {
         failout_sysCx("Reading -x-test-known file.");
       }
@@ -278,10 +297,11 @@ protocon_options_rec
       Xn::Sys try_sys;
       ProtoconFileOpt file_opt;
       file_opt.constant_map = exec_opt.params[0].constant_map;
-      if (!argv[argi]) {
+      const char* const filename = argv[argi++];
+      if (!filename) {
         failout_sysCx("Not enuff arguments for -x-try.");
       }
-      file_opt.file_path = argv[argi++];
+      ReadFileText (file_opt.text, filename);
       if (!ReadProtoconFile(try_sys, file_opt)) {
         failout_sysCx("Reading -x-try file.");
       }
@@ -341,9 +361,6 @@ protocon_options_rec
     }
     else if (eq_cstr (arg, "-sysrand")) {
       opt.system_urandom = true;
-    }
-    else if (eq_cstr (arg, "-")) {
-      opt.randomize_pick = false;
     }
     else if (eq_cstr (arg, "-max-depth")) {
       if (!xget_uint_cstr (&opt.max_depth, argv[argi++])) {
@@ -452,14 +469,15 @@ protocon_options
   }
 
   if (exec_opt.xfilepaths.sz() == 0) {
-    if (!!infile_opt.file_path) {
-      exec_opt.xfilepaths.push(infile_opt.file_path);
+    if (!!exec_opt.xfilepath) {
+      exec_opt.xfilepaths.push(exec_opt.xfilepath);
     }
   }
 
   // Set up the chosen problem.
   switch(problem){
     case FromFileInstance:
+      ReadFileText (infile_opt.text, exec_opt.xfilepath.cstr());
       if (!ReadProtoconFile(sys, infile_opt))
         failout_sysCx ("");
       break;

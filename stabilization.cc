@@ -74,7 +74,7 @@ shadow_ck(Cx::PFmla* ret_invariant,
   }
 
   const Xn::Net& topo = sys.topology;
-  const Cx::PFmla& shadow_invariant = sys.invariant;
+  const Cx::PFmla& shadow_invariant = sys.invariant & sys.closed_assume;
   const Cx::PFmla& shadow_self =
     shadow_invariant & topo.proj_shadow(topo.identity_xn);
   const Cx::PFmla& shadow_live =
@@ -236,7 +236,7 @@ stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
       if (info->find_livelock_actions) {
         Cx::Table<Cx::PFmla> states;
         info->livelock_actions = info->actions;
-        find_one_cycle(info->livelock_actions, lo_xn, scc, topo);
+        find_livelock_actions(info->livelock_actions, lo_xn, scc, sys.invariant, topo);
         of << info->livelock_actions.size() << " actions involved in livelocks.\n";
       }
     }

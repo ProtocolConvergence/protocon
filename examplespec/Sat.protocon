@@ -14,7 +14,6 @@
 // This formula defines the protocol's $x[0..2]$ domains (via the constant $M$)
 // and the legitimate states.
 
-protocol Sat;
 
 // Number of variables in 3-SAT formula.
 constant M := 3;
@@ -67,6 +66,8 @@ predicate Clauses :=
    y[0] == 1 || y[1] == 0 || y[2] == 0)
   ;
 
-legit:
-  Iden && Clauses && (sat[0] == 1);
+(future & silent)
+(
+  Iden && Clauses && (sat[0] == 1)
+);
 

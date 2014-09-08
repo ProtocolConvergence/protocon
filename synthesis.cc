@@ -912,7 +912,7 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
     adds.clear();
     dels.clear();
     if (ret_nlayers) {
-      *ret_nlayers = 0;
+      *ret_nlayers = 1;
     }
     return true;
   }
@@ -1038,7 +1038,7 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
   this->lo_xn.cycle_ck(&scc, &nlayers, 0, &sys.closed_assume);
   if (max_nlayers > 0 && nlayers > max_nlayers) {
     *this->log << "NLAYERS (maximum number of convergence layers exceeded: "
-      << max_nlayers << ")" << this->log->endl();
+      << nlayers << " > " << max_nlayers << ")" << this->log->endl();
     return false;
   }
   if (ret_nlayers) {
@@ -1056,7 +1056,7 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
                             *this->ctx);
 #else
       conflict_set = this->actions;
-      find_one_cycle (conflict_set, this->lo_xn, scc, topo);
+      find_livelock_actions (conflict_set, this->lo_xn, scc, sys.invariant, topo);
 #endif
       this->ctx->conflicts.add_conflict(conflict_set);
       *this->log << "cycle conflict size:" << conflict_set.sz() << this->log->endl();
@@ -1163,8 +1163,8 @@ PartialSynthesis::revise_actions(const Set<uint>& adds, const Set<uint>& dels,
           nlayers_sum += (*this)[j].lo_nlayers;
         }
         if (nlayers_sum >= max_nlayers_sum) {
-          *this->log << "NLAYERS (maximum number of convergence layers exceeded: 0)"
-            << this->log->endl();
+          *this->log << "SUBOPTIMAL (exceeding best known number of convergence layers: "
+            << nlayers_sum << " >= " << max_nlayers_sum << ")" << this->log->endl();
           return false;
         }
         nlayers_sum -= (*this)[i].lo_nlayers;

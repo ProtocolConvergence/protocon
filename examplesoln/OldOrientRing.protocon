@@ -74,9 +74,10 @@ process P[q <- Int % N]
 }
 
 // Eventually, all processes are pointing in the same direction.
-shadow invariant:
+((future & shadow) % puppet)
+(
   (forall i <- Nat % N : orientation[i] == (FlipField / 2^i) % 2)
   ||
   (forall i <- Nat % N : orientation[i] != (FlipField / 2^i) % 2)
-  ;
+);
 

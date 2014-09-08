@@ -12,7 +12,7 @@ extern "C" {
 class ProtoconFileOpt
 {
 public:
-  Cx::String file_path;
+  Cx::String text;
   Map< Cx::String, uint > constant_map;
 
   ProtoconFileOpt()
@@ -109,6 +109,8 @@ public:
   bool permit_action(Sesp act_sp);
 
   bool add_pc_predicate(Sesp name_sp, Sesp val_sp);
+
+  bool add_pc_assume(Sesp assume_sp);
 
   bool add_pc_legit(Sesp legit_sp);
 

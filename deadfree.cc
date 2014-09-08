@@ -89,7 +89,7 @@ int main(int argc, char** argv)
   Xn::Sys sys;
   sys.topology.lightweight = true;
   ProtoconFileOpt infile_opt;
-  infile_opt.file_path = in_filepath;
+  infile_opt.text = textfile_AlphaTab (0, in_filepath);
 
   if (!ReadProtoconFile(sys, infile_opt))
     failout_sysCx ("Cannot read file!");

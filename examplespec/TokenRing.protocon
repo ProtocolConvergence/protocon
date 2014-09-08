@@ -26,10 +26,11 @@ process P[j <- Int % (N-1)]
     ( t[i-1] != t[i] --> t[i] := 1 - t[i]; );
 }
 
-shadow invariant:
+((future & shadow) % puppet)
+(
   unique i <- Int % N :
   (   i == 0 && t[i-1] == t[i]
    || i != 0 && t[i-1] != t[i]
   )
-  ;
+);
 

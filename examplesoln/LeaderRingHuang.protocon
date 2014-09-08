@@ -23,7 +23,8 @@ process P[i <- Nat % N]
 
 // For prime-sized rings, any solution leaves all x values unique.
 // A leader can be chosen by finding the process whose x[i]==0.
-invariant:
+(future & silent)
+(
   (forall i <- Nat % N :
    (x[i-1] - x[i]) % M == (x[i] - x[i+1]) % M
   )
@@ -34,5 +35,5 @@ invariant:
     i == j || x[i] != x[j]
    )
   )
-  ;
+);
 

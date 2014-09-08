@@ -19,7 +19,7 @@ process P[i <- Nat % N]
   write: x[i];
 }
 
-invariant:
+(future & silent)
   (forall i <- Nat % N :
    (forall q <- Nat % 2 :
     (i == -(2*i + q+1) % N)

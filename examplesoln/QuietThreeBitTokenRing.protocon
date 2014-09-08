@@ -61,7 +61,8 @@ process P[j <- Nat % (N-1)]
 }
 
 // Make the invariant exactly this, no smoothing over puppet variables is allowed.
-direct invariant:
+(future & shadow)
+(
   (unique i <- Nat % N :
    i == 0 &&
    // These are the guards of process Bot.
@@ -105,5 +106,5 @@ direct invariant:
     || e[i-1]==0 && t[i-1]==0 && e[i]==1 && t[i]==1 && ready[i]==0
    )
   )
-  ;
+);
 
