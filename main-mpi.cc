@@ -16,7 +16,6 @@ extern "C" {
 
 #define MpiTag_MpiDissem 1
 #define MpiTag_Conflict 2
-#define MpiTag_Reduce 3
 
 static MpiDissem* mpi_dissem = 0;
 
@@ -289,7 +288,7 @@ stabilization_search(vector<uint>& ret_actions,
   {
     int send_pc = solution_found ? (int)PcIdx : -1;
     ret_pc = send_pc;
-    MPI_Allreduce(&send_pc, &ret_pc, MpiTag_Reduce,
+    MPI_Allreduce(&send_pc, &ret_pc, 1,
                   MPI_INT, MPI_MAX, MPI_COMM_WORLD);
   }
 
