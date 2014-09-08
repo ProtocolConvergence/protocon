@@ -1,5 +1,9 @@
 
-find_package (Qt4 REQUIRED)
+find_package (Qt4)
+
+if (NOT QT4_FOUND)
+  return()
+endif ()
 
 include (${QT_USE_FILE})
 add_definitions (${QT_DEFINITIONS})

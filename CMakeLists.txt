@@ -152,9 +152,18 @@ if (MPI_FOUND)
   target_link_libraries (protocon-mpi cu glu cal ${M_LIB})
 
   if(MPI_COMPILE_FLAGS)
-    set_target_properties (protocon-mpi PROPERTIES
-      COMPILE_FLAGS "${MPI_COMPILE_FLAGS}")
+    set (MPI_COMPILE_FLAGS ${DEFAULT_COMPILE_FLAGS})
+  else()
+    set (MPI_COMPILE_FLAGS "${MPI_COMPILE_FLAGS} ${DEFAULT_COMPILE_FLAGS}")
   endif()
+
+  string (REGEX REPLACE "(^| )[/-]ansi($| )" " "
+    MPI_COMPILE_FLAGS "${MPI_COMPILE_FLAGS}")
+  string (REGEX REPLACE "(^| )[/-]pedantic($| )" " "
+    MPI_COMPILE_FLAGS "${MPI_COMPILE_FLAGS}")
+
+  set_target_properties (protocon-mpi PROPERTIES
+    COMPILE_FLAGS ${MPI_COMPILE_FLAGS})
 
   if(MPI_LINK_FLAGS)
     set_target_properties (protocon-mpi PROPERTIES
