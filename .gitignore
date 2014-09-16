@@ -20,7 +20,6 @@
 /doc/*/*.snm
 /doc/*/*.toc
 /doc/*/*.vrb
-/doc/man.html
 /doc/*.pdf
 /doc/*.aux
 /doc/*.log

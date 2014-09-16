@@ -6,7 +6,7 @@ CxPfx = ../../cx
 tex2web = ../../bin/tex2web
 man2html = man2html
 
-html html/example:
+html/ html/example/:
 	mkdir -p $@
 	chmod a+rx $@
 
