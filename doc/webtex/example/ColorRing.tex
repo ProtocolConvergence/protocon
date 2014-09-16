@@ -9,24 +9,13 @@ The \ilfile{examplespec/ColorRing.protocon} file specifies a bidirectional ring 
 Each process has $3$ colors to choose from.
 This is a very simple protocol and is useful for instruction.
 
-\begin{code}
-// file: ColorRing.protocon
-constant N := 5;
-
-variable c[Nat % N] <- Nat % 3;
-
-process P[i <- Nat % N]
-{
-  read: c[i-1];
-  write: c[i];
-  read: c[i+1];
-  invariant: (c[i] != c[i-1]) && (c[i] != c[i+1]);
-}
-\end{code}
+\codeinputlisting{../../../examplespec/ColorRing.protocon}
 The invariant can also be specified outside of the process definition as:
 \begin{code}
-invariant: forall i <- Nat % N : c[i] != c[i+1];
+(future & silent)
+  (forall i <- Nat % N : c[i] != c[i+1]);
 \end{code}
+outside of the process definition.
 
 The commands in this tutorial should be executed from within the top-level project directory on a Linux system.
 First make a directory \ilfile{tmp/} to store some files.

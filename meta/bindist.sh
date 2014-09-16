@@ -1,13 +1,21 @@
 #!/bin/sh
 
-metapath=$(dirname "$0")
-
-toppath="$metapath/../../"
+metapath=$(readlink -f $(dirname "$0"))
+srcpath=$(dirname "$metapath")
+toppath=$(dirname "$srcpath")
 distpath=$1
 
 if [ ! "$distpath" ]
 then
   distpath="$toppath/protocon-bin"
+fi
+
+distpath=$(readlink -f "$distpath")
+
+if ! make -C "$srcpath/doc"
+then
+  echo 'Cannot create documentation.' >&2
+  exit 1
 fi
 
 mkdir -p "$distpath/bin"
@@ -31,6 +39,12 @@ cat "$metapath/examplesoln.files" | \
   done
 }
 
-mkdir -p "$distpath/doc"
-cp -a -t "$distpath/doc" "$toppath/protocon/doc/protocon.1"
+cp -a -t "$distpath" "$srcpath/doc"
+rm -fr "$distpath/doc/webtex"
+rm -f "$distpath/doc/Makefile"
+
+cd "$(dirname "$distpath")"
+distname=$(basename "$distpath")
+tar czf "$distname.tar.gz" "$distname"
+chmod a+r,a-x "$distname.tar.gz"
 

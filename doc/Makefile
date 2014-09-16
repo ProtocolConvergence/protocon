@@ -1,36 +1,52 @@
 
-#default: $(patsubst %.tex,%.pdf,$(shell ls */main.tex)) \
-#	tosat.pdf algo.pdf behavior.pdf
-
-default:
-	man2html protocon.1 > man.html
+default: all
 
 CxPfx = ../../cx
 
-%/main.pdf: %/main.tex preamble.tex predef.tex bibliography.bib
-	pdflatex -output-directory $(dir $@) $<
-	bibtex $(patsubst %.pdf,%,$@)
-	pdflatex -output-directory $(dir $@) $<
-	pdflatex -output-directory $(dir $@) $<
+tex2web = ../../bin/tex2web
+man2html = man2html
 
-%/quick.pdf: %/main.tex preamble.tex predef.tex bibliography.bib
-	pdflatex -output-directory $(dir $@) $<
-	cp -f $(patsubst %.tex,%.pdf,$<) $@
+html html/example:
+	mkdir -p $@
+	chmod a+rx $@
 
-%/full.pdf: %/main.pdf
-	cp -f $< $@
+define webtex_rule
+Targets += html/$(1).html
 
-%.pdf: %.tex $(addprefix $(CxPfx)/doc/,preamble.tex predef.tex)
-	env TEXINPUTS=$(CxPfx)/doc:.: pdflatex $<
+html/$(1).html: webtex/$(1).tex $(2)
+	$(tex2web) -x $$< -o $$@
+	chmod a+r,a-x $$@
+
+html/$(1).html: | $(dir html/$(1))
+
+endef
+
+define example_deps
+../examplespec/$(1).protocon ../examplesoln/$(1).protocon
+endef
+
+$(eval \
+	$(call webtex_rule,index,webtex/content.tex webtex/changes.tex webtex/thanks.tex) \
+	$(call webtex_rule,example/ColorRing,$(call example_deps,ColorRing)) \
+	$(call webtex_rule,example/OrientOddRing,$(call example_deps,OrientOddRing)) \
+	$(call webtex_rule,example/TokenRingThreeBit,$(call example_deps,TokenRingThreeBit)) \
+	)
+
+Targets += html/man.html
+
+html/man.html: protocon.1
+	$(man2html) $< > $@
+	chmod a+r,a-x $@
+
+html/man.html: | html
+
+all: $(Targets)
 
 .PHONY: clean
 clean:
-	rm -f man.html
-	#rm -f */*.aux */*.log */*.bbl */*.blg
-	#rm -f *.aux *.log
+	rm -fr html
 
 .PHONY: distclean
 distclean: clean
-	rm -f *.pdf
-	rm -f */*.pdf
+	# Nothing more than a clean.
 
