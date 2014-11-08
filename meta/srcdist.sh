@@ -22,11 +22,11 @@ fi
 
 mkdir -p "$distpath"
 cd "$distpath"
-git clone --depth=1 "$toppath/cx" cx
+git clone --depth=1 "file://$toppath/cx" cx
 rm -fr cx/.git
-git clone --depth=1 "$toppath/cx-pp" cx-pp
+git clone --depth=1 "file://$toppath/cx-pp" cx-pp
 rm -fr cx-pp/.git
-git clone --depth=1 "$toppath/protocon" $src
+git clone --depth=1 "file://$toppath/protocon" $src
 rm -fr $src/.git
 
 cp -a -t ./ "$metapath/CMakeLists.txt"

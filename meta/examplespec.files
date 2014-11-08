@@ -12,6 +12,7 @@ MatchRing
 MatchRingOneBit
 OrientOddRing
 OrientRing
+OrientRingViaToken
 Sat
 SumNotTarget
 SumNotTwo

@@ -544,6 +544,8 @@ ProtoconFile::add_pc_assume(Sesp assume_sp)
 
     if (!good)  break;
     sys->closed_assume &= pf;
+    sys->invariant &= pf;
+    pc_symm->membs[i]->invariant &= pf;
   }
 
   Cx::String assume_expression;

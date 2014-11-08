@@ -4,14 +4,14 @@
 
 constant N := 5;
 
-variable c[Int % N] <- Int % 3;
+variable x[Int % N] <- Int % 3;
 
 process P[i <- Int % N]
 {
-  read: c[i-1];
-  write: c[i];
-  read: c[i+1];
+  read: x[i-1];
+  write: x[i];
+  read: x[i+1];
   (future & silent)
-    (c[i-1] != c[i] && c[i] != c[i+1]);
+    (x[i-1] != x[i] && x[i] != x[i+1]);
 }
 

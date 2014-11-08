@@ -1,5 +1,6 @@
 
 #include "xnsys.hh"
+#include <cx/bittable.hh>
 
 Cx::OFile DBogOF( stderr_OFile () );
 
@@ -443,6 +444,18 @@ Net::oput(ostream& of,
 }
 
   Cx::OFile&
+Net::oput_vbl_names(Cx::OFile& of) const
+{
+  for (uint i = 0; i < this->vbls.sz(); ++i) {
+    if (i > 0)
+      of << ' ';
+    of << name_of (this->vbls[i]);
+  }
+  of << '\n';
+  return of;
+}
+
+  Cx::OFile&
 Net::oput_pfmla(Cx::OFile& of, Cx::PFmla pf,
                 Sign pre_or_img, bool just_one) const
 {
@@ -722,15 +735,24 @@ oput_one_cycle(Cx::OFile& of, const Cx::PFmla& xn, const Cx::PFmla& scc, const X
   of.flush();
 }
 
-  Cx::PFmla
+  X::Fmla
 Xn::Net::sync_xn(const Cx::Table<uint>& actidcs) const
 {
-  // Unidirectional ring.
-  Cx::Table<Cx::PFmla> pc_xns(this->pcs.sz(), Cx::PFmla(false));
-
+  Cx::Table<P::Fmla> pc_xns(this->pcs.sz(), P::Fmla(false));
+  Cx::Set<uint> all_actidcs_set;
   for (uint i = 0; i < actidcs.sz(); ++i) {
+    const Cx::Table<uint>& all_acts =
+      represented_actions[actidcs[i]];
+    for (uint j = 0; j < all_acts.sz(); ++j) {
+      all_actidcs_set << all_acts[j];
+    }
+  }
+
+  Cx::FlatSet<uint> all_actidcs( all_actidcs_set );
+
+  for (uint i = 0; i < all_actidcs.sz(); ++i) {
     ActSymm act;
-    this->action(act, actidcs[i]);
+    this->action(act, all_actidcs[i]);
     const Xn::PcSymm& pc_symm = *act.pc_symm;
     for (uint symmidx = 0; symmidx < pc_symm.membs.sz(); ++symmidx) {
       const uint pcidx = this->pcs.index_of(pc_symm.membs[symmidx]);
@@ -738,29 +760,48 @@ Xn::Net::sync_xn(const Cx::Table<uint>& actidcs) const
     }
   }
 
-  Cx::PFmla xn(true);
+  Cx::BitTable written_vbls( vbls.sz(), 0 );
+
+  X::Fmla xn(true);
   for (uint pcidx = 0; pcidx < this->pcs.sz(); ++pcidx) {
     const Xn::Pc& pc = this->pcs[pcidx];
-    Cx::PFmla self_loop( true );
+    P::Fmla self_loop( true );
     for (uint i = 0; i < pc.wvbls.sz(); ++i) {
       const Cx::PFmlaVbl& vbl = this->pfmla_vbl(*pc.wvbls[i]);
       self_loop &= vbl.img_eq(vbl);
+
+      const uint xnvbl_idx = vbls.index_of(pc.wvbls[i]);
+      if (1 == written_vbls[xnvbl_idx]) {
+        const char msg[] = "Two processes cannot write to the same variable in a synchronous system!";
+        DBog0( msg );
+        failout_sysCx (msg);
+      }
+      written_vbls[xnvbl_idx] = 1;
     }
     self_loop -= pc_xns[pcidx].pre();
     xn &= (self_loop | pc_xns[pcidx]);
   }
+
+  X::Fmla read_only_identity_xn( true );
+  for (uint i = 0; i < written_vbls.sz(); ++i) {
+    if (1 == written_vbls[i])
+      continue;
+    const Cx::PFmlaVbl& vbl = pfmla_vbl(vbls[i]);
+    read_only_identity_xn &= vbl.img_eq(vbl);
+  }
+  xn &= read_only_identity_xn;
   xn -= this->identity_xn;
   return xn;
 }
 
-  Cx::PFmla
+  X::Fmla
 Xn::Net::xn_of_pc(const Xn::ActSymm& act, uint pcidx) const
 {
   const Xn::PcSymm& pc_symm = *act.pc_symm;
   const Xn::Pc& pc = *pc_symm.membs[pcidx];
   // Local transition whose guard is over puppet variables
   // but does make an assignment to the writeable pure shadow variables.
-  Cx::PFmla xn(true);
+  X::Fmla xn(true);
 
   for (uint i = 0; i < pc.wvbls.sz(); ++i) {
     const Cx::PFmlaVbl& vbl = pfmla_vbl(*pc.wvbls[i]);
@@ -777,15 +818,15 @@ Xn::Net::xn_of_pc(const Xn::ActSymm& act, uint pcidx) const
   return xn;
 }
 
-  Cx::PFmla
+  X::Fmla
 Xn::Net::pure_shadow_xn_of_pc(const Xn::ActSymm& act, uint pcidx) const
 {
   const Xn::PcSymm& pc_symm = *act.pc_symm;
   const Xn::Pc& pc = *pc_symm.membs[pcidx];
 
   // Fixed states for the pure shadow variables.
-  Cx::PFmla pure_shadow_pre(true);
-  Cx::PFmla pure_shadow_img(true);
+  P::Fmla pure_shadow_pre(true);
+  P::Fmla pure_shadow_img(true);
 
   for (uint i = 0; i < pc.wvbls.sz(); ++i) {
     const Cx::PFmlaVbl& vbl = pfmla_vbl(*pc.wvbls[i]);
@@ -814,14 +855,14 @@ Xn::Net::pure_shadow_xn_of_pc(const Xn::ActSymm& act, uint pcidx) const
 }
 
   void
-Xn::Net::make_action_pfmla(Cx::PFmla* ret_xn, Cx::PFmla* ret_pure_shadow_xn, uint actidx) const
+Xn::Net::make_action_pfmla(X::Fmla* ret_xn, X::Fmla* ret_pure_shadow_xn, uint actidx) const
 {
   Xn::ActSymm act;
   this->action(act, actidx);
   const Xn::PcSymm& pc_symm = *act.pc_symm;
 
-  Cx::PFmla xn(false);
-  Cx::PFmla pure_shadow_pfmla(true);
+  X::Fmla xn(false);
+  X::Fmla pure_shadow_pfmla(true);
 
   for (uint pc_memb_idx = 0; pc_memb_idx < pc_symm.membs.sz(); ++pc_memb_idx) {
     const Xn::Pc& pc = *pc_symm.membs[pc_memb_idx];

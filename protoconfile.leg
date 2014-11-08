@@ -23,6 +23,7 @@ ProtoconFile =
   (Protocol WS?)?
   (ConstDecl WS?)*
   (VarDecl WS?)+
+  { yy->st->sys->topology.commit_variables(); }
   ((  NamedPredicate
     | GlobalAssume
     | GlobalLegit
@@ -349,9 +350,14 @@ Disjunction =
   ;
 
 Conjunction =
-  a:Comparison
-  (WS? '&&' WS? b:Comparison {a.sp = list3_ccstr_Sesp ("&&", a.sp, b.sp);  a.int_ck = 0;} )*
+  a:ChainlessFormula
+  (WS? '&&' WS? b:ChainlessFormula {a.sp = list3_ccstr_Sesp ("&&", a.sp, b.sp);  a.int_ck = 0;} )*
   {$$ = a;}
+  ;
+
+ChainlessFormula =
+    a:Quantify {$$ = a;}
+  | a:Comparison {$$ = a;}
   ;
 
 Comparison =

@@ -566,5 +566,15 @@ transitive_closure(const Cx::PFmla& xn);
 bool
 SCC_Find(Cx::PFmla* ret_cycles, const Cx::PFmla& E, const Cx::PFmla& pf);
 
+namespace P
+{
+  typedef Cx::PFmla Fmla;
+}
+
+namespace X
+{
+  typedef Cx::PFmla Fmla;
+}
+
 #endif
 

@@ -380,6 +380,8 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys, bool use_espresso, const 
   stdxpipe_OSPc (ospc);
   stdopipe_OSPc (ospc);
   ospc->cmd = cons1_AlphaTab ("espresso");
+  /* Using -Dexact can take a long time.*/
+  //PushTable( ospc->args, cons1_AlphaTab ("-Dexact") );
 
   const Xn::Net& topo = sys.topology;
   oput_protocon_constants (of, *sys.spec);

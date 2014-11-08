@@ -384,6 +384,7 @@ public:
                 const String& pfx,
                 const String& sfx) const;
 
+  Cx::OFile& oput_vbl_names(Cx::OFile& of) const;
   Cx::OFile& oput_pfmla(Cx::OFile& of, Cx::PFmla pf,
                         Sign pre_or_img, bool just_one) const;
   Cx::OFile& oput_one_xn(Cx::OFile& of, const Cx::PFmla& pf) const;
@@ -392,11 +393,11 @@ public:
   Cx::OFile& oput_all_pf(Cx::OFile& of, const Cx::PFmla& pf) const;
 
 
-  Cx::PFmla sync_xn(const Cx::Table<uint>& actidcs) const;
-  Cx::PFmla xn_of_pc(const Xn::ActSymm& act, uint pcidx) const;
-  Cx::PFmla pure_shadow_xn_of_pc(const Xn::ActSymm& act, uint pcidx) const;
-  void make_action_pfmla(Cx::PFmla* ret_xn, Cx::PFmla* ret_pure_shadow_xn, uint actidx) const;
-  void make_action_pfmla(Cx::PFmla* ret_xn, uint actid) const;
+  X::Fmla sync_xn(const Cx::Table<uint>& actidcs) const;
+  X::Fmla xn_of_pc(const Xn::ActSymm& act, uint pcidx) const;
+  X::Fmla pure_shadow_xn_of_pc(const Xn::ActSymm& act, uint pcidx) const;
+  void make_action_pfmla(X::Fmla* ret_xn, X::Fmla* ret_pure_shadow_xn, uint actidx) const;
+  void make_action_pfmla(X::Fmla* ret_xn, uint actid) const;
 private:
   void cache_action_pfmla(uint actid);
 };

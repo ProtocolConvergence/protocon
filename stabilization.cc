@@ -56,25 +56,26 @@ shadow_ck(Cx::PFmla* ret_invariant,
           const Cx::PFmla& lo_xn, const Cx::PFmla& hi_xn,
           const Cx::PFmla* lo_scc)
 {
+  const Xn::Net& topo = sys.topology;
+  const Cx::PFmla& shadow_invariant = sys.invariant & sys.closed_assume;
+
   if (!sys.shadow_puppet_synthesis_ck()) {
     // Closure.
-    if (!lo_xn.img(sys.invariant).subseteq_ck(sys.invariant)) {
+    if (!lo_xn.img(shadow_invariant).subseteq_ck(shadow_invariant)) {
       return false;
     }
     // Shadow behavior.
-    if (!(sys.shadow_pfmla & sys.invariant).subseteq_ck(hi_xn)) {
+    if (!(sys.shadow_pfmla & shadow_invariant).subseteq_ck(hi_xn)) {
       return false;
     }
-    if (!(lo_xn & sys.invariant).subseteq_ck(sys.shadow_pfmla)) {
+    if (!(lo_xn & shadow_invariant).subseteq_ck(sys.shadow_pfmla)) {
       return false;
     }
     if (ret_invariant)
-      *ret_invariant = sys.invariant;
+      *ret_invariant = shadow_invariant;
     return true;
   }
 
-  const Xn::Net& topo = sys.topology;
-  const Cx::PFmla& shadow_invariant = sys.invariant & sys.closed_assume;
   const Cx::PFmla& shadow_self =
     shadow_invariant & topo.proj_shadow(topo.identity_xn);
   const Cx::PFmla& shadow_live =
@@ -178,22 +179,24 @@ stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
                  StabilizationCkInfo* info)
 {
   const Xn::Net& topo = sys.topology;
+  const bool show_failure = true;
   if (sys.shadow_puppet_synthesis_ck()) {
     of << "Checking for bad shadow...\n";
   }
   else {
     of << "Checking for self-loops...\n";
   }
-  if (lo_xn.img().overlap_ck(lo_xn & topo.proj_puppet(topo.identity_xn))) {
+  if ((lo_xn.img() & sys.closed_assume).overlap_ck(lo_xn & topo.proj_puppet(topo.identity_xn))) {
     if (sys.shadow_puppet_synthesis_ck()) {
       of << "Pure shadow behavior is not put together properly.\n";
     }
     else {
       of << "Self-loop found.\n";
     }
-    if (false) {
+    if (show_failure) {
       const Cx::PFmla& puppet_self = lo_xn & topo.proj_puppet(topo.identity_xn);
       Cx::PFmla pf = (lo_xn.img() & puppet_self.pre()).pick_pre();
+      topo.oput_vbl_names(of);
       topo.oput_one_pf(of, lo_xn.pre(pf));
       topo.oput_one_pf(of, pf);
       topo.oput_one_pf(of, puppet_self.img(pf));
@@ -205,9 +208,10 @@ stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
   of << "Checking for deadlocks..." << of.endl();
   if (!(~sys.invariant & sys.closed_assume).subseteq_ck(hi_xn.pre())) {
     of << "Deadlock found.\n";
-    if (false) {
+    if (show_failure) {
       Cx::PFmla pf = (~sys.invariant & sys.closed_assume) - hi_xn.pre();
-      topo.oput_all_pf(of, pf);
+      topo.oput_vbl_names(of);
+      topo.oput_one_pf(of, pf);
     }
     of.flush();
     return false;
@@ -240,7 +244,8 @@ stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
         of << info->livelock_actions.size() << " actions involved in livelocks.\n";
       }
     }
-    if (false) {
+    if (show_failure) {
+      topo.oput_vbl_names(of);
       oput_one_cycle(of, lo_xn, scc, topo);
     }
     of.flush();

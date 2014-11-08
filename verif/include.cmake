@@ -81,6 +81,7 @@ endforeach ()
 list (APPEND ExampleSpecs
   FoundThreeBitTokenRing
   OrientRing
+  OrientRingViaToken
   TokenChainDijkstra
   TokenRingSixStateQuiet
   TokenRingThreeState
@@ -97,4 +98,8 @@ add_test (NAME Verif4_OrientOddRing
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
   COMMAND protocon -verify -x examplesoln/OrientOddRing.protocon -def N 4)
 set_tests_properties (Verif4_OrientOddRing PROPERTIES WILL_FAIL TRUE)
+
+add_test (NAME Verif4_Sync_OrientRing
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+  COMMAND protocon -verify -synchronous -x examplesoln/OrientRing.protocon -def N 4)
 
