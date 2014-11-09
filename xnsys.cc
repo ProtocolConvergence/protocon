@@ -915,7 +915,10 @@ Xn::Net::cache_action_pfmla(uint actidx)
 }
 
   bool
-candidate_actions(std::vector<uint>& candidates, Cx::Table<uint>& rejs, const Xn::Sys& sys)
+candidate_actions(std::vector<uint>& candidates,
+                  Cx::Table<uint>& dels,
+                  Cx::Table<uint>& rejs,
+                  const Xn::Sys& sys)
 {
   const Xn::Net& topo = sys.topology;
 
@@ -999,15 +1002,21 @@ candidate_actions(std::vector<uint>& candidates, Cx::Table<uint>& rejs, const Xn
       add = false;
       rejs << actidx;
     }
+    if (add && !sys.closed_assume.overlap_ck(act_pf.pre())) {
+      add = false;
+      dels << actidx;
+    }
     if (add && sys.direct_invariant_ck()) {
-      if (!act_pf.img(sys.invariant).subseteq_ck(sys.invariant)) {
+      if (!act_pf.img(sys.invariant & sys.closed_assume).subseteq_ck(sys.invariant)) {
         add = false;
         rejs << actidx;
         if (false) {
           OPut((DBogOF << "Action " << actidx << " breaks closure: "), act) << '\n';
         }
       }
-      else if (!(act_pf & sys.invariant).subseteq_ck(sys.shadow_pfmla | sys.shadow_self)) {
+      else if (!(act_pf & sys.invariant & sys.closed_assume)
+               .subseteq_ck(sys.shadow_pfmla | sys.shadow_self))
+      {
         add = false;
         rejs << actidx;
         if (false) {

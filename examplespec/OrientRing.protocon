@@ -4,9 +4,9 @@ constant N := 3;
 // This can be 0, 3, or 4.
 constant NColors := 0;
 
-variable cgt[Nat % (2*N)] <- Nat % 2;
-variable flipped[Nat % N] <- Nat % 2;
-variable way[Nat % (2*N)] <- Nat % 2;
+puppet variable cgt[Nat % (2*N)] <- Nat % 2;
+puppet variable flipped[Nat % N] <- Nat % 2;
+direct variable way[Nat % (2*N)] <- Nat % 2;
 
 
 // Colors of processes can be compared logically.
@@ -54,6 +54,12 @@ process P[i <- Nat % N]
   write: flipped[i];
 
   (assume & closed) (way[2*i] != way[2*i+1]);
-  (future & silent) (way[2*i-1]==way[2*i+1] && flipped[i]==0);
 }
+
+// Eventually, all processes point in the same direction.
+((future & shadow) % puppet)
+  (forall i <- Nat % N : way[2*i-1]==way[2*i+1]);
+
+// We want a silent protocol.
+future silent;
 

@@ -435,6 +435,10 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys, bool use_espresso, const 
     of << "\n  (" << sys.spec->invariant_expression << ");\n";
   }
 
+  if (sys.spec->invariant_behav == Xn::FutureSilent) {
+    of << "future silent;\n";
+  }
+
   lose_OSPc (ospc);
   return good;
 }

@@ -93,13 +93,26 @@ foreach (f ${ExampleSpecs})
     COMMAND protocon -verify -x examplesoln/${f}.protocon -def N 5)
 endforeach ()
 
+list (APPEND VerifyBySynthesis
+  ColorRing
+  FoundThreeBitTokenRing
+  OrientRing
+  OrientOddRing
+  )
+
+foreach (f ${VerifyBySynthesis})
+  add_test (NAME VerifSyn_${f}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    COMMAND protocon -x examplesoln/${f}.protocon -def N 5)
+endforeach ()
+
+add_test (NAME Verif4_Sync_OrientRing
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+  COMMAND protocon -verify -synchronous -x examplesoln/OrientRing.protocon -def N 4)
+
 ## Ensure our tests can actually detect failure.
 add_test (NAME Verif4_OrientOddRing
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
   COMMAND protocon -verify -x examplesoln/OrientOddRing.protocon -def N 4)
 set_tests_properties (Verif4_OrientOddRing PROPERTIES WILL_FAIL TRUE)
-
-add_test (NAME Verif4_Sync_OrientRing
-  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-  COMMAND protocon -verify -synchronous -x examplesoln/OrientRing.protocon -def N 4)
 

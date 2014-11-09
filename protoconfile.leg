@@ -27,6 +27,7 @@ ProtoconFile =
   ((  NamedPredicate
     | GlobalAssume
     | GlobalLegit
+    | GlobalLegitBehav
     | ProcDecl
    )
    WS?
@@ -248,6 +249,11 @@ GlobalLegit =
     WS? ')' WS?
     '(' WS? a:Expr WS? ')' END_STMT
     {yy->st->add_legit(a.sp);}
+  ;
+
+GlobalLegitBehav =
+  FUTURE_SILENT {yy->st->sys->spec->invariant_behav = Xn::FutureSilent;}
+  END_STMT
   ;
 
 ConstExpr = a:ConstSum {$$ = a;}
@@ -499,6 +505,11 @@ FUTURE_AND_CLOSED_AND_ACTIVE =
     FUTURE_AND_CLOSED WS? '&' WS? ACTIVE
   | FUTURE_AND_ACTIVE WS? '&' WS? CLOSED
   | CLOSED_AND_ACTIVE WS? '&' WS? FUTURE
+  ;
+
+FUTURE_SILENT =
+    FUTURE WS SILENT
+  | SILENT WS FUTURE
   ;
 
 ACTION = 'act:' | 'action:' ;

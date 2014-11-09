@@ -1296,9 +1296,10 @@ SynthesisCtx::add(const Xn::Sys& sys, const StabilizationOpt& stabilization_opt)
   if (topo.lightweight)
     return true;
 
+  Cx::Table<uint> dels;
   Cx::Table<uint> rejs;
   bool good =
-    candidate_actions(partial.candidates, rejs, sys);
+    candidate_actions(partial.candidates, dels, rejs, sys);
   for (uint i = 0; i < rejs.sz(); ++i) {
     synctx.conflicts.add_impossible(rejs[i]);
   }

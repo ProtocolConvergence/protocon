@@ -18,11 +18,14 @@ process P[i <- Int % N]
 
 
 // The following cases are P[i] pointing
-// to P[i-1], itself, or P[i+1] repsectively.
+// to P[i-1], itself, or P[i+1] respectively.
 ((future & shadow) % puppet)
   (forall i <- Int % N :
       m[i-1] == 2 && m[i] == 0
    || m[i-1] == 0 && m[i] == 1 && m[i+1] == 2
    ||                m[i] == 2 && m[i+1] == 0
   );
+
+// Actions will eventually cease.
+future silent;
 

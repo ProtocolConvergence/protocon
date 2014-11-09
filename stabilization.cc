@@ -56,6 +56,7 @@ shadow_ck(Cx::PFmla* ret_invariant,
           const Cx::PFmla& lo_xn, const Cx::PFmla& hi_xn,
           const Cx::PFmla* lo_scc)
 {
+  static const bool explain_failure = false;
   const Xn::Net& topo = sys.topology;
   const Cx::PFmla& shadow_invariant = sys.invariant & sys.closed_assume;
 
@@ -84,11 +85,15 @@ shadow_ck(Cx::PFmla* ret_invariant,
   // There shouldn't be non-progress cycles.
   if (lo_scc) {
     if ((lo_xn & shadow_self).cycle_ck(*lo_scc & shadow_live.pre())) {
+      if (explain_failure)
+        DBog0( "Non-progress cycle in invariant." );
       return false;
     }
   }
   else {
     if ((lo_xn & shadow_self).cycle_ck(shadow_live.pre())) {
+      if (explain_failure)
+        DBog0( "Non-progress cycle in invariant." );
       return false;
     }
   }
@@ -106,6 +111,10 @@ shadow_ck(Cx::PFmla* ret_invariant,
   Cx::PFmla hi_self = hi_xn & shadow_self;
   // Over-approximation of protocol which does change shadow variables.
   Cx::PFmla hi_live = hi_xn & shadow_live;
+
+  if (sys.spec->invariant_behav == Xn::FutureSilent) {
+    hi_invariant -= lo_xn.pre();
+  }
 
   // Trim all states which cannot be in the invariant since we cannot
   // simulate the shadow protocol in those states given the current
@@ -136,23 +145,31 @@ shadow_ck(Cx::PFmla* ret_invariant,
   Claim( (lo_xn & hi_invariant).subseteq_ck(hi_live | hi_self) );
 
   // Over-approximated protocol must preserve shadow invariant.
-  if (!shadow_invariant.equiv_ck(topo.proj_shadow(hi_invariant))) {
+  if (!topo.proj_shadow(shadow_invariant).equiv_ck(topo.proj_shadow(hi_invariant))) {
+      if (explain_failure)
+        DBog0( "Does not preserve shadow invariant." );
     return false;
   }
 
   // Over-approximated protocol must preserve shadow transitions.
   if (!shadow_live.equiv_ck(topo.proj_shadow(hi_live))) {
+      if (explain_failure)
+        DBog0( "Does not preserve shadow transitions." );
     return false;
   }
 
   // Over-approximated protocol must preserve shadow transitions.
   if (lo_scc) {
     if (!lo_scc->subseteq_ck(hi_invariant)) {
+      if (explain_failure)
+        DBog0( "Cycle outside invariant." );
       return false;
     }
   }
   else {
     if (lo_xn.cycle_ck(shadow_invariant - hi_invariant)) {
+      if (explain_failure)
+        DBog0( "Cycle outside invariant." );
       return false;
     }
   }
@@ -162,6 +179,8 @@ shadow_ck(Cx::PFmla* ret_invariant,
 
   if (sys.direct_invariant_ck()) {
     if (!hi_invariant.equiv_ck(shadow_invariant)) {
+      if (explain_failure)
+        DBog0( "Closure violated." );
       return false;
     }
   }

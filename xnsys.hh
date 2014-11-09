@@ -483,7 +483,10 @@ find_livelock_actions(Cx::Table<uint>& actions, const Cx::PFmla& xn,
 void
 oput_one_cycle(Cx::OFile& of, const Cx::PFmla& xn, const Cx::PFmla& scc, const Xn::Net& topo);
 bool
-candidate_actions(std::vector<uint>& candidates, Cx::Table<uint>& rejs, const Xn::Sys& sys);
+candidate_actions(std::vector<uint>& candidates,
+                  Cx::Table<uint>& dels,
+                  Cx::Table<uint>& rejs,
+                  const Xn::Sys& sys);
 
 #endif
 
