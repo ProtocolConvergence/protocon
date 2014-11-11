@@ -85,6 +85,10 @@ AddStabilization(vector<uint>& ret_actions,
   }
 
   while (true) {
+    // This is used for an assertion at the end of this loop,
+    // but the sum can be updated be updated by other processes.
+    const uint old_optimal_nlayers_sum = synctx.optimal_nlayers_sum;
+
     PartialSynthesis& partial = bt_stack[stack_idx];
     if (synctx.done_ck()) {
       base_partial.failed_bt_level = partial.failed_bt_level;
@@ -177,8 +181,8 @@ AddStabilization(vector<uint>& ret_actions,
       }
       actidx = partial.picks.top();
     }
-    if (synctx.optimal_nlayers_sum > 0) {
-      Claim2( nlayers_sum ,<, synctx.optimal_nlayers_sum );
+    if (old_optimal_nlayers_sum > 0) {
+      Claim2( nlayers_sum ,<, old_optimal_nlayers_sum );
     }
   }
   PartialSynthesis& partial = bt_stack[stack_idx];
@@ -648,6 +652,7 @@ stabilization_search(vector<uint>& ret_actions,
                      const AddConvergenceOpt& global_opt)
 {
   bool solution_found = false;
+  uint solution_nlayers_sum = 0;
   uint NPcs = 0;
   ConflictFamily conflicts;
   Cx::Table< FlatSet<uint> > flat_conflicts;
@@ -667,7 +672,8 @@ stabilization_search(vector<uint>& ret_actions,
     omp_set_num_threads(1);
 #endif
 
-#pragma omp parallel shared(done_flag,NPcs,solution_found,ret_actions,conflicts,flat_conflicts)
+#pragma omp parallel shared(done_flag,NPcs,solution_found,solution_nlayers_sum,\
+                            ret_actions,conflicts,flat_conflicts)
   {
   Sign good = 1;
   AddConvergenceOpt opt(global_opt);
@@ -769,11 +775,11 @@ stabilization_search(vector<uint>& ret_actions,
     synctx.conflicts.oput_conflict_sizes(*opt.log);
   }
 
-  vector<uint> actions;
   if (exec_opt.task == ProtoconOpt::SearchTask)
   for (uint trial_idx = 0; !synctx.done_ck() && (opt.ntrials == 0 || trial_idx < opt.ntrials); ++trial_idx)
   {
     bool found = false;
+    vector<uint> actions;
     if (opt.search_method == opt.RankShuffleSearch)
     {
       PartialSynthesis tape( synlvl );
@@ -801,10 +807,26 @@ stabilization_search(vector<uint>& ret_actions,
 
 #pragma omp critical (DBog)
     {
+    if (found) {
+      found = (solution_nlayers_sum == 0
+               ||
+               synctx.optimal_nlayers_sum < solution_nlayers_sum);
+
+      if (found) {
+        solution_found = true;
+        ret_actions = actions;
+        solution_nlayers_sum = synctx.optimal_nlayers_sum;
+      }
+
+      if (!opt.optimize_soln)
+        synctx.optimal_nlayers_sum = 0;
+    }
+
     if (synctx.done_ck())
     {}
     else if (found)
     {
+      *opt.log << "SOLUTION FOUND!" << opt.log->endl();
       bool count_solution = true;
       if (opt.solution_as_conflict || global_opt.optimize_soln) {
         FlatSet<uint> flat_actions( actions );
@@ -827,11 +849,12 @@ stabilization_search(vector<uint>& ret_actions,
         ofb.open(exec_opt.ofilepath + "." + PcIdx + "." + trial_idx);
         oput_protocon_file (ofb, sys, exec_opt.use_espresso, actions);
       }
-
-      solution_found = true;
-      ret_actions = actions;
-      *opt.log << "SOLUTION FOUND!" << opt.log->endl();
     }
+
+    if (synctx.opt.optimize_soln) {
+      synctx.optimal_nlayers_sum = solution_nlayers_sum;
+    }
+
     if (!synctx.done_ck() || !!exec_opt.conflicts_ofilepath || try_known_solution_ck)
     {
       if (try_known_solution_ck &&
@@ -863,7 +886,7 @@ stabilization_search(vector<uint>& ret_actions,
         DBogOF << "pcidx:" << PcIdx << " trial:" << trial_idx+1 << " actions:" << actions.size() << '\n';
       else
         DBogOF << "pcidx:" << PcIdx << " trial:" << trial_idx+1 << " depth:" << synlvl.failed_bt_level
-          << " nlayers_sum:" << synctx.optimal_nlayers_sum << '\n';
+          << " nlayers_sum:" << solution_nlayers_sum << '\n';
       DBogOF.flush();
     }
     }
@@ -873,7 +896,7 @@ stabilization_search(vector<uint>& ret_actions,
       *opt.log << "pcidx:" << PcIdx << " trial:" << trial_idx+1 << " actions:" << actions.size() << '\n';
     else
       *opt.log << "pcidx:" << PcIdx << " trial:" << trial_idx+1 << " depth:" << synlvl.failed_bt_level
-        << " nlayers_sum:" << synctx.optimal_nlayers_sum << '\n';
+        << " nlayers_sum:" << solution_nlayers_sum << '\n';
     opt.log->flush();
 
     if (global_opt.snapshot_conflicts && !!exec_opt.conflicts_ofilepath)

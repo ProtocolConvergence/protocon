@@ -17,6 +17,9 @@ extern "C" {
 #define MpiTag_MpiDissem 1
 #define MpiTag_Conflict 2
 
+#define DissemTag_Conflict 0
+#define DissemTag_NLayers 1
+
 static MpiDissem* mpi_dissem = 0;
 
 
@@ -29,11 +32,34 @@ set_term_flag (int sig)
 }
 
 static
+  void
+handle_dissem_msg(MpiDissem::Tag tag,
+                  const Cx::Table<uint>& msg,
+                  SynthesisCtx& synctx)
+{
+  if (tag == DissemTag_Conflict) {
+    synctx.conflicts.add_conflicts(msg);
+  }
+  else if (tag == DissemTag_NLayers) {
+    if ((synctx.optimal_nlayers_sum == 0)
+        ||
+        (0 < msg[0] && msg[0] < synctx.optimal_nlayers_sum))
+    {
+      synctx.optimal_nlayers_sum = msg[0];
+      mpi_dissem->push(tag, msg);
+    }
+  }
+  else {
+    Claim( 0 && "Unknown dissemination tag!");
+  }
+}
+
+static
   Bool
 done_ck (void* dat)
 {
-  Cx::Table<uint> flat_conflicts;
-  ConflictFamily& conflicts = *(ConflictFamily*) dat;
+  Cx::Table<uint> msg;
+  SynthesisCtx& synctx = *(SynthesisCtx*) dat;
 
   if (0 == remove("kill-protocon")) {
     mpi_dissem->terminate();
@@ -46,12 +72,13 @@ done_ck (void* dat)
   if (mpi_dissem->done_ck()) {
     return 1;
   }
-  while (mpi_dissem->xtest(flat_conflicts)) {
-    conflicts.add_conflicts(flat_conflicts);
+  MpiDissem::Tag tag = 0;
+  while (mpi_dissem->xtest(tag, msg)) {
+    handle_dissem_msg (tag, msg, synctx);
   }
-  conflicts.flush_new_conflicts(flat_conflicts);
-  for (uint i = 0; i < flat_conflicts.sz(); ++i) {
-    *mpi_dissem << flat_conflicts[i];
+  synctx.conflicts.flush_new_conflicts(msg);
+  if (msg.sz() > 0) {
+    mpi_dissem->push(DissemTag_Conflict, msg);
   }
   mpi_dissem->maysend();
   return mpi_dissem->done_ck();
@@ -59,14 +86,17 @@ done_ck (void* dat)
 
 static
   void
-complete_dissemination(ConflictFamily& conflicts)
+complete_dissemination(SynthesisCtx& synctx)
 {
-  Cx::Table<uint> flat_conflicts;
+  Cx::Table<uint> msg;
   mpi_dissem->done_fo();
+
   /* DBog1("completing... %u", mpi_dissem->PcIdx); */
-  while (mpi_dissem->xwait(flat_conflicts)) {
+  MpiDissem::Tag tag = 0;
+  while (mpi_dissem->xwait(tag, msg)) {
     /* DBog1("waiting... %u", mpi_dissem->PcIdx); */
-    conflicts.add_conflicts(flat_conflicts);
+    synctx.conflicts.add_conflicts(msg);
+    handle_dissem_msg (tag, msg, synctx);
   }
   /* DBog1("done... %u", mpi_dissem->PcIdx); */
 }
@@ -94,6 +124,7 @@ stabilization_search(vector<uint>& ret_actions,
                      const uint NPcs)
 {
   bool solution_found = false;
+  uint solution_nlayers_sum = 0;
   ConflictFamily conflicts;
   Cx::Table< FlatSet<uint> > flat_conflicts;
 
@@ -130,7 +161,7 @@ stabilization_search(vector<uint>& ret_actions,
 
   PartialSynthesis& synlvl = synctx.base_partial;
   synctx.done_ck_fn = done_ck;
-  synctx.done_ck_mem = &synctx.conflicts;
+  synctx.done_ck_mem = &synctx;
 
   if (!good)
     mpi_dissem->terminate();
@@ -189,51 +220,88 @@ stabilization_search(vector<uint>& ret_actions,
       }
       found = try_order_synthesis(actions, tape);
     }
+    else if (NPcs * trial_idx + PcIdx < global_opt.solution_guesses.sz()) {
+      PartialSynthesis tape( synlvl );
+      tape.pick_actions(global_opt.solution_guesses[NPcs * trial_idx + PcIdx]);
+      found = AddStabilization(actions, tape, opt);
+      synlvl.failed_bt_level = tape.failed_bt_level;
+    }
     else
     {
       found = AddStabilization(actions, synlvl, opt);
+    }
+
+    if (found) {
+      solution_found = true;
+      ret_actions = actions;
+      solution_nlayers_sum = synctx.optimal_nlayers_sum;
+
+      if (!opt.optimize_soln)
+        synctx.optimal_nlayers_sum = 0;
     }
 
     if (synctx.done_ck())
     {}
     else if (found)
     {
-      if (opt.solution_as_conflict) {
+      *opt.log << "SOLUTION FOUND!" << opt.log->endl();
+      bool count_solution = true;
+      if (opt.solution_as_conflict || global_opt.optimize_soln) {
         FlatSet<uint> flat_actions( actions );
-        conflicts.add_conflict(flat_actions);
+        if (conflicts.conflict_ck(flat_actions)) {
+          count_solution = false;
+        }
+        else {
+          conflicts.add_conflict(flat_actions);
+        }
       }
-      if (!global_opt.try_all) {
+
+      if (global_opt.optimize_soln) {
+        // Don't write out files when optimizing, but do keep going.
+      }
+      else if (!global_opt.try_all) {
         mpi_dissem->terminate();
       }
-      else if (!!exec_opt.ofilepath) {
+      else if (!!exec_opt.ofilepath && count_solution) {
         Cx::OFileB ofb;
         ofb.open(exec_opt.ofilepath + "." + PcIdx + "." + trial_idx);
         oput_protocon_file (ofb, sys, exec_opt.use_espresso, actions);
       }
-      solution_found = true;
-      ret_actions = actions;
-      *opt.log << "SOLUTION FOUND!" << opt.log->endl();
     }
     else {
       if (!synctx.conflicts.sat_ck())
         set_term_flag (1);
     }
 
+    if (!synctx.done_ck() && synctx.opt.optimize_soln) {
+      Cx::Table<uint> msg;
+      msg.push(synctx.optimal_nlayers_sum);
+      mpi_dissem->push(DissemTag_NLayers, msg);
+      mpi_dissem->maysend();
+    }
+
     synctx.conflicts.oput_conflict_sizes(*opt.log);
-    if (opt.search_method == opt.RankShuffleSearch) {
-      if (opt.log != &DBogOF) {
-        DBogOF << "pcidx:" << PcIdx << " trial:" << trial_idx+1 << " actions:" << actions.size() << '\n';
-      }
-      *opt.log << "pcidx:" << PcIdx << " trial:" << trial_idx+1 << " actions:" << actions.size() << '\n';
+
+    for (Cx::OFile* ofile = &DBogOF;
+         true;  // See end of loop.
+         ofile = opt.log)
+    {
+      *ofile << "pcidx:" << PcIdx << " trial:" << trial_idx+1;
+
+      if (opt.search_method == opt.RankShuffleSearch)
+        *ofile
+          << " actions:" << actions.size();
+      else
+        *ofile
+          << " depth:" << synlvl.failed_bt_level
+          << " nlayers_sum:" << synctx.optimal_nlayers_sum;
+
+      *ofile << '\n';
+      ofile->flush();
+
+      if (ofile == opt.log)
+        break;
     }
-    else {
-      if (opt.log != &DBogOF) {
-        *opt.log << "pcidx:" << PcIdx << " trial:" << trial_idx+1 << " depth:" << synlvl.failed_bt_level << '\n';
-      }
-      DBogOF << "pcidx:" << PcIdx << " trial:" << trial_idx+1 << " depth:" << synlvl.failed_bt_level << '\n';
-    }
-    opt.log->flush();
-    DBogOF.flush();
 
     if (!synctx.done_ck()) {
       Set<uint> impossible( synctx.conflicts.impossible_set );
@@ -251,7 +319,7 @@ stabilization_search(vector<uint>& ret_actions,
   if (global_opt.try_all)
     mpi_dissem->terminate();
 
-  complete_dissemination(synctx.conflicts);
+  complete_dissemination(synctx);
 
   if (!!exec_opt.conflicts_ofilepath) {
     Cx::Table<uint> flattest_conflicts;
@@ -286,10 +354,22 @@ stabilization_search(vector<uint>& ret_actions,
 
   int ret_pc;
   {
-    int send_pc = solution_found ? (int)PcIdx : -1;
+    int send_nlayers = solution_found ? (int)solution_nlayers_sum : -1;
+    int max_nlayers = send_nlayers;
+    MPI_Allreduce(&send_nlayers, &max_nlayers, 1,
+                  MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+
+    if (!solution_found)
+      send_nlayers = max_nlayers + 1;
+
+    int min_nlayers = send_nlayers;
+    MPI_Allreduce(&send_nlayers, &min_nlayers, 1,
+                  MPI_INT, MPI_MIN, MPI_COMM_WORLD);
+
+    int send_pc = (send_nlayers == min_nlayers) ? (int)PcIdx : NPcs;
     ret_pc = send_pc;
     MPI_Allreduce(&send_pc, &ret_pc, 1,
-                  MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+                  MPI_INT, MPI_MIN, MPI_COMM_WORLD);
   }
 
   signal(SIGINT, SIG_DFL);
@@ -318,9 +398,6 @@ int main(int argc, char** argv)
     protocon_options
     (sys, argi, argc, argv, opt, infile_opt, exec_opt);
   if (!good)  failout_sysCx ("Bad args.");
-  if (opt.optimize_soln) {
-    failout_sysCx ("protocon-mpi does not yet support -optimize flag.");
-  }
 
   int found_papc =
     stabilization_search(sys.actions, infile_opt, exec_opt, opt, PcIdx, NPcs);

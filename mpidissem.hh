@@ -13,8 +13,7 @@ private:
   bool term;
   uint x_degree;
   uint o_degree;
-  int value;
-  int tag;
+  int comm_tag;
   MPI_Comm comm;
   Cx::Table<uint> hood;
   Cx::Table< uint > paysizes;
@@ -25,10 +24,11 @@ private:
   Cx::Table< Cx::Table<uint> > next_o_payloads;
   Cx::Table< int > indices;
 public:
+  typedef uint Tag;
   uint PcIdx;
 
 public:
-  MpiDissem(int _tag, MPI_Comm _comm);
+  MpiDissem(int _comm_tag, MPI_Comm _comm);
 
   uint x_sz() const { return x_degree; }
   uint o_sz() const { return o_degree; }
@@ -49,9 +49,9 @@ public:
   MPI_Status* x_statuses() { return this->x_status(0); }
   MPI_Status* o_statuses() { return this->o_status(0); }
 
-  bool xtestlite(Cx::Table<uint>& ret);
-  bool xtest(Cx::Table<uint>& ret);
-  bool xwait(Cx::Table<uint>& ret);
+  bool xtestlite(Tag& tag, Cx::Table<uint>& msg);
+  bool xtest(Tag& tag, Cx::Table<uint>& msg);
+  bool xwait(Tag& tag, Cx::Table<uint>& msg);
 
 private:
   Bool& x_done_flag(uint i) { return done_flags[i]; }
@@ -67,11 +67,15 @@ public:
   void done_fo();
   bool done_ck();
 
-  MpiDissem& operator<<(uint x) {
+  void push(Tag tag, const Cx::Table<uint>& msg)
+  {
     for (uint i = 0; i < this->o_sz(); ++i) {
-      this->next_o_payloads[i].push(x);
+      this->next_o_payloads[i].push(tag);
+      this->next_o_payloads[i].push(msg.sz());
+      for (uint j = 0; j < msg.sz(); ++j) {
+        this->next_o_payloads[i].push(msg[j]);
+      }
     }
-    return *this;
   }
 };
 

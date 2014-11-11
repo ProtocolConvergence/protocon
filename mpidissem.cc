@@ -3,11 +3,10 @@
 
 #include "kautz.hh"
 
-MpiDissem::MpiDissem(int _tag, MPI_Comm _comm)
+MpiDissem::MpiDissem(int _comm_tag, MPI_Comm _comm)
   : done(false)
   , term(false)
-  , value(-1)
-  , tag(_tag)
+  , comm_tag(_comm_tag)
   , comm(_comm)
 {
   uint NPcs = 0;
@@ -42,36 +41,53 @@ MpiDissem::MpiDissem(int _tag, MPI_Comm _comm)
 
   for (uint i = 0; i < this->x_sz(); ++i) {
     MPI_Irecv(this->x_paysize(i), 2, MPI_UNSIGNED,
-              this->x_hood(i), this->tag, this->comm,
+              this->x_hood(i), this->comm_tag, this->comm,
               this->x_request(i));
   }
 }
 
   bool
-MpiDissem::xtestlite(Cx::Table<uint>& ret)
+MpiDissem::xtestlite(Tag& tag, Cx::Table<uint>& msg)
 {
   for (uint i = 0; i < this->x_sz(); ++i) {
-    if (*this->x_request(i) == MPI_REQUEST_NULL) {
-      if (this->x_payload(i).sz() > 0) {
-        ret = this->x_payload(i);
-        this->x_payload(i).flush();
+    if (*this->x_request(i) == MPI_REQUEST_NULL
+        &&
+        this->x_payload(i).sz() > 0)
+    {
+      Cx::Table<uint>& payload = this->x_payload(i);
+
+      tag = payload.top();
+      payload.cpop();
+      const uint n = payload.top();
+      payload.cpop();
+
+      msg.flush();
+      msg.ensize(n);
+      for (uint j = 0; j < n; ++j) {
+        msg[j] = payload.top();
+        payload.cpop();
+      }
+
+      if (payload.sz() == 0) {
         MPI_Irecv(this->x_paysize(i), 2, MPI_UNSIGNED,
-                  this->x_hood(i), this->tag, this->comm,
+                  this->x_hood(i), this->comm_tag, this->comm,
                   this->x_request(i));
-        return true;
       }
-      else {
-        Claim( this->x_done_flag(i) );
-      }
+      return true;
+    }
+    else if (*this->x_request(i) == MPI_REQUEST_NULL)
+    {
+      Claim2( this->x_payload(i).sz() ,==, 0 );
+      Claim( this->x_done_flag(i) );
     }
   }
   return false;
 }
 
   bool
-MpiDissem::xtest(Cx::Table<uint>& ret)
+MpiDissem::xtest(Tag& tag, Cx::Table<uint>& msg)
 {
-  if (this->xtestlite(ret))
+  if (this->xtestlite(tag, msg))
     return true;
   int count = 0;
   MPI_Testsome(this->xo_sz(), &this->requests[0],
@@ -88,17 +104,17 @@ MpiDissem::xtest(Cx::Table<uint>& ret)
     }
   }
   if (some_recv) {
-    this->xtestlite(ret);
+    this->xtestlite(tag, msg);
     return true;
   }
   return false;
 }
 
   bool
-MpiDissem::xwait(Cx::Table<uint>& ret)
+MpiDissem::xwait(Tag& tag, Cx::Table<uint>& msg)
 {
   this->maysend();
-  while (!this->xtestlite(ret))
+  while (!this->xtestlite(tag, msg))
   {
     int count = 0;
 #if 0
@@ -140,7 +156,7 @@ MpiDissem::handle_recv(uint i)
   if (paysize > 0) {
     this->x_payload(i).grow(paysize);
     MPI_Irecv(&this->x_payload(i)[0], paysize, MPI_UNSIGNED,
-              this->x_hood(i), this->tag, this->comm,
+              this->x_hood(i), this->comm_tag, this->comm,
               this->x_request(i));
   }
   else {
@@ -168,14 +184,16 @@ MpiDissem::handle_send(uint i)
     this->o_paysize(i)[0] = paysize;
     this->o_paysize(i)[1] = 0;
     this->o_payload(i) = next_o_payloads[i];
+    // Reverse the array, since we use it like a stack on the receiving end.
+    this->o_payload(i).reverse();
     next_o_payloads[i].clear();
     // Send size.
     MPI_Isend(this->o_paysize(i), 2, MPI_UNSIGNED,
-              this->o_hood(i), this->tag, this->comm,
+              this->o_hood(i), this->comm_tag, this->comm,
               this->o_request(i));
     MPI_Request_free(this->o_request(i));
     MPI_Isend(&this->o_payload(i)[0], paysize, MPI_UNSIGNED,
-              this->o_hood(i), this->tag, this->comm,
+              this->o_hood(i), this->comm_tag, this->comm,
               this->o_request(i));
   }
   else if (this->done) {
@@ -188,7 +206,7 @@ MpiDissem::handle_send(uint i)
       DBog2("DONE SEND %u -> %d", PcIdx, o_hood(i));
 #endif
     MPI_Isend(this->o_paysize(i), 2, MPI_UNSIGNED,
-              this->o_hood(i), this->tag, this->comm,
+              this->o_hood(i), this->comm_tag, this->comm,
               this->o_request(i));
     this->o_done_flag(i) = 1;
   }
