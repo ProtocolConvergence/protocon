@@ -264,8 +264,10 @@ public:
   Cx::LgTable< Pc > pcs;
   Cx::LgTable< PcSymm > pc_symms;
 
+private:
   Cx::Table< Cx::PFmla > act_pfmlas;
   Cx::Table< Cx::PFmla > pure_shadow_pfmlas;
+public:
   Cx::Table< Cx::Table<uint> > represented_actions;
   uint n_possible_acts;
   uint total_pre_domsz;
@@ -324,11 +326,32 @@ public:
 
   uint representative_action_index(uint actidx) const;
 
-  const Cx::PFmla& pure_shadow_pfmla(uint i) const {
-    return pure_shadow_pfmlas[i];
+  const X::Fmla pure_shadow_pfmla(uint actidx) const {
+    if (!this->lightweight) {
+      return pure_shadow_pfmlas[actidx];
+    }
+    X::Fmla xn(false);
+    const Cx::Table<uint>& actions = represented_actions[actidx];
+    for (uint i = 0; i < actions.sz(); ++i) {
+      X::Fmla tmp_xn;
+      this->make_action_pfmla(0, &tmp_xn, actions[i]);
+      xn |= tmp_xn;
+    }
+    return xn;
   }
-  const Cx::PFmla& action_pfmla(uint i) const {
-    return act_pfmlas[i];
+
+  const X::Fmla action_pfmla(uint actidx) const {
+    if (!this->lightweight) {
+      return act_pfmlas[actidx];
+    }
+    X::Fmla xn(false);
+    const Cx::Table<uint>& actions = represented_actions[actidx];
+    for (uint i = 0; i < actions.sz(); ++i) {
+      X::Fmla tmp_xn;
+      this->make_action_pfmla(&tmp_xn, 0, actions[i]);
+      xn |= tmp_xn;
+    }
+    return xn;
   }
 
   Cx::PFmlaVbl pfmla_vbl(uint i) const {

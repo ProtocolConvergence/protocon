@@ -317,24 +317,53 @@ stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
                  StabilizationCkInfo* info)
 {
   const Xn::Net& topo = sys.topology;
-  Cx::PFmla lo_xn( false );
-  Cx::PFmla lo_pure_shadow_pf( true );
   of << "Building transition relation...\n";
   of.flush();
+
+  if (opt.synchronous) {
+    Cx::Table<uint> sync_actions( actions );
+    const X::Fmla lo_xn = sys.topology.sync_xn(sync_actions);
+
+    for (uint i = 0; i < candidates.size(); ++i) {
+      sync_actions << candidates[i];
+    }
+
+    const X::Fmla hi_xn =
+      (candidates.empty()
+       ? lo_xn
+       : sys.topology.sync_xn(sync_actions));
+
+    if (!candidates.empty()) {
+      DBog0( "Synchronous semantics don't work well with overapproximation." );
+      DBog0( "Expect failure." );
+    }
+
+    if (info) {
+      info->actions = actions;
+    }
+    return stabilization_ck(of, sys, opt, lo_xn, hi_xn, info);
+  }
+
+  X::Fmla lo_xn( false );
+  X::Fmla lo_pure_shadow_pf( true );
   for (uint i = 0; i < actions.size(); ++i) {
     if (!topo.lightweight) {
       lo_xn |= topo.action_pfmla(actions[i]);
       lo_pure_shadow_pf &= topo.pure_shadow_pfmla(actions[i]);
     }
     else {
-      Cx::PFmla act_xn;
-      Cx::PFmla pure_shadow_act_xn;
-      topo.make_action_pfmla(&act_xn, &pure_shadow_act_xn, actions[i]);
-      lo_xn |= act_xn;
-      lo_pure_shadow_pf &= pure_shadow_act_xn;
+      const Cx::Table<uint>& rep_actions = topo.represented_actions[actions[i]];
+      for (uint j = 0; j < rep_actions.sz(); ++j) {
+        X::Fmla act_xn;
+        X::Fmla pure_shadow_act_xn;
+        topo.make_action_pfmla(&act_xn, &pure_shadow_act_xn, rep_actions[j]);
+        lo_xn |= act_xn;
+        lo_pure_shadow_pf &= pure_shadow_act_xn;
+      }
     }
     //Claim( lo_pure_shadow_pf.sat_ck() );
   }
+
   Cx::PFmla hi_xn( lo_xn );
   Cx::PFmla hi_pure_shadow_pf( lo_pure_shadow_pf );
   for (uint i = 0; i < candidates.size(); ++i) {
@@ -342,9 +371,12 @@ stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
       hi_xn |= topo.action_pfmla(candidates[i]);
     }
     else {
-      Cx::PFmla act_xn;
-      topo.make_action_pfmla(&act_xn, candidates[i]);
-      hi_xn |= act_xn;
+      const Cx::Table<uint>& rep_candidates = topo.represented_actions[candidates[i]];
+      for (uint j = 0; j < rep_candidates.sz(); ++j) {
+        X::Fmla act_xn;
+        topo.make_action_pfmla(&act_xn, 0, rep_candidates[j]);
+        hi_xn |= act_xn;
+      }
     }
     // TODO
     //hi_pure_shadow_pf |= topo.pure_shadow_pfmla(candidates[i]);
@@ -377,8 +409,7 @@ stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
                  StabilizationCkInfo* info)
 {
   if (opt.synchronous) {
-    const Cx::PFmla xn = sys.topology.sync_xn(Cx::Table<uint>(sys.actions));
-    return stabilization_ck(of, sys, opt, xn, xn, info);
+    return stabilization_ck(of, sys, opt, sys.actions, info);
   }
   if (!info || sys.topology.lightweight) {
     return stabilization_ck(of, sys, opt, sys.direct_pfmla, sys.direct_pfmla, info);

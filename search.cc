@@ -38,7 +38,8 @@ verify_solutions(const PartialSynthesis& inst, StabilizationCkInfo* info, uint* 
       return false;
     }
     if (info && ret_nlayers_sum) {
-      *ret_nlayers_sum += info->nlayers;
+      // Don't count these.
+      //*ret_nlayers_sum += info->nlayers;
     }
   }
   for (uint i = 0; i < inst.sz(); ++i) {
@@ -100,33 +101,39 @@ AddStabilization(vector<uint>& ret_actions,
       return false;
     }
 
-    if (!partial.candidates_ck()) {
+    if (!partial.deadlocks_ck()) {
       StabilizationCkInfo info;
-      bool early_return = true;
+      bool backtrack = false;
       if (verify_solutions(partial, &info, &nlayers_sum)) {
         if (synctx.optimal_nlayers_sum == 0 || nlayers_sum < synctx.optimal_nlayers_sum) {
           break;
         }
-        early_return = false;
+        backtrack = true;
         *partial.log << "SUBOPTIMAL (exceeding best known number of convergence layers: "
           << nlayers_sum << " >= " << synctx.optimal_nlayers_sum << ")" << partial.log->endl();
       }
 
-      early_return = early_return && !info.livelock_exists;
-      if (early_return)
-        return false;
-
-      *partial.log << "backtrack from lvl:" << partial.bt_level << partial.log->endl();
-      partial.add_small_conflict_set(partial.picks);
       if (info.livelock_exists) {
-        partial.ctx->conflicts.add_conflict(info.livelock_actions);
+        backtrack = true;
       }
-      stack_idx = decmod(stack_idx, 1, bt_stack.sz());
-      if (bt_stack[stack_idx].bt_level >= partial.bt_level) {
-        base_partial.failed_bt_level = bt_stack[stack_idx].bt_level;
+
+      if (!backtrack && !partial.candidates_ck()) {
         return false;
       }
-      continue;
+
+      if (backtrack) {
+        *partial.log << "backtrack from lvl:" << partial.bt_level << partial.log->endl();
+        partial.add_small_conflict_set(partial.picks);
+        if (info.livelock_exists && info.find_livelock_actions) {
+          partial.ctx->conflicts.add_conflict(info.livelock_actions);
+        }
+        stack_idx = decmod(stack_idx, 1, bt_stack.sz());
+        if (bt_stack[stack_idx].bt_level >= partial.bt_level) {
+          base_partial.failed_bt_level = bt_stack[stack_idx].bt_level;
+          return false;
+        }
+        continue;
+      }
     }
 
     // Pick the action.
@@ -186,7 +193,11 @@ AddStabilization(vector<uint>& ret_actions,
     }
   }
   PartialSynthesis& partial = bt_stack[stack_idx];
-  Claim(!partial.deadlockPF.sat_ck());
+  for (uint i = 0; i < partial.sz(); ++i) {
+    if (!partial[i].no_partial) {
+      Claim(!partial[i].deadlockPF.sat_ck());
+    }
+  }
   ret_actions = partial.actions;
   Claim2( nlayers_sum ,>, 0 );
   synctx.optimal_nlayers_sum = nlayers_sum;

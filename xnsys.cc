@@ -877,7 +877,9 @@ Xn::Net::make_action_pfmla(X::Fmla* ret_xn, X::Fmla* ret_pure_shadow_xn, uint ac
     }
   }
 
-  *ret_xn = xn;
+  if (ret_xn) {
+    *ret_xn = xn;
+  }
   if (ret_pure_shadow_xn) {
     *ret_pure_shadow_xn = pure_shadow_pfmla;
   }

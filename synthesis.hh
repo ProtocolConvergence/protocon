@@ -190,6 +190,16 @@ public:
     return false;
   }
 
+  bool deadlocks_ck() const {
+    for (uint i = 0; i < this->sz(); ++i) {
+      if ((*this)[i].no_partial)
+        continue;
+      if ((*this)[i].deadlockPF.sat_ck())
+        return true;
+    }
+    return false;
+  }
+
   uint add_small_conflict_set(const Cx::Table<uint>& delpicks);
   bool check_forward(Set<uint>& adds, Set<uint>& dels, Set<uint>& rejs);
   bool revise_actions_alone(Set<uint>& adds, Set<uint>& dels, Set<uint>& rejs, uint* ret_nlayers = 0);

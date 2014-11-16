@@ -366,10 +366,15 @@ stabilization_search(vector<uint>& ret_actions,
     MPI_Allreduce(&send_nlayers, &min_nlayers, 1,
                   MPI_INT, MPI_MIN, MPI_COMM_WORLD);
 
-    int send_pc = (send_nlayers == min_nlayers) ? (int)PcIdx : NPcs;
-    ret_pc = send_pc;
-    MPI_Allreduce(&send_pc, &ret_pc, 1,
-                  MPI_INT, MPI_MIN, MPI_COMM_WORLD);
+    if (min_nlayers == 0) {
+      ret_pc = -1;
+    }
+    else {
+      int send_pc = (send_nlayers == min_nlayers) ? (int)PcIdx : NPcs;
+      ret_pc = send_pc;
+      MPI_Allreduce(&send_pc, &ret_pc, 1,
+                    MPI_INT, MPI_MIN, MPI_COMM_WORLD);
+    }
   }
 
   signal(SIGINT, SIG_DFL);

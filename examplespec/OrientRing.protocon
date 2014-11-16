@@ -57,7 +57,7 @@ process P[i <- Nat % N]
 }
 
 // Eventually, all processes point in the same direction.
-((future & shadow) % puppet)
+(future & shadow)
   (forall i <- Nat % N : way[2*i-1]==way[2*i+1]);
 
 // We want a silent protocol.
