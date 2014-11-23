@@ -279,7 +279,8 @@ ProtoconFile::add_symmetric_access(Sesp let_names_sp, Sesp let_vals_list_sp,
 }
 
   bool
-ProtoconFile::parse_action(Cx::PFmla& act_pf, Cx::Table<Cx::PFmla>& pc_xns, Sesp act_sp, bool selfloop)
+ProtoconFile::parse_action(Cx::PFmla& act_pf, Cx::Table<Cx::PFmla>& pc_xns, Sesp act_sp,
+                           bool selfloop, Xn::Vbl::ShadowPuppetRole role)
 {
   Sign good = 1;
   Claim( pc_symm );
@@ -373,12 +374,27 @@ ProtoconFile::parse_action(Cx::PFmla& act_pf, Cx::Table<Cx::PFmla>& pc_xns, Sesp
 
     for (uint i = 0; i < pc.wvbls.sz(); ++i) {
       if (!wvbl_assigned[i]) {
-        const Cx::PFmlaVbl& pf_vbl = topo.pfmla_vbl(*pc.wvbls[i]);
-        assign_pf &= pf_vbl.img_eq(pf_vbl);
+        if (role != Xn::Vbl::Shadow && pc_symm->wvbl_symms[i]->pure_shadow_ck()) {
+          DBog0( "All writable shadow variables must be assigned in a puppet action!" );
+          good = false;
+        }
+        else {
+          const Cx::PFmlaVbl& pf_vbl = topo.pfmla_vbl(*pc.wvbls[i]);
+          assign_pf &= pf_vbl.img_eq(pf_vbl);
+        }
       }
     }
 
     pc_xns[pcidx] = guard_pf & assign_pf;
+    if (pc_symm->pure_shadow_ck()) {
+      X::Fmla self_xn( true );
+      for (uint i = 0; i < pc.wvbls.sz(); ++i) {
+        const Cx::PFmlaVbl& pf_vbl = topo.pfmla_vbl(*pc.wvbls[i]);
+        self_xn &= pf_vbl.img_eq(pf_vbl);
+      }
+      pc_xns[pcidx] &= ~self_xn;
+    }
+
     act_pf |= pc_xns[pcidx] & pc.act_unchanged_pfmla;
   }
   if (good)
@@ -408,7 +424,7 @@ ProtoconFile::add_action(Sesp act_sp, Xn::Vbl::ShadowPuppetRole role)
   Cx::PFmla act_pf( false );
   Cx::Table<Cx::PFmla> pc_xns;
   DoLegit( good, "parse action" )
-    good = parse_action(act_pf, pc_xns, act_sp, true);
+    good = parse_action(act_pf, pc_xns, act_sp, true, role);
 
   if (good) {
     for (uint i = 0; i < pc_symm->membs.sz(); ++i) {
@@ -464,7 +480,7 @@ ProtoconFile::forbid_action(Sesp act_sp)
   Cx::PFmla act_pf( false );
   Cx::Table<Cx::PFmla> pc_xns;
   DoLegit( good, "parse action" ) {
-    good = parse_action(act_pf, pc_xns, act_sp, false);
+    good = parse_action(act_pf, pc_xns, act_sp, false, Xn::Vbl::Puppet);
   }
 
   DoLegit( good, "" ) {
@@ -494,7 +510,7 @@ ProtoconFile::permit_action(Sesp act_sp)
   Cx::PFmla act_pf( false );
   Cx::Table<Cx::PFmla> pc_xns;
   DoLegit( good, "parse action" ) {
-    good = parse_action(act_pf, pc_xns, act_sp, false);
+    good = parse_action(act_pf, pc_xns, act_sp, false, Xn::Vbl::Puppet);
   }
 
   DoLegit( good, "" ) {
@@ -544,10 +560,6 @@ ProtoconFile::add_pc_assume(Sesp assume_sp)
 
     if (!good)  break;
     sys->closed_assume &= pf;
-
-    // Hopefully these aren't needed.
-    //sys->invariant &= pf;
-    //pc_symm->membs[i]->invariant &= pf;
   }
 
   Cx::String assume_expression;

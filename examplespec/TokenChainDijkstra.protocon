@@ -1,0 +1,57 @@
+
+constant N := 3;
+
+shadow variable allup[Int % 1] <- Int % 2;
+shadow variable tok[Int % N] <- Int % 2;
+puppet variable up[Int % N] <- Int % 2;
+puppet variable z[Int % N] <- Int % 2;
+
+process Bot[i <- Int % 1]
+{
+  let i := 0;
+
+  write: allup[0], tok[i], tok[i+1];
+
+  write: up[i], z[i];
+  read:  up[i+1], z[i+1];
+
+  shadow:
+    ( tok[i]==1 --> allup[0]:=1; tok[i]:=0; tok[i+1]:=1; );
+}
+
+process P[j <- Int % (N-2)]
+{
+  let i := j+1;
+
+  read: allup[0];
+  write: tok[i-1], tok[i], tok[i+1];
+
+  write: up[i];
+  read:  up[i+1];
+
+  read: z[i-1];
+  write: z[i];
+  read: z[i+1];
+
+  shadow:
+    ( allup[0]==1 && tok[i]==1 --> tok[i]:=0; tok[i+1]:=1; )
+    ( allup[0]==0 && tok[i]==1 --> tok[i]:=0; tok[i-1]:=1; )
+    ;
+}
+
+process Top[j <- Int % 1]
+{
+  let i := N-1;
+
+  write: allup[0], tok[i-1], tok[i];
+
+  read: z[i-1];
+  write: up[i], z[i];
+
+  shadow:
+    ( tok[i]==1 --> allup[0]:=0; tok[i]:=0; tok[i-1]:=1; );
+}
+
+((future & shadow) % puppet)
+  (unique i <- Int % N : tok[i]==1);
+

@@ -1,0 +1,32 @@
+
+// 3-coloring protocol
+// We want no two adjacent colors to be the same.
+
+constant N := 5;
+
+puppet variable x[Int % N] <- Int % 3;
+shadow variable c[Int % N] <- Int % 3;
+
+process P[i <- Int % N]
+{
+  read:  x[i-1];
+  write: x[i];
+  read:  x[i+1];
+  write: c[i];
+
+  puppet action:
+    ( x[i-1]==0 && x[i]!=1 && x[i+1]==2 --> x[i]:=1; c[i]:=1; )
+    ( x[i-1]!=0 && x[i]==2 && x[i+1]==2 --> x[i]:=0; c[i]:=0; )
+    ( x[i-1]==2 && x[i]==1 && x[i+1]==1 --> x[i]:=0; c[i]:=0; )
+    ( x[i-1]!=2 && x[i]==x[i-1] && x[i+1]!=2 --> x[i]:=2; c[i]:=2; )
+    ( x[i-1]!=2 && x[i]==x[i+1] && x[i+1]!=2 --> x[i]:=2; c[i]:=2; )
+    ( x[i-1]!=x[i] && x[i]!=x[i+1] --> c[i]:=x[i]; )
+    ;
+}
+
+((future & shadow) % puppet)
+  (forall i <- Nat % N :
+   (c[i] != c[i-1]) && (c[i] != c[i+1])
+  )
+  ;
+

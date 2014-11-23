@@ -40,6 +40,7 @@ verify_solutions(const PartialSynthesis& inst, StabilizationCkInfo* info, uint* 
     if (info && ret_nlayers_sum) {
       // Don't count these.
       //*ret_nlayers_sum += info->nlayers;
+      *ret_nlayers_sum += 1;
     }
   }
   for (uint i = 0; i < inst.sz(); ++i) {

@@ -19,6 +19,8 @@ extern "C" {
 #include "protoconfile.hh"
 #include "stabilization.hh"
 #include "kautz.hh"
+#include "search.hh"
+#include "synthesis.hh"
 #include <stdio.h>
 
 static void
@@ -192,6 +194,7 @@ TestXnSys()
   act.vals.push(0); // Self.
 
   uint actidx = topo.action_index(act);
+
   {
     Xn::ActSymm action;
     topo.action(action, actidx);
@@ -372,18 +375,14 @@ TestProtoconFileAgreement()
   TestProtoconFile(true);
 }
 
-
 static void
-TestShadowColoring()
+SetupSilentShadowRing(Xn::Sys& sys, const uint npcs,
+                      const char* puppet_vbl_name, const uint puppet_vbl_domsz,
+                      const char* shadow_vbl_name, const uint shadow_vbl_domsz)
 {
-  Cx::OFile& of = Cx::OFile::null();
-  //Cx::OFile& of = DBogOF;
-  Xn::Sys sys;
   Xn::Net& topo = sys.topology;
-  const uint npcs = 3;
-
-  topo.add_variables("x", npcs, 3, Xn::Vbl::Puppet);
-  topo.add_variables("c", npcs, 3, Xn::Vbl::Shadow);
+  topo.add_variables(puppet_vbl_name, npcs, puppet_vbl_domsz, Xn::Vbl::Puppet);
+  topo.add_variables(shadow_vbl_name, npcs, shadow_vbl_domsz, Xn::Vbl::Shadow);
   Xn::PcSymm* pc_symm = topo.add_processes("P", "i", npcs);
   Xn::NatMap indices(npcs);
 
@@ -409,6 +408,17 @@ TestShadowColoring()
 
   sys.spec->invariant_style = Xn::FutureAndShadowModPuppet;
   sys.commit_initialization();
+}
+
+static void
+TestShadowColorRing()
+{
+  Cx::OFile& of = DBogOF;
+  Xn::Sys sys;
+  Xn::Net& topo = sys.topology;
+  const uint npcs = 3;
+  SetupSilentShadowRing(sys, npcs, "x", 3, "c", 3);
+
   for (uint i = 0; i < npcs; ++i) {
     sys.invariant &=
       (topo.pfmla_vbl(*topo.vbl_symms[1].membs[i])
@@ -444,22 +454,137 @@ TestShadowColoring()
   {
     Xn::ActSymm act_symm;
     topo.action(act_symm, actidx);
-    if (act_symm.aguard(0) != act_symm.aguard(1))  continue;
-    if (act_symm.assign(0) != act_symm.assign(1))  continue;
-    for (uint i = 0; i < ArraySz(act_vals); ++i) {
-      if (act_vals[i][0] == act_symm.guard(0) &&
-          act_vals[i][1] == act_symm.guard(1) &&
-          act_vals[i][2] == act_symm.guard(2) &&
-          act_vals[i][3] == act_symm.assign(0))
-      {
+
+    bool add_action = false;
+    for (uint i = 0; i < ArraySz(act_vals) && !add_action; ++i) {
+      add_action =
+        (   act_vals[i][0] == act_symm.guard(0)
+         && (   act_vals[i][1] == act_symm.guard(1)
+             || act_vals[i][3] == act_symm.guard(1))
+         && act_vals[i][2] == act_symm.guard(2)
+         && act_vals[i][3] == act_symm.assign(0)
+         && act_vals[i][3] == act_symm.assign(1));
+    }
+
+    if (add_action)
+    {
+      uint rep_actidx = topo.representative_action_index(actidx);
+      if (rep_actidx == actidx)
         sys.actions.push_back(actidx);
-      }
     }
   }
+
   StabilizationOpt stabilization_opt;
   if (!stabilization_ck(of, sys, stabilization_opt, sys.actions)) {
     Claim(0);
   }
+}
+
+static void
+TestShadowMatchRing()
+{
+  Cx::OFile& ofile = DBogOF;
+  Xn::Sys sys;
+  Xn::Net& topo = sys.topology;
+  const uint npcs = 3;
+  SetupSilentShadowRing(sys, npcs, "x", 2, "m", 3);
+
+  const Cx::PFmlaVbl& x0 = topo.pfmla_vbl(*topo.vbl_symms[0].membs[0]);
+  const Cx::PFmlaVbl& x1 = topo.pfmla_vbl(*topo.vbl_symms[0].membs[1]);
+  const Cx::PFmlaVbl& x2 = topo.pfmla_vbl(*topo.vbl_symms[0].membs[2]);
+  const Cx::PFmlaVbl& m0 = topo.pfmla_vbl(*topo.vbl_symms[1].membs[0]);
+  const Cx::PFmlaVbl& m1 = topo.pfmla_vbl(*topo.vbl_symms[1].membs[1]);
+  const Cx::PFmlaVbl& m2 = topo.pfmla_vbl(*topo.vbl_symms[1].membs[2]);
+
+  sys.invariant
+    =  (m0==2 && m1==0 && m2==1)
+    || (m0==0 && m1==1 && m2==2)
+    || (m0==1 && m1==2 && m2==0)
+    ;
+
+  Xn::ActSymm act;
+  act.pc_symm = &topo.pc_symms[0];
+  act.vals.grow(6, 0);
+  act.vals[0] = 1;  Claim2( 1 ,==, act.guard(0) );
+  act.vals[1] = 1;  Claim2( 1 ,==, act.aguard(0) );
+  act.vals[2] = 1;  Claim2( 1 ,==, act.guard(2) );
+  act.vals[3] = 0;
+  act.vals[4] = 0;  Claim2( 0 ,==, act.assign(0) );
+  act.vals[5] = 0;  Claim2( 0 ,==, act.assign(1) );
+
+  uint actidx = topo.action_index(act);
+  actidx = topo.representative_action_index(actidx);
+  X::Fmla act_xn = topo.action_pfmla(actidx);
+
+  X::Fmla expect_xn =
+    x0==1 && x1==1 && x2==1
+    &&
+    ((x0.img_eq(0) && x1.img_eq(x1) && x2.img_eq(x2) &&
+      m0.img_eq(0) && m1.img_eq(m1) && m2.img_eq(m2))
+     ||
+     (x0.img_eq(x0) && x1.img_eq(0) && x2.img_eq(x2) &&
+      m0.img_eq(m0) && m1.img_eq(0) && m2.img_eq(m2))
+     ||
+     (x0.img_eq(x0) && x1.img_eq(x1) && x2.img_eq(0) &&
+      m0.img_eq(m0) && m1.img_eq(m1) && m2.img_eq(0))
+    );
+  Claim( expect_xn.equiv_ck(act_xn) );
+
+  act.vals[0] = 0;  act.vals[1] = 1;  act.vals[2] = 0;
+  act.vals[3] = 0; // m[i] ignored
+  act.vals[4] = 1; // x[i] remains the same
+  act.vals[5] = 2; // m[i]:=2
+
+  actidx = topo.action_index(act);
+  actidx = topo.representative_action_index(actidx);
+  act_xn = topo.action_pfmla(actidx);
+  expect_xn =
+    x0.img_eq(x0) && x1.img_eq(x1) && x2.img_eq(x2) &&
+    ((x0==1 && x1==0 && x2==0 && m0!=2 &&
+      m0.img_eq(2) && m1.img_eq(m1) && m2.img_eq(m2))
+     ||
+     (x0==0 && x1==1 && x2==0 && m1!=2 &&
+      m0.img_eq(m0) && m1.img_eq(2) && m2.img_eq(m2))
+     ||
+     (x0==0 && x1==0 && x2==1 && m2!=2 &&
+      m0.img_eq(m0) && m1.img_eq(m1) && m2.img_eq(2))
+    );
+  Claim( expect_xn.equiv_ck(act_xn) );
+
+  const uint init_actions[][5] = {
+    { 0, 0, 0, 1, 2 },
+    { 1, 1, 1, 0, 0 },
+    { 0, 0, 1, 0, 1 },
+    { 1, 0, 0, 0, 0 }
+  };
+  act.vals[3] = 0;
+  for (uint i = 0; i < ArraySz(init_actions); ++i) {
+    act.vals[0] = init_actions[i][0];
+    act.vals[1] = init_actions[i][1];
+    act.vals[2] = init_actions[i][2];
+    act.vals[4] = init_actions[i][3];
+    act.vals[5] = init_actions[i][4];
+    actidx = topo.action_index(act);
+    actidx = topo.representative_action_index(actidx);
+    sys.actions.push_back(actidx);
+  }
+
+  {
+    Xn::ActSymm act1;
+    Xn::ActSymm act2;
+    act1.pc_symm = &topo.pc_symms[0];
+    act2.pc_symm = &topo.pc_symms[0];
+    act1.vals << 0 << 0 << 0 << 0 << 1 << 2;
+    act2.vals << 0 << 1 << 0 << 0 << 1 << 2;
+    Claim( coexist_ck(act1, act2) );
+  }
+
+  AddConvergenceOpt opt;
+  opt.randomize_pick = false;
+  opt.max_height = 0;
+  opt.log = &ofile;
+  bool solution_found = AddStabilization(sys, opt);
+  Claim( solution_found );
 }
 
 static void

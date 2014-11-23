@@ -123,8 +123,6 @@ public:
   Cx::Table<uint> picks; ///< Chosen actions, no inferred ones.
   vector<uint> candidates; ///< Candidate actions.
   Cx::PFmla deadlockPF; ///< Current deadlocks.
-  Cx::PFmla lo_pure_shadow_pfmla; ///< Under-approximation of the pure shadow states.
-  Cx::PFmla hi_pure_shadow_pfmla; ///< Over-approximation of the pure shadow states?
   Cx::PFmla lo_puppet_xn; ///< Under-approximation of the puppet transitions.
   Cx::PFmla hi_puppet_xn; ///< Over-approximation of the puppet transitions.
   Cx::PFmla lo_xn; ///< Under-approximation of the transition function.
@@ -146,8 +144,6 @@ public:
     , directly_add_conflicts( false )
     , no_conflict( false )
     , no_partial( false )
-    , lo_pure_shadow_pfmla( true )
-    , hi_pure_shadow_pfmla( true )
     , lo_puppet_xn( false )
     , hi_puppet_xn( false )
     , lo_xn( false )

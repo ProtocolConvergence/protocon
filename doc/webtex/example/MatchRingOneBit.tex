@@ -1,0 +1,109 @@
+
+\title{Maximal Matching with One Bit per Process}
+%\author{}
+\date{}
+
+\begin{document}
+
+\section{Maximal Matching using Ternary Variables}
+
+A process $P[i]$ can point to itself or either of its neighbors.
+Arrange the processes in a bidirectional ring.
+The processes form a maximal matching when they point to each other or themselves (though no two neighboring processes can both point to themselves).
+Formally, this can be defined with a ternary variable $m[i]$ used by each process $P[i]$.
+\begin{code}
+(future & silent)
+  (forall i <- Int % N :
+      m[i-1] == 2 && m[i] == 0                 // P[i] pointing to P[i-1] and P[i-1] pointing back
+   || m[i-1] == 0 && m[i] == 1 && m[i+1] == 2  // P[i] pointing to itself and neighbors pointing away
+   ||                m[i] == 2 && m[i+1] == 0  // P[i] pointing to P[i+1] and P[i+1] pointing back
+  );
+\end{code}
+
+One stabilizing protocol has the actions:
+\begin{code}
+( m[i-1]==2 && m[i]!=0 && m[i+1]!=0 --> m[i]:=0; )
+( m[i-1]!=2 && m[i]!=1 && m[i+1]==2 --> m[i]:=1; )
+( m[i-1]!=2 && m[i]!=2 && m[i+1]!=2 --> m[i]:=2; )
+\end{code}
+
+\section{How the Shadow/Puppet Variables Work}
+
+Can a matching protocol be performed with only one bit per process?
+It seems counterintuitive, since each process needs to be able to point in $3$ directions.
+Even so, let's found out if it is possible!
+
+Give each process $P[i]$ a binary $x[i]$ variable to perform the protocol along with a ternary $m[i]$ variable used to specify the invariant.
+We use the same invariant as before, but since we are using superposition, we only enforce that a synthesized protocol converges to some invariant $I'$ that is the same as $I$ when projected onto the underlying variables.
+\begin{code}
+constant N := 4;
+
+// Superposed variables.
+puppet variable x[Int % N] <- Int % 2;
+
+// Underlying variables.
+direct variable m[Int % N] <- Int % 3;
+
+process P[i <- Int % N]
+{
+  read: x[i-1];
+  write: x[i];
+  read: x[i+1];
+  write: m[i];
+}
+
+((future & shadow) % puppet)
+  (forall i <- Int % N :
+      m[i-1] == 2 && m[i] == 0
+   || m[i-1] == 0 && m[i] == 1 && m[i+1] == 2
+   ||                m[i] == 2 && m[i+1] == 0
+  );
+\end{code}
+
+From synthesis, one of the protocols we get the following.
+These actions are simplified for presentation, but the protocol is the same.
+\begin{code}
+( x[i-1]==1 && x[i]==1 && x[i+1]==1 --> x[i]:=0; m[i]:=0; )
+( x[i-1]==0 && x[i]==1 && x[i+1]==1 --> x[i]:=0; m[i]:=1; )
+( x[i-1]==0 && x[i]==0 && x[i+1]==0 --> x[i]:=1; m[i]:=2; )
+
+( x[i-1]==1 && x[i]==0              && m[i]!=0 --> m[i]:=0; )
+( x[i-1]==0 && x[i]==0 && x[i+1]==1 && m[i]!=1 --> m[i]:=1; )
+( x[i-1]==0 && x[i]==1 && x[i+1]==0 && m[i]!=2 --> m[i]:=2; )
+\end{code}
+
+From here, we can create the 1-bit matching protocol on the $x[i]$ variables without the $m[i]$s.
+The first three actions of the synthesized protocol change $x[i]$ and are therefore used as actions in our 1-bit matching protocol, discarding changes to $m[i]$.
+\begin{code}
+( x[i-1]==1 && x[i]==1 && x[i+1]==1 --> x[i]:=0; )
+( x[i-1]==0 && x[i]==1 && x[i+1]==1 --> x[i]:=0; )
+( x[i-1]==0 && x[i]==0 && x[i+1]==0 --> x[i]:=1; )
+\end{code}
+
+The invariant is all states where the $x[i]$ values don't change (see the last three actions above).
+\begin{code}
+(future & silent)
+  (forall i <- Int % N :
+      x[i-1]==1 && x[i]==0               // P[i] pointing to P[i-1] and P[i-1] pointing back
+   || x[i-1]==0 && x[i]==0 && x[i+1]==1  // P[i] pointing to itself and neighbors pointing away
+   || x[i-1]==0 && x[i]==1 && x[i+1]==0  // P[i] pointing to P[i+1] and P[i+1] pointing back
+  );
+\end{code}
+Each of these cases in the disjunction corresponds to $P[i]$ pointing to $P[i-1]$, itself, and $P[i+1]$ respectively.
+We know this by looking at how $m[i]$ is changed to be \ilcode{m[i]:=0}, \ilcode{m[i]:=1}, and \ilcode{m[i]:=2} in the synthesized protocol.
+
+Note that the third case in the disjunction can be simplified from \ilcode{x[i-1]==0 && x[i]==1 && x[i+1]==0} to \ilcode{x[i]==1 && x[i+1]==0} since if the formula holds for $P[i]$ and the system is in the invariant, then the first or second cases in the disjunction must hold for $P[i-1]$ (hence, $x[i-1]=0$).
+
+Putting this all together, we get:
+\codeinputlisting{../../../examplesoln/MatchRingOneBit.protocon}
+
+\section{Using Shadow/Puppet Variables}
+
+The specification is best given using shadow/puppet variables, where the shadow variable values cannot affect actions in the synthesized protocol.
+\codeinputlisting{../../../examplespec/MatchRingOneBit.protocon}
+
+This is effectively the same result as in the previous section, though self-loops formed by fixing the $m[i]$ variables are ignored.
+\codeinputlisting{../../../examplesynt/MatchRingOneBit.protocon}
+
+\end{document}
+

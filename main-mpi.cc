@@ -329,12 +329,12 @@ stabilization_search(vector<uint>& ret_actions,
       synctx.conflicts.flush_new_conflicts();
       for (uint source_idx = 1; source_idx < NPcs; ++source_idx) {
         MPI_Status status;
-        uint sz = 0;
-        MPI_Probe(MPI_ANY_SOURCE, MpiTag_Conflict, MPI_COMM_WORLD, &status);
-        MPI_Get_count (&status, MPI_UNSIGNED, (int*) &sz);
-        flattest_conflicts.resize(sz);
-        MPI_Recv(&flattest_conflicts[0], sz, MPI_UNSIGNED, MPI_ANY_SOURCE,
-                 MpiTag_Conflict, MPI_COMM_WORLD, &status);
+        uint src_and_sz[2] = { 0, 0 };
+        MPI_Recv(src_and_sz, 2, MPI_UNSIGNED,
+                 MPI_ANY_SOURCE, MpiTag_Conflict, MPI_COMM_WORLD, &status);
+        flattest_conflicts.resize(src_and_sz[1]);
+        MPI_Recv(&flattest_conflicts[0], src_and_sz[1], MPI_UNSIGNED,
+                 src_and_sz[0], MpiTag_Conflict, MPI_COMM_WORLD, &status);
         synctx.conflicts.add_conflicts(flattest_conflicts);
         synctx.conflicts.flush_new_conflicts();
         synctx.conflicts.oput_conflict_sizes(*opt.log);
@@ -346,9 +346,13 @@ stabilization_search(vector<uint>& ret_actions,
     }
     else {
       synctx.conflicts.flush_new_conflicts(flattest_conflicts);
-      uint sz = flattest_conflicts.sz();
-      MPI_Send(&flattest_conflicts[0], sz, MPI_UNSIGNED, 0,
+      uint src_and_sz[2];
+      src_and_sz[0] = PcIdx;
+      src_and_sz[1] = flattest_conflicts.sz();
+      MPI_Send(src_and_sz, 2, MPI_UNSIGNED, 0,
                MpiTag_Conflict, MPI_COMM_WORLD);
+      MPI_Send(&flattest_conflicts[0], src_and_sz[1], MPI_UNSIGNED,
+               0, MpiTag_Conflict, MPI_COMM_WORLD);
     }
   }
 

@@ -219,6 +219,15 @@ public:
   bool representative(uint* ret_pcidx) const;
   void action(ActSymm& act, uint actidx) const;
   void actions(Cx::Table<uint>& ret_actions, Cx::PFmlaCtx& ctx) const;
+
+  bool pure_shadow_ck() const {
+    for (uint i = 0; i < rvbl_symms.sz(); ++i) {
+      if (rvbl_symms[i]->pure_shadow_ck()) {
+        return true;
+      }
+    }
+    return false;
+  }
 };
 
 inline String name_of(const Pc& pc) {
@@ -266,7 +275,6 @@ public:
 
 private:
   Cx::Table< Cx::PFmla > act_pfmlas;
-  Cx::Table< Cx::PFmla > pure_shadow_pfmlas;
 public:
   Cx::Table< Cx::Table<uint> > represented_actions;
   uint n_possible_acts;
@@ -326,20 +334,6 @@ public:
 
   uint representative_action_index(uint actidx) const;
 
-  const X::Fmla pure_shadow_pfmla(uint actidx) const {
-    if (!this->lightweight) {
-      return pure_shadow_pfmlas[actidx];
-    }
-    X::Fmla xn(false);
-    const Cx::Table<uint>& actions = represented_actions[actidx];
-    for (uint i = 0; i < actions.sz(); ++i) {
-      X::Fmla tmp_xn;
-      this->make_action_pfmla(0, &tmp_xn, actions[i]);
-      xn |= tmp_xn;
-    }
-    return xn;
-  }
-
   const X::Fmla action_pfmla(uint actidx) const {
     if (!this->lightweight) {
       return act_pfmlas[actidx];
@@ -348,7 +342,7 @@ public:
     const Cx::Table<uint>& actions = represented_actions[actidx];
     for (uint i = 0; i < actions.sz(); ++i) {
       X::Fmla tmp_xn;
-      this->make_action_pfmla(&tmp_xn, 0, actions[i]);
+      this->make_action_pfmla(&tmp_xn, actions[i]);
       xn |= tmp_xn;
     }
     return xn;
@@ -418,8 +412,6 @@ public:
 
   X::Fmla sync_xn(const Cx::Table<uint>& actidcs) const;
   X::Fmla xn_of_pc(const Xn::ActSymm& act, uint pcidx) const;
-  X::Fmla pure_shadow_xn_of_pc(const Xn::ActSymm& act, uint pcidx) const;
-  void make_action_pfmla(X::Fmla* ret_xn, X::Fmla* ret_pure_shadow_xn, uint actidx) const;
   void make_action_pfmla(X::Fmla* ret_xn, uint actid) const;
 private:
   void cache_action_pfmla(uint actid);
@@ -504,7 +496,9 @@ find_livelock_actions(Cx::Table<uint>& actions, const Cx::PFmla& xn,
                       const Cx::PFmla& scc, const Cx::PFmla& invariant,
                       const Xn::Net& topo);
 void
-oput_one_cycle(Cx::OFile& of, const Cx::PFmla& xn, const Cx::PFmla& scc, const Xn::Net& topo);
+oput_one_cycle(Cx::OFile& of, const X::Fmla& xn,
+               const P::Fmla& scc, const P::Fmla& initial,
+               const Xn::Net& topo);
 bool
 candidate_actions(std::vector<uint>& candidates,
                   Cx::Table<uint>& dels,

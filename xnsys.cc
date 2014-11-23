@@ -28,9 +28,7 @@ Net::commit_initialization()
     for (uint j = 0; j < pc.rvbl_symms.sz(); ++j) {
       uint domsz = pc.rvbl_symms[j]->domsz;
       if (pc.rvbl_symms[j]->pure_shadow_ck()) {
-        if (!pc.write_flags[j]) {
-          domsz = 1;
-        }
+        domsz = 1;
       }
       pc.doms.push(domsz);
       pc.pre_domsz *= domsz;
@@ -57,7 +55,6 @@ Net::commit_initialization()
   if (this->lightweight)
     return;
   act_pfmlas.resize(ntotal);
-  pure_shadow_pfmlas.resize(ntotal);
   for (uint i = 0; i < ntotal; ++i) {
     this->cache_action_pfmla(i);
   }
@@ -156,7 +153,7 @@ Net::add_processes(const String& name, const String& idx_name, uint nmembs)
   for (uint i = 0; i < nmembs; ++i) {
     Pc& pc = pcs.push(Pc(&symm, i));
     symm.membs.push(&pc);
-    pc.act_unchanged_pfmla = this->proj_puppet(this->identity_xn);
+    pc.act_unchanged_pfmla = this->identity_xn;
   }
   return &symm;
 }
@@ -295,6 +292,11 @@ Pc::actions(Cx::Table<uint>& ret_actions, Cx::PFmlaCtx& ctx) const
     Cx::PFmla pre_pf = ctx.pfmla_of_state(pre_state, pfmla_rvbl_idcs);
     Cx::PFmla img_pf = pfmla.img(pre_pf);
 
+    for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
+      if (pc_symm.rvbl_symms[i]->pure_shadow_ck()) {
+        pre_state[i] = 0;
+      }
+    }
     while (img_pf.sat_ck()) {
       uint* img_state = &act.vals[pc.rvbls.sz()];
       img_pf.state(img_state, pfmla_wvbl_idcs);
@@ -423,6 +425,13 @@ Net::representative_action_index(uint actidx) const
     }
   }
 
+  for (uint vbl_idx = 0; vbl_idx < pc_symm.rvbl_symms.sz(); ++vbl_idx) {
+    const Xn::VblSymm& vbl_symm = *pc_symm.rvbl_symms[vbl_idx];
+    if (vbl_symm.pure_shadow_ck()) {
+      act.vals[vbl_idx] = 0;
+    }
+  }
+
   uint rep_actidx = this->action_index(act);
   Claim2( rep_actidx ,<=, actidx );
   return rep_actidx;
@@ -461,7 +470,7 @@ Net::oput_pfmla(Cx::OFile& of, Cx::PFmla pf,
 {
   Cx::Table<uint> state_pre(this->vbls.sz(), 0);
   Cx::Table<uint> state_img(this->vbls.sz(), 0);
-  while (!pf.tautology_ck(false))
+  while (pf.sat_ck())
   {
     Cx::PFmla pf_pre = pf.pick_pre();
     Cx::PFmla pf_img = pf.img(pf_pre).pick_pre();
@@ -581,7 +590,7 @@ Sys::integrityCk() const
 
   Claim(topo.identity_xn.sat_ck());
   Claim(topo.identity_xn.subseteq_ck(this->shadow_self));
-  Claim(topo.smooth_pure_puppet_vbls(topo.identity_xn).equiv_ck(this->shadow_self));
+  Claim(topo.proj_shadow(topo.identity_xn).equiv_ck(this->shadow_self));
 
   if (false)
   for (uint i = 0; i < topo.pcs.sz(); ++i) {
@@ -630,9 +639,7 @@ OPut(Cx::OFile& of, const Xn::ActSymm& act)
   const char* delim = "";
   for (uint i = 0; i < pc.rvbl_symms.sz(); ++i) {
     if (pc.rvbl_symms[i]->pure_shadow_ck()) {
-      if (!pc.write_flags[i]) {
-        continue;
-      }
+      continue;
     }
     of << delim;
     delim = " && ";
@@ -724,10 +731,12 @@ find_livelock_actions(Cx::Table<uint>& ret_actions, const Cx::PFmla& xn,
 }
 
   void
-oput_one_cycle(Cx::OFile& of, const Cx::PFmla& xn, const Cx::PFmla& scc, const Xn::Net& topo)
+oput_one_cycle(Cx::OFile& of, const X::Fmla& xn,
+               const P::Fmla& scc, const P::Fmla& initial,
+               const Xn::Net& topo)
 {
   Cx::Table<Cx::PFmla> states;
-  find_one_cycle(states, xn, scc);
+  find_one_cycle(states, xn, scc, initial);
   of << "Cycle is:\n";
   for (uint i = 0; i < states.sz(); ++i) {
     topo.oput_pfmla(of, states[i], -1, true);
@@ -803,10 +812,29 @@ Xn::Net::xn_of_pc(const Xn::ActSymm& act, uint pcidx) const
   // but does make an assignment to the writeable pure shadow variables.
   X::Fmla xn(true);
 
+  bool puppet_self_loop = true;
   for (uint i = 0; i < pc.wvbls.sz(); ++i) {
     const Cx::PFmlaVbl& vbl = pfmla_vbl(*pc.wvbls[i]);
-    xn &= (vbl == act.aguard(i));
+    if (pc_symm.wvbl_symms[i]->puppet_ck()) {
+      if (act.aguard(i) != act.assign(i)) {
+        puppet_self_loop = false;
+      }
+      xn &= (vbl == act.aguard(i));
+    }
     xn &= (vbl.img_eq(act.assign(i)));
+  }
+
+  // When there is a self-loop on puppet variables,
+  // ensure that some shadow variable changes in the X::Fmla.
+  if (puppet_self_loop) {
+    P::Fmla shadow_guard( false );
+    for (uint i = 0; i < pc.wvbls.sz(); ++i) {
+      const Cx::PFmlaVbl& vbl = pfmla_vbl(*pc.wvbls[i]);
+      if (!pc_symm.wvbl_symms[i]->puppet_ck()) {
+        shadow_guard |= (vbl != act.assign(i));
+      }
+    }
+    xn &= shadow_guard;
   }
 
   for (uint i = 0; i < pc.rvbls.sz(); ++i) {
@@ -815,80 +843,26 @@ Xn::Net::xn_of_pc(const Xn::ActSymm& act, uint pcidx) const
       xn &= (vbl == act.guard(i));
     }
   }
+
   return xn;
 }
 
-  X::Fmla
-Xn::Net::pure_shadow_xn_of_pc(const Xn::ActSymm& act, uint pcidx) const
-{
-  const Xn::PcSymm& pc_symm = *act.pc_symm;
-  const Xn::Pc& pc = *pc_symm.membs[pcidx];
-
-  // Fixed states for the pure shadow variables.
-  P::Fmla pure_shadow_pre(true);
-  P::Fmla pure_shadow_img(true);
-
-  for (uint i = 0; i < pc.wvbls.sz(); ++i) {
-    const Cx::PFmlaVbl& vbl = pfmla_vbl(*pc.wvbls[i]);
-    if (pc_symm.wvbl_symms[i]->pure_shadow_ck()) {
-      pure_shadow_pre &= (vbl == act.aguard(i));
-      pure_shadow_img &= (vbl == act.assign(i));
-    }
-  }
-
-  for (uint i = 0; i < pc.wvbls.sz(); ++i) {
-    const Cx::PFmlaVbl& vbl = pfmla_vbl(*pc.wvbls[i]);
-    if (pc_symm.wvbl_symms[i]->puppet_ck()) {
-      pure_shadow_pre |= (vbl != act.aguard(i));
-      pure_shadow_img |= (vbl != act.assign(i));
-    }
-  }
-
-  for (uint i = 0; i < pc.rvbls.sz(); ++i) {
-    const Cx::PFmlaVbl& vbl = pfmla_vbl(*pc.rvbls[i]);
-    if (!pc_symm.write_flags[i] && pc_symm.rvbl_symms[i]->puppet_ck()) {
-      pure_shadow_pre |= (vbl != act.guard(i));
-      pure_shadow_img |= (vbl != act.guard(i));
-    }
-  }
-  return (pure_shadow_pre & pure_shadow_img);
-}
-
   void
-Xn::Net::make_action_pfmla(X::Fmla* ret_xn, X::Fmla* ret_pure_shadow_xn, uint actidx) const
+Xn::Net::make_action_pfmla(X::Fmla* ret_xn, uint actidx) const
 {
   Xn::ActSymm act;
   this->action(act, actidx);
   const Xn::PcSymm& pc_symm = *act.pc_symm;
 
   X::Fmla xn(false);
-  X::Fmla pure_shadow_pfmla(true);
-
   for (uint pc_memb_idx = 0; pc_memb_idx < pc_symm.membs.sz(); ++pc_memb_idx) {
     const Xn::Pc& pc = *pc_symm.membs[pc_memb_idx];
     xn |= (pc.act_unchanged_pfmla & this->xn_of_pc(act, pc_memb_idx));
-    pure_shadow_pfmla &= this->pure_shadow_xn_of_pc(act, pc_memb_idx);
-  }
-  Claim( pure_shadow_pfmla.sat_ck() );
-
-  if (xn.overlap_ck(this->identity_xn)) {
-    if (!pure_shadow_pfmla.tautology_ck()) {
-      xn = false;
-    }
   }
 
   if (ret_xn) {
     *ret_xn = xn;
   }
-  if (ret_pure_shadow_xn) {
-    *ret_pure_shadow_xn = pure_shadow_pfmla;
-  }
-}
-
-  void
-Xn::Net::make_action_pfmla(Cx::PFmla* xn, uint actidx) const
-{
-  this->make_action_pfmla(xn, 0, actidx);
 }
 
 /**
@@ -899,20 +873,16 @@ Xn::Net::make_action_pfmla(Cx::PFmla* xn, uint actidx) const
 Xn::Net::cache_action_pfmla(uint actidx)
 {
   Cx::PFmla xn;
-  Cx::PFmla pure_shadow_pfmla;
-  make_action_pfmla(&xn, &pure_shadow_pfmla, actidx);
+  make_action_pfmla(&xn, actidx);
 
   uint rep_actidx = representative_action_index(actidx);
 
   if (rep_actidx == actidx) {
     act_pfmlas[actidx] = xn;
-    pure_shadow_pfmlas[actidx] = pure_shadow_pfmla;
   }
   else {
     act_pfmlas[actidx] = false;
-    pure_shadow_pfmlas[actidx] = false;
     act_pfmlas[rep_actidx] |= xn;
-    pure_shadow_pfmlas[rep_actidx] |= pure_shadow_pfmla;
   }
 }
 
@@ -946,6 +916,8 @@ candidate_actions(std::vector<uint>& candidates,
     Xn::ActSymm act;
     topo.action(act, actidx);
     const Xn::PcSymm& pc_symm = *act.pc_symm;
+    if (pc_symm.membs.sz() == 0)
+      continue;
 
     uint rep_pcidx = 0;
     pc_symm.representative(&rep_pcidx);
@@ -972,13 +944,9 @@ candidate_actions(std::vector<uint>& candidates,
     if (add) {
       bool selfloop = true;
       bool shadow_exists = false;
-      bool shadow_selfloop = true;
       for (uint j = 0; j < pc_symm.wvbl_symms.sz(); ++j) {
         if (pc_symm.wvbl_symms[j]->pure_shadow_ck()) {
           shadow_exists = true;
-          if (act.assign(j) != act.aguard(j)) {
-            shadow_selfloop = false;
-          }
         }
         else {
           if (act.assign(j) != act.aguard(j)) {
@@ -988,7 +956,7 @@ candidate_actions(std::vector<uint>& candidates,
       }
       add = !selfloop;
       if (selfloop) {
-        if (shadow_exists && shadow_selfloop) {
+        if (shadow_exists) {
           add = true;
         }
         else {

@@ -21,7 +21,7 @@ oput_pla_act (Cx::OFile& of, const Xn::ActSymm& act)
 {
   const Xn::PcSymm& pc_symm = *act.pc_symm;
   for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
-    if (pc_symm.rvbl_symms[i]->pure_shadow_ck() && !pc_symm.write_flags[i])
+    if (pc_symm.rvbl_symms[i]->pure_shadow_ck())
       continue;
     of << ' ';
     oput_pla_val (of, act.guard(i), pc_symm.doms[i]);
@@ -40,13 +40,13 @@ oput_pla_pc_acts (Cx::OFile& of, const Xn::PcSymm& pc_symm,
 
   uint nrvbls = 0;
   for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
-    if (!(pc_symm.rvbl_symms[i]->pure_shadow_ck() && !pc_symm.write_flags[i]))
+    if (!pc_symm.rvbl_symms[i]->pure_shadow_ck())
       nrvbls += 1;
   }
 
   of << ".mv " << (nrvbls + pc_symm.wmap.sz()) << " 0";
   for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
-    if (pc_symm.rvbl_symms[i]->pure_shadow_ck() && !pc_symm.write_flags[i])
+    if (pc_symm.rvbl_symms[i]->pure_shadow_ck())
       continue;
     of << ' ' << pc_symm.doms[i];
   }
@@ -56,7 +56,7 @@ oput_pla_pc_acts (Cx::OFile& of, const Xn::PcSymm& pc_symm,
 
   of << '#';
   for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
-    if (pc_symm.rvbl_symms[i]->pure_shadow_ck() && !pc_symm.write_flags[i])
+    if (pc_symm.rvbl_symms[i]->pure_shadow_ck())
       continue;
     of << ' ' << pc_symm.vbl_name(i);
   }
@@ -269,7 +269,7 @@ oput_protocon_pc_acts (Cx::OFile& of, const Xn::PcSymm& pc_symm,
   Cx::Table<Cx::String> guard_vbls;
   Cx::Table<Cx::String> assign_vbls( pc_symm.wmap.sz() );
   for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
-    if (pc_symm.rvbl_symms[i]->pure_shadow_ck() && !pc_symm.write_flags[i])
+    if (pc_symm.rvbl_symms[i]->pure_shadow_ck())
       continue;
     guard_vbls.push(pc_symm.vbl_name(i));
   }
@@ -387,9 +387,9 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys, bool use_espresso, const 
   oput_protocon_constants (of, *sys.spec);
   for (uint i = 0; i < topo.vbl_symms.sz(); ++i) {
     const Xn::VblSymm& vbl_symm = topo.vbl_symms[i];
-    if (vbl_symm.shadow_puppet_role == Xn::Vbl::Shadow)
+    if (vbl_symm.pure_shadow_ck())
       of << "shadow\n";
-    if (vbl_symm.shadow_puppet_role == Xn::Vbl::Puppet)
+    if (vbl_symm.pure_puppet_ck())
       of << "puppet\n";
 
     of << "variable " << vbl_symm.spec->name

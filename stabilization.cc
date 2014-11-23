@@ -146,13 +146,20 @@ shadow_ck(Cx::PFmla* ret_invariant,
 
   // Over-approximated protocol must preserve shadow invariant.
   if (!topo.proj_shadow(shadow_invariant).equiv_ck(topo.proj_shadow(hi_invariant))) {
-      if (explain_failure)
+
+      if (explain_failure) {
         DBog0( "Does not preserve shadow invariant." );
+        P::Fmla pf = topo.proj_shadow(shadow_invariant) - topo.proj_shadow(hi_invariant);
+        X::Fmla xn = pf & lo_xn & (~topo.proj_shadow(hi_invariant)).as_img();
+        topo.oput_vbl_names(DBogOF);
+        topo.oput_one_xn(DBogOF, xn);
+        // May not output anything.
+      }
     return false;
   }
 
   // Over-approximated protocol must preserve shadow transitions.
-  if (!shadow_live.equiv_ck(topo.proj_shadow(hi_live))) {
+  if (!topo.proj_shadow(shadow_live).equiv_ck(topo.proj_shadow(hi_live))) {
       if (explain_failure)
         DBog0( "Does not preserve shadow transitions." );
     return false;
@@ -199,21 +206,12 @@ stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
 {
   const Xn::Net& topo = sys.topology;
   const bool show_failure = true;
-  if (sys.shadow_puppet_synthesis_ck()) {
-    of << "Checking for bad shadow...\n";
-  }
-  else {
-    of << "Checking for self-loops...\n";
-  }
-  if ((lo_xn.img() & sys.closed_assume).overlap_ck(lo_xn & topo.proj_puppet(topo.identity_xn))) {
-    if (sys.shadow_puppet_synthesis_ck()) {
-      of << "Pure shadow behavior is not put together properly.\n";
-    }
-    else {
-      of << "Self-loop found.\n";
-    }
+
+  of << "Checking for self-loops...\n";
+  if (sys.closed_assume.overlap_ck(lo_xn & topo.identity_xn)) {
+    of << "Self-loop found.\n";
     if (show_failure) {
-      const Cx::PFmla& puppet_self = lo_xn & topo.proj_puppet(topo.identity_xn);
+      const Cx::PFmla& puppet_self = sys.closed_assume & lo_xn & topo.identity_xn;
       Cx::PFmla pf = (lo_xn.img() & puppet_self.pre()).pick_pre();
       topo.oput_vbl_names(of);
       topo.oput_one_pf(of, lo_xn.pre(pf));
@@ -265,7 +263,7 @@ stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
     }
     if (show_failure) {
       topo.oput_vbl_names(of);
-      oput_one_cycle(of, lo_xn, scc, topo);
+      oput_one_cycle(of, lo_xn, scc, scc - sys.invariant, topo);
     }
     of.flush();
     return false;
@@ -345,27 +343,21 @@ stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
   }
 
   X::Fmla lo_xn( false );
-  X::Fmla lo_pure_shadow_pf( true );
   for (uint i = 0; i < actions.size(); ++i) {
     if (!topo.lightweight) {
       lo_xn |= topo.action_pfmla(actions[i]);
-      lo_pure_shadow_pf &= topo.pure_shadow_pfmla(actions[i]);
     }
     else {
       const Cx::Table<uint>& rep_actions = topo.represented_actions[actions[i]];
       for (uint j = 0; j < rep_actions.sz(); ++j) {
         X::Fmla act_xn;
-        X::Fmla pure_shadow_act_xn;
-        topo.make_action_pfmla(&act_xn, &pure_shadow_act_xn, rep_actions[j]);
+        topo.make_action_pfmla(&act_xn, rep_actions[j]);
         lo_xn |= act_xn;
-        lo_pure_shadow_pf &= pure_shadow_act_xn;
       }
     }
-    //Claim( lo_pure_shadow_pf.sat_ck() );
   }
 
   Cx::PFmla hi_xn( lo_xn );
-  Cx::PFmla hi_pure_shadow_pf( lo_pure_shadow_pf );
   for (uint i = 0; i < candidates.size(); ++i) {
     if (!topo.lightweight) {
       hi_xn |= topo.action_pfmla(candidates[i]);
@@ -374,18 +366,11 @@ stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
       const Cx::Table<uint>& rep_candidates = topo.represented_actions[candidates[i]];
       for (uint j = 0; j < rep_candidates.sz(); ++j) {
         X::Fmla act_xn;
-        topo.make_action_pfmla(&act_xn, 0, rep_candidates[j]);
+        topo.make_action_pfmla(&act_xn, rep_candidates[j]);
         hi_xn |= act_xn;
       }
     }
-    // TODO
-    //hi_pure_shadow_pf |= topo.pure_shadow_pfmla(candidates[i]);
   }
-  lo_xn &= lo_pure_shadow_pf & lo_pure_shadow_pf.as_img();
-  hi_xn &= hi_pure_shadow_pf & hi_pure_shadow_pf.as_img();
-  const Cx::PFmla& puppet_self = topo.proj_puppet(topo.identity_xn);
-  lo_xn |= puppet_self & ~lo_pure_shadow_pf & lo_pure_shadow_pf.as_img();
-  hi_xn |= puppet_self & ~hi_pure_shadow_pf & hi_pure_shadow_pf.as_img();
 
   if (info) {
     info->actions = actions;

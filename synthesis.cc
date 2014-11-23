@@ -34,6 +34,7 @@ coexist_ck(const Xn::ActSymm& a, const Xn::ActSymm& b)
         pure_shadow_img_eql = false;
     }
   }
+
   if (puppet_img_eql && !pure_shadow_img_eql)
     return false;
 
@@ -53,11 +54,22 @@ coexist_ck(const Xn::ActSymm& a, const Xn::ActSymm& b)
   if (!deterministic)  return false;
   if (!enabling)  return true;
 
+  bool shadow_exists = false;
+  bool a_self_loop = true;
+  bool b_self_loop = true;
   bool a_enables = true;
   bool b_enables = true;
   for (uint j = 0; j < pc.wvbl_symms.sz(); ++j) {
-    if (pc.wvbl_symms[j]->pure_shadow_ck())
+    if (pc.wvbl_symms[j]->pure_shadow_ck()) {
+      shadow_exists = true;
       continue;
+    }
+    if (a.assign(j) != a.aguard(j)) {
+      a_self_loop = false;
+    }
+    if (b.assign(j) != b.aguard(j)) {
+      b_self_loop = false;
+    }
     if (a.assign(j) != b.aguard(j)) {
       a_enables = false;
     }
@@ -65,8 +77,13 @@ coexist_ck(const Xn::ActSymm& a, const Xn::ActSymm& b)
       b_enables = false;
     }
   }
-  if (a_enables || b_enables)
+
+  if (!shadow_exists && (a_self_loop || b_self_loop)) {
     return false;
+  }
+  if ((a_enables && !b_self_loop) || (b_enables && !a_self_loop)) {
+    return false;
+  }
   return true;
 }
 
@@ -207,7 +224,7 @@ ReviseDeadlocksMCV(vector<DeadlockConstraint>& dlsets,
         for (uint j = minidx; j < diffDeadlockSets.size(); ++j) {
           const PF& diffPF =
             (candidateGuardPF & diffDeadlockSets[j].deadlockPF);
-          if (!diffPF.tautology_ck(false)) {
+          if (diffPF.sat_ck()) {
             diffDeadlockSets[j-1].deadlockPF |= diffPF;
             diffDeadlockSets[j].deadlockPF -= diffPF;
             if (j == minidx) {
@@ -918,7 +935,6 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
   }
 
   Cx::PFmla add_act_pfmla( false );
-  Cx::PFmla add_pure_shadow_pfmla( true );
   for (it = adds.begin(); it != adds.end(); ++it) {
     uint actId = *it;
     if (use_csp) {
@@ -959,7 +975,6 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
     }
     dels |= tmp_dels;
     add_act_pfmla |= topo.action_pfmla(actId);
-    add_pure_shadow_pfmla &= topo.pure_shadow_pfmla(actId);
   }
 
   if (adds.overlap_ck(dels)) {
@@ -976,12 +991,6 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
 
   this->lo_puppet_xn |= add_act_pfmla;
   this->lo_xn = this->lo_puppet_xn;
-  this->lo_pure_shadow_pfmla &= add_pure_shadow_pfmla;
-  if (topo.pure_shadow_vbl_ck()) {
-    this->lo_xn &= this->lo_pure_shadow_pfmla & this->lo_pure_shadow_pfmla.as_img();
-    this->lo_xn |= topo.proj_puppet(topo.identity_xn) &
-      (~this->lo_pure_shadow_pfmla & this->lo_pure_shadow_pfmla.as_img());
-  }
 
   Cx::PFmla del_act_pfmla( false );
   for (it = dels.begin(); it != dels.end(); ++it) {
@@ -1006,13 +1015,6 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
   }
   this->hi_puppet_xn -= del_act_pfmla;
   this->hi_xn = this->hi_puppet_xn;
-  this->hi_pure_shadow_pfmla = this->lo_pure_shadow_pfmla;
-  if (topo.pure_shadow_vbl_ck()) {
-    this->hi_xn &= this->hi_pure_shadow_pfmla & this->hi_pure_shadow_pfmla.as_img();
-    this->hi_xn |= topo.proj_puppet(topo.identity_xn) &
-      (~this->hi_pure_shadow_pfmla & this->hi_pure_shadow_pfmla.as_img());
-  }
-
 
   Xn::ActSymm act;
   if (this->sys_idx == 0)
@@ -1038,14 +1040,15 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
   this->lo_xn.cycle_ck(&scc, &nlayers, 0, &sys.closed_assume);
   if (max_nlayers > 0 && nlayers > max_nlayers) {
     *this->log << "NLAYERS (maximum number of convergence layers exceeded: "
-      << nlayers << " > " << max_nlayers << ")" << this->log->endl();
+      << nlayers << "+ > " << max_nlayers << ")" << this->log->endl();
     return false;
   }
   if (ret_nlayers) {
     *ret_nlayers = nlayers;
   }
   if (!scc.subseteq_ck(sys.invariant)) {
-    //oput_one_cycle(*this->log, this->lo_xn, scc, topo);
+    //topo.oput_vbl_names(*this->log);
+    //oput_one_cycle(*this->log, this->lo_xn, scc, scc - sys.invariant, topo);
     //uint n = count_actions_in_cycle(scc, act_pf, this->actions, topo);
     //DBog1("scc actions: %u", n);
     *this->log << "CYCLE" << this->log->endl();
@@ -1095,6 +1098,11 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
 
   if (!this->deadlockPF.subseteq_ck(this->hi_xn.pre())) {
     *this->log << "DEADLOCK" << this->log->endl();
+    if (false) {
+      topo.oput_vbl_names(*this->log);
+      topo.oput_one_pf(*this->log, this->deadlockPF - this->hi_xn.pre());
+      this->log->flush();
+    }
     return false;
   }
 
@@ -1116,8 +1124,10 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
   }
 
   bool revise = true;
-  if (sys.shadow_puppet_synthesis_ck() &&
-      !(this->deadlockPF.subseteq_ck(old_deadlock_pfmla)))
+  if ((sys.shadow_puppet_synthesis_ck() &&
+       !(this->deadlockPF.subseteq_ck(old_deadlock_pfmla)))
+      ||
+      topo.pure_shadow_vbl_ck())
   {
     RankDeadlocksMCV(this->mcv_deadlocks,
                      sys.topology,
