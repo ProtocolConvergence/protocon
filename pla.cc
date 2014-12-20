@@ -21,14 +21,16 @@ oput_pla_act (Cx::OFile& of, const Xn::ActSymm& act)
 {
   const Xn::PcSymm& pc_symm = *act.pc_symm;
   for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
-    if (pc_symm.rvbl_symms[i]->pure_shadow_ck())
+    const Xn::VblSymm& vbl_symm = *pc_symm.rvbl_symms[i];
+    if (vbl_symm.pure_shadow_ck())
       continue;
     of << ' ';
-    oput_pla_val (of, act.guard(i), pc_symm.doms[i]);
+    oput_pla_val (of, act.guard(i), vbl_symm.domsz);
   }
-  for (uint i = 0; i < pc_symm.wmap.sz(); ++i) {
+  for (uint i = 0; i < pc_symm.wvbl_symms.sz(); ++i) {
+    const Xn::VblSymm& vbl_symm = *pc_symm.wvbl_symms[i];
     of << ' ';
-    oput_pla_val (of, act.assign(i), pc_symm.doms[pc_symm.wmap[i]]);
+    oput_pla_val (of, act.assign(i), vbl_symm.domsz);
   }
 }
 
@@ -46,12 +48,15 @@ oput_pla_pc_acts (Cx::OFile& of, const Xn::PcSymm& pc_symm,
 
   of << ".mv " << (nrvbls + pc_symm.wmap.sz()) << " 0";
   for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
-    if (pc_symm.rvbl_symms[i]->pure_shadow_ck())
+    const Xn::VblSymm& vbl_symm = *pc_symm.rvbl_symms[i];
+    if (vbl_symm.pure_shadow_ck())
       continue;
-    of << ' ' << pc_symm.doms[i];
+    of << ' ' << vbl_symm.domsz;
   }
-  for (uint i = 0; i < pc_symm.wmap.sz(); ++i)
-    of << ' ' << pc_symm.doms[pc_symm.wmap[i]];
+  for (uint i = 0; i < pc_symm.wvbl_symms.sz(); ++i) {
+    const Xn::VblSymm& vbl_symm = *pc_symm.wvbl_symms[i];
+    of << ' ' << vbl_symm.domsz;
+  }
   of << '\n';
 
   of << '#';
@@ -209,10 +214,15 @@ oput_protocon_pc_act (Cx::OFile& of, const Xn::ActSymm& act)
   of << "    ( ";
   const Xn::PcSymm& pc_symm = *act.pc_symm;
 
+  bool need_delim = false;
   for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
-    if (i > 0) {
+    if (pc_symm.rvbl_symms[i]->pure_shadow_ck())
+      continue;
+
+    if (need_delim)
       of << " && ";
-    }
+    else
+      need_delim = true;
     of << pc_symm.vbl_name(i) << "==" << act.guard(i);
   }
   of << " --> ";
@@ -382,6 +392,13 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys, bool use_espresso, const 
   ospc->cmd = cons1_AlphaTab ("espresso");
   /* Using -Dexact can take a long time.*/
   //PushTable( ospc->args, cons1_AlphaTab ("-Dexact") );
+
+  if (false) {
+    // Use this to capture espresso input/output.
+    ospc->cmd = cons1_AlphaTab ("sh");
+    PushTable( ospc->args, cons1_AlphaTab ("-c") );
+    PushTable( ospc->args, cons1_AlphaTab ("tee in.pla | espresso | tee out.pla") );
+  }
 
   const Xn::Net& topo = sys.topology;
   oput_protocon_constants (of, *sys.spec);

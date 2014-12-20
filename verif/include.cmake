@@ -107,6 +107,13 @@ foreach (f ${ExampleSynts})
   add_test (NAME VerifSynt_${f}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMAND protocon -verify -x examplesynt/${f}.protocon -def N 5)
+  add_test (NAME overify_synt_${f}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    COMMAND "${CMAKE_COMMAND}"
+    -Dprotocon_exe=$<TARGET_FILE:protocon>
+    -Dxfile=examplesynt/${f}.protocon
+    -P ${CMAKE_CURRENT_SOURCE_DIR}/verif/overify.cmake
+    )
 endforeach ()
 
 add_test (NAME TrySynt2_TokenChainDijkstra
