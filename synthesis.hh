@@ -16,7 +16,7 @@
 class SynthesisCtx;
 class PartialSynthesis;
 
-static const bool DBog_RankDeadlocksMCV = false;
+static const bool DBog_RankDeadlocksMRV = false;
 
 class DeadlockConstraint {
 public:
@@ -35,7 +35,7 @@ public:
 class AddConvergenceOpt {
 public:
   enum PickActionHeuristic {
-    MCVLitePick,
+    MRVLitePick,
     GreedyPick,
     GreedySlowPick,
     LCVLitePick,
@@ -84,7 +84,7 @@ public:
   uint n_livelock_ofiles;
 
   AddConvergenceOpt() :
-    pick_method( MCVLitePick )
+    pick_method( MRVLitePick )
     , search_method( BacktrackSearch )
     , nicePolicy( NilNice )
     , pick_back_reach( false )
@@ -123,8 +123,6 @@ public:
   Cx::Table<uint> picks; ///< Chosen actions, no inferred ones.
   vector<uint> candidates; ///< Candidate actions.
   Cx::PFmla deadlockPF; ///< Current deadlocks.
-  Cx::PFmla lo_puppet_xn; ///< Under-approximation of the puppet transitions.
-  Cx::PFmla hi_puppet_xn; ///< Over-approximation of the puppet transitions.
   Cx::PFmla lo_xn; ///< Under-approximation of the transition function.
   Cx::PFmla hi_xn; ///< Over-approximation of the transition function.
   Cx::PFmla hi_invariant;
@@ -144,8 +142,6 @@ public:
     , directly_add_conflicts( false )
     , no_conflict( false )
     , no_partial( false )
-    , lo_puppet_xn( false )
-    , hi_puppet_xn( false )
     , lo_xn( false )
     , hi_xn( false )
     , hi_invariant( false )
@@ -202,6 +198,7 @@ public:
   bool revise_actions(const Set<uint>& adds, const Set<uint>& dels, uint* ret_nlayers = 0);
   bool pick_action(uint act_idx);
   bool pick_actions(const vector<uint>& act_idcs);
+  bool pick_actions_separately(const vector<uint>& act_idcs);
 };
 
 class SynthesisCtx {
@@ -247,12 +244,12 @@ public:
 bool
 coexist_ck(const Xn::ActSymm& a, const Xn::ActSymm& b);
 void
-RankDeadlocksMCV(vector<DeadlockConstraint>& dlsets,
+RankDeadlocksMRV(vector<DeadlockConstraint>& dlsets,
                  const Xn::Net& topo,
                  const vector<uint>& actions,
                  const Cx::PFmla& deadlockPF);
 bool
-PickActionMCV(uint& ret_actId,
+PickActionMRV(uint& ret_actId,
               const PartialSynthesis& tape,
               const AddConvergenceOpt& opt);
 

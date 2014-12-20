@@ -80,7 +80,7 @@ add_custom_command (
   OUTPUT ${BldPath}/protoconfile.leg.cc
   COMMAND ${PegExe} -o ${BldPath}/protoconfile.leg.cc ${CMAKE_CURRENT_SOURCE_DIR}/protoconfile.leg
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/protoconfile.leg)
-set_source_files_properties (${BldPath}/protoconfile.leg.cc PROPERTIES GENERATED TRUE)
+set_bld_cfile_properties (${BldPath}/protoconfile.leg.cc)
 
 list (APPEND ProtoconSources
   pfmla.cc xnsys.cc inst.cc

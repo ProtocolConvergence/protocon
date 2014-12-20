@@ -15,6 +15,7 @@
     (and      (= x_pd 2)  (not (= x 0)) (not (= x_sc 0)) (= x1 0))
     (and (not (= x_pd 2)) (not (= x 1))      (= x_sc 2)  (= x1 1))
     (and (not (= x_pd 2)) (not (= x 2)) (not (= x_sc 2)) (= x1 2))
+    ; Replace the above action with the one below to create a livelock.
     ;(and (not (= x_pd 2))      (= x 2)  (not (= x_sc 2)) (= x1 1))
     )
   )

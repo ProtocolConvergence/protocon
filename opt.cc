@@ -164,6 +164,9 @@ protocon_options_rec
     else if (eq_cstr (arg, "-rank-shuffle")) {
       opt.search_method = opt.RankShuffleSearch;
     }
+    else if (eq_cstr (arg, "-test")) {
+      exec_opt.task = ProtoconOpt::TestTask;
+    }
     else if (eq_cstr (arg, "-verify")) {
       exec_opt.task = ProtoconOpt::VerifyTask;
     }
@@ -377,8 +380,8 @@ protocon_options_rec
     }
     else if (eq_cstr (arg, "-pick")) {
       const char* method = argv[argi++];
-      if (eq_cstr (method, "mcv")) {
-        opt.pick_method = opt.MCVLitePick;
+      if (eq_cstr (method, "mrv")) {
+        opt.pick_method = opt.MRVLitePick;
       }
       else if (eq_cstr (method, "greedy")) {
         opt.pick_method = opt.GreedyPick;
@@ -396,7 +399,7 @@ protocon_options_rec
         opt.pick_method = opt.QuickPick;
       }
       else {
-        failout_sysCx("Argument Usage: -pick [mcv|greedy|lcv|quick]");
+        failout_sysCx("Argument Usage: -pick [mrv|greedy|lcv|quick]");
       }
     }
     else {

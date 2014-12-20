@@ -1,8 +1,8 @@
 
 constant N := 4;
 
-shadow variable m[Int % N] <- Int % 3;
 puppet variable x[Int % N] <- Int % 2;
+shadow variable m[Int % N] <- Int % 3;
 
 process P[i <- Int % N]
 {

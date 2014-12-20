@@ -222,8 +222,9 @@ stabilization_search(vector<uint>& ret_actions,
     }
     else if (NPcs * trial_idx + PcIdx < global_opt.solution_guesses.sz()) {
       PartialSynthesis tape( synlvl );
-      tape.pick_actions(global_opt.solution_guesses[NPcs * trial_idx + PcIdx]);
-      found = AddStabilization(actions, tape, opt);
+      if (tape.pick_actions(global_opt.solution_guesses[NPcs * trial_idx + PcIdx])) {
+        found = AddStabilization(actions, tape, opt);
+      }
       synlvl.failed_bt_level = tape.failed_bt_level;
     }
     else

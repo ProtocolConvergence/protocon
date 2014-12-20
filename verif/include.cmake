@@ -97,12 +97,13 @@ set (ExampleSynts
   MatchRingOneBit
   ShadowColorRing
   TokenChainDijkstra
+  TokenRingThreeState
   )
 
 foreach (f ${ExampleSynts})
   add_test (NAME TrySynt_${f}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    COMMAND protocon -x examplespec/${f}.protocon -x-try examplesynt/${f}.protocon -def N 5)
+    COMMAND protocon -test -x examplespec/${f}.protocon -x-try examplesynt/${f}.protocon -def N 5)
   add_test (NAME VerifSynt_${f}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMAND protocon -verify -x examplesynt/${f}.protocon -def N 5)
@@ -110,7 +111,7 @@ endforeach ()
 
 add_test (NAME TrySynt2_TokenChainDijkstra
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-  COMMAND protocon -x examplespec/TokenChainDijkstra.protocon -x-try examplesynt/TokenChainDijkstra.protocon -def N 2)
+  COMMAND protocon -test -x examplespec/TokenChainDijkstra.protocon -x-try examplesynt/TokenChainDijkstra.protocon -def N 2)
 
 list (APPEND VerifyBySynthesis
   ColorRing

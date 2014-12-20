@@ -15,6 +15,7 @@
     (and (= x_pd 0) (= x 2) (= x1 0))
     (and (= x_pd 1) (= x 1) (= x1 2))
     (and (= x_pd 2) (= x 0) (= x1 1))
+    ; Replace the above action with the one below to create a livelock.
     ;(and (= x_pd 2) (= x 0) (= x1 2))
     )
   )
@@ -51,20 +52,21 @@
 
 (assert
   (forall ((i Int) (t Int))
-    ;; Switch to this one for a synchronous execution.
-    ;(=> (and (idx_ck i) (step_ck t))
-    ;    (act_P (sigma (dec1modN i) t)
-    ;           (sigma i t)
-    ;           (sigma i (+ t 1))))
-    (=> (and (idx_ck i) (step_ck t)
-             (not (= (sigma i t) (sigma i (+ t 1)))))
-        (and
-          (act_P (sigma (dec1modN i) t)
-                 (sigma i t)
-                 (sigma i (+ t 1)))
-          (= (sigma (dec1modN i) t)
-             (sigma (dec1modN i) (+ t 1)))
-          ))
+    ;; Use synchronous execution.
+    (=> (and (idx_ck i) (step_ck t))
+        (act_P (sigma (dec1modN i) t)
+               (sigma i t)
+               (sigma i (+ t 1))))
+    ;; Use asynchronous execution.
+    ;(=> (and (idx_ck i) (step_ck t)
+    ;         (not (= (sigma i t) (sigma i (+ t 1)))))
+    ;    (and
+    ;      (act_P (sigma (dec1modN i) t)
+    ;             (sigma i t)
+    ;             (sigma i (+ t 1)))
+    ;      (= (sigma (dec1modN i) t)
+    ;         (sigma (dec1modN i) (+ t 1)))
+    ;      ))
     ))
 
 (assert

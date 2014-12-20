@@ -108,10 +108,10 @@ This does not make sense in conjunction with the
 .B -parallel
 flag.
 .TP
-.BR -pick\  ( mcv | lcv | fully-random | conflict | quick )
+.BR -pick\  ( mrv | lcv | fully-random | conflict | quick )
 .IP
-.B mcv
-Most-constrained variable heuristic.
+.B mrv
+minimum remaining values heuristic.
 This is used by default, and it is always used since (most) other picking heuristics build on its functionality.
 .IP
 .B lcv
@@ -119,9 +119,9 @@ Least constraining value heuristic.
 Attempt to choose actions which constrain the possibilities the least.
 .IP
 .B fully-random
-Randomly choose a candidate action without the MCV heuristic.
+Randomly choose a candidate action without the MRV heuristic.
 The
-.B mcv
+.B mrv
 method already uses randomization in a backtracking search when the run mode is
 .B -random
 (this is the default) rather than
@@ -129,16 +129,16 @@ method already uses randomization in a backtracking search when the run mode is
 .IP
 .B conflict
 Try to choose actions which correspond with existing conflicts.
-This is constrained by the MCV heuristic.
+This is constrained by the MRV heuristic.
 .IP
 .B quick
 For testing, don't use this.
 The
-.B mcv
+.B mrv
 picking method is fast.
 .TP
 .BR -pick-reach
-Without breaking the most-constrained variable heuristic, try to pick actions which resolve a deadlock which can reach the invariant using the partial solution.
+Without breaking the minimum remaining valuesheuristic, try to pick actions which resolve a deadlock which can reach the invariant using the partial solution.
 .TP
 .BI -o-log\  log-file
 Output log file
@@ -278,7 +278,7 @@ The random method can make better decisions (for this problem, at least) by tryi
 This is accomplished with the
 .B -pick-reach
 flag.
-We can also make better decisions by using the least-constraining value heuristic on top of the default most-constrained variable heuristic.
+We can also make better decisions by using the least-constraining value heuristic on top of the default minimum remaining values heuristic.
 This is accomplished with the
 .B -pick lcv
 flag.

@@ -557,11 +557,11 @@ TestShadowMatchRing()
     { 0, 0, 1, 0, 1 },
     { 1, 0, 0, 0, 0 }
   };
-  act.vals[3] = 0;
   for (uint i = 0; i < ArraySz(init_actions); ++i) {
     act.vals[0] = init_actions[i][0];
     act.vals[1] = init_actions[i][1];
     act.vals[2] = init_actions[i][2];
+    act.vals[3] = 0;
     act.vals[4] = init_actions[i][3];
     act.vals[5] = init_actions[i][4];
     actidx = topo.action_index(act);

@@ -976,6 +976,12 @@ candidate_actions(std::vector<uint>& candidates,
       add = false;
       dels << actidx;
     }
+    // Optimization. Shadow variables can just be changed as if the invariant
+    // is reached or will be reached by this action.
+    if (add && !topo.smooth_puppet_vbls(act_pf.img()).overlap_ck(sys.invariant)) {
+      add = false;
+      dels << actidx;
+    }
     if (add && sys.direct_invariant_ck()) {
       if (!act_pf.img(sys.invariant & sys.closed_assume).subseteq_ck(sys.invariant)) {
         add = false;

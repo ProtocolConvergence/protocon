@@ -87,9 +87,46 @@ coexist_ck(const Xn::ActSymm& a, const Xn::ActSymm& b)
   return true;
 }
 
+#if 1
+  void
+RankDeadlocksMRV(vector<DeadlockConstraint>& dlsets,
+                 const Xn::Net& topo,
+                 const vector<uint>& candidates,
+                 const PF& deadlockPF)
+{
+  dlsets.clear();
+  dlsets.push_back(DeadlockConstraint(deadlockPF));
+  for (uint cidx = 0; cidx < candidates.size(); ++cidx) {
+    uint actidx = candidates[cidx];
+    const X::Fmla& act_xn = topo.action_pfmla(actidx);
+    uint i = dlsets.size();
+    while (i > 0) {
+      i -= 1;
+      P::Fmla resolved = dlsets[i].deadlockPF & act_xn.pre();
+      if (resolved.sat_ck()) {
+        if (i == dlsets.size()-1) {
+          dlsets.push_back(DeadlockConstraint(P::Fmla(false)));
+        }
+        dlsets[i].deadlockPF -= resolved;
+        dlsets[i+1].deadlockPF |= resolved;
+      }
+    }
+  }
+  for (uint cidx = 0; cidx < candidates.size(); ++cidx) {
+    uint actidx = candidates[cidx];
+    const P::Fmla& act_pre = topo.action_pfmla(actidx).pre();
+    for (uint i = 0; i < dlsets.size(); ++i) {
+      if (act_pre.overlap_ck(dlsets[i].deadlockPF)) {
+        dlsets[i].candidates << actidx;
+      }
+    }
+  }
+}
+#else
+
 /** Rank the deadlocks by how many actions can resolve them.*/
   void
-RankDeadlocksMCV(vector<DeadlockConstraint>& dlsets,
+RankDeadlocksMRV(vector<DeadlockConstraint>& dlsets,
                  const Xn::Net& topo,
                  const vector<uint>& actions,
                  const PF& deadlockPF)
@@ -148,7 +185,7 @@ RankDeadlocksMCV(vector<DeadlockConstraint>& dlsets,
     }
   }
 
-  if (DBog_RankDeadlocksMCV) {
+  if (DBog_RankDeadlocksMRV) {
     for (uint i = 0; i < dlsets.size(); ++i) {
       if (!dlsets[i].deadlockPF.tautology_ck(false)) {
         DBog2( "Rank %u has %u actions.", i, (uint) dlsets[i].candidates.size() );
@@ -156,6 +193,7 @@ RankDeadlocksMCV(vector<DeadlockConstraint>& dlsets,
     }
   }
 }
+#endif
 
 /**
  * Revise the ranks of deadlocks which are ranked by number candidate actions
@@ -164,7 +202,7 @@ RankDeadlocksMCV(vector<DeadlockConstraint>& dlsets,
  * \param dels  Actions which were pruned from the list of candidates.
  */
   void
-ReviseDeadlocksMCV(vector<DeadlockConstraint>& dlsets,
+ReviseDeadlocksMRV(vector<DeadlockConstraint>& dlsets,
                    const Xn::Net& topo,
                    const Set<uint>& adds,
                    const Set<uint>& dels)
@@ -270,14 +308,14 @@ pick_action_candidates(Set<uint>& ret_candidates,
 
 /**
  * Pick the next candidate action to use.
- * The most constrained variable (MCV) heuristic may be used.
+ * The minimum remaining values (MRV) heuristic may be used.
  *
  * \param ret_actidx  Return value. Action to use.
  * \return True iff an action was picked. It should return
  *   true unless you're doing it wrong).
  */
   bool
-PickActionMCV(uint& ret_actidx,
+PickActionMRV(uint& ret_actidx,
               const PartialSynthesis& tape,
               const AddConvergenceOpt& opt)
 {
@@ -295,7 +333,7 @@ PickActionMCV(uint& ret_actidx,
     return false;
   }
 
-  // Do most constrained variable (MCV).
+  // Do minimal remaining values heuristic (MRV).
   // That is, find an action which resolves a deadlock which
   // can only be resolved by some small number of actions.
   uint mcv_dlset_idx = 0;
@@ -349,8 +387,8 @@ PickActionMCV(uint& ret_actidx,
   *inst.log
     << " (lvl " << inst.bt_level
     << ") (psys " << inst.sys_idx
-    << ") (mcv " << mcv_dlset_idx
-    << ") (mcv-sz " << inst.mcv_deadlocks[mcv_dlset_idx].candidates.sz()
+    << ") (mrv " << mcv_dlset_idx
+    << ") (mrv-sz " << inst.mcv_deadlocks[mcv_dlset_idx].candidates.sz()
     << ") (rem-sz " << candidates.sz()
     << ")" << inst.log->endl();
 
@@ -429,7 +467,7 @@ pick_action_candidates(Set<uint>& ret_candidates,
     candidates = candidates_1;
   }
 
-  if (pick_method == Opt::MCVLitePick) {
+  if (pick_method == Opt::MRVLitePick) {
     biasMap[0] = candidates;
   }
   else if (pick_method == Opt::GreedyPick || pick_method == Opt::GreedySlowPick) {
@@ -485,7 +523,7 @@ pick_action_candidates(Set<uint>& ret_candidates,
       const uint actId = *it;
       uint n = 0;
       vector<DeadlockConstraint> tmpDeadlocks( dlsets );
-      ReviseDeadlocksMCV(tmpDeadlocks, topo, Set<uint>(actId), Set<uint>());
+      ReviseDeadlocksMRV(tmpDeadlocks, topo, Set<uint>(actId), Set<uint>());
       for (uint j = 1; j < tmpDeadlocks.size(); ++j) {
         n += tmpDeadlocks[j].candidates.size();
       }
@@ -856,7 +894,6 @@ PartialSynthesis::check_forward(Set<uint>& adds, Set<uint>& dels, Set<uint>& rej
   const Xn::Net& topo = sys.topology;
 
   if (this->mcv_deadlocks.size() <= 1) {
-    // This should have been caught if no deadlocks remain.
     Claim(!this->deadlockPF.sat_ck());
     this->candidates.clear();
     if (this->ctx->conflicts.conflict_ck(FlatSet<uint>(this->actions))) {
@@ -910,12 +947,22 @@ PartialSynthesis::check_forward(Set<uint>& adds, Set<uint>& dels, Set<uint>& rej
 PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
                                        Set<uint>& rejs, uint* ret_nlayers)
 {
+  bool candidates_contain_all_adds = true;
   const Xn::Sys& sys = *this->ctx->systems[this->sys_idx];
   const Xn::Net& topo = sys.topology;
   Set<uint>::const_iterator it;
   const bool use_csp = false;
   if (this->ctx->done_ck())
     return false;
+
+  // For debug only. Optimized out.
+  for (uint i = 0; false && i < this->candidates.size(); ++i) {
+    Xn::ActSymm act;
+    *this->log << "candidate " << (i+1) << "/" << this->candidates.size() << ": ";
+    topo.action(act, candidates[i]);
+    OPut(*this->log, act);
+    *this->log << this->log->endl();
+  }
 
   if (this->no_partial) {
     for (it = adds.begin(); it != adds.end(); ++it) {
@@ -944,6 +991,7 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
     }
 
     if (!Remove1(this->candidates, actId)) {
+      candidates_contain_all_adds = false;
       // This action wasn't a candidate,
       // but that may just mean it introduces nondeterminism
       // or doesn't resolve any existing deadlocks.
@@ -980,7 +1028,7 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
   if (adds.overlap_ck(dels)) {
     if ((adds & dels) <= this->mcv_deadlocks[1].candidates)
     {
-      *this->log << "Conflicting add from MCV." << this->log->endl();
+      *this->log << "Conflicting add from MRV." << this->log->endl();
     }
     else
     {
@@ -989,33 +1037,10 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
     return false;
   }
 
-  this->lo_puppet_xn |= add_act_pfmla;
-  this->lo_xn = this->lo_puppet_xn;
-
-  Cx::PFmla del_act_pfmla( false );
-  for (it = dels.begin(); it != dels.end(); ++it) {
-    uint actidx = *it;
-    if (use_csp) {
-      this->csp_pfmla &=
-        this->ctx->csp_pfmla_ctx.vbl(topo.action_pre_index(actidx))
-        != topo.action_img_index(actidx);
-    }
-    Remove1(this->candidates, actidx);
-    del_act_pfmla |= topo.action_pfmla(actidx);
-    if (false) {
-      Xn::ActSymm act;
-      DBogOF << "DEL ";
-      topo.action(act, actidx);
-      OPut(DBogOF, act) << DBogOF.endl();
-    }
+  this->lo_xn |= add_act_pfmla;
+  if (!candidates_contain_all_adds) {
+    this->hi_xn |= add_act_pfmla;
   }
-  del_act_pfmla -= this->lo_xn;
-  for (uint i = 0; i < this->candidates.size(); ++i) {
-    del_act_pfmla -= topo.action_pfmla(this->candidates[i]);
-  }
-  this->hi_puppet_xn -= del_act_pfmla;
-  this->hi_xn = this->hi_puppet_xn;
-
   Xn::ActSymm act;
   if (this->sys_idx == 0)
   for (it = adds.begin(); it != adds.end(); ++it) {
@@ -1028,6 +1053,33 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
     topo.action(act, actId);
     OPut(*this->log, act) << this->log->endl();
   }
+
+  X::Fmla del_act_xn( false );
+  Cx::Table<P::Fmla> del_xns;
+  for (it = dels.begin(); it != dels.end(); ++it) {
+    uint actidx = *it;
+    if (use_csp) {
+      this->csp_pfmla &=
+        this->ctx->csp_pfmla_ctx.vbl(topo.action_pre_index(actidx))
+        != topo.action_img_index(actidx);
+    }
+    Remove1(this->candidates, actidx);
+    del_act_xn |= topo.action_pfmla(actidx);
+    del_xns.push(topo.action_pfmla(actidx));
+    if (false) {
+      Xn::ActSymm act;
+      DBogOF << "DEL ";
+      topo.action(act, actidx);
+      OPut(DBogOF, act) << DBogOF.endl();
+    }
+  }
+  del_act_xn -= this->lo_xn;
+  for (uint i = 0; i < this->candidates.size(); ++i) {
+    del_act_xn -= topo.action_pfmla(this->candidates[i]);
+  }
+
+  this->hi_xn -= del_act_xn;
+
 
   uint max_nlayers = this->stabilization_opt().max_nlayers;
   if (ret_nlayers && *ret_nlayers > 0
@@ -1084,14 +1136,19 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
     return false;
   }
 
+  const P::Fmla old_hi_invariant( this->hi_invariant );
   if (!shadow_ck(&this->hi_invariant, sys, this->lo_xn, this->hi_xn, &scc))
   {
     *this->log << "SHADOW" << this->log->endl();
     return false;
   }
+  if (candidates_contain_all_adds) {
+    Claim(this->hi_invariant.subseteq_ck(old_hi_invariant));
+  }
 
   const Cx::PFmla old_deadlock_pfmla( this->deadlockPF );
 
+  // This grows sometimes when {hi_invariant} shrinks.
   this->deadlockPF =
     (((~this->hi_invariant) | sys.shadow_pfmla.pre()) & sys.closed_assume)
     - this->lo_xn.pre();
@@ -1125,11 +1182,12 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
 
   bool revise = true;
   if ((sys.shadow_puppet_synthesis_ck() &&
-       !(this->deadlockPF.subseteq_ck(old_deadlock_pfmla)))
+       !this->deadlockPF.subseteq_ck(old_deadlock_pfmla))
       ||
-      topo.pure_shadow_vbl_ck())
+      candidates_contain_all_adds
+     )
   {
-    RankDeadlocksMCV(this->mcv_deadlocks,
+    RankDeadlocksMRV(this->mcv_deadlocks,
                      sys.topology,
                      this->candidates,
                      this->deadlockPF);
@@ -1137,7 +1195,7 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
   }
 
   if (revise) {
-    ReviseDeadlocksMCV(this->mcv_deadlocks, topo, adds, dels);
+    ReviseDeadlocksMRV(this->mcv_deadlocks, topo, adds, dels);
   }
 
   adds.clear();
@@ -1248,6 +1306,19 @@ PartialSynthesis::pick_actions(const vector<uint>& act_idcs)
   return true;
 }
 
+  bool
+PartialSynthesis::pick_actions_separately(const vector<uint>& act_idcs)
+{
+  DBog1("There are %u actions to pick", (uint) act_idcs.size());
+  for (uint i = 0; i < act_idcs.size(); ++i) {
+    DBog1("picking: %u", i);
+    if (!pick_action(act_idcs[i])) {
+      return false;
+    }
+  }
+  return true;
+}
+
 /**
  * Initialize synthesis structures.
  */
@@ -1322,16 +1393,16 @@ SynthesisCtx::add(const Xn::Sys& sys, const StabilizationOpt& stabilization_opt)
   }
 
   for (uint i = 0; i < partial.candidates.size(); ++i) {
-    partial.hi_puppet_xn |= topo.action_pfmla(partial.candidates[i]);
+    partial.hi_xn |= topo.action_pfmla(partial.candidates[i]);
   }
-  partial.hi_xn = partial.hi_puppet_xn;
 
   partial.deadlockPF = ~sys.invariant & sys.closed_assume;
+  partial.hi_invariant = sys.invariant & sys.closed_assume;
   if (sys.shadow_puppet_synthesis_ck()) {
     partial.deadlockPF |= sys.shadow_pfmla.pre();
   }
 
-  RankDeadlocksMCV(partial.mcv_deadlocks,
+  RankDeadlocksMRV(partial.mcv_deadlocks,
                    sys.topology,
                    partial.candidates,
                    partial.deadlockPF);

@@ -139,7 +139,7 @@ AddStabilization(vector<uint>& ret_actions,
 
     // Pick the action.
     uint actidx = 0;
-    if (!PickActionMCV(actidx, partial, opt)) {
+    if (!PickActionMRV(actidx, partial, opt)) {
       DBog0("Cannot resolve all deadlocks!");
       partial.add_small_conflict_set(partial.picks);
       return false;
@@ -436,9 +436,9 @@ try_known_solution(const ConflictFamily& conflicts,
   {
     good = false;
     if (!found)
-      *synctx.log << "NO LONGER WORKING OMG\n";
+      *synctx.log << "NO LONGER WORKING\n";
     else
-      *synctx.log << "WTF I SKIPPED SOME\n";
+      *synctx.log << "I SKIPPED SOME\n";
 
     Cx::OFileB working_of;
     working_of.open(Cx::String("working_conflicts.out.") + synctx.opt.sys_pcidx);
@@ -787,6 +787,28 @@ stabilization_search(vector<uint>& ret_actions,
     synctx.conflicts.oput_conflict_sizes(*opt.log);
   }
 
+  if (exec_opt.task == ProtoconOpt::TestTask) {
+    if (PcIdx == 0) {
+      solution_found = true;
+    }
+#pragma omp barrier
+    for (uint trial_idx = 0;
+         !synctx.done_ck() &&
+         NPcs * trial_idx + PcIdx < global_opt.solution_guesses.sz();
+         ++trial_idx)
+    {
+      bool sat = true;
+      PartialSynthesis partial( synlvl );
+      sat = sat && partial.pick_actions_separately(global_opt.solution_guesses[NPcs * trial_idx + PcIdx]);
+      sat = sat && !partial.deadlocks_ck();
+      vector<uint> actions;
+      sat = sat && AddStabilization(actions, partial, opt);
+      if (!sat) {
+        solution_found = false;
+      }
+    }
+  }
+
   if (exec_opt.task == ProtoconOpt::SearchTask)
   for (uint trial_idx = 0; !synctx.done_ck() && (opt.ntrials == 0 || trial_idx < opt.ntrials); ++trial_idx)
   {
@@ -808,8 +830,9 @@ stabilization_search(vector<uint>& ret_actions,
     }
     else if (NPcs * trial_idx + PcIdx < global_opt.solution_guesses.sz()) {
       PartialSynthesis tape( synlvl );
-      tape.pick_actions(global_opt.solution_guesses[NPcs * trial_idx + PcIdx]);
-      found = AddStabilization(actions, tape, opt);
+      if (tape.pick_actions(global_opt.solution_guesses[NPcs * trial_idx + PcIdx])) {
+        found = AddStabilization(actions, tape, opt);
+      }
       synlvl.failed_bt_level = tape.failed_bt_level;
     }
     else
