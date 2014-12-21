@@ -94,7 +94,7 @@
         <item>
          <widget class="QLineEdit" name="outputFileLineEdit">
           <property name="text">
-           <string>out.protocon</string>
+           <string>out.prot</string>
           </property>
          </widget>
         </item>
