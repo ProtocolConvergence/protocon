@@ -6,8 +6,8 @@
 #include "cx/urandom.hh"
 #include "cx/fileb.hh"
 #include "opt.hh"
-#include "pla.hh"
-#include "protoconfile.hh"
+#include "prot-xfile.hh"
+#include "prot-ofile.hh"
 #include "stabilization.hh"
 #include "synthesis.hh"
 #include <signal.h>

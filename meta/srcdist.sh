@@ -38,7 +38,7 @@ cat "$metapath/examplespec.files" | \
 {
   while read f
   do
-    cp -a -t examplespec "$srcpath/examplespec/$f.protocon"
+    cp -a -t examplespec "$srcpath/examplespec/$f.prot"
   done
 }
 rm -fr $src/examplespec
@@ -48,7 +48,7 @@ cat "$metapath/examplesoln.files" | \
 {
   while read f
   do
-    cp -a -t examplesoln "$srcpath/examplesoln/$f.protocon"
+    cp -a -t examplesoln "$srcpath/examplesoln/$f.prot"
   done
 }
 rm -fr $src/examplesoln

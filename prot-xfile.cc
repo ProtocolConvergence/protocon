@@ -1,6 +1,6 @@
 
 
-#include "protoconfile.hh"
+#include "prot-xfile.hh"
 #include "cx/bittable.hh"
 
   bool

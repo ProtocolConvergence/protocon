@@ -2,7 +2,7 @@
 extern "C" {
 #include "cx/syscx.h"
 }
-#include "pla.hh"
+#include "prot-ofile.hh"
 #include "cx/fileb.hh"
 
 extern "C" {

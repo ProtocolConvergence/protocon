@@ -1,6 +1,6 @@
 
-#ifndef PLA_HH_
-#define PLA_HH_
+#ifndef PROT_OFILE_HH_
+#define PROT_OFILE_HH_
 
 #include "cx/ofile.hh"
 #include "xnsys.hh"

@@ -22,7 +22,7 @@ html/$(1).html: | $(dir html/$(1))
 endef
 
 define example_deps
-../examplespec/$(1).protocon ../examplesoln/$(1).protocon
+../examplespec/$(1).prot ../examplesoln/$(1).prot
 endef
 
 $(eval \

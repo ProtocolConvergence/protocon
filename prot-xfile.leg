@@ -5,7 +5,7 @@
 extern "C" {
 #include "cx/fileb.h"
 }
-#include "protoconfile.hh"
+#include "prot-xfile.hh"
 
 #define YYSTYPE FinMeta
 #define YY_CTX_LOCAL

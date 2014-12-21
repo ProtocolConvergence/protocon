@@ -8,7 +8,7 @@ extern "C" {
 #include <errno.h>
 
 #include "opt.hh"
-#include "pla.hh"
+#include "prot-ofile.hh"
 #include "search.hh"
 #include "synthesis.hh"
 #include "stabilization.hh"

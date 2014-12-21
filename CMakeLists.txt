@@ -40,12 +40,12 @@ list (APPEND CCFiles
   opt.cc search.cc
   test.cc inst.cc main.cc
   main-mpi.cc mpidissem.cc
-  promela.cc pla.cc graphviz.cc kautz.cc
+  promela.cc graphviz.cc kautz.cc
   interactive.cc
   conflictfamily.cc
   stabilization.cc
   synthesis.cc
-  protoconfile.cc
+  prot-xfile.cc prot-ofile.cc
   biring.cc
   deadfree.cc
   )
@@ -54,12 +54,13 @@ list (APPEND HHFiles
   opt.hh search.hh
   inst.hh
   mpidissem.hh
-  promela.hh pla.hh graphviz.hh kautz.hh
+  promela.hh graphviz.hh kautz.hh
   interactive.hh
   conflictfamily.hh
   stabilization.hh
   synthesis.hh
-  protoconfile.hh tuple.hh
+  prot-xfile.hh prot-ofile.hh
+  tuple.hh
   )
 
 include (${CxPath}/include.cmake)
@@ -77,20 +78,20 @@ if (NOT DEFINED PegExe)
 endif ()
 
 add_custom_command (
-  OUTPUT ${BldPath}/protoconfile.leg.cc
-  COMMAND ${PegExe} -o ${BldPath}/protoconfile.leg.cc ${CMAKE_CURRENT_SOURCE_DIR}/protoconfile.leg
-  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/protoconfile.leg)
-set_bld_cfile_properties (${BldPath}/protoconfile.leg.cc)
+  OUTPUT ${BldPath}/prot-xfile.leg.cc
+  COMMAND ${PegExe} -o ${BldPath}/prot-xfile.leg.cc ${CMAKE_CURRENT_SOURCE_DIR}/prot-xfile.leg
+  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/prot-xfile.leg)
+set_bld_cfile_properties (${BldPath}/prot-xfile.leg.cc)
 
 list (APPEND ProtoconSources
   pfmla.cc xnsys.cc inst.cc
   opt.cc
-  promela.cc pla.cc graphviz.cc kautz.cc
+  promela.cc graphviz.cc kautz.cc
   stabilization.cc
   synthesis.cc
   interactive.cc
   conflictfamily.cc
-  protoconfile.cc protoconfile.leg.cc
+  prot-xfile.cc prot-xfile.leg.cc prot-ofile.cc
   pfmla.c pfmla-glu.c pfmla-bittable.c
   )
 

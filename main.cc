@@ -5,7 +5,7 @@ extern "C" {
 
 #include "stabilization.hh"
 #include "synthesis.hh"
-#include "pla.hh"
+#include "prot-ofile.hh"
 #include "graphviz.hh"
 #include "cx/fileb.hh"
 #include "opt.hh"

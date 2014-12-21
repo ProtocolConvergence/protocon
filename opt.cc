@@ -5,7 +5,7 @@ extern "C" {
 
 #include "opt.hh"
 #include "synthesis.hh"
-#include "pla.hh"
+#include "prot-ofile.hh"
 #include "cx/fileb.hh"
 #include "search.hh"
 

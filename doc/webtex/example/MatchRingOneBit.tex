@@ -95,15 +95,15 @@ We know this by looking at how $m[i]$ is changed to be \ilcode{m[i]:=0}, \ilcode
 Note that the third case in the disjunction can be simplified from \ilcode{x[i-1]==0 && x[i]==1 && x[i+1]==0} to \ilcode{x[i]==1 && x[i+1]==0} since if the formula holds for $P[i]$ and the system is in the invariant, then the first or second cases in the disjunction must hold for $P[i-1]$ (hence, $x[i-1]=0$).
 
 Putting this all together, we get:
-\codeinputlisting{../../../examplesoln/MatchRingOneBit.protocon}
+\codeinputlisting{../../../examplesoln/MatchRingOneBit.prot}
 
 \section{Using Shadow/Puppet Variables}
 
 The specification is best given using shadow/puppet variables, where the shadow variable values cannot affect actions in the synthesized protocol.
-\codeinputlisting{../../../examplespec/MatchRingOneBit.protocon}
+\codeinputlisting{../../../examplespec/MatchRingOneBit.prot}
 
 This is effectively the same result as in the previous section, though self-loops formed by fixing the $m[i]$ variables are ignored.
-\codeinputlisting{../../../examplesynt/MatchRingOneBit.protocon}
+\codeinputlisting{../../../examplesynt/MatchRingOneBit.prot}
 
 \section{Proof of Stabilization}
 

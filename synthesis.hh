@@ -9,7 +9,7 @@
 #include "promela.hh"
 #include "xnsys.hh"
 #include <fstream>
-#include "protoconfile.hh"
+#include "prot-xfile.hh"
 #include "conflictfamily.hh"
 #include "stabilization.hh"
 

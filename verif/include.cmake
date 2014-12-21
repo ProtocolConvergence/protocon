@@ -20,7 +20,7 @@ foreach (f ${DistribSpecs})
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMAND "${CMAKE_COMMAND}"
     -Dprotocon_exe=$<TARGET_FILE:protocon>
-    -Dxfile=examplespec/${f}.protocon
+    -Dxfile=examplespec/${f}.prot
     -P ${CMAKE_CURRENT_SOURCE_DIR}/verif/ofile.cmake
     )
 endforeach ()
@@ -31,7 +31,7 @@ foreach (f ${DistribSolns})
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMAND "${CMAKE_COMMAND}"
     -Dprotocon_exe=$<TARGET_FILE:protocon>
-    -Dxfile=examplesoln/${f}.protocon
+    -Dxfile=examplesoln/${f}.prot
     -P ${CMAKE_CURRENT_SOURCE_DIR}/verif/ofile.cmake
     )
 endforeach ()
@@ -52,28 +52,28 @@ set (ExampleSpecs
 foreach (f ${ExampleSpecs})
   add_test (NAME Synth3_${f}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    COMMAND protocon -x examplespec/${f}.protocon -def N 3)
+    COMMAND protocon -x examplespec/${f}.prot -def N 3)
 endforeach ()
 
 foreach (f SortRing TokenRingDijkstra)
   list (APPEND ExampleSpecs ${f})
   add_test (NAME Synth_${f}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    COMMAND protocon -x examplespec/${f}.protocon)
+    COMMAND protocon -x examplespec/${f}.prot)
 endforeach ()
 
 foreach (f LeaderRingHuang)
   list (APPEND ExampleSpecs ${f})
   add_test (NAME SynthOpenMP_${f}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    COMMAND protocon -parallel 4 -x examplespec/${f}.protocon)
+    COMMAND protocon -parallel 4 -x examplespec/${f}.prot)
   set_tests_properties (SynthOpenMP_${f} PROPERTIES PROCESSORS 4)
 
   if (MPI_FOUND)
     add_test (NAME SynthMPI_${f}
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
       COMMAND ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} 4 ${MPIEXEC_PREFLAGS}
-      ${BinPath}/protocon-mpi ${MPIEXEC_POSTFLAGS} -x examplespec/${f}.protocon)
+      ${BinPath}/protocon-mpi ${MPIEXEC_POSTFLAGS} -x examplespec/${f}.prot)
     set_tests_properties (SynthMPI_${f} PROPERTIES PROCESSORS 4)
   endif ()
 endforeach ()
@@ -90,7 +90,7 @@ list (APPEND ExampleSpecs
 foreach (f ${ExampleSpecs})
   add_test (NAME Verif5_${f}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    COMMAND protocon -verify -x examplesoln/${f}.protocon -def N 5)
+    COMMAND protocon -verify -x examplesoln/${f}.prot -def N 5)
 endforeach ()
 
 set (ExampleSynts
@@ -103,22 +103,22 @@ set (ExampleSynts
 foreach (f ${ExampleSynts})
   add_test (NAME TrySynt_${f}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    COMMAND protocon -test -x examplespec/${f}.protocon -x-try examplesynt/${f}.protocon -def N 5)
+    COMMAND protocon -test -x examplespec/${f}.prot -x-try examplesynt/${f}.prot -def N 5)
   add_test (NAME VerifSynt_${f}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    COMMAND protocon -verify -x examplesynt/${f}.protocon -def N 5)
+    COMMAND protocon -verify -x examplesynt/${f}.prot -def N 5)
   add_test (NAME overify_synt_${f}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMAND "${CMAKE_COMMAND}"
     -Dprotocon_exe=$<TARGET_FILE:protocon>
-    -Dxfile=examplesynt/${f}.protocon
+    -Dxfile=examplesynt/${f}.prot
     -P ${CMAKE_CURRENT_SOURCE_DIR}/verif/overify.cmake
     )
 endforeach ()
 
 add_test (NAME TrySynt2_TokenChainDijkstra
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-  COMMAND protocon -test -x examplespec/TokenChainDijkstra.protocon -x-try examplesynt/TokenChainDijkstra.protocon -def N 2)
+  COMMAND protocon -test -x examplespec/TokenChainDijkstra.prot -x-try examplesynt/TokenChainDijkstra.prot -def N 2)
 
 list (APPEND VerifyBySynthesis
   ColorRing
@@ -130,16 +130,16 @@ list (APPEND VerifyBySynthesis
 foreach (f ${VerifyBySynthesis})
   add_test (NAME VerifSyn_${f}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    COMMAND protocon -x examplesoln/${f}.protocon -def N 5)
+    COMMAND protocon -x examplesoln/${f}.prot -def N 5)
 endforeach ()
 
 add_test (NAME Verif4_Sync_OrientRing
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-  COMMAND protocon -verify -synchronous -x examplesoln/OrientRing.protocon -def N 4)
+  COMMAND protocon -verify -synchronous -x examplesoln/OrientRing.prot -def N 4)
 
 ## Ensure our tests can actually detect failure.
 add_test (NAME Verif4_OrientOddRing
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-  COMMAND protocon -verify -x examplesoln/OrientOddRing.protocon -def N 4)
+  COMMAND protocon -verify -x examplesoln/OrientOddRing.prot -def N 4)
 set_tests_properties (Verif4_OrientOddRing PROPERTIES WILL_FAIL TRUE)
 

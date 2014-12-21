@@ -4,7 +4,7 @@ extern "C" {
 }
 
 #include "cx/fileb.hh"
-#include "protoconfile.hh"
+#include "prot-xfile.hh"
 #include "xnsys.hh"
 
 struct LCNode {
@@ -76,7 +76,7 @@ deadlock_freedom_ck(const Xn::Sys& sys)
 /** Execute me now!*/
 int main(int argc, char** argv)
 {
-  const char* in_filepath = "examplesoln/ColorRing.protocon";
+  const char* in_filepath = "examplesoln/ColorRing.prot";
   int argi = (init_sysCx (&argc, &argv), 1);
 
   if (argi < argc) {

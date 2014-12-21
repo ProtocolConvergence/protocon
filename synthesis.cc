@@ -2,7 +2,7 @@
 #include "synthesis.hh"
 
 #include "cx/fileb.hh"
-#include "pla.hh"
+#include "prot-ofile.hh"
 
 typedef Cx::PFmla PF;
 

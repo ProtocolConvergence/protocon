@@ -5,12 +5,12 @@
 
 \begin{document}
 
-The \ilfile{examplespec/OddOrientRing.protocon} file specifies a bidirectional ring topology where processes wish to agree with each other on a direction around the ring.
+The \ilfile{examplespec/OddOrientRing.prot} file specifies a bidirectional ring topology where processes wish to agree with each other on a direction around the ring.
 The topology is taken from the paper by Hoepman titled \textit{Uniform Deterministic Self-Stabilizing Ring-Orientation on Odd-Length Rings}.
 
 \section{Problem Instance}
 
-\codeinputlisting{../../../examplespec/OrientOddRing.protocon}
+\codeinputlisting{../../../examplespec/OrientOddRing.prot}
 
 Each process \ttvbl{P[i]} reads \ttvbl{color[i-1]}, \ttvbl{color[i+1]}, \ttvbl{phase[i-1]}, and \ttvbl{phase[i+1]} and writes \ttvbl{color[i]}, \ttvbl{phase[i]}, \ttvbl{way[2*i]}, and \ttvbl{way[2*i+1]}.
 
@@ -24,7 +24,7 @@ Also, the behavior of the protocol within the new invariant $I'$ must be the sam
 
 \section{Stabilizing Version}
 
-\codeinputlisting{../../../examplesoln/OrientOddRing.protocon}
+\codeinputlisting{../../../examplesoln/OrientOddRing.prot}
 
 \end{document}
 

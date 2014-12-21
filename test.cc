@@ -16,7 +16,7 @@ extern "C" {
 #include "inst.hh"
 #include "xnsys.hh"
 #include "conflictfamily.hh"
-#include "protoconfile.hh"
+#include "prot-xfile.hh"
 #include "stabilization.hh"
 #include "kautz.hh"
 #include "search.hh"
@@ -332,9 +332,9 @@ TestProtoconFile(bool agreement)
 
   const char* filename;
   if (agreement)
-    filename = "examplespec/LeaderRingHuang.protocon";
+    filename = "examplespec/LeaderRingHuang.prot";
   else
-    filename = "examplespec/SumNotTwo.protocon";
+    filename = "examplespec/SumNotTwo.prot";
 
   ProtoconFileOpt infile_opt;
   infile_opt.text = textfile_AlphaTab (0, filename);

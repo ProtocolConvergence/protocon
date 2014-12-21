@@ -887,7 +887,7 @@ recurse(const BitTable bt, const uint domsz, uint q, Cx::Set<FlatDigraph>& db)
     db << digraph;
 #endif
     if (true || local_propagation_syn(set, domsz)) {
-      //oput_biring_protocon_spec ("../trial/ss3/spec", ofilename + ".protocon", min_bt, domsz);
+      //oput_biring_protocon_spec ("../trial/ss3/spec", ofilename + ".prot", min_bt, domsz);
       //stat_ofile << ofilename << ' ' << min_bt << '\n';
       //stat_ofile << bt << ' ' << min_bt << '\n';
       stat_ofile << min_bt;
