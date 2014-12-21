@@ -5,6 +5,8 @@ MatchRingOneBit
 OrientOddRing
 OrientRing
 OrientRingViaToken
+SortChain
+SortRing
 SumNotTarget
 TokenChainDijkstra
 TokenRingDijkstra

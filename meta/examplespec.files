@@ -14,10 +14,13 @@ OrientOddRing
 OrientRing
 OrientRingViaToken
 Sat
-SumNotTarget
-SumNotTwo
+ShadowColorRing
 SortChain
 SortRing
+SumNotTarget
+SumNotTwo
+TokenChainDijkstra
 TokenRingDijkstra
 TokenRingSixState
 TokenRingThreeBit
+TokenRingThreeState

@@ -5,20 +5,8 @@ srcpath=$(dirname "$metapath")
 toppath=$(dirname "$srcpath")
 src=protocon
 
-distpath=$1
-
-if [ ! "$distpath" ]
-then
-  distpath="$toppath/protocon-src"
-fi
-
-distpath=$(readlink -f "$distpath")
-
-if ! make -C $srcpath/doc
-then
-  echo 'Cannot create documentation.' >&2
-  exit 1
-fi
+source "$metapath/include.sh"
+init_distpath "$1" "$toppath/protocon-src"
 
 mkdir -p "$distpath"
 cd "$distpath"
@@ -27,39 +15,20 @@ rm -fr cx/.git
 git clone --depth=1 "file://$toppath/cx-pp" cx-pp
 rm -fr cx-pp/.git
 git clone --depth=1 "file://$toppath/protocon" $src
-rm -fr $src/.git
+rm -fr $src/.git $src/.gitignore $src/.vimrc
 
 cp -a -t ./ "$metapath/CMakeLists.txt"
 rm -f cx/Makefile.raw
 rm -f $src/Makefile.raw
 
-mkdir -p "examplespec"
-cat "$metapath/examplespec.files" | \
-{
-  while read f
-  do
-    cp -a -t examplespec "$srcpath/examplespec/$f.prot"
-  done
-}
-rm -fr $src/examplespec
+copy_examples
+rm -fr "$src/examplespec" "$src/examplesynt" "$src/examplesoln"
 
-mkdir -p "examplesoln"
-cat "$metapath/examplesoln.files" | \
-{
-  while read f
-  do
-    cp -a -t examplesoln "$srcpath/examplesoln/$f.prot"
-  done
-}
-rm -fr $src/examplesoln
-
-rm -fr $src/verif/include.cmake
+rm -fr $src/verif
 
 rm -fr $src/meta
 mv $src/doc doc
+make_doc .
 
-cd "$(dirname "$distpath")"
-distname=$(basename "$distpath")
-tar czf "$distname.tar.gz" "$distname"
-chmod a+r,a-x "$distname.tar.gz"
+zip_up
 
