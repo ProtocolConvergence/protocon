@@ -252,7 +252,9 @@ GlobalLegit =
   ;
 
 GlobalLegitBehav =
-  FUTURE_SILENT {yy->st->sys->spec->invariant_behav = Xn::FutureSilent;}
+  (  FUTURE_SILENT {yy->st->sys->spec->invariant_behav = Xn::FutureSilent;}
+   | FUTURE_ACTIVE_SHADOW {yy->st->sys->spec->invariant_behav = Xn::FutureActiveShadow;}
+  )
   END_STMT
   ;
 
@@ -508,8 +510,11 @@ FUTURE_AND_CLOSED_AND_ACTIVE =
   ;
 
 FUTURE_SILENT =
-    FUTURE WS SILENT
-  | SILENT WS FUTURE
+  FUTURE WS SILENT
+  ;
+
+FUTURE_ACTIVE_SHADOW =
+  FUTURE WS ACTIVE WS SHADOW
   ;
 
 ACTION = 'act:' | 'action:' ;

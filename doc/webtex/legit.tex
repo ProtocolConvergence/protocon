@@ -1,0 +1,103 @@
+
+\title{Legitimate States and Behavior}
+%\author{}
+\date{}
+
+\begin{document}
+
+\section{Defining the Invariant}
+
+Let's define a predicate for the system where all colors in the ring are distinct.
+\begin{code}
+predicate I := (forall i <- Nat % N : c[i-1]!=c[i]);
+\end{code}
+
+Since we will use $I$ as an invariant, it must be defined with shadow or direct variables (not puppet variables).
+
+\section{Convergence and Behavior}
+
+Stabilization can be defined as both convergence and closure.
+That is, a system should eventually reach $I$ and remain within $I$.
+\textbf{This definition is not supported} because it is too relaxed to be useful in most cases.
+However, if it were supported, one would write the following in a \ilfile{.prot} file:
+\begin{code}
+(future & closed) (I);
+\end{code}
+
+We often want to specify how the protocol behavies within the invariant.
+The simplest case is that of silent protocols.
+Here we say the protocol should reach the invariant $I$ and no actions should execute within $I$.
+This is written as:
+\begin{code}
+(future & silent) (I);
+\end{code}
+
+When there is shadow protocol defined (using \ilcode{shadow action:} statements in process definitions), we can enforce that it is executed within $I$.
+Puppet variables are allowed to be changed in any way, but shadow (and direct) variables must eventually change.
+That is, some transitions in the protocol may not change any shadow variables, which will appear as a self-loop in the shadow protocol.
+\begin{code}
+(future & shadow) (I);
+\end{code}
+If no shadow protocol is defined, this statement allows any finite or infinite executions within the invariant provided that the shadow variables are not changed.
+
+\section{Modding out Puppet Variables}
+
+Puppet variables are used for synthesis, but we like to ignore them when it comes to the exact definition of the invariant $I$.
+Definitions in this section allow synthesis to create another invariant $I'$ which is equivalent to $I$ after existential quantification over the puppet variables.
+That is, for every valuation of shadow (or direct) variables that satisfies $I$, a state exists in $I'$ with the same valuation (but some arbitrary valuation of puppet variables).
+
+When silence on the shadow (or direct) variables is enforced, they are not allowed to change within the new invariant $I'$.
+This is written as:
+\begin{code}
+((future & silent) % puppet) (I);
+\end{code}
+If we know $I'$ and no shadow protocol is defined, we can instead write:
+\begin{code}
+(future & shadow) (I_prime);
+\end{code}
+
+When a shadow protocol exists, we can ensure that it is executed within the new invariant $I'$.
+This is written as:
+\begin{code}
+((future & shadow) % puppet) (I);
+\end{code}
+If we know $I'$, we can instead write:
+\begin{code}
+(future & shadow) (I_prime);
+\end{code}
+This is the general constraint we used in \href{http://dx.doi.org/10.1007/978-3-319-11764-5_18}{Synthesizing Self-stabilization through Superposition and Backtracking}.
+
+If a shadow protocol is not defined (i.e., it is silent), the two statements
+\ilcode{((future & silent) % puppet) (I);}
+and
+\ilcode{((future & shadow) % puppet) (I);}
+are equivalent.
+
+\section{Eventual Behavior}
+
+In some cases, we want to define constraints on the protocols eventual behavior.
+The statements in this section are optional and are given in addition to lines such as \ilcode{(future & shadow) (I);} or \ilcode{((future & shadow) % puppet) (I);}.
+
+When the shadow protocol is silent, we often want to enforce a silent protocol overall in order to minimize network traffic.
+This is expressed by adding the following line:
+\begin{code}
+future silent;
+\end{code}
+
+To get an efficient protocol, we can specify that eventually, each transition of the synthesized protocol must progress the shadow protocol.
+This requires all executions of the shadow protocol to be infinite.
+\begin{code}
+future active shadow;
+\end{code}
+
+\section{Planned Improvements}
+
+One appealing addition to these options (without adding a full LTL-like language) is to simply specify a \ilcode{future} constraint without closure.
+This would allow synthesis of adaptive programs as described in \href{http://doi.ieeecomputersociety.org/10.1109/32.92911}{Adaptive Programming} by Gouda and Herman.
+\begin{code}
+future (I);
+future silent;
+\end{code}
+
+\end{document}
+

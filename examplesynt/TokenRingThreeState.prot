@@ -62,3 +62,5 @@ process Top[j <- Int % 1]
 ((future & shadow) % puppet)
   (unique i <- Int % N : tok[i]==1);
 
+future active shadow;
+

@@ -53,12 +53,21 @@ weak_convergence_ck(uint* ret_nlayers, const Cx::PFmla& xn, const Cx::PFmla& inv
   bool
 shadow_ck(Cx::PFmla* ret_invariant,
           const Xn::Sys& sys,
-          const Cx::PFmla& lo_xn, const Cx::PFmla& hi_xn,
-          const Cx::PFmla* lo_scc)
+          const X::Fmla& lo_xn, const X::Fmla& hi_xn,
+          const P::Fmla& lo_scc)
 {
   static const bool explain_failure = false;
   const Xn::Net& topo = sys.topology;
+  const Xn::InvariantBehav invariant_behav = sys.spec->invariant_behav;
   const Cx::PFmla& shadow_invariant = sys.invariant & sys.closed_assume;
+
+  if (invariant_behav == Xn::FutureSilent) {
+    if (lo_scc.sat_ck()) {
+      if (explain_failure)
+        DBog0( "Protocol is not silent." );
+      return false;
+    }
+  }
 
   if (!sys.shadow_puppet_synthesis_ck()) {
     // Closure.
@@ -83,19 +92,10 @@ shadow_ck(Cx::PFmla* ret_invariant,
     shadow_invariant & topo.proj_shadow(sys.shadow_pfmla);
 
   // There shouldn't be non-progress cycles.
-  if (lo_scc) {
-    if ((lo_xn & shadow_self).cycle_ck(*lo_scc & shadow_live.pre())) {
-      if (explain_failure)
-        DBog0( "Non-progress cycle in invariant." );
-      return false;
-    }
-  }
-  else {
-    if ((lo_xn & shadow_self).cycle_ck(shadow_live.pre())) {
-      if (explain_failure)
-        DBog0( "Non-progress cycle in invariant." );
-      return false;
-    }
+  if ((lo_xn & shadow_self).cycle_ck(lo_scc & shadow_live.pre())) {
+    if (explain_failure)
+      DBog0( "Non-progress cycle in invariant." );
+    return false;
   }
 
   // Invariant states with no transitions to them.
@@ -111,10 +111,6 @@ shadow_ck(Cx::PFmla* ret_invariant,
   Cx::PFmla hi_self = hi_xn & shadow_self;
   // Over-approximation of protocol which does change shadow variables.
   Cx::PFmla hi_live = hi_xn & shadow_live;
-
-  if (sys.spec->invariant_behav == Xn::FutureSilent) {
-    hi_invariant -= lo_xn.pre();
-  }
 
   // Trim all states which cannot be in the invariant since we cannot
   // simulate the shadow protocol in those states given the current
@@ -166,19 +162,34 @@ shadow_ck(Cx::PFmla* ret_invariant,
   }
 
   // Over-approximated protocol must preserve shadow transitions.
-  if (lo_scc) {
-    if (!lo_scc->subseteq_ck(hi_invariant)) {
-      if (explain_failure)
-        DBog0( "Cycle outside invariant." );
-      return false;
-    }
+  if (!lo_scc.subseteq_ck(hi_invariant)) {
+    if (explain_failure)
+      DBog0( "Cycle outside invariant." );
+    return false;
   }
-  else {
-    if (lo_xn.cycle_ck(shadow_invariant - hi_invariant)) {
+
+  if (invariant_behav == Xn::FutureActiveShadow) {
+    // Every transition in the SCC must change shadow variables.
+    if (lo_scc.overlap_ck(lo_xn & shadow_self)) {
       if (explain_failure)
-        DBog0( "Cycle outside invariant." );
+        DBog0( "A shadow self-loop may be taken infinitely often." );
       return false;
     }
+    X::Fmla hi_scc_xn = hi_live - (lo_xn & shadow_self).pre();
+    P::Fmla hi_scc(false);
+    if (!hi_scc_xn.cycle_ck(&hi_scc, hi_invariant)) {
+      if (explain_failure)
+        DBog0( "No active shadow in over-approximation." );
+      return false;
+    }
+    if (!weak_convergence_ck(0, hi_xn, hi_scc, hi_invariant)) {
+      if (explain_failure) {
+        DBog0( "Not all executions are infinite ones that eventually" );
+        DBog0( "\\-> change shadow variables at every transition." );
+      }
+      return false;
+    }
+    P::Fmla tmp_scc(false);
   }
 
   hi_invariant = (hi_xn & (shadow_self | shadow_live)).pre_reach(hi_invariant);
@@ -270,7 +281,7 @@ stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
   }
   of << "Checking behavior within the invariant..." << of.endl();
   Cx::PFmla hi_invariant( false );
-  if (!shadow_ck(&hi_invariant, sys, lo_xn, hi_xn, &scc)) {
+  if (!shadow_ck(&hi_invariant, sys, lo_xn, hi_xn, scc)) {
     of << "Invariant not valid, given the protocol and behavior.\n";
     of.flush();
     return false;

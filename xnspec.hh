@@ -30,7 +30,8 @@ enum InvariantStyle {
 
 enum InvariantBehav {
   FutureSilent,
-  FutureActive,
+  FutureActiveShadow,
+  //FutureActive,
   NInvariantBehavs
 };
 

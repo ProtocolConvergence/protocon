@@ -1137,7 +1137,7 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
   }
 
   const P::Fmla old_hi_invariant( this->hi_invariant );
-  if (!shadow_ck(&this->hi_invariant, sys, this->lo_xn, this->hi_xn, &scc))
+  if (!shadow_ck(&this->hi_invariant, sys, this->lo_xn, this->hi_xn, scc))
   {
     *this->log << "SHADOW" << this->log->endl();
     return false;

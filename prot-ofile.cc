@@ -367,6 +367,22 @@ string_of_invariant_style (Xn::InvariantStyle style)
 }
 
 static
+  const char*
+string_of_invariant_behav (Xn::InvariantBehav behav)
+{
+  switch (behav)
+  {
+    case Xn::FutureSilent:
+      return "future silent";
+    case Xn::FutureActiveShadow:
+      return "future active shadow";
+    case Xn::NInvariantBehavs:
+      return 0;
+  }
+  return 0;
+}
+
+static
   bool
 oput_protocon_pc_invariant (Cx::OFile& of, const Xn::PcSymm& pc_symm,
                             Xn::InvariantStyle invariant_style)
@@ -452,8 +468,8 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys, bool use_espresso, const 
     of << "\n  (" << sys.spec->invariant_expression << ");\n";
   }
 
-  if (sys.spec->invariant_behav == Xn::FutureSilent) {
-    of << "future silent;\n";
+  if (sys.spec->invariant_behav != Xn::NInvariantBehavs) {
+    of << string_of_invariant_behav (sys.spec->invariant_behav) << ";\n";
   }
 
   lose_OSPc (ospc);
