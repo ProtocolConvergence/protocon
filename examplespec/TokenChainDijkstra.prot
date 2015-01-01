@@ -6,6 +6,9 @@ shadow variable tok[Int % N] <- Int % 2;
 puppet variable up[Int % N] <- Int % 2;
 puppet variable z[Int % N] <- Int % 2;
 
+((future & active shadow) % puppet)
+  (unique i <- Int % N : tok[i]==1);
+
 process Bot[i <- Int % 1]
 {
   let i := 0;
@@ -51,9 +54,4 @@ process Top[j <- Int % 1]
   shadow:
     ( tok[i]==1 --> allup[0]:=0; tok[i]:=0; tok[i-1]:=1; );
 }
-
-((future & shadow) % puppet)
-  (unique i <- Int % N : tok[i]==1);
-
-future active shadow;
 

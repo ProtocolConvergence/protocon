@@ -406,7 +406,8 @@ SetupSilentShadowRing(Xn::Sys& sys, const uint npcs,
   indices.expression = "i";
   topo.add_write_access(pc_symm, &topo.vbl_symms[1], indices);
 
-  sys.spec->invariant_style = Xn::FutureAndShadowModPuppet;
+  sys.spec->invariant_style = Xn::FutureAndShadow;
+  sys.spec->invariant_mod_puppet = true;
   sys.commit_initialization();
 }
 

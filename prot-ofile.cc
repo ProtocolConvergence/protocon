@@ -352,14 +352,16 @@ string_of_invariant_style (Xn::InvariantStyle style)
 {
   switch (style)
   {
+#if 0
     case Xn::FutureAndClosed:
       return "(future & closed)";
+#endif
     case Xn::FutureAndSilent:
       return "(future & silent)";
     case Xn::FutureAndShadow:
       return "(future & shadow)";
-    case Xn::FutureAndShadowModPuppet:
-      return "((future & shadow) % puppet)";
+    case Xn::FutureAndActiveShadow:
+      return "(future & active shadow)";
     case Xn::NInvariantStyles:
       Claim( 0 );
   }
@@ -385,13 +387,13 @@ string_of_invariant_behav (Xn::InvariantBehav behav)
 static
   bool
 oput_protocon_pc_invariant (Cx::OFile& of, const Xn::PcSymm& pc_symm,
-                            Xn::InvariantStyle invariant_style)
+                            const Cx::String& style_str)
 {
   const Cx::String& invariant_expression = pc_symm.spec->invariant_expression;
   if (invariant_expression.empty_ck())
     return true;
 
-  of << "  " << string_of_invariant_style (invariant_style)
+  of << "  " << style_str
     << "\n    (" << invariant_expression << ");\n";
   return true;
 }
@@ -430,6 +432,29 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys, bool use_espresso, const 
       << "] <- Nat % " << vbl_symm.spec->domsz_expression << ";\n";
   }
 
+  for (uint i = 0; i < sys.predicate_map.sz(); ++i) {
+    of << "predicate " << sys.predicate_map.keys[i]
+      << " :=\n  " << sys.predicate_map.expressions[i] << ";\n";
+  }
+
+  if (!!sys.spec->closed_assume_expression) {
+    of << "(assume & closed)\n (" << sys.spec->closed_assume_expression << ")\n ;\n";
+  }
+
+  Cx::String style_str = string_of_invariant_style (sys.spec->invariant_style);
+  if (sys.spec->invariant_mod_puppet) {
+    style_str = Cx::String("(") + style_str + " % puppet)";
+  }
+  if (!sys.spec->invariant_expression.empty_ck()) {
+    Cx::String legit_str = sys.spec->invariant_expression;
+    of << style_str << "\n (" << legit_str << ")\n ;\n";
+  }
+
+  if (sys.spec->invariant_behav != Xn::NInvariantBehavs) {
+    of << string_of_invariant_behav (sys.spec->invariant_behav) << ";\n";
+  }
+
+
   Cx::Table<Xn::ActSymm> acts;
   for (uint i = 0; i < actions.size(); ++i) {
     for (uint j = 0; j < topo.represented_actions[actions[i]].sz(); ++j) {
@@ -448,28 +473,10 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys, bool use_espresso, const 
     DoLegit(good, "output assume")
       good = oput_protocon_pc_assume (of, pc_symm);
     DoLegit(good, "output invariant")
-      good = oput_protocon_pc_invariant (of, pc_symm, sys.spec->invariant_style);
+      good = oput_protocon_pc_invariant (of, pc_symm, style_str);
     DoLegit(good, "output actions")
       good = oput_protocon_pc_acts (of, pc_symm, acts, ospc, use_espresso);
     of << "}\n";
-  }
-
-  for (uint i = 0; i < sys.predicate_map.sz(); ++i) {
-    of << "predicate " << sys.predicate_map.keys[i]
-      << " :=\n  " << sys.predicate_map.expressions[i] << ";\n";
-  }
-
-  if (!!sys.spec->closed_assume_expression) {
-    of << "(assume & closed)\n (" << sys.spec->closed_assume_expression << ")\n ;\n";
-  }
-
-  if (!sys.spec->invariant_expression.empty_ck()) {
-    of << string_of_invariant_style (sys.spec->invariant_style);
-    of << "\n  (" << sys.spec->invariant_expression << ");\n";
-  }
-
-  if (sys.spec->invariant_behav != Xn::NInvariantBehavs) {
-    of << string_of_invariant_behav (sys.spec->invariant_behav) << ";\n";
   }
 
   lose_OSPc (ospc);

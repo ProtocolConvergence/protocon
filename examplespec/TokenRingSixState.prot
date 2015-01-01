@@ -5,6 +5,16 @@ constant M := 3;
 direct variable t[Nat % N] <- Nat % 2;
 puppet variable x[Nat % N] <- Nat % M;
 
+(future & shadow)
+  // One process has the token.
+  (unique i <- Nat % N :
+   i == 0 && t[i-1] == t[i]
+   ||
+   i != 0 && t[i-1] != t[i]
+  );
+
+//future active shadow;
+
 process Bot[i <- Nat % 1]
 {
   read: t[i-1], x[i-1];
@@ -19,12 +29,4 @@ process P[j <- Nat % (N-1)]
   write: t[i], x[i];
   shadow action: ( t[i-1] != t[i] --> t[i] := t[i-1]; );
 }
-
-(future & shadow)
-  // One process has the token.
-  (unique i <- Nat % N :
-   i == 0 && t[i-1] == t[i]
-   ||
-   i != 0 && t[i-1] != t[i]
-  );
 

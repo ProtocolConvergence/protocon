@@ -149,12 +149,14 @@ public:
   Cx::PFmla act_unchanged_pfmla;
   Cx::PFmla invariant;
   Cx::PFmla puppet_xn;
+  Cx::PFmla shadow_xn;
 
   Pc(PcSymm* symmetry, uint index)
     : symm(symmetry)
     , symm_idx(index)
     , invariant(true)
     , puppet_xn(false)
+    , shadow_xn(false)
   {}
   void actions(Cx::Table<uint>& ret_actions, Cx::PFmlaCtx& ctx) const;
 };
@@ -203,7 +205,7 @@ public:
   PcSymm()
     : shadow_pfmla( false )
     , direct_pfmla( false )
-    , permit_pfmla( true )
+    , permit_pfmla( false )
     , forbid_pfmla( false )
   {}
 
@@ -460,7 +462,7 @@ public:
     return this->shadow_puppet_synthesis;
   }
   bool direct_invariant_ck() const {
-    return spec->invariant_style != Xn::FutureAndShadowModPuppet;
+    return !spec->invariant_mod_puppet;
   }
 
   void niceIdxFo(uint pcIdx, uint niceIdx) {

@@ -60,6 +60,7 @@ public:
   Cx::Mem<Xn::PcSymm> pc_symm;
   Cx::Mem<Xn::PcSymmSpec> pc_symm_spec;
   Cx::PFmla permit_xn;
+  bool legit_mode_assigned;
 
   ProtoconFile(Xn::Sys* sys, XFile* xf)
     : allgood( true )
@@ -67,6 +68,7 @@ public:
     , pc_symm(0)
     , pc_symm_spec(0)
     , permit_xn(false)
+    , legit_mode_assigned(false)
   {
     this->sys = sys;
     this->spec = sys->spec;
@@ -109,6 +111,8 @@ public:
   bool forbid_action(Sesp act_sp);
   bool permit_action(Sesp act_sp);
 
+  bool set_invariant(Xn::InvariantStyle style, bool invariant_mod_puppet);
+
   bool add_pc_predicate(Sesp name_sp, Sesp val_sp);
 
   bool add_pc_assume(Sesp assume_sp);
@@ -120,6 +124,7 @@ public:
   bool add_predicate(Sesp name_sp, Sesp val_sp);
 
   bool add_assume(Sesp assume_sp);
+  bool assign_legit_mode(Xn::InvariantStyle style, bool invariant_mod_puppet=false);
   bool add_legit(Sesp legit_sp);
 
   bool string_expression(Cx::String& ss, Sesp a);

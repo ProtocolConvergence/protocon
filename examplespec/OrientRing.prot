@@ -42,6 +42,15 @@ direct variable way[Nat % (2*N)] <- Nat % 2;
    || cgt[2*i+2] == cgt[2*i+3]
   );
 
+
+// Eventually, all processes point in the same direction.
+(future & shadow)
+  (forall i <- Nat % N : way[2*i-1]==way[2*i+1]);
+
+// We want a silent protocol.
+future silent;
+
+
 process P[i <- Nat % N]
 {
   symmetric (j, way_idx, adj_way_idx) <- {# (i-1, 2*i, 2*i-1), (i+1, 2*i+1, 2*i+2) #}
@@ -55,11 +64,4 @@ process P[i <- Nat % N]
 
   (assume & closed) (way[2*i] != way[2*i+1]);
 }
-
-// Eventually, all processes point in the same direction.
-(future & shadow)
-  (forall i <- Nat % N : way[2*i-1]==way[2*i+1]);
-
-// We want a silent protocol.
-future silent;
 

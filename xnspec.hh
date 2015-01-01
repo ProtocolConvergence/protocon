@@ -21,10 +21,10 @@ class LinkSymmetry;
 class Spec;
 
 enum InvariantStyle {
-  FutureAndClosed,
+  //FutureAndClosed,
   FutureAndSilent,
   FutureAndShadow,
-  FutureAndShadowModPuppet,
+  FutureAndActiveShadow,
   NInvariantStyles
 };
 
@@ -187,15 +187,14 @@ public:
 
   LetVblMap constant_map;
   InvariantStyle invariant_style;
+  bool invariant_mod_puppet;
   InvariantBehav invariant_behav;
-  /// Force silence within the invariant
-  /// when the {invariant_style} allows liveness.
-  bool future_silent;
   Cx::String closed_assume_expression;
   Cx::String invariant_expression;
 
   Spec()
     : invariant_style( Xn::FutureAndShadow )
+    , invariant_mod_puppet( false )
     , invariant_behav( Xn::NInvariantBehavs )
   {}
 };

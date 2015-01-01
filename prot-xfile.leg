@@ -131,18 +131,9 @@ ProcAssume =
   {yy->st->add_pc_assume(a.sp);}
   ;
 
-LegitStmt =
-    LEGIT ':' WS? legit:Expr END_STMT
-    {$$ = legit;}
-  | '(' WS?
-    (FUTURE_AND_CLOSED | FUTURE_AND_SILENT | FUTURE_AND_SHADOW | FUTURE_AND_SHADOW_MOD_PUPPET)
-    WS? ')' WS?
-    '(' WS? legit:Expr WS? ')' END_STMT
-    {$$ = legit;}
-  ;
-
 ProcLegit =
-  legit:LegitStmt {yy->st->add_pc_legit(legit.sp);}
+  legit:LegitStmt
+  {yy->st->add_pc_legit(legit.sp);}
   ;
 
 ProcDecl =
@@ -228,27 +219,24 @@ GlobalAssume =
   {yy->st->add_assume(a.sp);}
   ;
 
+LegitMode =
+    FUTURE_AND_SILENT {yy->st->assign_legit_mode(Xn::FutureAndSilent);}
+  | FUTURE_AND_SHADOW {yy->st->assign_legit_mode(Xn::FutureAndShadow);}
+  | FUTURE_AND_ACTIVE_SHADOW {yy->st->assign_legit_mode(Xn::FutureAndActiveShadow);}
+  | FUTURE_AND_SILENT_MOD_PUPPET {yy->st->assign_legit_mode(Xn::FutureAndSilent, true);}
+  | FUTURE_AND_SHADOW_MOD_PUPPET {yy->st->assign_legit_mode(Xn::FutureAndShadow, true);}
+  | FUTURE_AND_ACTIVE_SHADOW_MOD_PUPPET {yy->st->assign_legit_mode(Xn::FutureAndActiveShadow, true);}
+  ;
+
+LegitStmt =
+  '(' WS? LegitMode WS? ')' WS?
+  '(' WS? a:Expr WS? ')' END_STMT
+  {$$ = a;}
+  ;
+
 GlobalLegit =
-    (  LEGIT {yy->st->sys->spec->invariant_style = Xn::FutureAndShadow;}
-     | ( 'direct'
-         {yy->st->sys->spec->invariant_style = Xn::FutureAndShadow;}
-       | ('shadow' | 'underlying')
-         {yy->st->sys->spec->invariant_style = Xn::FutureAndShadowModPuppet;}
-       )
-      (WS LEGIT)?
-    )
-    ':'
-    WS? a:Expr END_STMT
-    {yy->st->add_legit(a.sp);}
-  | '(' WS?
-    (  FUTURE_AND_CLOSED {yy->st->sys->spec->invariant_style = Xn::FutureAndClosed;}
-     | FUTURE_AND_SILENT {yy->st->sys->spec->invariant_style = Xn::FutureAndSilent;}
-     | FUTURE_AND_SHADOW {yy->st->sys->spec->invariant_style = Xn::FutureAndShadow;}
-     | FUTURE_AND_SHADOW_MOD_PUPPET {yy->st->sys->spec->invariant_style = Xn::FutureAndShadowModPuppet;}
-    )
-    WS? ')' WS?
-    '(' WS? a:Expr WS? ')' END_STMT
-    {yy->st->add_legit(a.sp);}
+  legit:LegitStmt
+  {yy->st->add_legit(legit.sp);}
   ;
 
 GlobalLegitBehav =
@@ -460,7 +448,6 @@ NAT = < [0-9]+ >
 IN = '<-'
   ;
 
-LEGIT = 'legit' | 'invariant' ;
 FUTURE = 'future' | 'eventually' | '<>' ;
 SHADOW = 'shadow' ;
 PUPPET = 'puppet' | 'superposed' ;
@@ -468,53 +455,57 @@ CLOSED = 'closed' ;
 ASSUME = 'assume' ;
 SILENT = 'silent' ;
 ACTIVE = 'active' ;
+ACTIVE_SHADOW = ACTIVE WS SHADOW ;
 
-FUTURE_AND_SHADOW =
-    FUTURE WS? '&' WS? SHADOW
-  | SHADOW WS? '&' WS? FUTURE
-  ;
-
-FUTURE_AND_SHADOW_MOD_PUPPET =
-  '(' WS? FUTURE_AND_SHADOW WS? ')' WS? '%' WS? PUPPET
-  ;
 
 ASSUME_AND_CLOSED =
     ASSUME WS? '&' WS? CLOSED
   | CLOSED WS? '&' WS? ASSUME
   ;
 
-FUTURE_AND_CLOSED =
-    FUTURE WS? '&' WS? CLOSED
-  | CLOSED WS? '&' WS? FUTURE
-  ;
+#FUTURE_AND_CLOSED =
+#    FUTURE WS? '&' WS? CLOSED
+#  | CLOSED WS? '&' WS? FUTURE
+#  ;
 
 FUTURE_AND_SILENT =
     FUTURE WS? '&' WS? SILENT
   | SILENT WS? '&' WS? FUTURE
   ;
 
-FUTURE_AND_ACTIVE =
-    FUTURE WS? '&' WS? ACTIVE
-  | ACTIVE WS? '&' WS? FUTURE
+FUTURE_AND_SHADOW =
+    FUTURE WS? '&' WS? SHADOW
+  | SHADOW WS? '&' WS? FUTURE
   ;
 
-CLOSED_AND_ACTIVE =
-    CLOSED WS? '&' WS? ACTIVE
-  | ACTIVE WS? '&' WS? CLOSED
+FUTURE_AND_ACTIVE_SHADOW =
+    FUTURE WS? '&' WS? ACTIVE_SHADOW
+  | ACTIVE_SHADOW WS? '&' WS? FUTURE
   ;
 
-FUTURE_AND_CLOSED_AND_ACTIVE =
-    FUTURE_AND_CLOSED WS? '&' WS? ACTIVE
-  | FUTURE_AND_ACTIVE WS? '&' WS? CLOSED
-  | CLOSED_AND_ACTIVE WS? '&' WS? FUTURE
+MOD_PUPPET =
+  '%' WS? PUPPET
   ;
+
+FUTURE_AND_SILENT_MOD_PUPPET =
+  '(' WS? FUTURE_AND_SILENT WS? ')' WS? MOD_PUPPET
+  ;
+
+FUTURE_AND_SHADOW_MOD_PUPPET =
+  '(' WS? FUTURE_AND_SHADOW WS? ')' WS? MOD_PUPPET
+  ;
+
+FUTURE_AND_ACTIVE_SHADOW_MOD_PUPPET =
+  '(' WS? FUTURE_AND_ACTIVE_SHADOW WS? ')' WS? MOD_PUPPET
+  ;
+
 
 FUTURE_SILENT =
   FUTURE WS SILENT
   ;
 
 FUTURE_ACTIVE_SHADOW =
-  FUTURE WS ACTIVE WS SHADOW
+  FUTURE WS ACTIVE_SHADOW
   ;
 
 ACTION = 'act:' | 'action:' ;

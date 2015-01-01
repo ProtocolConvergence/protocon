@@ -428,7 +428,12 @@ ProtoconFile::add_action(Sesp act_sp, Xn::Vbl::ShadowPuppetRole role)
 
   if (good) {
     for (uint i = 0; i < pc_symm->membs.sz(); ++i) {
-      pc_symm->membs[i]->puppet_xn |= pc_xns[i];
+      if (role != Xn::Vbl::Puppet) {
+        pc_symm->membs[i]->shadow_xn |= topo.proj_shadow(pc_xns[i]);
+      }
+      if (role != Xn::Vbl::Shadow) {
+        pc_symm->membs[i]->puppet_xn |= pc_xns[i];
+      }
     }
   }
 
@@ -516,7 +521,7 @@ ProtoconFile::permit_action(Sesp act_sp)
   DoLegit( good, "" ) {
     uint rep_pcidx = 0;
     pc_symm->representative(&rep_pcidx);
-    pc_symm->permit_pfmla &= pc_xns[rep_pcidx];
+    pc_symm->permit_pfmla |= pc_xns[rep_pcidx];
   }
 
   return update_allgood (good);
@@ -669,6 +674,23 @@ ProtoconFile::add_assume(Sesp assume_sp)
     spec->closed_assume_expression += str;
   }
 
+  return update_allgood (good);
+}
+
+  bool
+ProtoconFile::assign_legit_mode(Xn::InvariantStyle style, bool invariant_mod_puppet)
+{
+  Sign good = 1;
+  if (legit_mode_assigned) {
+    DoLegit( good, "Invariant must have the same style in all places." ) {
+      good =
+        (spec->invariant_style == style &&
+         spec->invariant_mod_puppet == invariant_mod_puppet);
+    }
+  }
+  spec->invariant_style = style;
+  spec->invariant_mod_puppet = invariant_mod_puppet;
+  legit_mode_assigned = true;
   return update_allgood (good);
 }
 

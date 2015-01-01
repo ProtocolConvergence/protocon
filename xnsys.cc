@@ -921,10 +921,11 @@ candidate_actions(std::vector<uint>& candidates,
 
     uint rep_pcidx = 0;
     pc_symm.representative(&rep_pcidx);
-    const Cx::PFmla& pc_xn = topo.xn_of_pc(act, rep_pcidx);
+    const Xn::Pc& rep_pc = *pc_symm.membs[rep_pcidx];
+    const X::Fmla& pc_xn = topo.xn_of_pc(act, rep_pcidx);
 
-    const Cx::PFmla& act_pf = topo.action_pfmla(actidx);
-    if (!act_pf.sat_ck()) {
+    const X::Fmla& act_xn = topo.action_pfmla(actidx);
+    if (!act_xn.sat_ck()) {
       add = false;
     }
     if (add) {
@@ -934,9 +935,11 @@ candidate_actions(std::vector<uint>& candidates,
       }
     }
     if (add) {
-      if (!pc_xn.subseteq_ck(pc_symm.permit_pfmla)) {
-        add = false;
-        rejs << actidx;
+      if (pc_symm.permit_pfmla.sat_ck()) {
+        if (!pc_xn.subseteq_ck(pc_symm.permit_pfmla)) {
+          add = false;
+          rejs << actidx;
+        }
       }
     }
 
@@ -968,29 +971,37 @@ candidate_actions(std::vector<uint>& candidates,
       }
     }
 
-    if (add && !act_pf.img(sys.closed_assume).subseteq_ck(sys.closed_assume)) {
+    if (add && !act_xn.img(sys.closed_assume).subseteq_ck(sys.closed_assume)) {
       add = false;
       rejs << actidx;
     }
-    if (add && !sys.closed_assume.overlap_ck(act_pf.pre())) {
+    if (add && !sys.closed_assume.overlap_ck(act_xn.pre())) {
       add = false;
       dels << actidx;
     }
     // Optimization. Shadow variables can just be changed as if the invariant
     // is reached or will be reached by this action.
-    if (add && !topo.smooth_puppet_vbls(act_pf.img()).overlap_ck(sys.invariant)) {
+    if (add && !topo.smooth_puppet_vbls(act_xn.img()).overlap_ck(sys.invariant)) {
       add = false;
       dels << actidx;
     }
+    // Optimization. When (future & active shadow) is specified, shadow
+    // variables should only change as they do in the shadow protocol.
+    if (add && sys.spec->invariant_style == Xn::FutureAndActiveShadow) {
+      if (!pc_xn.overlap_ck(topo.smooth_puppet_vbls(rep_pc.shadow_xn))) {
+        add = false;
+        dels << actidx;
+      }
+    }
     if (add && sys.direct_invariant_ck()) {
-      if (!act_pf.img(sys.invariant & sys.closed_assume).subseteq_ck(sys.invariant)) {
+      if (!act_xn.img(sys.invariant & sys.closed_assume).subseteq_ck(sys.invariant)) {
         add = false;
         rejs << actidx;
         if (false) {
           OPut((DBogOF << "Action " << actidx << " breaks closure: "), act) << '\n';
         }
       }
-      else if (!(act_pf & sys.invariant & sys.closed_assume)
+      else if (!(act_xn & sys.invariant & sys.closed_assume)
                .subseteq_ck(sys.shadow_pfmla | sys.shadow_self))
       {
         add = false;
@@ -1000,7 +1011,7 @@ candidate_actions(std::vector<uint>& candidates,
         }
       }
     }
-    if (add && !act_pf.pre().overlap_ck(sys.closed_assume)) {
+    if (add && !act_xn.pre().overlap_ck(sys.closed_assume)) {
       add = false;
     }
 

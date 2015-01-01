@@ -7,6 +7,14 @@ constant M := 3;
 direct variable t[Nat % N] <- Nat % 2;
 puppet variable x[Nat % N] <- Nat % M;
 
+// One process has the token.
+(future & shadow)
+  (unique i <- Nat % N :
+   i == 0 && t[i-1] == t[i]
+   ||
+   i != 0 && t[i-1] != t[i]
+  );
+
 process Bot[i <- Nat % 1]
 {
   read: t[i-1];
@@ -75,12 +83,4 @@ process P[j <- Nat % (N-1)]
     ( t[i-1]==1 && x[i-1]==2 && t[i]==1 && x[i]==1 --> t[i]:=1; x[i]:=2; )
     ;
 }
-
-// One process has the token.
-(future & shadow)
-  (unique i <- Nat % N :
-   i == 0 && t[i-1] == t[i]
-   ||
-   i != 0 && t[i-1] != t[i]
-  );
 

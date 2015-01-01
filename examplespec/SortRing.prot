@@ -13,12 +13,6 @@ process P[i <- Nat % N]
   permit:
     ( 1==1 --> x[i]:=x[i+1]; x[i+1]:=x[i]; )
     ;
-
-  // Equivalent to the above.
-  //permit:
-  //  ( 1==1 --> x[i]:=x[i+1]; )
-  //  ( 1==1 --> x[i+1]:=x[i]; )
-  //  ;
 }
 
 // Assumed initial states.

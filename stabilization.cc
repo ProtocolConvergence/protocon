@@ -58,6 +58,7 @@ shadow_ck(Cx::PFmla* ret_invariant,
 {
   static const bool explain_failure = false;
   const Xn::Net& topo = sys.topology;
+  const Xn::InvariantStyle invariant_style = sys.spec->invariant_style;
   const Xn::InvariantBehav invariant_behav = sys.spec->invariant_behav;
   const Cx::PFmla& shadow_invariant = sys.invariant & sys.closed_assume;
 
@@ -112,6 +113,13 @@ shadow_ck(Cx::PFmla* ret_invariant,
   // Over-approximation of protocol which does change shadow variables.
   Cx::PFmla hi_live = hi_xn & shadow_live;
 
+  if (invariant_style == Xn::FutureAndSilent) {
+    hi_live = false;
+  }
+  if (invariant_style == Xn::FutureAndActiveShadow) {
+    hi_self = false;
+  }
+
   // Trim all states which cannot be in the invariant since we cannot
   // simulate the shadow protocol in those states given the current
   // over-approximated protocol.
@@ -142,22 +150,21 @@ shadow_ck(Cx::PFmla* ret_invariant,
 
   // Over-approximated protocol must preserve shadow invariant.
   if (!topo.proj_shadow(shadow_invariant).equiv_ck(topo.proj_shadow(hi_invariant))) {
-
-      if (explain_failure) {
-        DBog0( "Does not preserve shadow invariant." );
-        P::Fmla pf = topo.proj_shadow(shadow_invariant) - topo.proj_shadow(hi_invariant);
-        X::Fmla xn = pf & lo_xn & (~topo.proj_shadow(hi_invariant)).as_img();
-        topo.oput_vbl_names(DBogOF);
-        topo.oput_one_xn(DBogOF, xn);
-        // May not output anything.
-      }
+    if (explain_failure) {
+      DBog0( "Does not preserve shadow invariant." );
+      P::Fmla pf = topo.proj_shadow(shadow_invariant) - topo.proj_shadow(hi_invariant);
+      X::Fmla xn = pf & lo_xn & (~topo.proj_shadow(hi_invariant)).as_img();
+      topo.oput_vbl_names(DBogOF);
+      topo.oput_one_xn(DBogOF, xn);
+      // May not output anything.
+    }
     return false;
   }
 
   // Over-approximated protocol must preserve shadow transitions.
   if (!topo.proj_shadow(shadow_live).equiv_ck(topo.proj_shadow(hi_live))) {
-      if (explain_failure)
-        DBog0( "Does not preserve shadow transitions." );
+    if (explain_failure)
+      DBog0( "Does not preserve shadow transitions." );
     return false;
   }
 
@@ -176,24 +183,34 @@ shadow_ck(Cx::PFmla* ret_invariant,
       return false;
     }
     X::Fmla hi_scc_xn = hi_live - (lo_xn & shadow_self).pre();
+#if 1
     P::Fmla hi_scc(false);
     if (!hi_scc_xn.cycle_ck(&hi_scc, hi_invariant)) {
       if (explain_failure)
         DBog0( "No active shadow in over-approximation." );
       return false;
     }
+#else
+    // Not an SCC, but the cycle check can be expensive.
+    P::Fmla hi_scc = hi_scc_xn.pre();
+#endif
     if (!weak_convergence_ck(0, hi_xn, hi_scc, hi_invariant)) {
       if (explain_failure) {
         DBog0( "Not all executions are infinite ones that eventually" );
-        DBog0( "\\-> change shadow variables at every transition." );
+        DBog0( "`-> change shadow variables at every transition." );
       }
       return false;
     }
-    P::Fmla tmp_scc(false);
   }
 
-  hi_invariant = (hi_xn & (shadow_self | shadow_live)).pre_reach(hi_invariant);
-  hi_invariant = lo_xn.closure_within(hi_invariant);
+  if (invariant_style == Xn::FutureAndShadow) {
+    hi_invariant = (hi_xn & (shadow_self | shadow_live)).pre_reach(hi_invariant);
+    hi_invariant = lo_xn.closure_within(hi_invariant);
+  }
+  if (invariant_style == Xn::FutureAndActiveShadow) {
+    hi_invariant = (hi_xn & shadow_live).pre_reach(hi_invariant);
+    hi_invariant = lo_xn.closure_within(hi_invariant);
+  }
 
   if (sys.direct_invariant_ck()) {
     if (!hi_invariant.equiv_ck(shadow_invariant)) {

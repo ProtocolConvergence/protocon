@@ -40,60 +40,75 @@ That is, some transitions in the protocol may not change any shadow variables, w
 \end{code}
 If no shadow protocol is defined, this statement allows any finite or infinite executions within the invariant provided that the shadow variables are not changed.
 
+Allowing shadow self-loops within $I$ is undesirable since they delay operation of the shadow protocol.
+These can be forbidden by forcing all transitions in $I$ to correspond with transitions in the shadow protocol.
+Write this as:
+\begin{code}
+(future & active shadow) (I);
+\end{code}
+Note that the shadow protocol must not have deadlocks.
+
 \section{Modding out Puppet Variables}
 
 Puppet variables are used for synthesis, but we like to ignore them when it comes to the exact definition of the invariant $I$.
 Definitions in this section allow synthesis to create another invariant $I'$ which is equivalent to $I$ after existential quantification over the puppet variables.
 That is, for every valuation of shadow (or direct) variables that satisfies $I$, a state exists in $I'$ with the same valuation (but some arbitrary valuation of puppet variables).
 
-When silence on the shadow (or direct) variables is enforced, they are not allowed to change within the new invariant $I'$.
+\textbf{Note:} Always use the notation from this section when using pure \ilcode{shadow} variables (not \ilcode{direct} variables).
+Shadow variables are assigned completely based on puppet (and direct) variables, so any nontrivial protocol will have transitions that leave $I$.
+Therefore $I'$ will need to be a proper subset of $I$.
+
+Semantics follow directly from the previous section.
+To synthesize a protocol which is silent in some $I'$, we would write \ilcode{(future & silent) (I_prime);} if we knew $I'$.
+It can be difficult to determine $I'$ manually, so we prefer to specify $I$ and use a certain notation to say that $I=I'$ \textit{modulo} the puppet variables.
 This is written as:
 \begin{code}
 ((future & silent) % puppet) (I);
 \end{code}
-If we know $I'$ and no shadow protocol is defined, we can instead write:
-\begin{code}
-(future & shadow) (I_prime);
-\end{code}
 
-When a shadow protocol exists, we can ensure that it is executed within the new invariant $I'$.
-This is written as:
+Likewise, if we want to enforce execution of the shadow protocol within $I'$ (i.e., \ilcode{(future & shadow) (I_prime);}), we write:
 \begin{code}
 ((future & shadow) % puppet) (I);
 \end{code}
-If we know $I'$, we can instead write:
-\begin{code}
-(future & shadow) (I_prime);
-\end{code}
 This is the general constraint we used in \href{http://dx.doi.org/10.1007/978-3-319-11764-5_18}{Synthesizing Self-stabilization through Superposition and Backtracking}.
 
-If a shadow protocol is not defined (i.e., it is silent), the two statements
-\ilcode{((future & silent) % puppet) (I);}
-and
-\ilcode{((future & shadow) % puppet) (I);}
-are equivalent.
+Finally, if we want to force all actions within $I'$ to correspond with actions in the shadow protocol (i.e., \ilcode{(future & active shadow) (I_prime);}), we write:
+\begin{code}
+((future & active shadow) % puppet) (I);
+\end{code}
 
 \section{Eventual Behavior}
 
-In some cases, we want to define constraints on the protocols eventual behavior.
-The statements in this section are optional and are given in addition to lines such as \ilcode{(future & shadow) (I);} or \ilcode{((future & shadow) % puppet) (I);}.
+In some cases, forcing silence or an active shadow protocol within the entire invariant $I'$ is too strict.
+Rather, we are often content to enforce these constraints on the protocol's eventual behavior.
+This is done by an additional statement in the specification \ilfile{.prot} file.
+That is, the statements inthis section are optional and are given in addition to lines such as \ilcode{(future & shadow) (I);} or \ilcode{((future & shadow) % puppet) (I);}.
 
 When the shadow protocol is silent, we often want to enforce a silent protocol overall in order to minimize network traffic.
 This is expressed by adding the following line:
 \begin{code}
 future silent;
 \end{code}
+We use this in the \ilfile{examplespec/OrientRing.prot} example where the invariant is defined as \ilcode{(future & shadow) (I);}.
+In this case, we desire a silent protocol, but the two alternative ways to define the invariant have deficiencies:
+(1) \ilcode{(future & silent) (I);} is too strict, and
+(2) \ilcode{((future & silent) % puppet) (I);} does not force $I'=I$, which disables some search optimizations.
 
-To get an efficient protocol, we can specify that eventually, each transition of the synthesized protocol must progress the shadow protocol.
-This requires all executions of the shadow protocol to be infinite.
+When the shadow protocol is live, we often want the synthesized protocol to execute its actions exactly (i.e., eventually, every transition of the system corresponds to a shadow action).
+This desire is for practicality - we want the service to respond quickly if no faults are occurring.
+Write this as:
 \begin{code}
 future active shadow;
 \end{code}
+We use this in the \ilfile{examplespec/TokenRingSixState.prot} where the invariant is defined as \ilcode{(future & shadow) (I);}.
+In this case, we desire an active shadow protocol, but the two alternative ways to define the invariant have deficiencies:
+(1) \ilcode{(future & active shadow) (I);} is too strict, and
+(2) \ilcode{((future & active shadow) % puppet) (I);} does not force $I'=I$, which disables some search optimizations.
 
 \section{Planned Improvements}
 
 One appealing addition to these options (without adding a full LTL-like language) is to simply specify a \ilcode{future} constraint without closure.
-This would allow synthesis of adaptive programs as described in \href{http://doi.ieeecomputersociety.org/10.1109/32.92911}{Adaptive Programming} by Gouda and Herman.
+This would allow synthesis of adaptive programs as described in \href{http://dx.doi.org/10.1109/32.92911}{Adaptive Programming} by Gouda and Herman.
 \begin{code}
 future (I);
 future silent;

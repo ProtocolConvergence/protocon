@@ -4,8 +4,13 @@
 
 constant N := 5;
 
-puppet variable x[Int % N] <- Int % 3;
 shadow variable c[Int % N] <- Int % 3;
+puppet variable x[Int % N] <- Int % 3;
+
+((future & silent) % puppet)
+  (forall i <- Nat % N :
+   (c[i] != c[i-1]) && (c[i] != c[i+1])
+  );
 
 process P[i <- Int % N]
 {
@@ -23,12 +28,4 @@ process P[i <- Int % N]
     ( x[i-1]!=x[i] && x[i]!=x[i+1] --> c[i]:=x[i]; )
     ;
 }
-
-((future & shadow) % puppet)
-  (forall i <- Nat % N :
-   (c[i] != c[i-1]) && (c[i] != c[i+1])
-  )
-  ;
-
-future silent;
 
