@@ -173,6 +173,7 @@ public:
   uint assign(uint vbl_idx) const;
   uint aguard(uint vbl_idx) const;
   void swap_vals(uint ridx_a, uint ridx_b);
+  bool puppet_self_loop_ck() const;
 };
 
 class PcSymm {
@@ -264,6 +265,16 @@ inline void ActSymm::swap_vals(uint ridx_a, uint ridx_b)
     Claim2( widx_b ,!=, 0 );
     SwapT( uint, this->vals[widx_a], this->vals[widx_b] );
   }
+}
+inline bool ActSymm::puppet_self_loop_ck() const
+{
+  for (uint i = 0; i < this->pc_symm->wvbl_symms.sz(); ++i) {
+    if (this->pc_symm->wvbl_symms[i]->pure_shadow_ck())
+      continue;
+    if (this->aguard(i) != this->assign(i))
+      return false;
+  }
+  return true;
 }
 
 class Net {

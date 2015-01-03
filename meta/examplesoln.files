@@ -1,7 +1,9 @@
 ColorRing
+ColorRingSymm
+ColorTree
 LeaderRingHuang
-MatchRing
 MatchRingOneBit
+MatchRingThreeState
 OrientOddRing
 OrientRing
 OrientRingViaToken
@@ -11,6 +13,5 @@ SumNotTarget
 TokenChainDijkstra
 TokenRingDijkstra
 TokenRingSixState
-TokenRingSixStateQuiet
 TokenRingThreeBit
 TokenRingThreeState

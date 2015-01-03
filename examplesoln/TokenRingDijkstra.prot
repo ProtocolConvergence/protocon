@@ -9,6 +9,15 @@ constant M := N;
 
 variable x[Int % N] <- Int % M;
 
+// Eventually one token will exist and the protocol will remain live.
+(future & active shadow)
+  (unique i <- Int % N :
+   i == 0 && x[i-1] == x[i]
+   ||
+   i != 0 && x[i-1] != x[i]
+  );
+
+
 process Bot[i <- Int % 1]
 {
   read:  x[i-1];
@@ -25,12 +34,4 @@ process P[j <- Int % (N-1)]
   direct action:
     ( x[i-1] != x[i] --> x[i] := x[i-1]; );
 }
-
-(future & shadow)
-(
-  unique i <- Int % N :
-  (   i == 0 && x[i-1] == x[i]
-   || i != 0 && x[i-1] != x[i]
-  )
-);
 

@@ -1,0 +1,199 @@
+
+\title{Example List}
+%\author{}
+\date{}
+
+\begin{document}
+
+These protocols are given in order of simplicity.
+In principle, one should be able to gradually learn Protocon's features by reading and understanding these examples in order.
+
+Example files are given in three directories: (1) \url{examplespec} contains problem specifications, (2) \url{examplesoln} contains solutions, and (3) \url{examplesynt} contains solutions which retain artifacts from the specification.
+For each file in \url{examplesynt}, there is usually a corresponding file in \url{examplesoln} which is more presentable and simpler to verify.
+
+\section{Sum-Not-2}
+
+Aly Farahat's \href{http://digitalcommons.mtu.edu/etds/178}{dissertation} includes a simple yet nontrivial unidirectional ring protocol.
+It has been extremely helpful for reasoning about the nature of \href{http://dx.doi.org/10.1007/978-3-319-03089-0\_12}{livelocks in unidirectional rings} and has a simple enough transition system to actually show in a presentation.
+
+\textit{Specification:} \url{examplespec/SumNotTwo.prot}
+- Processes are arranged in a unidirectional ring and have an $x$ variable of size $3$.
+Eventually, the system must stabilize to a state where no two consecutive $x$ values in the ring add up to $2$.
+This is specified on a per-process basis using the \ilcode{(future & silent)} statement within the processes block.
+
+The protocol can be generalized to numbers other than $2$.
+\\\textit{Specification:} \url{examplespec/SumNotTarget.prot}
+\\\textit{Solution:} \url{examplesoln/SumNotTarget.prot}
+
+\section{Coloring}
+
+\href{http://en.wikipedia.org/wiki/Graph\_coloring}{Graph coloring} is another well-known problem with many applications.
+Each node in the graph is assigned a color.
+For this assignment to be called a \textit{coloring}, each node must have a different color than the nodes adjacent to it.
+In a computer network, a coloring applies to processes that communicate directly with each other rather than nodes connected by edges.
+
+\subsection{3-Coloring on a Ring}
+
+\textit{Specification:} \url{examplespec/ColorRing.prot}
+- Processes are arranged in a bidirectional ring.
+Each process must choose a color which differs from its two neighbors.
+One solution can be just that, where a process chooses a different color than its neighbors if its current color matches.
+\\\textit{Solution:} \url{examplesoln/ColorRing.prot}
+- The given solution is deterministic and converges in an optimal number of asynchronous steps.
+Some effort has been made to simplify the actions in the deterministic protocol.
+
+\subsection{3-Coloring on an Unoriented Ring}
+
+\textit{Specification:} \url{examplespec/ColorRingSymm.prot}
+- Each process is given read access to its neighbors' variables within a \ilcode{symmetric} block.
+This forces each process $P[i]$ to have a set of actions that would not change if $x[i-1]$ and $x[i+1]$ were swapped (rewritten as each other).
+This models an unoriented ring where $P[i]$ cannot determine which of its neighbors is $P[i-1]$ and which is $P[i+1]$.
+\\\textit{Solution:} \url{examplesoln/ColorRingSymm.prot}
+- This solution is just as optimal as the previous example, but it takes longer to verify.
+Notice that the actions are written in pairs such that swapping the $x[i-1]$ and $x[i+1]$ variables in one action results in the other action.
+
+\subsection{3-Coloring on a Tree}
+\textit{Specification:} \url{examplespec/ColorTree.prot}
+- Processes are arranged in a (complete) tree of $L$ levels.
+There are three types of processes in this example: A root node, interior nodes, and leaf nodes.
+Each process must choose a color which differs from the processes adjacent to it (i.e., its parent and children).
+\\\textit{Solution:} \url{examplesoln/ColorTree.prot}
+
+\section{Reduction from 3-SAT}
+
+This example is from a paper \href{http://dx.doi.org/10.1007/978-3-642-40213-5_2}{On the Complexity of Adding Convergence} which shows how to reduce 3-SAT to the problem of adding convergence.
+Adding convergence NP-complete in the size of the state space since it grows linearly with the 3-SAT encoding.
+Ignoring the theoretical aspects, the specification itself is quite simple.
+\\\textit{Specification:} \url{examplespec/Sat.prot}
+
+\section{Sorting on Chains and Rings}
+
+\textit{Specification:} \url{examplespec/SortChain.prot}
+- Variables are arranged in a chain and processes are placed between each two variables.
+Processes are only permitted to swap values, rather than assigning arbitrary values.
+\\\textit{Solution:} \url{examplesoln/SortChain.prot}
+- The solution is fairly simple, where processes swap values when they are out of order.
+
+\textit{Specification:} \url{examplespec/SortRing.prot}
+- The chain topology above becomes a ring by adding another process between the two end variables.
+Since there is no beginning and end, we define the beginning as a zero value.
+As such, we must assume a unique zero value in the ring.
+\\\textit{Solution:} \url{examplesoln/SortRing.prot}
+- The solution is much like the chain's version, but the zero value is never moved.
+
+\section{Ring Orientation}
+
+When a ring is unoriented, it can become oriented if all processes agree on a common direction around the ring.
+
+\subsection{Orientation on Odd-Sized Rings}
+
+\textit{Specification:} \url{examplespec/OrientOddRing.prot}
+- Each process $P[i]$ has four binary variables $way[2*i]$, $way[2*i+1]$, $color[i]$, and $phase[i]$.
+Only one of the $way[2*i]$ and $way[2*i+1]$ variables may be assigned to $1$ to indicate that $P[i]$ has chosen a direction to $P[i-1]$ or $P[i+1]$ respectively.
+Eventually, all processes should choose the same direction.
+The $way$ variables are declared as \ilcode{direct} just as a matter of style (it is the default mode for variables).
+Both $color$ and $phase$ are declared as \ilcode{puppet} variables since they are superposed with the original system to achieve convergence.
+See the \href{http://dx.doi.org/10.1007/978-3-319-11764-5_18}{superposition paper} for more info or the \href{http://www.mtu.edu/cs/research/papers/pdfs/CS-TR-14-01.pdf}{technical report} for a better explanation of this example.
+\\\textit{Solution:} \url{examplesoln/OrientOddRing.prot}
+- This is the solution from Hoeman's \href{http://dx.doi.org/10.1007/BFb0020439}{paper} (\href{http://dx.doi.org/10.1006/inco.1998.2707}{journal version}).
+It operates by circulating tokens where eventually, all tokens circulate in the same direction.
+
+\subsection{Orientation on Any-Sized Rings}
+
+Israeli and Jalfon \href{http://dx.doi.org/10.1006/inco.1993.1029}{give a ring orientation protocol} that works on rings of any size.
+Hoepman's odd-sized ring protocol is based on this one, but he focused on a more strict state-reading model.
+\\\textit{Specification:} \url{examplespec/OrientRingViaToken.prot}
+\\\textit{Solution:} \url{examplesoln/OrientRingViaToken.prot}
+
+\subsection{Silent Ring Orientation}
+
+\textit{Specification:} \url{examplespec/OrientRing.prot}
+- The problem is specified like the other orientation protocols but an arbitrary coloring is assumed.
+The line \ilcode{future silent;} forces the protocol to eventually halt.
+The problem is specified like the other orientation protocols but an arbitrary coloring is assumed.
+\\\textit{Solution:} \url{examplesoln/OrientRing.prot}
+- Proof of stabilization is not published, but the protocol has been verified up to rings of size $20$.
+It works under synchronous semantics, so the \ilflag{-synchronous} flag can be used to speed up verification with Protocon.
+
+\section{Maximal Matching}
+
+\href{http://en.wikipedia.org/wiki/Matching_(graph_theory)}{Matching} is well-known problem from graph theory.
+A matching is a set of edges which do not share any common vertices.
+For a matching to be \textit{maximal}, it must be impossible to add another edge to the set without breaking the matching property.
+
+\subsection{Maximal Matching on a Ring}
+
+\textit{Specification:} \url{examplespec/MatchRingThreeState.prot}
+- Processes are arranged in a bidirectional ring.
+Each process must choose to point to one of its neighbors or itself.
+If a process points to a neighbor, that neighbor must point back.
+If a process points to itself, its neighbors must be pointing away.
+In this way, at least two out of every three processes are paired up.
+\\\textit{Solution:} \url{examplesoln/MatchRingThreeState.prot}
+- The given solution converges optimally in the number of asynchronous steps.
+Its actions are simplified simplified nicely.
+
+\subsection{1-Bit Matching}
+It may be more natural to to specify the matching problem in terms of edges in a graph.
+In doing so, we find matching can be done with one one bit per process.
+Here we also introduce \ilcode{shadow} variables and \ilcode{puppet} variables.
+Variables declared as \ilcode{shadow} are not part of the actual system; they are used purely for specification.
+Variables declared as \ilcode{puppet} are part of the actual system, but they cannot be used to define the system's invariant.
+To bridge the gap between specification and implementation, the values of \ilcode{shadow} variables are completely derived from the values of \ilcode{puppet} variables.
+
+\textit{Specification:} \url{examplespec/MatchRing.prot}
+- Each process $P[i]$ owns a binary variable $x[i]$.
+Additionally, there are two binary variables $e[i]$ and $e[i+1]$ which represent the edges connecting to $P[i-1]$ and $P[i+1]$ respectively.
+If an $e$ variable is set to $1$, we consider it in the matching.
+The system must converge to a state where no consecutive $e$ variables equal $1$, yet one out of every three consecutive $e$ variables equals $1$.
+In this way, the system converges to a state where at least two out of every three processes are paired with another process.
+Note that each $e[i]$ is a \ilcode{shadow} variable because it does not make sense for the link between processes to hold persistent data.
+This means that the $e$ variables that $P[i]$ can assign (i.e., $e[i]$ and $e[i+1]$) are virtual and must be completely derived from the values of the puppet variables $P[i]$ can read (i.e., $x[i-1]$, $x[i]$ and $x[i+1]$).
+\\\textit{Solution:} \url{examplesynt/MatchRing.prot}
+- There are $6$ actions.
+The last $3$ actions are used to derive values for shadow variables from puppet variables.
+The first $3$ actions change the $x$ values and are required for convergence.
+\\\textit{Solution:} \url{examplesoln/MatchRingOneBit.prot}
+- The occurrences of $e[i]$ and $e[i+1]$ variables in each process $P[i]$ are replaced with the corresponding $(x[i-1],x[i],x[i+1])$ values.
+
+\section{Token Passing}
+
+\subsection{Dijkstra's Token Ring}
+
+\textit{Specification:} \url{examplespec/TokenRingDijkstra.prot}
+\\\textit{Solution:} \url{examplesoln/TokenRingDijkstra.prot}
+- Dijkstra's original token ring.
+
+\subsection{3-Bit Token Ring}
+
+\textit{Specification:} \url{examplespec/TokenRingThreeBit.prot}
+\\\textit{Solution:} \url{examplesoln/TokenRingThreeBit.prot}
+- Solution from Gouda and Haddix.
+
+\subsection{6-State Token Ring}
+
+\textit{Specification:} \url{examplespec/TokenRingSixState.prot}
+\\\textit{Solution:} \url{examplesynt/TokenRingSixState.prot}
+\\\textit{Solution:} \url{examplesoln/TokenRingSixState.prot}
+- The same solution without shadow variables.
+This version also redefines a token to be states where only one process is enabled.
+
+\subsection{4-State Token Chain}
+
+\textit{Specification:} \url{examplespec/TokenChainDijkstra.prot}
+\\\textit{Solution:} \url{examplesynt/TokenChainDijkstra.prot}
+- This contains Dijkstra's solution.
+\\\textit{Solution:} \url{examplesoln/TokenChainDijkstra.prot}
+- Also Dijkstra's solution, but without shadow variables.
+
+\subsection{3-State Bidirectional Token Ring}
+
+\textit{Specification:} \url{examplespec/TokenRingThreeState.prot}
+\\\textit{Solution:} \url{examplesynt/TokenRingThreeState.prot}
+- This contains Dijkstra's solution.
+\\\textit{Solution:} \url{examplesoln/TokenRingThreeState.prot}
+- An alternative to Dijkstra's solution.
+No shadow variables are included.
+
+\end{document}
+

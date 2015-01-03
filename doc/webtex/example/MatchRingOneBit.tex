@@ -105,6 +105,10 @@ The specification is best given using shadow/puppet variables, where the shadow 
 This is effectively the same result as in the previous section, though self-loops formed by fixing the $m[i]$ variables are ignored.
 \codeinputlisting{../../../examplesynt/MatchRingOneBit.prot}
 
+It may have been more intuitive to define the matching problem as picking a set of edges without common vertices.
+This is also possible using shadow/puppet synthesis.
+See the specification \caturl{../}{examplespec/MatchRing.prot} and solution \caturl{../}{examplesynt/MatchRing.prot}.
+
 \section{Proof of Stabilization}
 
 It is fairly easy to show that the 1-bit matching protocol is stabilizing.

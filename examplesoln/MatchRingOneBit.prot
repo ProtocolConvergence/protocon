@@ -1,5 +1,5 @@
 
-constant N := 4;
+constant N := 3;
 
 variable x[Int % N] <- Int % 2;
 
@@ -9,14 +9,11 @@ process P[i <- Int % N]
   write: x[i];
   read: x[i+1];
 
-  // The following cases are P[i] pointing
-  // to P[i-1], itself, or P[i+1] repsectively.
   (future & silent)
-  (
-      x[i-1] == 1 && x[i] == 0
-   || x[i-1] == 0 && x[i] == 0 && x[i+1] == 1
-   ||                x[i] == 1 && x[i+1] == 0
-  );
+    (   x[i-1] == 1 && x[i] == 0                 // P[i] matched with P[i-1]
+     || x[i-1] == 0 && x[i] == 0 && x[i+1] == 1  // P[i] is not matched
+     ||                x[i] == 1 && x[i+1] == 0  // P[i] matched with P[i+1]
+    );
 
   puppet action:
     ( x[i-1]==0 && x[i]==0 && x[i+1]==0 --> x[i]:=1; )

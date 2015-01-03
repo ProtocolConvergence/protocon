@@ -2,21 +2,19 @@
 // 3-coloring protocol
 // We want no two adjacent colors to be the same.
 
-constant N := 5;
+constant N := 3;
 
-variable c[Int % N] <- Int % 3;
+variable x[Int % N] <- Int % 3;
 
 process P[i <- Int % N]
 {
-  let pd := i-1;
-  let sc := i+1;
   symmetric j <- {# i-1, i+1 #}
   {
-    read: c[j];
+    read: x[j];
   }
-  write: c[i];
+  write: x[i];
+
   (future & silent)
-    ( c[i-1] != c[i] && c[i] != c[i+1] )
-    ;
+    (x[i-1]!=x[i] && x[i]!=x[i+1]);
 }
 

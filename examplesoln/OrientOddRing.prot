@@ -1,3 +1,4 @@
+
 // Ring orientation protocol using the state-reading model defined in
 // Title: Uniform Deterministic Self-Stabilizing Ring-Orientation on Odd-Length Rings
 // Author: Jaap-Henk Hoepman
@@ -9,6 +10,12 @@ puppet variable color[Nat % N] <- Nat % 2;
 puppet variable phase[Nat % N] <- Nat % 2;
 direct variable way[Nat % (2*N)] <- Nat % 2;
 
+// Eventually, all processes are pointing in the same direction.
+((future & shadow) % puppet)
+  (forall i <- Nat % N :
+   way[2*i] == way[2*(i+1)]
+  );
+
 process P[i <- Nat % N]
 {
   symmetric (hand_idx, j)  <- {# (2*i, i-1), (2*i+1, i+1) #}
@@ -17,6 +24,10 @@ process P[i <- Nat % N]
     read: color[j], phase[j];
   }
   write: color[i], phase[i];
+
+  // Assume that some direction is chosen at all times.
+  (assume & closed)
+    (way[2*i] != way[2*i+1]);
 
   // Actions a,b,c,d from the paper
   puppet action:
@@ -44,14 +55,5 @@ process P[i <- Nat % N]
      -->
       phase[i] := 1-phase[i];
     );
-
-  (assume & closed)
-    (way[2*i] != way[2*i+1]);
 }
-
-// Eventually, all processes are pointing in the same direction.
-((future & shadow) % puppet)
-  (forall i <- Nat % N :
-   way[2*i] == way[2*(i+1)])
-  ;
 

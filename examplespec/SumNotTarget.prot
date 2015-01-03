@@ -9,10 +9,9 @@ process P[i <- Nat % N]
 {
   read:  x[i-1];
   write: x[i];
+
+  (future & silent)
+    (x[i-1] + x[i] != Target);
 }
 
-(future & silent)
-  (forall i <- Nat % N :
-   x[i-1] + x[i] != Target
-  );
 

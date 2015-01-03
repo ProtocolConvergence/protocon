@@ -9,8 +9,6 @@ process P[i <- Int % N]
   write: x[i];
 
   (future & silent)
-  (
-   x[i] + x[i-1] != 2
-  );
+    (x[i] + x[i-1] != 2);
 }
 

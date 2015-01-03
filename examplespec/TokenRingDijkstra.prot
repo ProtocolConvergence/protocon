@@ -7,6 +7,17 @@ constant M := N;
 
 variable x[Nat % N] <- Nat % M;
 
+// Eventually one token will exist and the protocol will remain live.
+// The 'active' part just ensures that our given protocol is actually live,
+// which we already know at design time.
+// Other invariant constraints are given within the process definitions.
+(future & active shadow)
+  (unique i <- Int % N :
+   i == 0 && x[i-1] == x[i]
+   ||
+   i != 0 && x[i-1] != x[i]
+  );
+
 process Bot[i <- Nat % 1]
 {
   read:  x[i-1];
@@ -15,7 +26,7 @@ process Bot[i <- Nat % 1]
   shadow action: ( x[i-1] == x[i] --> x[i] := x[i] + 1; );
 
   // Conjunct this into the invariant:
-  (future & shadow)
+  (future & active shadow)
     (x[i-1] == x[i] || x[i-1] == (x[i] - 1) % M);
 }
 
@@ -28,16 +39,7 @@ process P[j <- Nat % (N-1)]
   shadow action: ( x[i-1] == (x[i] + 1) % M --> x[i] := x[i] + 1; );
 
   // Conjunct this into the invariant:
-  (future & shadow)
+  (future & active shadow)
     (x[i-1] == (x[i] + 1) % M || x[i-1] == x[i]);
 }
-
-(future & shadow)
-  (unique i <- Nat % N :
-   (i == 0 && x[i-1] == x[i]
-    ||
-    i != 0 && x[i-1] == (x[i] + 1) % M
-   )
-  )
-  ;
 

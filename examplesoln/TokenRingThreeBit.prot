@@ -6,9 +6,28 @@
 
 constant N := 5;
 
-puppet variable e[Int % N] <- Int % 2;
 direct variable t[Int % N] <- Int % 2;
+puppet variable e[Int % N] <- Int % 2;
 puppet variable ready[Int % N] <- Int % 2;
+
+// Make the invariant exactly this, no smoothing over puppet variables is allowed.
+(future & shadow)
+(
+  // One process has the token.
+  (unique i <- Int % N :
+      i == 0 && t[i-1] == t[i]
+   || i != 0 && t[i-1] != t[i]
+  )
+  //&&
+  //// Some process is enabled.
+  //// This and the actual token-passing behavior are
+  //// already enforced by the shadow protocol.
+  //// already enforced by the shadow protocol.
+  //(exists i <- Int % N :
+  //    i == 0 && e[i-1] == e[i]
+  // || i != 0 && e[i-1] != e[i]
+  //)
+);
 
 process Bot[i <- Int % 1]
 {
@@ -52,21 +71,4 @@ process P[j <- Int % (N-1)]
       --> e[i] := e[i-1]; t[i] := t[i-1]; ready[i] := 0;
     );
 }
-
-// Make the invariant exactly this, no smoothing over puppet variables is allowed.
-((future & shadow) % puppet)
-(
-  // One process has the token.
-  (unique i <- Int % N :
-      i == 0 && t[i-1] == t[i]
-   || i != 0 && t[i-1] != t[i]
-  )
-  //&&
-  //// Some process is enabled.
-  //// This (and the token-passing behavior) is enforced by the shadow actions.
-  //(exists i <- Int % N :
-  //    i == 0 && e[i-1] == e[i]
-  // || i != 0 && e[i-1] != e[i]
-  //)
-);
 

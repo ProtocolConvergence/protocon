@@ -1184,7 +1184,7 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
   if ((sys.shadow_puppet_synthesis_ck() &&
        !this->deadlockPF.subseteq_ck(old_deadlock_pfmla))
       ||
-      candidates_contain_all_adds
+      !candidates_contain_all_adds
      )
   {
     RankDeadlocksMRV(this->mcv_deadlocks,

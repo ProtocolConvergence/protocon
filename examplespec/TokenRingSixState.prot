@@ -13,8 +13,6 @@ puppet variable x[Nat % N] <- Nat % M;
    i != 0 && t[i-1] != t[i]
   );
 
-//future active shadow;
-
 process Bot[i <- Nat % 1]
 {
   read: t[i-1], x[i-1];

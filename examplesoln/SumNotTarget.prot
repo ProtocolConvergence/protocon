@@ -16,11 +16,11 @@ process P[i <- Nat % N]
 {
   read:  x[i-1];
   write: x[i];
+
+  (future & silent)
+    (x[i-1] + x[i] != Target);
+
   puppet action:
     ( x[i-1] + x[i] == Target --> x[i] := Target + 1 - x[i-1]; );
 }
-
-(future & silent)
-  (forall i <- Nat % N : x[i-1] + x[i] != Target)
-  ;
 

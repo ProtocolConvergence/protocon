@@ -39,8 +39,8 @@ endforeach ()
 set (ExampleSpecs
   ColorRing
   ColorTree
-  MatchRing
   MatchRingOneBit
+  MatchRingThreeState
   OldOrientRing
   OrientOddRing
   SortChain
@@ -83,7 +83,6 @@ list (APPEND ExampleSpecs
   OrientRing
   OrientRingViaToken
   TokenChainDijkstra
-  TokenRingSixStateQuiet
   TokenRingThreeState
   )
 
@@ -94,9 +93,11 @@ foreach (f ${ExampleSpecs})
 endforeach ()
 
 set (ExampleSynts
+  MatchRing
   MatchRingOneBit
   ShadowColorRing
   TokenChainDijkstra
+  TokenRingSixState
   TokenRingThreeState
   )
 
