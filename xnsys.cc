@@ -843,6 +843,21 @@ Xn::Net::xn_of_pc(const Xn::ActSymm& act, uint pcidx) const
   return xn;
 }
 
+  X::Fmla
+Xn::Net::represented_xns_of_pc(const Xn::ActSymm& act, uint pcidx) const
+{
+  uint actidx = this->action_index(act);
+  const Cx::Table<uint>& reps =
+    this->represented_actions[actidx];
+  X::Fmla xn( false );
+  for (uint i = 0; i < reps.sz(); ++i) {
+    ActSymm tmp_act;
+    this->action(tmp_act, reps[i]);
+    xn |= this->xn_of_pc(tmp_act, pcidx);
+  }
+  return xn;
+}
+
   void
 Xn::Net::make_action_pfmla(X::Fmla* ret_xn, uint actidx) const
 {
@@ -918,14 +933,14 @@ candidate_actions(std::vector<uint>& candidates,
     uint rep_pcidx = 0;
     pc_symm.representative(&rep_pcidx);
     const Xn::Pc& rep_pc = *pc_symm.membs[rep_pcidx];
-    const X::Fmla& pc_xn = topo.xn_of_pc(act, rep_pcidx);
+    const X::Fmla& pc_xn = topo.represented_xns_of_pc(act, rep_pcidx);
 
     const X::Fmla& act_xn = topo.action_pfmla(actidx);
     if (!act_xn.sat_ck()) {
       add = false;
     }
     if (add) {
-      add = !pc_xn.subseteq_ck(pc_symm.forbid_pfmla);
+      add = !pc_xn.overlap_ck(pc_symm.forbid_pfmla);
       if (!add) {
         rejs << actidx;
       }

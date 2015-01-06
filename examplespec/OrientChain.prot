@@ -1,0 +1,46 @@
+
+constant N := 3;
+
+puppet variable cgt[Nat % (2*(N-1))] <- Nat % 2;
+puppet variable flipped[Nat % N] <- Nat % 2;
+direct variable way[Nat % (2*(N-1))] <- Nat % 2;
+
+// Colors of processes can be compared logically.
+(assume & closed)
+  (forall i <- Nat % (N-1) : cgt[2*i-1] != cgt[2*i]);
+
+((future & shadow) % puppet)
+  (forall i <- Nat % (N-1) : way[2*i-1]!=way[2*i]);
+
+future silent;
+
+
+process End[id <- Nat % 2]
+{
+  let i := if (id==0) then (-1) else (N-2);
+
+  let j := if (id==0) then (i+1) else (i-1);
+  let way_idx := if (id==0) then (2*i+1) else (2*i);
+  let adj_way_idx := if (id==0) then (2*i+2) else (2*i-1);
+
+  read: cgt[way_idx];
+  read: flipped[j];
+  read: way[adj_way_idx];
+  write: way[way_idx];
+  write: flipped[i];
+}
+
+process P[i <- Nat % (N-2)]
+{
+  symmetric (j, way_idx, adj_way_idx) <- {# (i-1, 2*i, 2*i-1), (i+1, 2*i+1, 2*i+2) #}
+  {
+    read: cgt[way_idx];
+    read: flipped[j];
+    read: way[adj_way_idx];
+    write: way[way_idx];
+  }
+  write: flipped[i];
+
+  (assume & closed) (way[2*i] != way[2*i+1]);
+}
+

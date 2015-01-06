@@ -1,0 +1,49 @@
+
+// Coloring protocol on a torus.
+// There are M rows and N columns in the torus.
+
+// Try with:
+//   protocon -x ColorTorus.prot -def M 2 -def N 2
+// or
+//   protocon -x ColorTorus.prot -def M 3 -def N 2
+// Do not put the -def flags before the -x flag
+// since actions will not be enumerated properly.
+
+constant M := 3;
+constant N := 3;
+
+variable x[Nat % (M*N)] <- Nat % 5;
+
+process P[id <- Nat % (M*N)]
+{
+  let i := id / N;
+  let j := id % N;
+
+  let id_N := ((i+1)%M)*N + j;
+  let id_S := ((i-1)%M)*N + j;
+  let id_E := i*N + (j+1)%N;
+  let id_W := i*N + (j-1)%N;
+
+  symmetric id_adj <- {# id_N, id_S, id_E, id_W #}
+  {
+    read: x[id_adj];
+  }
+  write: x[id];
+
+  (future & silent)
+    (   x[id]!=x[id_N]
+     && x[id]!=x[id_S]
+     && x[id]!=x[id_E]
+     && x[id]!=x[id_W]
+    );
+
+  // Only allow the search to choose actions which can achieve convergence.
+  permit:
+    ( x[id_N]!=0 && x[id_S]!=0 && x[id_E]!=0 && x[id_W]!=0 && x[id]!=0 --> x[id]:=0; )
+    ( x[id_N]!=1 && x[id_S]!=1 && x[id_E]!=1 && x[id_W]!=1 && x[id]!=1 --> x[id]:=1; )
+    ( x[id_N]!=2 && x[id_S]!=2 && x[id_E]!=2 && x[id_W]!=2 && x[id]!=2 --> x[id]:=2; )
+    ( x[id_N]!=3 && x[id_S]!=3 && x[id_E]!=3 && x[id_W]!=3 && x[id]!=3 --> x[id]:=3; )
+    ( x[id_N]!=4 && x[id_S]!=4 && x[id_E]!=4 && x[id_W]!=4 && x[id]!=4 --> x[id]:=4; )
+    ;
+}
+

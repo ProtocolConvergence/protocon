@@ -11,8 +11,6 @@ puppet variable z[Int % N] <- Int % 2;
 
 process Bot[i <- Int % 1]
 {
-  let i := 0;
-
   write: allup[0], tok[i], tok[i+1];
 
   write: up[i], z[i];

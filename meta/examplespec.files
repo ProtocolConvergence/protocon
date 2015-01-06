@@ -1,3 +1,4 @@
+ColorChain
 ColorKautz
 ColorKautzBi
 ColorKautzOrient
@@ -6,11 +7,13 @@ ColorKautzSymm
 ColorMobius
 ColorRing
 ColorRingSymm
+ColorTorus
 ColorTree
 LeaderRingHuang
 MatchRing
 MatchRingOneBit
 MatchRingThreeState
+OrientChain
 OrientOddRing
 OrientRing
 OrientRingViaToken
@@ -21,6 +24,7 @@ SortRing
 SumNotTarget
 SumNotTwo
 TokenChainDijkstra
+TokenRing
 TokenRingDijkstra
 TokenRingSixState
 TokenRingThreeBit

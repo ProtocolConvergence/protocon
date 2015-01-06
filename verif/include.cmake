@@ -95,8 +95,10 @@ endforeach ()
 set (ExampleSynts
   MatchRing
   MatchRingOneBit
+  OrientChain
   ShadowColorRing
   TokenChainDijkstra
+  TokenRing
   TokenRingSixState
   TokenRingThreeState
   )

@@ -425,6 +425,7 @@ public:
 
   X::Fmla sync_xn(const Cx::Table<uint>& actidcs) const;
   X::Fmla xn_of_pc(const Xn::ActSymm& act, uint pcidx) const;
+  X::Fmla represented_xns_of_pc(const Xn::ActSymm& act, uint pcidx) const;
   void make_action_pfmla(X::Fmla* ret_xn, uint actid) const;
 private:
   void cache_action_pfmla(uint actid);

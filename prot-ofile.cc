@@ -426,9 +426,9 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys, bool use_espresso, const 
   for (uint i = 0; i < topo.vbl_symms.sz(); ++i) {
     const Xn::VblSymm& vbl_symm = topo.vbl_symms[i];
     if (vbl_symm.pure_shadow_ck())
-      of << "shadow\n";
+      of << "shadow ";
     if (vbl_symm.pure_puppet_ck())
-      of << "puppet\n";
+      of << "puppet ";
 
     of << "variable " << vbl_symm.spec->name
       << "[Nat % " << vbl_symm.spec->nmembs_expression
@@ -441,7 +441,7 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys, bool use_espresso, const 
   }
 
   if (!!sys.spec->closed_assume_expression) {
-    of << "(assume & closed)\n (" << sys.spec->closed_assume_expression << ")\n ;\n";
+    of << "(assume & closed)\n  (" << sys.spec->closed_assume_expression << ")\n  ;\n";
   }
 
   Cx::String style_str = string_of_invariant_style (sys.spec->invariant_style);
@@ -450,7 +450,7 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys, bool use_espresso, const 
   }
   if (!sys.spec->invariant_expression.empty_ck()) {
     Cx::String legit_str = sys.spec->invariant_expression;
-    of << style_str << "\n (" << legit_str << ")\n ;\n";
+    of << style_str << "\n  (" << legit_str << ")\n  ;\n";
   }
 
   if (sys.spec->invariant_behav != Xn::NInvariantBehavs) {
