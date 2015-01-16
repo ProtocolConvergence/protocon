@@ -545,13 +545,25 @@ stabilization_search_init
       good = ReadProtoconFile(sys, infile_opt);
   }
 
-  DoLegit(good, "ambiguous variable refs for all processes, try increasing system size")
+  DoLegit(good, "Repeated variable references in all processes!")
   {
     for (uint i = 0; i < sys.topology.pc_symms.sz(); ++i) {
+      const Xn::PcSymm& pc_symm = sys.topology.pc_symms[i];
       uint pcidx = 0;
-      if (!sys.topology.pc_symms[i].representative(&pcidx)) {
+      if (!pc_symm.representative(&pcidx)) {
+        Cx::String msg;
+        msg << "Every process "
+          << pc_symm.spec->name << "[" << pc_symm.spec->idx_name << "]"
+          << " has repeated variable references!";
+        DBog0( msg.ccstr() );
         good = 0;
       }
+    }
+    if (!good) {
+      DBog0("`- Try placing the -def flag AFTER the -x flag.");
+      DBog0("`- If that doesn't work, the input system needs to be larger or");
+      DBog0("`- you need to remove duplicate variable references after read/write keywords.");
+      DBog0("`- Also recall that write access implies read access.");
     }
   }
 
@@ -574,6 +586,29 @@ stabilization_search_init
     DoLegit(good, "add param sys")
       good = synctx.add(param_sys, exec_opt.params[i].stabilization_opt);
   }
+
+  DoLegit(good, "The -def flag changes variable domains, put it before -x")
+  {
+    for (uint i = 0; i < sys.topology.pc_symms.sz(); ++i) {
+      const Xn::PcSymm& a = sys.topology.pc_symms[i];
+      const Xn::PcSymm& b = systems[0].topology.pc_symms[i];
+      if (!a.dom_equiv_ck(b))
+        good = 0;
+    }
+  }
+
+  DoLegit(good, "A -param flag changes variable domains, don't do this")
+  {
+    for (uint sysidx = 1; sysidx < systems.sz(); ++sysidx) {
+      for (uint i = 0; i < sys.topology.pc_symms.sz(); ++i) {
+        const Xn::PcSymm& a = sys.topology.pc_symms[i];
+        const Xn::PcSymm& b = systems[sysidx].topology.pc_symms[i];
+        if (!a.dom_equiv_ck(b))
+          good = 0;
+      }
+    }
+  }
+
 
   PartialSynthesis& synlvl = synctx.base_partial;
 
@@ -712,7 +747,7 @@ stabilization_search(vector<uint>& ret_actions,
 
   Cx::Table< Cx::Table<uint> > act_layers;
 
-  DoLegit( good, "shared init call" ) {
+  DoLegit( good, "init call failed" ) {
     good = stabilization_search_init
       (synctx, sys, systems, log_ofile, opt, infile_opt, exec_opt, act_layers);
   }

@@ -8,6 +8,7 @@ source "$metapath/include.sh"
 init_distpath "$1" "$toppath/protocon-bin"
 
 mkdir -p "$distpath/bin"
+mkdir -p "$distpath/tmp"
 cp -a -t "$distpath/bin" "$toppath/bin/protocon" "$toppath/bin/protocon-gui" "$toppath/bin/protocon-mpi"
 
 copy_examples

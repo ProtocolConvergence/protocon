@@ -203,6 +203,27 @@ Net::action_pcsymm_index(uint actidx) const
 }
 
   bool
+PcSymm::dom_equiv_ck(const PcSymm& b) const
+{
+  const PcSymm& a = *this;
+  if (a.n_possible_acts != b.n_possible_acts)
+    return false;
+  if (a.rvbl_symms.sz() != b.rvbl_symms.sz())
+    return false;
+  for (uint i = 0; i < a.rvbl_symms.sz(); ++i) {
+    if (a.rvbl_symms[i]->domsz != b.rvbl_symms[i]->domsz)
+      return false;
+  }
+  if (a.wvbl_symms.sz() != b.wvbl_symms.sz())
+    return false;
+  for (uint i = 0; i < a.wvbl_symms.sz(); ++i) {
+    if (a.wvbl_symms[i]->domsz != b.wvbl_symms[i]->domsz)
+      return false;
+  }
+  return true;
+}
+
+  bool
 PcSymm::representative(uint* ret_pcidx) const
 {
   for (uint i = 0; i < membs.sz(); ++i) {

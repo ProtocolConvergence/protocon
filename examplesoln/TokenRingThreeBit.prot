@@ -33,8 +33,10 @@ process Bot[i <- Int % 1]
 {
   read:  e[i-1], t[i-1];
   write: e[i], t[i], ready[i];
+
   // Enforce this behavior within the invariant:
   shadow action:( t[i-1] == t[i] --> t[i] := 1 - t[i-1]; );
+
   // Use these actions:
   puppet action:
     ( e[i-1] == e[i] && t[i-1] != t[i]
@@ -55,8 +57,10 @@ process P[j <- Int % (N-1)]
   let i := j+1;
   read:  e[i-1], t[i-1];
   write: e[i], t[i], ready[i];
+
   // Enforce this behavior within the invariant:
   shadow action:( t[i-1] != t[i] --> t[i] := t[i-1]; );
+
   // Use these actions:
   puppet action:
     ( e[i-1] != e[i] && t[i-1] == t[i]

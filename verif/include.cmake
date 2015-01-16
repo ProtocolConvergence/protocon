@@ -45,7 +45,6 @@ set (ExampleSpecs
   OrientOddRing
   SortChain
   SumNotTarget
-  TokenRingSixState
   TokenRingThreeBit
   )
 
@@ -79,7 +78,6 @@ foreach (f LeaderRingHuang)
 endforeach ()
 
 list (APPEND ExampleSpecs
-  FoundThreeBitTokenRing
   OrientRing
   OrientRingViaToken
   TokenChainDijkstra
@@ -99,7 +97,8 @@ set (ExampleSynts
   ShadowColorRing
   TokenChainDijkstra
   TokenRing
-  TokenRingSixState
+  TokenRingSuperpos
+  TokenRingThreeBit
   TokenRingThreeState
   )
 
@@ -125,9 +124,9 @@ add_test (NAME TrySynt2_TokenChainDijkstra
 
 list (APPEND VerifyBySynthesis
   ColorRing
-  FoundThreeBitTokenRing
   OrientRing
   OrientOddRing
+  TokenRingThreeBit
   )
 
 foreach (f ${VerifyBySynthesis})

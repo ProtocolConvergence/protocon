@@ -5,6 +5,14 @@ variable x[Nat % N] <- Nat % 3;
 
 process P[i <- Nat % N]
 {
+  // Declare read and write access to variables corresponding to
+  // P[i]'s links with P[i-1] and P[i+1] such that P[i] would
+  // behave no differently if the links were swapped.
+  // That is, an action
+  //   ( x[i-1]==a && x[i+1]==b && x[i]==c --> x[i]:=d; )
+  // exists if and only if the action
+  //   ( x[i-1]==b && x[i+1]==a && x[i]==c --> x[i]:=d; )
+  // also exists.
   symmetric j <- {# i-1, i+1 #}
   {
     read: x[j];

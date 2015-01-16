@@ -1,0 +1,19 @@
+
+constant N := 3;
+constant M := 3;
+
+shadow variable leader[Nat % N] <- Nat % 2;
+puppet variable x[Nat % N] <- Nat % M;
+
+((future & shadow) % puppet)
+  (unique i <- Nat % N : leader[i] == 1)
+  ;
+
+process P[i <- Nat % N]
+{
+  read:  x[i-1];
+  write: x[i];
+  read:  x[i+1];
+  write: leader[i];
+}
+

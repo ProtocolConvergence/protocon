@@ -80,7 +80,7 @@
         <item>
          <widget class="QPushButton" name="searchButton">
           <property name="text">
-           <string>Search</string>
+           <string>Synthesize</string>
           </property>
          </widget>
         </item>

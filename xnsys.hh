@@ -219,6 +219,7 @@ public:
     return write_flags[ridx];
   }
 
+  bool dom_equiv_ck(const PcSymm& b) const;
   bool representative(uint* ret_pcidx) const;
   void action(ActSymm& act, uint actidx) const;
   void actions(Cx::Table<uint>& ret_actions, Cx::PFmlaCtx& ctx) const;

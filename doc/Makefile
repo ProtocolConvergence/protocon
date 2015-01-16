@@ -29,6 +29,7 @@ $(eval \
 	$(call webtex_rule,index,webtex/content.tex webtex/changes.tex webtex/thanks.tex) \
 	$(call webtex_rule,legit,) \
 	$(call webtex_rule,examplelist,) \
+	$(call webtex_rule,tut,) \
 	$(call webtex_rule,example/ColorRing,$(call example_deps,ColorRing)) \
 	$(call webtex_rule,example/MatchRingOneBit,$(call example_deps,MatchRingOneBit)) \
 	$(call webtex_rule,example/OrientOddRing,$(call example_deps,OrientOddRing)) \

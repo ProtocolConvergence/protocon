@@ -4,5 +4,6 @@ OrientChain
 ShadowColorRing
 TokenChainDijkstra
 TokenRing
-TokenRingSixState
+TokenRingSuperpos
+TokenRingThreeBit
 TokenRingThreeState

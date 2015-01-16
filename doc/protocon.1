@@ -1,14 +1,14 @@
-.TH PROTOCON 1 "April 2014" "Version 2014.04.26"
+.TH PROTOCON 1 "January 2015" "Version 2015.01.16"
 .LS 1
 .SH NAME
 protocon \- add convergence to shared memory protocols
 .SH SYNOPSIS
 .B protocon
 .IR RUN_MODE ?
-.I OPTIONS
 .BI -x\  specification-file.prot
 .RB ( -o
 .IR solution-file.prot )?
+.I OPTIONS
 .SH DESCRIPTION
 .I Protocon
 adds convergence to shared memory protocols.
@@ -40,6 +40,9 @@ to output files.
 .B -h
 Print a summary of available options and exit.
 (Doesn't actually do this :D)
+.TP
+.BI -x-args\  args-file
+Load a file containing command-line arguments.
 .TP
 .BI -parallel\  N \fR?\fI
 Use

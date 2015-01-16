@@ -14,7 +14,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Form</string>
+   <string>Exploration</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
@@ -929,7 +929,7 @@
        </widget>
       </item>
       <item>
-       <widget class="QWidget" name="verticalWidget" native="true">
+       <widget class="QWidget" name="verticalWidget_2" native="true">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
           <horstretch>0</horstretch>
@@ -941,7 +941,7 @@
           <number>0</number>
          </property>
          <item>
-          <widget class="QWidget" name="horizontalWidget" native="true">
+          <widget class="QWidget" name="horizontalWidget_2" native="true">
            <property name="sizePolicy">
             <sizepolicy hsizetype="MinimumExpanding" vsizetype="Maximum">
              <horstretch>0</horstretch>
@@ -953,7 +953,7 @@
              <number>0</number>
             </property>
             <item>
-             <widget class="QWidget" name="verticalWidget" native="true">
+             <widget class="QWidget" name="verticalWidget_3" native="true">
               <property name="sizePolicy">
                <sizepolicy hsizetype="MinimumExpanding" vsizetype="Maximum">
                 <horstretch>0</horstretch>
@@ -976,7 +976,7 @@
                   <string>Step Forward</string>
                  </property>
                  <property name="autoDefault">
-                  <bool>false</bool>
+                  <bool>true</bool>
                  </property>
                 </widget>
                </item>
@@ -998,7 +998,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QWidget" name="verticalWidget" native="true">
+             <widget class="QWidget" name="verticalWidget_4" native="true">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
                 <horstretch>0</horstretch>

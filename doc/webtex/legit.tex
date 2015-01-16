@@ -100,8 +100,8 @@ Write this as:
 \begin{code}
 future active shadow;
 \end{code}
-We could use this in \url{examplespec/TokenRingSixState.prot} where the invariant is defined as \ilcode{(future & shadow) (I);}.
-Though it is not used in the example itself, we could add \ilcode{future active shadow;} if we desired an active shadow protocol.
+We could use this in \url{examplespec/TokenRingSuperpos.prot} where the invariant is defined as \ilcode{(future & shadow) (I);}.
+Though it is not used in the example itself, we could add \ilcode{future active shadow;} if we want every transition within the invariant to pass a token.
 We would do this over simply defining the invariant do be active, since the alternative ways to define the invariant have deficiencies:
 (1) \ilcode{(future & active shadow) (I);} is too strict, and
 (2) \ilcode{((future & active shadow) % puppet) (I);} does not force $I'=I$, which disables some search optimizations.

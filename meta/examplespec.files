@@ -9,6 +9,7 @@ ColorRing
 ColorRingSymm
 ColorTorus
 ColorTree
+LeaderRing
 LeaderRingHuang
 MatchRing
 MatchRingOneBit
@@ -26,6 +27,6 @@ SumNotTwo
 TokenChainDijkstra
 TokenRing
 TokenRingDijkstra
-TokenRingSixState
+TokenRingSuperpos
 TokenRingThreeBit
 TokenRingThreeState
