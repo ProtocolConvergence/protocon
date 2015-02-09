@@ -6,7 +6,8 @@ extern "C" {
 #include "cx/fileb.hh"
 #include "prot-xfile.hh"
 #include "xnsys.hh"
-
+#include <queue>
+#include <stack>
 struct LCNode {
   bool legit;
   uint x_pd;
@@ -16,6 +17,7 @@ struct LCNode {
 
 struct LCGraph {
   Cx::LgTable<LCNode> nodes;
+  std::map<std::pair<uint, uint>, std::vector<uint> > edges;
 };
 
 
@@ -53,6 +55,9 @@ deadlock_freedom_ck(const Xn::Sys& sys)
     node.x_pd = state[0];
     node.x_id = state[1];
     node.x_sc = state[2];
+
+    lcgraph.edges[std::make_pair(node.x_pd, node.x_id)]
+      .push_back(lcgraph.nodes.sz());
     lcgraph.nodes.push(node);
 
     silent1 = true;
@@ -61,29 +66,105 @@ deadlock_freedom_ck(const Xn::Sys& sys)
     }
     silent_pfmla -= silent1;
 
-    DBog4("x[i-1]==%u  x[i]==%u  x[i+1]==%u  legit:%s",
-          node.x_pd, node.x_id, node.x_sc,
-          node.legit ? "true" : "false");
+    //DBog4("x[i-1]==%u  x[i]==%u  x[i+1]==%u  legit:%s", node.x_pd,
+    //node.x_id, node.x_sc, node.legit ? "true" : "false");
   }
+  printf("\nThe size of the RCG graph in the protocol: [%lu]\n",
+         lcgraph.nodes.sz());
+  bool isDeadLock = false;
 
-  // TODO: write code here!
-  // - Add edges in continuation graph (LCGraph)
-  // - Check graph for cycles
+  for (uint sidx = 0; sidx < lcgraph.nodes.sz(); sidx++) {
+    const LCNode &node = lcgraph.nodes[sidx];
+    if (node.legit) {
+      continue;
+    }
 
+    Set<uint> visited;
+    std::queue<std::pair<uint, uint> > frontier;
+    frontier.push(std::make_pair(sidx, 0));
+    std::stack<LCNode> trace;
+    std::stack<LCNode> traceoutput;
+
+    while (!frontier.empty()) {
+      bool finCheck = false;
+      std::pair<uint, uint> tpair = frontier.front();
+      uint t = tpair.first;
+      uint tdistance = tpair.second;
+      frontier.pop();
+      const LCNode &tnode = lcgraph.nodes[t];
+
+      const std::vector<uint> &next =
+        lcgraph.edges[std::make_pair(tnode.x_id, tnode.x_sc)];
+      if (next.size() != 0) {
+        trace.push(lcgraph.nodes[t]);
+      }
+
+      for (uint nidx = 0; nidx < next.size(); nidx++) {
+        if (sidx == next[nidx]) {
+
+          LCNode termnode = lcgraph.nodes[next[nidx]];
+          bool legit = false;
+          while (!trace.empty()) {
+
+            LCNode tracemnode = trace.top();
+            if (termnode.x_pd == tracemnode.x_id
+                && termnode.x_id == tracemnode.x_sc) {
+              legit |= tracemnode.legit;
+              traceoutput.push(tracemnode);
+              termnode = tracemnode;
+            }
+
+            trace.pop();
+          }
+
+          while (!traceoutput.empty()) {
+            printf("[RING TRACE] (x[i-1]==%u  x[i]==%u  x[i+1]==%u)  local-legitimate:[%s]\n",
+                   traceoutput.top().x_pd, traceoutput.top().x_id,
+                   traceoutput.top().x_sc,
+                   traceoutput.top().legit ? "true" : "false");
+            traceoutput.pop();
+          }
+          if (legit == 1) {
+            finCheck = true;
+            isDeadLock = true;
+            printf("The protocol has a deadlock.\nThe global deadlock ring size is [%u]\n",
+                   tdistance + 1);
+
+            tdistance = 0;
+          }
+          break;
+
+        }
+        if (visited.elem_ck(next[nidx])) {
+          continue;
+        }
+        visited << next[nidx];
+        frontier.push(std::make_pair(next[nidx], tdistance + 1));
+
+      }
+      if (finCheck) {
+        printf("----------------------------------\n");
+        break;
+      }
+    }
+  }
+  if (!isDeadLock) {
+    printf("The protocol does not have deadlock.\n");
+  }
   return true;
 }
 
-/** Execute me now!*/
-int main(int argc, char** argv)
-{
-  const char* in_filepath = "examplesoln/ColorRing.prot";
-  int argi = (init_sysCx (&argc, &argv), 1);
+/** Execute me now!**/
+int main(int argc, char** argv) {
+  int argi = (init_sysCx(&argc, &argv), 1);
+
+  const char* in_filepath = argv[argi];
 
   if (argi < argc) {
     in_filepath = argv[argi++];
   }
   if (argi < argc) {
-    failout_sysCx ("Maximum of one argument!");
+    failout_sysCx("Maximum of one argument!");
   }
 
   Xn::Sys sys;
@@ -92,11 +173,10 @@ int main(int argc, char** argv)
   infile_opt.text = textfile_AlphaTab (0, in_filepath);
 
   if (!ReadProtoconFile(sys, infile_opt))
-    failout_sysCx ("Cannot read file!");
+    failout_sysCx("Cannot read file!");
 
   bool exit_good = deadlock_freedom_ck(sys);
-
-  lose_sysCx ();
+  lose_sysCx();
   return exit_good ? 0 : 2;
 }
 

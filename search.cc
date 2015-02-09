@@ -32,7 +32,8 @@ verify_solutions(const PartialSynthesis& inst, StabilizationCkInfo* info, uint* 
       if (i == inst.sz()-1 && info && info->livelock_exists && !!inst.ctx->opt.livelock_ofilepath) {
         Cx::OFileB ofb;
         ofb.open(inst.ctx->opt.livelock_ofilepath + "." + inst.ctx->opt.sys_pcidx + "." + inst.ctx->opt.n_livelock_ofiles++);
-        oput_protocon_file(ofb, *inst.ctx->systems[i], false, inst[i].actions);
+        oput_protocon_file(ofb, *inst.ctx->systems[i], inst[i].actions,
+                           false, "livelock");
       }
       *inst[i].log << "Solution was NOT self-stabilizing." << inst[i].log->endl();
       return false;
@@ -675,7 +676,9 @@ void
         *opt.log << "Writing system to: " << filepath  << opt.log->endl();
         Cx::OFileB ofb;
         ofb.open(filepath);
-        oput_protocon_file(ofb, sys, exec_opt.use_espresso, sys.actions);
+        oput_protocon_file(ofb, sys, sys.actions,
+                           exec_opt.use_espresso,
+                           exec_opt.argline.ccstr());
       }
     }
     else {
@@ -917,7 +920,9 @@ stabilization_search(vector<uint>& ret_actions,
       else if (!!exec_opt.ofilepath && count_solution) {
         Cx::OFileB ofb;
         ofb.open(exec_opt.ofilepath + "." + PcIdx + "." + trial_idx);
-        oput_protocon_file (ofb, sys, exec_opt.use_espresso, actions);
+        oput_protocon_file (ofb, sys, actions,
+                            exec_opt.use_espresso,
+                            exec_opt.argline.ccstr());
       }
     }
 

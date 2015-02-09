@@ -279,7 +279,7 @@ lookup_host(struct sockaddr_in* host, uint id)
     if (!ent)
       BailOut(-1, "gethostbyname()");
 
-    memset(host, 0, sizeof(host));
+    memset(host, 0, sizeof(*host));
     host->sin_family = AF_INET;
     memcpy(&host->sin_addr, ent->h_addr, ent->h_length);
     host->sin_port = htons(port);

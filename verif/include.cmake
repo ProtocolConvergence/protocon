@@ -91,6 +91,7 @@ foreach (f ${ExampleSpecs})
 endforeach ()
 
 set (ExampleSynts
+  LeaderRing
   MatchRing
   MatchRingOneBit
   OrientChain

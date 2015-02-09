@@ -402,7 +402,10 @@ oput_protocon_pc_invariant (Cx::OFile& of, const Xn::PcSymm& pc_symm,
 }
 
   bool
-oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys, bool use_espresso, const vector<uint>& actions)
+oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys,
+                    const vector<uint>& actions,
+                    bool use_espresso,
+                    const char* comment)
 {
   Sign good = 1;
   OSPc ospc[1];
@@ -422,6 +425,9 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys, bool use_espresso, const 
   }
 
   const Xn::Net& topo = sys.topology;
+  if (comment) {
+    of << "// " << comment << "\n";
+  }
   oput_protocon_constants (of, *sys.spec);
   for (uint i = 0; i < topo.vbl_symms.sz(); ++i) {
     const Xn::VblSymm& vbl_symm = topo.vbl_symms[i];
@@ -487,28 +493,32 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys, bool use_espresso, const 
 }
 
   bool
-oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys, bool use_espresso)
+oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys,
+                    bool use_espresso, const char* comment)
 {
-  return oput_protocon_file (of, sys, use_espresso, sys.actions);
+  return oput_protocon_file (of, sys, sys.actions, use_espresso, comment);
 }
 
   bool
 oput_protocon_file (const Cx::String& ofilename, const Xn::Sys& sys,
-                    bool use_espresso, const vector<uint>& actions)
+                    const vector<uint>& actions,
+                    bool use_espresso,
+                    const char* comment)
 {
   if (ofilename == "-") {
     Cx::OFile ofile( stdout_OFile () );
-    return oput_protocon_file (ofile, sys, use_espresso, actions);
+    return oput_protocon_file (ofile, sys, actions, use_espresso, comment);
   }
   Cx::OFileB ofb;
   ofb.open(ofilename);
-  return oput_protocon_file (ofb, sys, use_espresso, actions);
+  return oput_protocon_file (ofb, sys, actions, use_espresso, comment);
 }
 
   bool
 oput_protocon_file (const Cx::String& ofilename, const Xn::Sys& sys,
-                    bool use_espresso)
+                    bool use_espresso,
+                    const char* comment)
 {
-  return oput_protocon_file (ofilename, sys, use_espresso, sys.actions);
+  return oput_protocon_file (ofilename, sys, sys.actions, use_espresso, comment);
 }
 

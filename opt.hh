@@ -44,6 +44,7 @@ public:
   Cx::String graphviz_ofilepath;
   Cx::String conflicts_xfilepath;
   Cx::String conflicts_ofilepath;
+  Cx::String argline;
 
   MinimizeConflictsOrder conflict_order;
 

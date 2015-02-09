@@ -36,6 +36,7 @@ ReadFileText (Cx::String& ret_text, const char* filename)
     }
   }
   ret_text = text;
+  lose_AlphaTab( &text );
 }
 
 static
@@ -134,6 +135,9 @@ protocon_options_rec
 {
   Cx::OFile of( stderr_OFile() );
   while (pfxeq_cstr ("-", argv[argi])) {
+    const int prev_argi = argi;
+    bool copy_to_argline = true;
+
     const char* arg = argv[argi++];
     if (eq_cstr (arg, "-o-promela") ||
         eq_cstr (arg, "-o-model")) {
@@ -237,6 +241,7 @@ protocon_options_rec
       infile_opt.constant_map = exec_opt.params[0].constant_map;
     }
     else if (eq_cstr (arg, "-x-args")) {
+      copy_to_argline = false;
       Cx::String args_xfilepath( argv[argi++] );
       if (!args_xfilepath) {
         of << "-x-args requires an argument!" << of.endl();
@@ -405,6 +410,11 @@ protocon_options_rec
     else {
       failout_sysCx(arg);
     }
+    if (copy_to_argline) {
+      for (int i = prev_argi; i < argi; ++i) {
+        exec_opt.argline << " " << argv[i];
+      }
+    }
   }
   return true;
 }
@@ -421,6 +431,7 @@ protocon_options
    ProtoconOpt& exec_opt)
 {
   ProblemInstance problem = NProblemInstances;
+  exec_opt.argline = exename_of_sysCx ();
   uint npcs = 4;
   if (!protocon_options_rec (argi, argc, argv, opt, infile_opt, exec_opt, problem))
     return false;

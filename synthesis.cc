@@ -1130,7 +1130,7 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
       if (big_livelock) {
         Cx::OFileB ofb;
         ofb.open(this->ctx->opt.livelock_ofilepath + "." + this->ctx->opt.sys_pcidx + "." + this->ctx->opt.n_livelock_ofiles++);
-        oput_protocon_file(ofb, sys, false, this->actions);
+        oput_protocon_file(ofb, sys, this->actions, false, "livelock");
       }
     }
     return false;

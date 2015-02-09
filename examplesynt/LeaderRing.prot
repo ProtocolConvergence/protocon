@@ -1,0 +1,51 @@
+
+// protocon -x examplespec/LeaderRing.prot -x-try tmp/lead.prot
+//   -def N 2 -param N 3 -param N 5
+//   -optimize -no-random -max-height 0 -o tmp/newlead.prot
+// 
+
+constant N := 3;
+constant M := 3;
+
+shadow variable leader[Nat % N] <- Nat % 2;
+puppet variable x[Nat % N] <- Nat % M;
+
+((future & shadow) % puppet)
+  (unique i <- Nat % N : leader[i]==1)
+  ;
+
+process P[i <- Nat % N]
+{
+  read: x[i-1];
+  write: x[i];
+  read: x[i+1];
+  write: leader[i];
+  puppet action:
+    ( x[i-1]==0 && x[i]==0 && x[i+1]==0 --> x[i]:=1; leader[i]:=0; )
+    ( x[i-1]==0 && x[i]==0 && x[i+1]==1 --> x[i]:=2; leader[i]:=0; )
+    ( x[i-1]==2 && x[i]==1 && x[i+1]==0 --> x[i]:=2; leader[i]:=0; )
+    ( x[i-1]==2 && x[i]==1 && x[i+1]==1 --> x[i]:=0; leader[i]:=0; )
+    ( x[i-1]==0 && x[i]==1 && x[i+1]==1 --> x[i]:=2; leader[i]:=0; )
+    ( x[i-1]==0 && x[i]==1 && x[i+1]==2 --> x[i]:=2; leader[i]:=0; )
+    ( x[i-1]==0 && x[i]==2 && x[i+1]==0 --> x[i]:=1; leader[i]:=0; )
+
+    ( x[i-1]==1 && x[i]==1 && x[i+1]==1 --> x[i]:=0; leader[i]:=1; )
+    ( x[i-1]==1 && x[i]==1 && x[i+1]==2 --> x[i]:=0; leader[i]:=1; )
+    ( x[i-1]==2 && x[i]==1 && x[i+1]==2 --> x[i]:=0; leader[i]:=1; )
+    ( x[i-1]==1 && x[i]==2 && x[i+1]==1 --> x[i]:=0; leader[i]:=1; )
+    ( x[i-1]==1 && x[i]==2 && x[i+1]==2 --> x[i]:=0; leader[i]:=1; )
+    ( x[i-1]==2 && x[i]==2 && x[i+1]==2 --> x[i]:=0; leader[i]:=1; )
+
+    ( x[i-1]==2 && x[i]==0 && x[i+1]==1 --> leader[i]:=0; )
+    ( x[i-1]==0 && x[i]==1 && x[i+1]==0 --> leader[i]:=0; )
+    ( x[i-1]==1 && x[i]==1 && x[i+1]==0 --> leader[i]:=0; )
+    ( x[i-1]==0 && x[i]==2 && x[i+1]==2 --> leader[i]:=0; )
+    ( x[i-1]==1 && x[i]==2 && x[i+1]==0 --> leader[i]:=0; )
+    ( x[i-1]==2 && x[i]==2 && x[i+1]==0 --> leader[i]:=0; )
+
+    ( x[i-1]==1 && x[i]==0 && x[i+1]==1 --> leader[i]:=1; )
+    ( x[i-1]==1 && x[i]==0 && x[i+1]==2 --> leader[i]:=1; )
+    ( x[i-1]==2 && x[i]==0 && x[i+1]==2 --> leader[i]:=1; )
+    ;
+}
+

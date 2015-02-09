@@ -9,14 +9,30 @@ ProtoconFile::update_allgood(bool good)
   if (!allgood)  return false;
   if (good)  return true;
   allgood = false;
-  DBog1( "Something terribly wrong before line:%u", this->text_nlines );
+  DBog1( "Something terribly wrong at/after line:%u", this->text_nlines+1 );
   return false;
+}
+
+  void
+ProtoconFile::bad_parse(const char* text, const char* reason)
+{
+  Cx::OFile ofile(stderr_OFile ());
+  ofile << "Error at" << (text ? "" : "/after") << " line " << (this->text_nlines+1);
+  if (text) {
+     ofile << " in text: " << text;
+  }
+  if (reason) {
+    ofile << "\nReason for error: " << reason;
+  }
+  ofile << ofile.endl();
+  this->allgood = false;
 }
 
   bool
 ProtoconFile::add_variables(Sesp vbl_name_sp, Sesp vbl_nmembs_sp, Sesp vbl_dom_sp,
                             Xn::Vbl::ShadowPuppetRole role)
 {
+  if (!allgood)  return false;
   bool good = true;
   const char* name = 0;
   uint nmembs = 0;
@@ -44,6 +60,7 @@ ProtoconFile::add_variables(Sesp vbl_name_sp, Sesp vbl_nmembs_sp, Sesp vbl_dom_s
   bool
 ProtoconFile::add_processes(Sesp pc_name, Sesp idx_name, Sesp npcs)
 {
+  if (!allgood)  return false;
   Claim2( index_map.sz() ,==, 0 );
   bool good = true;
   const char* name_a = ccstr_of_Sesp (pc_name);
@@ -66,6 +83,7 @@ ProtoconFile::add_processes(Sesp pc_name, Sesp idx_name, Sesp npcs)
   bool
 ProtoconFile::add_constant(Sesp name_sp, Sesp val_sp)
 {
+  if (!allgood)  return false;
   Sign good = 1;
 
   const char* name = ccstr_of_Sesp (name_sp);
@@ -86,6 +104,7 @@ ProtoconFile::add_constant(Sesp name_sp, Sesp val_sp)
   bool
 ProtoconFile::add_let(Sesp name_sp, Sesp val_sp)
 {
+  if (!allgood)  return false;
   Sign good = 1;
   const char* name = ccstr_of_Sesp (name_sp);
   DoLegit(  good, "" )
@@ -109,6 +128,7 @@ ProtoconFile::add_let(Sesp name_sp, Sesp val_sp)
   bool
 ProtoconFile::add_scope_let(Sesp name_sp, Sesp val_sp)
 {
+  if (!allgood)  return false;
   Sign good = 1;
   const char* name = ccstr_of_Sesp (name_sp);
   DoLegit(  good, "" )
@@ -129,6 +149,7 @@ ProtoconFile::del_scope_let(Sesp name_sp)
   bool
 ProtoconFile::add_access(Sesp vbl_sp, Bit write)
 {
+  if (!allgood)  return false;
   bool legit = true;
   const char* vbl_name = 0;
   Sesp vbl_idx_sp = 0;
@@ -182,6 +203,7 @@ ProtoconFile::add_access(Sesp vbl_sp, Bit write)
   bool
 ProtoconFile::add_symmetric_links(Sesp let_names_sp, Sesp let_vals_list_sp)
 {
+  if (!allgood)  return false;
   Sign good = 1;
   pc_symm_spec->link_symmetries.push(Xn::LinkSymmetry(sz_of_Sesp (let_vals_list_sp)));
   Xn::LinkSymmetry& link_symmetry = pc_symm_spec->link_symmetries.top();
@@ -236,6 +258,7 @@ ProtoconFile::add_symmetric_links(Sesp let_names_sp, Sesp let_vals_list_sp)
 ProtoconFile::add_symmetric_access(Sesp let_names_sp, Sesp let_vals_list_sp,
                                    Sesp vbls_sp, Bit write)
 {
+  if (!allgood)  return false;
   Sign good = 1;
   Xn::LinkSymmetry& link_symmetry = pc_symm_spec->link_symmetries.top();
 
@@ -282,6 +305,7 @@ ProtoconFile::add_symmetric_access(Sesp let_names_sp, Sesp let_vals_list_sp,
 ProtoconFile::parse_action(Cx::PFmla& act_pf, Cx::Table<Cx::PFmla>& pc_xns, Sesp act_sp,
                            bool selfloop, Xn::Vbl::ShadowPuppetRole role)
 {
+  if (!allgood)  return false;
   Sign good = 1;
   Claim( pc_symm );
   const Xn::Net& topo = sys->topology;
@@ -470,6 +494,7 @@ ProtoconFile::add_action(Sesp act_sp, Xn::Vbl::ShadowPuppetRole role)
   bool
 ProtoconFile::forbid_action(Sesp act_sp)
 {
+  if (!allgood)  return false;
   Sign good = 1;
   Claim( pc_symm );
 
@@ -500,6 +525,7 @@ ProtoconFile::forbid_action(Sesp act_sp)
   bool
 ProtoconFile::permit_action(Sesp act_sp)
 {
+  if (!allgood)  return false;
   Sign good = 1;
   Claim( pc_symm );
 
@@ -530,6 +556,7 @@ ProtoconFile::permit_action(Sesp act_sp)
   bool
 ProtoconFile::add_pc_predicate(Sesp name_sp, Sesp val_sp)
 {
+  if (!allgood)  return false;
   Sign good = 1;
   const char* name = ccstr_of_Sesp (name_sp);
   DoLegit(  good, "" )
@@ -553,6 +580,7 @@ ProtoconFile::add_pc_predicate(Sesp name_sp, Sesp val_sp)
   bool
 ProtoconFile::add_pc_assume(Sesp assume_sp)
 {
+  if (!allgood)  return false;
   Sign good = 1;
 
   const Cx::String& idx_name = pc_symm_spec->idx_name;
@@ -586,6 +614,7 @@ ProtoconFile::add_pc_assume(Sesp assume_sp)
   bool
 ProtoconFile::add_pc_legit(Sesp legit_sp)
 {
+  if (!allgood)  return false;
   Sign good = 1;
 
   const Cx::String& idx_name = pc_symm_spec->idx_name;
@@ -631,6 +660,7 @@ ProtoconFile::finish_pc_def()
   bool
 ProtoconFile::add_predicate(Sesp name_sp, Sesp val_sp)
 {
+  if (!allgood)  return false;
   Sign good = 1;
   const char* name = ccstr_of_Sesp (name_sp);
   DoLegit(  good, "" )
@@ -638,13 +668,13 @@ ProtoconFile::add_predicate(Sesp name_sp, Sesp val_sp)
 
   Cx::PFmla pf(false);
   Cx::String expression;
-  DoLegit( good, "" )
+  DoLegit( good, 0 )
     good = eval(pf, val_sp);
 
   DoLegit( good, "finding expression" )
     good = string_expression (expression, val_sp);
 
-  DoLegit( good, "" )
+  DoLegit( good, 0 )
     sys->predicate_map.add(name, pf, expression);
 
   return update_allgood (good);
@@ -653,6 +683,7 @@ ProtoconFile::add_predicate(Sesp name_sp, Sesp val_sp)
   bool
 ProtoconFile::add_assume(Sesp assume_sp)
 {
+  if (!allgood)  return false;
   Sign good = 1;
 
   Cx::PFmla pf;
@@ -680,6 +711,7 @@ ProtoconFile::add_assume(Sesp assume_sp)
   bool
 ProtoconFile::assign_legit_mode(Xn::InvariantStyle style, bool invariant_mod_puppet)
 {
+  if (!allgood)  return false;
   Sign good = 1;
   if (legit_mode_assigned) {
     DoLegit( good, "Invariant must have the same style in all places." ) {
@@ -697,6 +729,7 @@ ProtoconFile::assign_legit_mode(Xn::InvariantStyle style, bool invariant_mod_pup
   bool
 ProtoconFile::add_legit(Sesp legit_sp)
 {
+  if (!allgood)  return false;
   Sign good = 1;
 
   Cx::PFmla pf;
@@ -724,6 +757,7 @@ ProtoconFile::add_legit(Sesp legit_sp)
   bool
 ProtoconFile::string_expression(Cx::String& ss, Sesp a)
 {
+  if (!allgood)  return false;
   Sign good = 1;
 
   const char* key = 0;
@@ -867,6 +901,7 @@ ProtoconFile::string_expression(Cx::String& ss, Sesp a)
   bool
 ProtoconFile::eval(Cx::PFmla& pf, Sesp a)
 {
+  if (!allgood)  return false;
   bool good = true;
 
   if (LegitCk(a, good, ""))
@@ -874,9 +909,10 @@ ProtoconFile::eval(Cx::PFmla& pf, Sesp a)
     const char* name = ccstr_of_Sesp (a);
     if (name)
     {
-      if (LegitCk( lookup_pfmla(&pf, name), good, "lookup_pfmla()" )) {
+      if (!lookup_pfmla(&pf, name)) {
+        bad_parse(name, "Unknown predicate name.");
+        return update_allgood(false);
       }
-      if (LegitCk( good, allgood, "" )) {}
       return good;
     }
   }
@@ -1065,6 +1101,7 @@ ProtoconFile::eval(Cx::PFmla& pf, Sesp a)
   bool
 ProtoconFile::eval(Cx::IntPFmla& ipf, Sesp a)
 {
+  if (!allgood)  return false;
   bool good = true;
 
   if (LegitCk(a, good, ""))
@@ -1332,7 +1369,9 @@ ProtoconFile::lookup_pfmla(Cx::PFmla* ret, const Cx::String& name)
       }
     }
   }
-  return update_allgood (false);
+
+  bad_parse(name.ccstr(), "Unknown predicate name.");
+  return false;
 }
 
   bool

@@ -6,15 +6,17 @@
 #include "xnsys.hh"
 
 bool
-oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys, bool use_espresso, const vector<uint>& actions);
+oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys, const vector<uint>& actions,
+                    bool use_espresso, const char* comment);
 bool
-oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys, bool use_espresso);
+oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys,
+                    bool use_espresso, const char* comment);
+bool
+oput_protocon_file (const Cx::String& ofilename, const Xn::Sys& sys, const vector<uint>& actions,
+                    bool use_espresso, const char* comment);
 bool
 oput_protocon_file (const Cx::String& ofilename, const Xn::Sys& sys,
-                    bool use_espresso, const vector<uint>& actions);
-bool
-oput_protocon_file (const Cx::String& ofilename, const Xn::Sys& sys,
-                    bool use_espresso);
+                    bool use_espresso, const char* comment);
 
 #endif
 

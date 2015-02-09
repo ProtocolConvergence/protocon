@@ -22,13 +22,15 @@ ProtoconFile =
   WS?
   (Protocol WS?)?
   (ConstDecl WS?)*
-  (VarDecl WS?)+
-  { yy->st->sys->topology.commit_variables(); }
+  (  (VarDecl WS?)+  {yy->st->sys->topology.commit_variables();}
+   | < [^;]+ >  {yy->st->bad_parse(yytext, "Bad variable declaration.");} END_STMT?
+  )
   ((  NamedPredicate
     | GlobalAssume
     | GlobalLegit
     | GlobalLegitBehav
     | ProcDecl
+    | < . .* >  {yy->st->bad_parse(0, "Unknown.");}
    )
    WS?
   )*
@@ -143,6 +145,7 @@ ProcDecl =
   ( 'let' WS let_name:ID WS? ':=' WS? let_val:Expr END_STMT WS?
     {yy->st->add_let(let_name.sp, let_val.sp);}
   )*
+(
   ( (  'read:'  WS? u:VblRef WS?  {yy->st->add_access(u.sp, 0);}
        (','     WS? v:VblRef WS?  {yy->st->add_access(v.sp, 0);} )*
      | 'write:' WS? u:VblRef WS?  {yy->st->add_access(u.sp, 1);}
@@ -152,6 +155,10 @@ ProcDecl =
     |
     SymmetricLinks WS?
   )+
+|
+  < [^;]+ >  {yy->st->bad_parse(yytext, "Bad variable declaration.");} END_STMT? WS?
+)
+
   ((  ProcNamedPredicate
     | ProcAssume
     | ProcLegit
@@ -159,7 +166,9 @@ ProcDecl =
     | DirectActionDef
     | PuppetActionDef
     | PermitActionDef
-    | ForbidActionDef)
+    | ForbidActionDef
+    | < [^};]+ >  {yy->st->bad_parse(yytext);} END_STMT?
+   )
    WS?
   )*
   {
@@ -302,6 +311,12 @@ Expr =
     a:Quantify {$$ = a;}
   | a:IfThenElse {$$ = a;}
   | a:Implication {$$ = a;}
+  | < [^)}\];]+ >
+    {
+      yy->st->bad_parse(yytext, "Malformed expression.");
+      $$.int_ck = 0;
+      $$.sp = make_ccstr_Sesp (yy->st->spctx, "(error)");
+    }
   ;
 
 IfThenElse =
@@ -557,7 +572,6 @@ ReadProtoconFile(Xn::Sys& sys, const ProtoconFileOpt& opt)
   }
   if (!yyparse(&yyctx) || !yyctx.st->allgood) {
     good = false;
-    DBog0( "Error parsing file." );
   }
   lose_AlphaTab (&text);
   delete yyctx.st;

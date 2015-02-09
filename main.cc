@@ -100,7 +100,9 @@ int main(int argc, char** argv)
     }
     if (!exec_opt.ofilepath.empty_ck())
     {
-      oput_protocon_file (exec_opt.ofilepath, sys, exec_opt.use_espresso);
+      oput_protocon_file (exec_opt.ofilepath, sys,
+                          exec_opt.use_espresso,
+                          exec_opt.argline.ccstr());
     }
   }
   DBogOF.flush();

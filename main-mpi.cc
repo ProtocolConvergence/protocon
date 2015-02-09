@@ -266,7 +266,9 @@ stabilization_search(vector<uint>& ret_actions,
       else if (!!exec_opt.ofilepath && count_solution) {
         Cx::OFileB ofb;
         ofb.open(exec_opt.ofilepath + "." + PcIdx + "." + trial_idx);
-        oput_protocon_file (ofb, sys, exec_opt.use_espresso, actions);
+        oput_protocon_file (ofb, sys, actions,
+                            exec_opt.use_espresso, 
+                            exec_opt.argline.ccstr()); 
       }
     }
     else {
@@ -423,7 +425,9 @@ int main(int argc, char** argv)
 
     if (!exec_opt.ofilepath.empty_ck())
     {
-      oput_protocon_file (exec_opt.ofilepath, sys, exec_opt.use_espresso);
+      oput_protocon_file (exec_opt.ofilepath, sys,
+                          exec_opt.use_espresso,
+                          exec_opt.argline.ccstr());
     }
   }
   else if (found_papc < 0 && PcIdx == 0) {
