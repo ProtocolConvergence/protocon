@@ -153,9 +153,9 @@ if (MPI_FOUND)
   target_link_libraries (protocon-mpi cu glu cal ${M_LIB})
 
   if(MPI_COMPILE_FLAGS)
-    set (MPI_COMPILE_FLAGS ${DEFAULT_COMPILE_FLAGS})
-  else()
     set (MPI_COMPILE_FLAGS "${MPI_COMPILE_FLAGS} ${DEFAULT_COMPILE_FLAGS}")
+  else()
+    set (MPI_COMPILE_FLAGS ${DEFAULT_COMPILE_FLAGS})
   endif()
 
   string (REGEX REPLACE "(^| )[/-]ansi($| )" " "
