@@ -77,18 +77,25 @@ foreach (f LeaderRingHuang)
   endif ()
 endforeach ()
 
-list (APPEND ExampleSpecs
+list (APPEND ExampleSolns
+  ${ExampleSpecs}
   OrientRing
   OrientRingViaToken
   TokenChainDijkstra
+  TokenRingFiveState
+  TokenRingSixState
   TokenRingThreeState
   )
 
-foreach (f ${ExampleSpecs})
+foreach (f ${ExampleSolns})
   add_test (NAME Verif5_${f}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMAND protocon -verify -x examplesoln/${f}.prot -def N 5)
 endforeach ()
+
+add_test (NAME Verif_ByzantineGenerals
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+  COMMAND protocon -verify -x examplesoln/ByzantineGenerals.prot)
 
 set (ExampleSynts
   LeaderRing
@@ -121,7 +128,13 @@ endforeach ()
 
 add_test (NAME TrySynt2_TokenChainDijkstra
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-  COMMAND protocon -test -x examplespec/TokenChainDijkstra.prot -x-try examplesynt/TokenChainDijkstra.prot -def N 2)
+  COMMAND protocon -test -x examplespec/TokenChainDijkstra.prot
+  -x-try examplesynt/TokenChainDijkstra.prot -def N 2)
+
+add_test (NAME TrySynt5_TokenRingFourState
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+  COMMAND protocon -test -def M 2 -x examplespec/TokenRingSuperpos.prot
+  -x-try examplesynt/TokenRingFourState.prot -def N 5)
 
 list (APPEND VerifyBySynthesis
   ColorRing

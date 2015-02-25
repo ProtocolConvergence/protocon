@@ -1,6 +1,6 @@
 
 constant N := 3;
-constant M := 6;
+constant M := 5;
 
 shadow variable tok[Int % N] <- Int % 2;
 puppet variable x[Int % N] <- Int % M;

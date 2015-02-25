@@ -90,12 +90,16 @@ Easy to synthesize, but solution is manually simplified.
 \section{Token Passing}
 
 \begin{itemize}
-\item TokenRing (\href{examplespec/TokenRing.prot}{spec}, \href{examplesynt/TokenRing.prot}{synt})
-- Specification and solution for a unidirectional token ring.
+\item TokenRingFiveState (\href{examplespec/TokenRing.prot}{spec}, \href{examplesynt/TokenRing.prot}{synt}, \href{examplesoln/TokenRingFiveState.prot}{soln})
+- 5-state token ring whose behavior is specified with shadow variables.
 \item TokenRingSixState (\href{examplespec/TokenRingSuperpos.prot}{spec}, \href{examplesynt/TokenRingSuperpos.prot}{synt}, \href{examplesoln/TokenRingSixState.prot}{soln})
 - 6-state token ring specified with variable superposition.
 \item TokenRingThreeBit (\href{examplespec/TokenRingThreeBit.prot}{spec}, \href{examplesynt/TokenRingThreeBit.prot}{synt},\href{examplesoln/TokenRingThreeBit.prot}{soln})
 - 3-bit token ring from \href{http://dx.doi.org/10.1006/jpdc.1996.0066}{Gouda and Haddix}.
+\item TokenRingFourState (\href{examplesynt/TokenRingFourState.prot}{synt})
+- 4-state token ring specified with variable superposition.
+This version is only stabilizing for $2$ to $7$ processes.
+It operates much like the 3-bit token ring.
 \item TokenRingDijkstra (\href{examplespec/TokenRingDijkstra.prot}{spec}, \href{examplesoln/TokenRingDijkstra.prot}{soln})
 - Dijkstra's stabilizing token ring.
 \item TokenChainDijkstra (\href{examplespec/TokenChainDijkstra.prot}{spec}, \href{examplesynt/TokenChainDijkstra.prot}{synt}, \href{examplesoln/TokenChainDijkstra.prot}{soln})
@@ -105,16 +109,16 @@ Easy to synthesize, but solution is manually simplified.
 One solution is from Dijkstra, the other is from \href{http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.153.6017}{Chernoy, Shalom, and Zaks}.
 \end{itemize}
 
-\section{Leader Election}
+%\section{Leader Election}
+%\section{Reduction from 3-SAT}
+
+\section{Other}
 
 \begin{itemize}
+\item ByzantineGenerals (\href{examplespec/ByzantineGenerals.prot}{spec}, \href{examplesoln/ByzantineGenerals.prot}{soln})
+- The Byzantine generals problem formulated as an instance of self-stabilization.
 \item LeaderRingHuang (\href{examplespec/LeaderRingHuang.prot}{spec}, \href{examplesoln/LeaderRingHuang.prot}{soln})
 - Leader election protocol on prime-sized rings from \href{http://dx.doi.org/10.1145/169683.174161}{Huang}.
-\end{itemize}
-
-\section{Reduction from 3-SAT}
-
-\begin{itemize}
 \item Sat (\href{examplespec/Sat.prot}{spec})
 - Example reduction from 3-SAT to adding stabilization from our \href{http://dx.doi.org/10.1007/978-3-642-40213-5_2}{paper showing NP-completeness} of adding convergence.
 \end{itemize}
