@@ -17,9 +17,5 @@ process P[i <- Nat % N]
     ( x[i-1]!=2 && x[i]==x[i-1] && x[i+1]!=2 --> x[i]:=2; )
     ( x[i-1]!=2 && x[i]==x[i+1] && x[i+1]!=2 --> x[i]:=2; )
     ;
-
-  // The first and third actions above can be replaced the following:
-  //( x[i-1]!=1 && x[i]==x[i+1] && x[i+1]!=1 --> x[i]:=1; )
-  // But it introduces nondeterminism. It does seem to verify faster though.
 }
 
