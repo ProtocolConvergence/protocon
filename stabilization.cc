@@ -50,10 +50,13 @@ weak_convergence_ck(uint* ret_nlayers, const Cx::PFmla& xn, const Cx::PFmla& inv
   return weak_convergence_ck(ret_nlayers, xn, invariant, Cx::PFmla(true));
 }
 
+
   bool
 shadow_ck(Cx::PFmla* ret_invariant,
           const Xn::Sys& sys,
-          const X::Fmla& lo_xn, const X::Fmla& hi_xn,
+          const X::Fmla& lo_xn,
+          const X::Fmla& hi_xn,
+          const X::Fmlae& lo_xfmlae,
           const P::Fmla& lo_scc)
 {
   static const bool explain_failure = false;
@@ -93,7 +96,14 @@ shadow_ck(Cx::PFmla* ret_invariant,
     shadow_invariant & topo.proj_shadow(sys.shadow_pfmla);
 
   // There shouldn't be non-progress cycles.
-  if ((lo_xn & shadow_self).cycle_ck(lo_scc & shadow_live.pre())) {
+  if (topo.probabilistic_ck()) {
+    if (lo_xfmlae.probabilistic_livelock_ck(0, shadow_invariant, shadow_live, &lo_xn)) {
+      if (explain_failure)
+        DBog0( "Non-progress cycle in invariant." );
+      return false;
+    }
+  }
+  else if ((lo_xn & shadow_self).cycle_ck(lo_scc & shadow_live.pre())) {
     if (explain_failure)
       DBog0( "Non-progress cycle in invariant." );
     return false;
@@ -128,15 +138,14 @@ shadow_ck(Cx::PFmla* ret_invariant,
     hi_invariant = lo_xn.closure_within(hi_invariant);
     const Cx::PFmla old_invariant = hi_invariant;
 
+    hi_live &= hi_invariant;
+    hi_live &= hi_invariant.as_img();
+    hi_live -= (shadow_live - topo.proj_img_shadow(hi_live)).pre();
+
     hi_invariant -= (lo_xn - (hi_self | hi_live)).pre();
-    const Cx::PFmla& hi_img = hi_invariant.as_img();
 
     hi_self &= hi_invariant;
-    hi_self &= hi_img;
-
-    hi_live &= hi_invariant;
-    hi_live &= hi_img;
-    hi_live -= (shadow_live - topo.proj_img_shadow(hi_live)).pre();
+    hi_self &= hi_invariant.as_img();
 
     hi_invariant &= hi_self.img_reach(shadow_beg | hi_live.img());
     hi_invariant &= hi_self.pre_reach(shadow_end | hi_live.pre());
@@ -230,13 +239,16 @@ stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
                  const StabilizationOpt& opt,
                  const Cx::PFmla& lo_xn,
                  const Cx::PFmla& hi_xn,
+                 const X::Fmlae& lo_xfmlae,
                  StabilizationCkInfo* info)
 {
   const Xn::Net& topo = sys.topology;
   const bool show_failure = true;
 
   of << "Checking for self-loops...\n";
-  if (sys.closed_assume.overlap_ck(lo_xn & topo.identity_xn)) {
+  if (topo.probabilistic_ck()) {
+  }
+  else if (sys.closed_assume.overlap_ck(lo_xn & topo.identity_xn)) {
     of << "Self-loop found.\n";
     if (show_failure) {
       const Cx::PFmla& puppet_self = sys.closed_assume & lo_xn & topo.identity_xn;
@@ -264,9 +276,16 @@ stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
   of << "Finding cycles..." << of.endl();
   Cx::PFmla scc( false );
   uint nlayers = opt.max_nlayers;
-  lo_xn.cycle_ck(&scc, &nlayers,
-                 (opt.count_convergence_layers ? &sys.invariant : 0),
-                 &sys.closed_assume);
+  if (topo.probabilistic_ck()) {
+    nlayers = 1;
+    P::Fmla tmp_invariant = lo_xn.closure_within(sys.invariant & sys.closed_assume);
+    lo_xfmlae.probabilistic_livelock_ck(&scc, sys.closed_assume, (~tmp_invariant).cross(tmp_invariant), &lo_xn);
+  }
+  else {
+    lo_xn.cycle_ck(&scc, &nlayers,
+                   (opt.count_convergence_layers ? &sys.invariant : 0),
+                   &sys.closed_assume);
+  }
   if (info)  info->nlayers = nlayers;
   if (opt.max_nlayers > 0 && nlayers > opt.max_nlayers) {
     of << "Too many layers to "
@@ -285,20 +304,24 @@ stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
       if (info->find_livelock_actions) {
         Cx::Table<Cx::PFmla> states;
         info->livelock_actions = info->actions;
-        find_livelock_actions(info->livelock_actions, lo_xn, scc, sys.invariant, topo);
+        if (!topo.probabilistic_ck()) {
+          find_livelock_actions(info->livelock_actions, lo_xn, scc, sys.invariant, topo);
+        }
         of << info->livelock_actions.size() << " actions involved in livelocks.\n";
       }
     }
     if (show_failure) {
       topo.oput_vbl_names(of);
-      oput_one_cycle(of, lo_xn, scc, scc - sys.invariant, topo);
+      //oput_one_cycle(of, lo_xn, scc, scc - sys.invariant, topo);
+      //topo.oput_all_pf(of, scc - sys.invariant);
+      topo.oput_one_pf(of, scc - sys.invariant);
     }
     of.flush();
     return false;
   }
   of << "Checking behavior within the invariant..." << of.endl();
   Cx::PFmla hi_invariant( false );
-  if (!shadow_ck(&hi_invariant, sys, lo_xn, hi_xn, scc)) {
+  if (!shadow_ck(&hi_invariant, sys, lo_xn, hi_xn, lo_xfmlae, scc)) {
     of << "Invariant not valid, given the protocol and behavior.\n";
     of.flush();
     return false;
@@ -367,34 +390,36 @@ stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
     if (info) {
       info->actions = actions;
     }
-    return stabilization_ck(of, sys, opt, lo_xn, hi_xn, info);
+    Claim( !topo.probabilistic_ck() );
+    X::Fmlae lo_xfmlae;
+    return stabilization_ck(of, sys, opt, lo_xn, hi_xn, lo_xfmlae, info);
   }
 
-  X::Fmla lo_xn( false );
+  X::Fmlae lo_xn( &topo.xfmlae_ctx );
   for (uint i = 0; i < actions.size(); ++i) {
     if (!topo.lightweight) {
-      lo_xn |= topo.action_pfmla(actions[i]);
+      lo_xn |= topo.action_xfmlae(actions[i]);
     }
     else {
       const Cx::Table<uint>& rep_actions = topo.represented_actions[actions[i]];
       for (uint j = 0; j < rep_actions.sz(); ++j) {
-        X::Fmla act_xn;
-        topo.make_action_pfmla(&act_xn, rep_actions[j]);
+        X::Fmlae act_xn;
+        topo.make_action_xfmlae(&act_xn, rep_actions[j]);
         lo_xn |= act_xn;
       }
     }
   }
 
-  Cx::PFmla hi_xn( lo_xn );
+  X::Fmlae hi_xn( lo_xn );
   for (uint i = 0; i < candidates.size(); ++i) {
     if (!topo.lightweight) {
-      hi_xn |= topo.action_pfmla(candidates[i]);
+      hi_xn |= topo.action_xfmlae(candidates[i]);
     }
     else {
       const Cx::Table<uint>& rep_candidates = topo.represented_actions[candidates[i]];
       for (uint j = 0; j < rep_candidates.sz(); ++j) {
-        X::Fmla act_xn;
-        topo.make_action_pfmla(&act_xn, rep_candidates[j]);
+        X::Fmlae act_xn;
+        topo.make_action_xfmlae(&act_xn, rep_candidates[j]);
         hi_xn |= act_xn;
       }
     }
@@ -403,7 +428,7 @@ stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
   if (info) {
     info->actions = actions;
   }
-  return stabilization_ck(of, sys, opt, lo_xn, hi_xn, info);
+  return stabilization_ck(of, sys, opt, lo_xn.xfmla(), hi_xn.xfmla(), lo_xn, info);
 }
 
   bool
@@ -425,7 +450,14 @@ stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
     return stabilization_ck(of, sys, opt, sys.actions, info);
   }
   if (!info || sys.topology.lightweight) {
-    return stabilization_ck(of, sys, opt, sys.direct_pfmla, sys.direct_pfmla, info);
+    const Xn::Net& topo = sys.topology;
+    X::Fmlae xn(&topo.xfmlae_ctx);
+    for (uint i = 0; i < topo.pcs.sz(); ++i) {
+      const Xn::Pc& pc = topo.pcs[i];
+      xn[i] = pc.puppet_xn;
+    }
+    return stabilization_ck(of, sys, opt, sys.direct_pfmla,
+                            sys.direct_pfmla, xn, info);
   }
   return stabilization_ck(of, sys, opt, sys.actions, info);
 }

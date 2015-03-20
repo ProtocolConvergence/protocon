@@ -46,9 +46,11 @@ struct PFmlaVT
   void (*subst_vbls_fn) (PFmlaCtx*, PFmla*, const PFmla, uint, uint);
   void (*pre_fn) (PFmlaCtx*, PFmla*, const PFmla);
   void (*pre1_fn) (PFmlaCtx*, PFmla*, const PFmla, const PFmla);
+  void (*pre2_fn) (PFmlaCtx*, PFmla*, const PFmla, const PFmla, uint);
   void (*img_as_img_fn) (PFmlaCtx*, PFmla*, const PFmla);
   void (*img_fn) (PFmlaCtx*, PFmla*, const PFmla);
   void (*img1_fn) (PFmlaCtx*, PFmla*, const PFmla, const PFmla);
+  void (*img2_fn) (PFmlaCtx*, PFmla*, const PFmla, const PFmla, uint);
   void (*dotjoin_fn) (PFmlaCtx*, PFmla*, const PFmla, const PFmla);
   void (*inverse_fn) (PFmlaCtx*, PFmla*, const PFmla);
   void (*as_img_fn) (PFmlaCtx*, PFmla*, const PFmla);
@@ -121,11 +123,15 @@ pre_PFmla (PFmla* dst, const PFmla a);
 void
 pre1_PFmla (PFmla* dst, const PFmla a, const PFmla b);
 void
+pre2_PFmla (PFmla* dst, const PFmla a, const PFmla b, uint list_id);
+void
 img_as_img_PFmla (PFmla* dst, const PFmla a);
 void
 img_PFmla (PFmla* dst, const PFmla a);
 void
 img1_PFmla (PFmla* dst, const PFmla a, const PFmla b);
+void
+img2_PFmla (PFmla* dst, const PFmla xn, const PFmla pf, uint list_id);
 void
 dotjoin_PFmla (PFmla* dst, const PFmla a, const PFmla b);
 void

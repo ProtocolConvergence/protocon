@@ -1,6 +1,7 @@
 W( ConflictFamily )
 W( IntPFmla )
 W( PFmla )
+W( ProbabilisticLivelock )
 W( ProtoconFileAgreement )
 W( ProtoconFileSumNotTwo )
 W( ShadowColorRing )

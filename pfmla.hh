@@ -248,6 +248,13 @@ public:
     return dst;
   }
 
+  PFmla pre(const PFmla& img_arg, uint list_id) const
+  {
+    PFmla dst;
+    pre2_PFmla (&dst.g, this->g, img_arg.g, list_id);
+    return dst;
+  }
+
   PFmla img_as_img() const
   {
     PFmla dst;
@@ -266,6 +273,13 @@ public:
   {
     PFmla dst;
     img_PFmla (&dst.g, this->g);
+    return dst;
+  }
+
+  PFmla img(const PFmla& pre_arg, uint list_id) const
+  {
+    PFmla dst;
+    img2_PFmla (&dst.g, this->g, pre_arg.g, list_id);
     return dst;
   }
 
@@ -298,6 +312,11 @@ public:
     PFmla dst;
     as_img_PFmla (&dst.g, this->g);
     return dst;
+  }
+
+  PFmla cross(const PFmla& b) const
+  {
+    return (*this) & b.as_img();
   }
 
   /**

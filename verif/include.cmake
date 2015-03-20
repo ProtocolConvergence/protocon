@@ -39,6 +39,7 @@ endforeach ()
 set (ExampleSpecs
   ColorRing
   ColorTree
+  ColorUniRing
   MatchRingOneBit
   MatchRingThreeState
   OldOrientRing

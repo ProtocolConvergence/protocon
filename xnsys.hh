@@ -10,6 +10,7 @@
 #include "cx/ofile.hh"
 #include "cx/map.hh"
 #include "pfmla.hh"
+#include "xfmlae.hh"
 #include "tuple.hh"
 #include "xnspec.hh"
 
@@ -147,16 +148,22 @@ public:
   Cx::Table< const Vbl* > rvbls;
   Cx::Table< const Vbl* > wvbls;
   Cx::PFmla act_unchanged_pfmla;
+  P::Fmla closed_assume;
   Cx::PFmla invariant;
   Cx::PFmla puppet_xn;
   Cx::PFmla shadow_xn;
+  X::Fmla permit_xn;
+  X::Fmla forbid_xn;
 
   Pc(PcSymm* symmetry, uint index)
     : symm(symmetry)
     , symm_idx(index)
+    , closed_assume(true)
     , invariant(true)
     , puppet_xn(false)
     , shadow_xn(false)
+    , permit_xn(false)
+    , forbid_xn(false)
   {}
   void actions(Cx::Table<uint>& ret_actions, Cx::PFmlaCtx& ctx) const;
 };
@@ -192,8 +199,6 @@ public:
 
   Cx::PFmla shadow_pfmla;
   Cx::PFmla direct_pfmla;
-  Cx::PFmla permit_pfmla;
-  Cx::PFmla forbid_pfmla;
   LetPredicateMap predicate_map;
 
   uint act_idx_offset;
@@ -206,8 +211,6 @@ public:
   PcSymm()
     : shadow_pfmla( false )
     , direct_pfmla( false )
-    , permit_pfmla( false )
-    , forbid_pfmla( false )
   {}
 
   String vbl_name(uint i) const {
@@ -274,6 +277,9 @@ inline bool ActSymm::puppet_self_loop_ck() const
       continue;
     if (this->aguard(i) != this->assign(i))
       return false;
+    if (this->pc_symm->spec->random_write_flags[this->pc_symm->wmap[i]]) {
+      return false;
+    }
   }
   return true;
 }
@@ -282,13 +288,14 @@ class Net {
 public:
   Cx::Mem<Spec> spec;
   Cx::PFmlaCtx pfmla_ctx;
+  X::FmlaeCtx xfmlae_ctx;
   Cx::LgTable< Vbl > vbls;
   Cx::LgTable< VblSymm > vbl_symms;
   Cx::LgTable< Pc > pcs;
   Cx::LgTable< PcSymm > pc_symms;
 
 private:
-  Cx::Table< Cx::PFmla > act_pfmlas;
+  Cx::Table< X::Fmlae > act_xfmlaes;
 public:
   Cx::Table< Cx::Table<uint> > represented_actions;
   uint n_possible_acts;
@@ -296,6 +303,7 @@ public:
   bool lightweight;
   Cx::PFmla identity_xn;
 
+  bool random_write_exists;
   bool pure_shadow_vbl_exists;
   bool pure_puppet_vbl_exists;
 
@@ -308,10 +316,13 @@ private:
 public:
   Net()
     : spec(0)
+    , pfmla_ctx()
+    , xfmlae_ctx(pfmla_ctx)
     , n_possible_acts(0)
     , total_pre_domsz(0)
     , lightweight(false)
     , identity_xn(true)
+    , random_write_exists(false)
     , pure_shadow_vbl_exists(false)
     , pure_puppet_vbl_exists(false)
   {
@@ -350,13 +361,27 @@ public:
 
   const X::Fmla action_pfmla(uint actidx) const {
     if (!this->lightweight) {
-      return act_pfmlas[actidx];
+      return act_xfmlaes[actidx].xfmla();
     }
     X::Fmla xn(false);
     const Cx::Table<uint>& actions = represented_actions[actidx];
     for (uint i = 0; i < actions.sz(); ++i) {
       X::Fmla tmp_xn;
       this->make_action_pfmla(&tmp_xn, actions[i]);
+      xn |= tmp_xn;
+    }
+    return xn;
+  }
+
+  const X::Fmlae action_xfmlae(uint actidx) const {
+    if (!this->lightweight) {
+      return act_xfmlaes[actidx];
+    }
+    X::Fmlae xn(&this->xfmlae_ctx);
+    const Cx::Table<uint>& actions = represented_actions[actidx];
+    for (uint i = 0; i < actions.sz(); ++i) {
+      X::Fmlae tmp_xn;
+      this->make_action_xfmlae(&tmp_xn, actions[i]);
       xn |= tmp_xn;
     }
     return xn;
@@ -369,6 +394,9 @@ public:
     return this->pfmla_ctx.vbl(x.pfmla_idx);
   }
 
+  bool probabilistic_ck() const {
+    return random_write_exists;
+  }
   bool pure_shadow_vbl_ck() const {
     return pure_shadow_vbl_exists;
   }
@@ -428,8 +456,9 @@ public:
   X::Fmla xn_of_pc(const Xn::ActSymm& act, uint pcidx) const;
   X::Fmla represented_xns_of_pc(const Xn::ActSymm& act, uint pcidx) const;
   void make_action_pfmla(X::Fmla* ret_xn, uint actid) const;
+  void make_action_xfmlae(X::Fmlae* ret_xn, uint actidx) const;
 private:
-  void cache_action_pfmla(uint actid);
+  void cache_action_xfmla(uint actid);
 };
 
 /** This holds the search problem and its solution.**/

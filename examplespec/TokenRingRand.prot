@@ -1,0 +1,31 @@
+
+constant N := 3;
+
+direct variable t[Nat % N] <- Nat % 2;
+puppet variable e[Nat % N] <- Nat % 2;
+puppet variable dec[Nat % N] <- Nat % 2;
+
+// Ensure that N is odd.
+(assume & closed)
+  (N % 2 == 1);
+
+(future & shadow)
+  (unique i <- Nat % N : t[i-1]==t[i]);
+
+process P[i <- Nat % N]
+{
+  read: e[i-1];
+  write: e[i];
+
+  read: t[i-1];
+  write: t[i];
+
+  random write: dec[i];
+
+  shadow: ( t[i-1]==t[i] --> t[i]:=1-t[i]; );
+
+  //permit: ( e[i-1]==e[i] --> _; );
+  //puppet: ( e[i-1]==e[i] && t[i-1]==t[i] --> e[i]:=1-e[i]; t[i]:=dec[i]; dec[i]:=_; );
+  //puppet: ( e[i-1]==e[i] && t[i-1]!=t[i] --> e[i]:=1-e[i]; dec[i]:=_; );
+}
+

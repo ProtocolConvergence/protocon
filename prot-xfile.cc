@@ -147,7 +147,7 @@ ProtoconFile::del_scope_let(Sesp name_sp)
 }
 
   bool
-ProtoconFile::add_access(Sesp vbl_sp, Bit write)
+ProtoconFile::add_access(Sesp vbl_sp, Bit write, Bit random)
 {
   if (!allgood)  return false;
   bool legit = true;
@@ -190,6 +190,9 @@ ProtoconFile::add_access(Sesp vbl_sp, Bit write)
     if (legit) {
       if (write) {
         topo.add_write_access(+pc_symm, vbl_symm, indices);
+        if (random) {
+          pc_symm_spec->random_write_flags.top() = 1;
+        }
       }
       else {
         topo.add_read_access(+pc_symm, vbl_symm, indices);
@@ -256,7 +259,7 @@ ProtoconFile::add_symmetric_links(Sesp let_names_sp, Sesp let_vals_list_sp)
 
   bool
 ProtoconFile::add_symmetric_access(Sesp let_names_sp, Sesp let_vals_list_sp,
-                                   Sesp vbls_sp, Bit write)
+                                   Sesp vbls_sp, Bit write, Bit random)
 {
   if (!allgood)  return false;
   Sign good = 1;
@@ -282,7 +285,7 @@ ProtoconFile::add_symmetric_access(Sesp let_names_sp, Sesp let_vals_list_sp,
       if (!good)  break;
 
       vbl_idcs.push(pc_symm_spec->rvbl_symms.sz());
-      add_access(car_of_Sesp (vbls_sp), write);
+      add_access(car_of_Sesp (vbls_sp), write, random);
 
       let_name_sp = let_names_sp;
       while (!nil_ck_Sesp (let_name_sp)) {
@@ -514,9 +517,9 @@ ProtoconFile::forbid_action(Sesp act_sp)
   }
 
   DoLegit( good, "" ) {
-    uint rep_pcidx = 0;
-    pc_symm->representative(&rep_pcidx);
-    pc_symm->forbid_pfmla |= pc_xns[rep_pcidx];
+    for (uint i = 0; i < pc_symm->membs.sz(); ++i) {
+      pc_symm->membs[i]->forbid_xn |= pc_xns[i];
+    }
   }
 
   return update_allgood (good);
@@ -545,9 +548,9 @@ ProtoconFile::permit_action(Sesp act_sp)
   }
 
   DoLegit( good, "" ) {
-    uint rep_pcidx = 0;
-    pc_symm->representative(&rep_pcidx);
-    pc_symm->permit_pfmla |= pc_xns[rep_pcidx];
+    for (uint i = 0; i < pc_symm->membs.sz(); ++i) {
+      pc_symm->membs[i]->permit_xn |= pc_xns[i];
+    }
   }
 
   return update_allgood (good);
@@ -592,6 +595,7 @@ ProtoconFile::add_pc_assume(Sesp assume_sp)
       good = eval(pf, assume_sp);
 
     if (!good)  break;
+    pc_symm->membs[i]->closed_assume &= pf;
     sys->closed_assume &= pf;
   }
 
@@ -1022,7 +1026,7 @@ ProtoconFile::eval(Cx::PFmla& pf, Sesp a)
         pf = false;
         pf_b = false;
       }
-
+#if 1
       for (uint i = 0; good && i < n; ++i) {
         index_map[idxname] = ipf_c.state_map[i];
         if (LegitCk( eval(pf_c, d), good, "" ))
@@ -1041,11 +1045,7 @@ ProtoconFile::eval(Cx::PFmla& pf, Sesp a)
         }
       }
       index_map.erase(idxname);
-    }
-#if 0
-    if (LegitCk( ipf_c.vbls.sz() == 0, good, "" )) {
-      const uint n = ipf_c.state_map.sz();
-
+#else
       Cx::Table< Cx::PFmla > pfmlas( n );
 
       for (uint i = 0; good && i < n; ++i) {
@@ -1082,8 +1082,8 @@ ProtoconFile::eval(Cx::PFmla& pf, Sesp a)
       }
 
       index_map.erase(idxname);
-    }
 #endif
+    }
   }
   else {
     good = false;

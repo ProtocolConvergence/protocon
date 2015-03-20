@@ -173,6 +173,7 @@ public:
   LetVblMap let_map;
   Cx::Table<const VblSymmSpec*> rvbl_symms;
   Cx::Table<const VblSymmSpec*> wvbl_symms;
+  Cx::Table<bool> random_write_flags;
   Cx::Table<LinkSymmetry> link_symmetries;
   Cx::String nmembs_expression;
   Cx::Table<Cx::String> shadow_act_strings;

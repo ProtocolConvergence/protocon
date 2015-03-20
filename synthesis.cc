@@ -24,7 +24,10 @@ coexist_ck(const Xn::ActSymm& a, const Xn::ActSymm& b)
         puppet_img_eql = false;
     }
   }
+  bool random_write = false;
   for (uint i = 0; i < pc.wvbl_symms.sz(); ++i) {
+    if (pc.spec->random_write_flags[pc.wmap[i]])
+      random_write = true;
     if (pc.wvbl_symms[i]->puppet_ck()) {
       if (a.assign(i) != b.assign(i))
         puppet_img_eql = false;
@@ -53,6 +56,7 @@ coexist_ck(const Xn::ActSymm& a, const Xn::ActSymm& b)
 
   if (!deterministic)  return false;
   if (!enabling)  return true;
+  if (random_write)  return true;
 
   bool shadow_exists = false;
   bool a_self_loop = true;
@@ -981,7 +985,7 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
     return true;
   }
 
-  Cx::PFmla add_act_pfmla( false );
+  X::Fmlae add_act_xfmlae( &topo.xfmlae_ctx );
   for (it = adds.begin(); it != adds.end(); ++it) {
     uint actId = *it;
     if (use_csp) {
@@ -1022,7 +1026,7 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
       }
     }
     dels |= tmp_dels;
-    add_act_pfmla |= topo.action_pfmla(actId);
+    add_act_xfmlae |= topo.action_xfmlae(actId);
   }
 
   if (adds.overlap_ck(dels)) {
@@ -1034,12 +1038,23 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
     {
       *this->log << "Tried to add conflicting actions... this is not good!!!" << this->log->endl();
     }
+    if (true) {
+      FlatSet<uint> adds_dels( adds & dels );
+      for (uint i = 0; i < adds_dels.sz(); ++i) {
+        Xn::ActSymm act;
+        topo.action(act, adds_dels[i]);
+        *this->log << "Reject:" << this->log->endl();
+        OPut(*this->log, act) << this->log->endl();
+      }
+    }
     return false;
   }
 
-  this->lo_xn |= add_act_pfmla;
+  this->lo_xn |= add_act_xfmlae.xfmla();
+  this->lo_xfmlae |= add_act_xfmlae;
   if (!candidates_contain_all_adds) {
-    this->hi_xn |= add_act_pfmla;
+    this->hi_xn |= add_act_xfmlae.xfmla();
+    this->hi_xfmlae |= add_act_xfmlae;
   }
   Xn::ActSymm act;
   if (this->sys_idx == 0)
@@ -1089,7 +1104,14 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
   }
   uint nlayers = max_nlayers;
   Cx::PFmla scc(false);
-  this->lo_xn.cycle_ck(&scc, &nlayers, 0, &sys.closed_assume);
+  if (topo.probabilistic_ck()) {
+    nlayers = 1;
+    P::Fmla tmp_invariant = lo_xn.closure_within(sys.invariant);
+    lo_xfmlae.probabilistic_livelock_ck(&scc, sys.closed_assume, (~tmp_invariant).cross(tmp_invariant), &lo_xn);
+  }
+  else {
+    lo_xn.cycle_ck(&scc, &nlayers, 0, &sys.closed_assume);
+  }
   if (max_nlayers > 0 && nlayers > max_nlayers) {
     *this->log << "NLAYERS (maximum number of convergence layers exceeded: "
       << nlayers << "+ > " << max_nlayers << ")" << this->log->endl();
@@ -1111,7 +1133,9 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
                             *this->ctx);
 #else
       conflict_set = this->actions;
-      find_livelock_actions (conflict_set, this->lo_xn, scc, sys.invariant, topo);
+      if (!topo.probabilistic_ck()) {
+        find_livelock_actions (conflict_set, this->lo_xn, scc, sys.invariant, topo);
+      }
 #endif
       this->ctx->conflicts.add_conflict(conflict_set);
       *this->log << "cycle conflict size:" << conflict_set.sz() << this->log->endl();
@@ -1137,7 +1161,7 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
   }
 
   const P::Fmla old_hi_invariant( this->hi_invariant );
-  if (!shadow_ck(&this->hi_invariant, sys, this->lo_xn, this->hi_xn, scc))
+  if (!shadow_ck(&this->hi_invariant, sys, this->lo_xn, this->hi_xn, this->lo_xfmlae, scc))
   {
     *this->log << "SHADOW" << this->log->endl();
     return false;
@@ -1185,6 +1209,7 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
        !this->deadlockPF.subseteq_ck(old_deadlock_pfmla))
       ||
       !candidates_contain_all_adds
+      //|| true
      )
   {
     RankDeadlocksMRV(this->mcv_deadlocks,
@@ -1392,9 +1417,12 @@ SynthesisCtx::add(const Xn::Sys& sys, const StabilizationOpt& stabilization_opt)
     return true;
   }
 
+  partial.lo_xfmlae = X::Fmlae(&topo.xfmlae_ctx);
+  partial.hi_xfmlae = X::Fmlae(&topo.xfmlae_ctx);
   for (uint i = 0; i < partial.candidates.size(); ++i) {
-    partial.hi_xn |= topo.action_pfmla(partial.candidates[i]);
+    partial.hi_xfmlae |= topo.action_xfmlae(partial.candidates[i]);
   }
+  partial.hi_xn = partial.hi_xfmlae.xfmla();
 
   partial.deadlockPF = ~sys.invariant & sys.closed_assume;
   partial.hi_invariant = sys.invariant & sys.closed_assume;

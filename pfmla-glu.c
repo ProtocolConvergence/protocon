@@ -185,6 +185,23 @@ pre1_GluPFmla (PFmlaCtx* fmlactx, PFmla* base_dst, const PFmla base_a, const PFm
 
 static
   void
+pre2_GluPFmla (PFmlaCtx* fmlactx, PFmla* base_dst, const PFmla base_xn, const PFmla base_pf, uint set_id)
+{
+  GluPFmlaCtx* ctx = castup_as_GluPFmlaCtx (fmlactx);
+  const GluPFmla* xn = ccastup_as_GluPFmla (base_xn);
+  const GluPFmla* pf = ccastup_as_GluPFmla (base_pf);
+  GluPFmla* dst = castup_as_GluPFmla (*base_dst);
+  array_t* pre_list = ctx->pre_vbl_lists.s[set_id];
+  array_t* img_list = ctx->img_vbl_lists.s[set_id];
+  mdd_t* subst = mdd_substitute (ctx->ctx, pf->mdd, pre_list, img_list);
+  mdd_t* tmp = dst->mdd;
+  dst->mdd = mdd_and_smooth (ctx->ctx, xn->mdd, subst, img_list);
+  mdd_free (subst);
+  if (tmp)  mdd_free (tmp);
+}
+
+static
+  void
 img_as_img_GluPFmla (PFmlaCtx* fmlactx, PFmla* base_dst, const PFmla base_a)
 {
   GluPFmlaCtx* ctx = castup_as_GluPFmlaCtx (fmlactx);
@@ -223,6 +240,22 @@ img1_GluPFmla (PFmlaCtx* fmlactx, PFmla* base_dst, const PFmla base_a, const PFm
   dst->mdd = mdd_substitute (ctx->ctx, img,
                              ctx->img_vbl_list,
                              ctx->pre_vbl_list);
+  mdd_free (img);
+}
+
+static
+  void
+img2_GluPFmla (PFmlaCtx* fmlactx, PFmla* base_dst, const PFmla base_xn, const PFmla base_pf, uint set_id)
+{
+  GluPFmlaCtx* ctx = castup_as_GluPFmlaCtx (fmlactx);
+  const GluPFmla* xn = ccastup_as_GluPFmla (base_xn);
+  const GluPFmla* pf = ccastup_as_GluPFmla (base_pf);
+  GluPFmla* dst = castup_as_GluPFmla (*base_dst);
+  array_t* pre_list = ctx->pre_vbl_lists.s[set_id];
+  array_t* img_list = ctx->img_vbl_lists.s[set_id];
+  mdd_t* img = mdd_and_smooth (ctx->ctx, xn->mdd, pf->mdd, pre_list);
+  if (dst->mdd)  mdd_free (dst->mdd);
+  dst->mdd = mdd_substitute (ctx->ctx, img, img_list, pre_list);
   mdd_free (img);
 }
 
@@ -508,9 +541,11 @@ make_GluPFmlaCtx ()
     vt.subst_vbls_fn   =   subst_vbls_GluPFmla;
     vt.pre_fn          =          pre_GluPFmla;
     vt.pre1_fn         =         pre1_GluPFmla;
+    vt.pre2_fn         =         pre2_GluPFmla;
     vt.img_as_img_fn   =   img_as_img_GluPFmla;
     vt.img_fn          =          img_GluPFmla;
     vt.img1_fn         =         img1_GluPFmla;
+    vt.img2_fn         =         img2_GluPFmla;
     vt.dotjoin_fn      =      dotjoin_GluPFmla;
     vt.inverse_fn      =      inverse_GluPFmla;
     vt.as_img_fn       =       as_img_GluPFmla;

@@ -59,14 +59,15 @@ PFmla::closure_within(const Cx::PFmla& pf) const
   bool
 PFmla::cycle_ck(Cx::PFmla* scc, uint* ret_nlayers, const Cx::PFmla* invariant, const Cx::PFmla* assumed) const
 {
-  Cx::PFmla span0( true, *this );
+  const X::Fmla& xn = *this;
+  P::Fmla span0( true, xn );
   if (assumed)
     span0 = *assumed;
 
   uint nlayers = 1;
 
   while (true) {
-    const Cx::PFmla& span1 = this->img(span0);
+    const P::Fmla& span1 = xn.img(span0);
     if (span0.equiv_ck(span1))  break;
     if (ret_nlayers) {
       if (invariant) {
@@ -86,7 +87,7 @@ PFmla::cycle_ck(Cx::PFmla* scc, uint* ret_nlayers, const Cx::PFmla* invariant, c
   }
 
   while (true) {
-    const Cx::PFmla& span1 = span0 & this->pre(span0);
+    const P::Fmla& span1 = span0 & xn.pre(span0);
     if (span0.equiv_ck(span1))  break;
     span0 = span1;
   }
@@ -109,30 +110,7 @@ PFmla::cycle_ck(Cx::PFmla* scc, uint* ret_nlayers, const Cx::PFmla* invariant, c
   bool
 PFmla::cycle_ck(Cx::PFmla* scc, const Cx::PFmla& pf) const
 {
-  Cx::PFmla span0( true );
-
-  while (true) {
-    const Cx::PFmla& span1 = this->img(span0);
-
-    if (!pf.overlap_ck(span1))  return false;
-    if (span0.equiv_ck(span1))  break;
-
-    span0 = span1;
-  }
-
-  while (true) {
-    const Cx::PFmla& span1 = span0 & this->pre(span0);
-
-    if (!pf.overlap_ck(span1))  return false;
-    if (span0.equiv_ck(span1))  break;
-
-    span0 = span1;
-  }
-
-  if (scc) {
-    *scc = span0;
-  }
-  return true;
+  return this->cycle_ck(scc, 0, 0, &pf);
 }
 
 /**

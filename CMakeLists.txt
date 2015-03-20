@@ -36,7 +36,7 @@ list (APPEND CFiles udp.c)
 list (APPEND HFiles udp-act.h testlist.h)
 
 list (APPEND CCFiles
-  pfmla.cc xnsys.cc xnspec.cc
+  pfmla.cc xfmlae.cc xnsys.cc xnspec.cc
   opt.cc search.cc
   test.cc inst.cc main.cc
   main-mpi.cc mpidissem.cc
@@ -50,7 +50,7 @@ list (APPEND CCFiles
   deadfree.cc
   )
 list (APPEND HHFiles
-  pfmla.hh xnsys.hh xnspec.hh
+  pfmla.hh xfmlae.hh xnsys.hh xnspec.hh
   opt.hh search.hh
   inst.hh
   mpidissem.hh
@@ -84,7 +84,7 @@ add_custom_command (
 set_bld_cfile_properties (${BldPath}/prot-xfile.leg.cc)
 
 list (APPEND ProtoconSources
-  pfmla.cc xnsys.cc inst.cc
+  pfmla.cc xfmlae.cc xnsys.cc inst.cc
   opt.cc
   promela.cc graphviz.cc kautz.cc
   stabilization.cc

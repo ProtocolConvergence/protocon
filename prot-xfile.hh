@@ -25,6 +25,10 @@ struct FinMeta
 {
   Sesp sp;
   Bit int_ck;
+  union {
+    int i;
+    const char* s;
+  } aux;
   //uint text_lineno;
 };
 
@@ -98,11 +102,12 @@ public:
 
   void del_scope_let(Sesp name_sp);
 
-  bool add_access(Sesp vbl_sp, Bit write);
+  bool add_access(Sesp vbl_sp, Bit write, Bit random);
 
   bool add_symmetric_links(Sesp let_names_sp, Sesp let_vals_list_sp);
 
-  bool add_symmetric_access(Sesp let_names_sp, Sesp let_vals_list_sp, Sesp vbls_sp, Bit write);
+  bool add_symmetric_access(Sesp let_names_sp, Sesp let_vals_list_sp, Sesp vbls_sp,
+                            Bit write, Bit random);
 
   bool parse_action(Cx::PFmla& act_pf, Cx::Table<Cx::PFmla>& pc_xns, Sesp act_sp,
                     bool selfloop, Xn::Vbl::ShadowPuppetRole role);

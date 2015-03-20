@@ -267,8 +267,8 @@ stabilization_search(vector<uint>& ret_actions,
         Cx::OFileB ofb;
         ofb.open(exec_opt.ofilepath + "." + PcIdx + "." + trial_idx);
         oput_protocon_file (ofb, sys, actions,
-                            exec_opt.use_espresso, 
-                            exec_opt.argline.ccstr()); 
+                            exec_opt.use_espresso,
+                            exec_opt.argline.ccstr());
       }
     }
     else {

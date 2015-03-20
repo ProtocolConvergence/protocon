@@ -1,0 +1,20 @@
+
+constant N := 5;
+variable x[Nat % N] <- Nat % 3;
+
+process P[i <- Nat % N]
+{
+  read: x[i-1];
+  random write: x[i];
+
+  (future & silent)
+    (x[i-1]!=x[i]);
+
+  // When my predecessor in the ring has the same color,
+  // randomly increment (mod 3) my color by either 1 or 2.
+  puppet action:
+    ( x[i-1]==x[i] --> x[i]:=x[i]+1; )
+    ( x[i-1]==x[i] --> x[i]:=x[i]+2; )
+    ;
+}
+

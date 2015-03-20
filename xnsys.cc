@@ -18,6 +18,15 @@ namespace Xn {
   void
 Net::commit_initialization()
 {
+  for (uint i = 0; i < pc_symms.sz(); ++i) {
+    const Xn::PcSymm& pc_symm = pc_symms[i];
+    for (uint j = 0; j < pc_symm.rvbl_symms.sz(); ++j) {
+      if (pc_symm.spec->random_write_flags[j]) {
+        this->random_write_exists = true;
+      }
+    }
+  }
+
   uint ntotal = 0;
   for (uint i = 0; i < pc_symms.sz(); ++i) {
     Xn::PcSymm& pc = pc_symms[i];
@@ -37,6 +46,9 @@ Net::commit_initialization()
     pc.img_domsz = 1;
     for (uint j = 0; j < pc.wvbl_symms.sz(); ++j) {
       uint domsz = pc.wvbl_symms[j]->domsz;
+      if (pc.spec->random_write_flags[pc.wmap[j]]) {
+        domsz = 1;
+      }
       pc.doms.push(domsz);
       pc.img_domsz *= domsz;
     }
@@ -54,9 +66,10 @@ Net::commit_initialization()
   }
   if (this->lightweight)
     return;
-  act_pfmlas.resize(ntotal);
+  Claim2( act_xfmlaes.sz() ,==, 0 );
+  act_xfmlaes.affysz(ntotal, X::Fmlae(&this->xfmlae_ctx));
   for (uint i = 0; i < ntotal; ++i) {
-    this->cache_action_pfmla(i);
+    this->cache_action_xfmla(i);
   }
 }
 
@@ -90,6 +103,7 @@ Net::commit_variable(VblSymm& symm, uint i)
 
   const Cx::PFmlaVbl& pf_vbl = this->pfmla_vbl(*vbl);
   this->identity_xn &= pf_vbl.img_eq(pf_vbl);
+  this->xfmlae_ctx.identity_xn &= pf_vbl.img_eq(pf_vbl);
 
   if (symm.pure_shadow_ck()) {
     pure_shadow_vbl_exists = true;
@@ -151,9 +165,11 @@ Net::add_processes(const String& name, const String& idx_name, uint nmembs)
   symm.spec->nmembs_expression = nmembs;
   symm.spec->idx_name = idx_name;
   for (uint i = 0; i < nmembs; ++i) {
+    xfmlae_ctx.wvbl_list_ids.push(pfmla_ctx.add_vbl_list());
     Pc& pc = pcs.push(Pc(&symm, i));
     symm.membs.push(&pc);
     pc.act_unchanged_pfmla = this->identity_xn;
+    xfmlae_ctx.act_unchanged_xfmlas.push(this->identity_xn);
   }
   return &symm;
 }
@@ -165,6 +181,7 @@ Net::add_read_access (PcSymm* pc_symm, const VblSymm* vbl_symm,
   pc_symm->rvbl_symms.push(vbl_symm);
   pc_symm->spec->rvbl_symms.push(+vbl_symm->spec);
   pc_symm->write_flags.push_back(false);
+  pc_symm->spec->random_write_flags.push(false);
   pc_symm->rindices.push(indices);
   for (uint i = 0; i < pc_symm->membs.sz(); ++i) {
     const Vbl* vbl = vbl_symm->membs[indices.index(i, vbl_symm->membs.sz())];
@@ -188,6 +205,12 @@ Net::add_write_access (PcSymm* pc_symm, const VblSymm* vbl_symm,
     pc.wvbls.push(vbl);
     pc.act_unchanged_pfmla =
       pc.act_unchanged_pfmla.smooth(pfmla_vbl(*vbl));
+
+    uint pcidx = this->xfmlae_ctx.sz()-pc_symm->membs.sz()+i;
+    pfmla_ctx.add_to_vbl_list(xfmlae_ctx.wvbl_list_ids[pcidx],
+                              vbl->pfmla_idx);
+    xfmlae_ctx.act_unchanged_xfmlas[pcidx] =
+      xfmlae_ctx.act_unchanged_xfmlas[pcidx].smooth(pfmla_vbl(*vbl));
   }
 }
 
@@ -312,6 +335,10 @@ Pc::actions(Cx::Table<uint>& ret_actions, Cx::PFmlaCtx& ctx) const
     for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
       if (pc_symm.rvbl_symms[i]->pure_shadow_ck()) {
         pre_state[i] = 0;
+      }
+      if (pc_symm.spec->random_write_flags[i]) {
+        const Cx::PFmlaVbl& v = ctx.vbl(pc.rvbls[i]->pfmla_idx);
+        img_pf = img_pf.smooth(v) & (v == 0);
       }
     }
     while (img_pf.sat_ck()) {
@@ -668,7 +695,12 @@ OPut(Cx::OFile& of, const Xn::ActSymm& act)
   for (uint i = 0; i < pc.wvbl_symms.sz(); ++i) {
     of << ' ' << pc.wvbl_symms[i]->spec->name
       << "[" << pc.windices[i].expression << "]"
-      << ":=" << act.assign(i) << ';';
+      << ":=";
+    if (pc.spec->random_write_flags[pc.wmap[i]])
+      of << '_';
+    else
+      of << act.assign(i);
+    of << ';';
   }
   return of;
 }
@@ -764,7 +796,7 @@ oput_one_cycle(Cx::OFile& of, const X::Fmla& xn,
   X::Fmla
 Xn::Net::sync_xn(const Cx::Table<uint>& actidcs) const
 {
-  Cx::Table<P::Fmla> pc_xns(this->pcs.sz(), P::Fmla(false));
+  X::Fmlae xfmlae(&this->xfmlae_ctx);
   Cx::Set<uint> all_actidcs_set;
   for (uint i = 0; i < actidcs.sz(); ++i) {
     const Cx::Table<uint>& all_acts =
@@ -782,7 +814,7 @@ Xn::Net::sync_xn(const Cx::Table<uint>& actidcs) const
     const Xn::PcSymm& pc_symm = *act.pc_symm;
     for (uint symmidx = 0; symmidx < pc_symm.membs.sz(); ++symmidx) {
       const uint pcidx = this->pcs.index_of(pc_symm.membs[symmidx]);
-      pc_xns[pcidx] |= xn_of_pc(act, symmidx);
+      xfmlae[pcidx] |= xn_of_pc(act, symmidx);
     }
   }
 
@@ -804,8 +836,8 @@ Xn::Net::sync_xn(const Cx::Table<uint>& actidcs) const
       }
       written_vbls[xnvbl_idx] = 1;
     }
-    self_loop -= pc_xns[pcidx].pre();
-    xn &= (self_loop | pc_xns[pcidx]);
+    self_loop -= xfmlae[pcidx].pre();
+    xn &= (self_loop | xfmlae[pcidx]);
   }
 
   X::Fmla read_only_identity_xn( true );
@@ -830,15 +862,32 @@ Xn::Net::xn_of_pc(const Xn::ActSymm& act, uint pcidx) const
   X::Fmla xn(true);
 
   bool puppet_self_loop = true;
+  bool probabilistic = false;
   for (uint i = 0; i < pc.wvbls.sz(); ++i) {
     const Cx::PFmlaVbl& vbl = pfmla_vbl(*pc.wvbls[i]);
+    bool random_write =
+      pc_symm.spec->random_write_flags[pc_symm.wmap[i]];
+
     if (pc_symm.wvbl_symms[i]->puppet_ck()) {
-      if (act.aguard(i) != act.assign(i)) {
+      if (random_write) {
+        probabilistic = true;
+      }
+      else if (act.aguard(i) != act.assign(i)) {
         puppet_self_loop = false;
       }
       xn &= (vbl == act.aguard(i));
     }
-    xn &= (vbl.img_eq(act.assign(i)));
+
+    if (!random_write) {
+      xn &= (vbl.img_eq(act.assign(i)));
+    }
+  }
+  if (probabilistic) {
+    puppet_self_loop = false;
+    xn &= (pc.closed_assume.as_img() & ~pc.forbid_xn);
+    if (pc.permit_xn.sat_ck()) {
+      xn &= pc.permit_xn;
+    }
   }
 
   // When there is a self-loop on puppet variables,
@@ -882,14 +931,28 @@ Xn::Net::represented_xns_of_pc(const Xn::ActSymm& act, uint pcidx) const
   void
 Xn::Net::make_action_pfmla(X::Fmla* ret_xn, uint actidx) const
 {
+  X::Fmlae xn(&this->xfmlae_ctx);
+  this->make_action_xfmlae(&xn, actidx);
+  if (ret_xn) {
+    *ret_xn = xn.xfmla();
+  }
+}
+
+  void
+Xn::Net::make_action_xfmlae(X::Fmlae* ret_xn, uint actidx) const
+{
   Xn::ActSymm act;
   this->action(act, actidx);
   const Xn::PcSymm& pc_symm = *act.pc_symm;
 
-  X::Fmla xn(false);
+  uint offset = 0;
+  if (pc_symm.membs.sz() > 0) {
+    offset = this->pcs.index_of(pc_symm.membs[0]);
+  }
+
+  X::Fmlae xn(&this->xfmlae_ctx);
   for (uint pc_memb_idx = 0; pc_memb_idx < pc_symm.membs.sz(); ++pc_memb_idx) {
-    const Xn::Pc& pc = *pc_symm.membs[pc_memb_idx];
-    xn |= (pc.act_unchanged_pfmla & this->xn_of_pc(act, pc_memb_idx));
+    xn[offset+pc_memb_idx] |= this->xn_of_pc(act, pc_memb_idx);
   }
 
   if (ret_xn) {
@@ -902,19 +965,19 @@ Xn::Net::make_action_pfmla(X::Fmla* ret_xn, uint actidx) const
  * \sa commit_initialization()
  **/
   void
-Xn::Net::cache_action_pfmla(uint actidx)
+Xn::Net::cache_action_xfmla(uint actidx)
 {
-  Cx::PFmla xn;
-  make_action_pfmla(&xn, actidx);
+  X::Fmlae xn(&this->xfmlae_ctx);
+  make_action_xfmlae(&xn, actidx);
 
   uint rep_actidx = representative_action_index(actidx);
 
   if (rep_actidx == actidx) {
-    act_pfmlas[actidx] = xn;
+    act_xfmlaes[actidx] = xn;
   }
   else {
-    act_pfmlas[actidx] = false;
-    act_pfmlas[rep_actidx] |= xn;
+    act_xfmlaes[actidx] = false;
+    act_xfmlaes[rep_actidx] |= xn;
   }
 }
 
@@ -939,6 +1002,8 @@ candidate_actions(std::vector<uint>& candidates,
   }
 
   for (uint actidx = 0; actidx < topo.n_possible_acts; ++actidx) {
+    const bool explain_rej = false;
+
     if (actidx != topo.representative_action_index(actidx)) {
       continue;
     }
@@ -961,14 +1026,14 @@ candidate_actions(std::vector<uint>& candidates,
       add = false;
     }
     if (add) {
-      add = !pc_xn.overlap_ck(pc_symm.forbid_pfmla);
+      add = !pc_xn.overlap_ck(rep_pc.forbid_xn);
       if (!add) {
         rejs << actidx;
       }
     }
     if (add) {
-      if (pc_symm.permit_pfmla.sat_ck()) {
-        if (!pc_xn.subseteq_ck(pc_symm.permit_pfmla)) {
+      if (rep_pc.permit_xn.sat_ck()) {
+        if (!pc_xn.subseteq_ck(rep_pc.permit_xn)) {
           add = false;
           rejs << actidx;
         }
@@ -982,6 +1047,9 @@ candidate_actions(std::vector<uint>& candidates,
       for (uint j = 0; j < pc_symm.wvbl_symms.sz(); ++j) {
         if (pc_symm.wvbl_symms[j]->pure_shadow_ck()) {
           shadow_exists = true;
+        }
+        else if (pc_symm.spec->random_write_flags[pc_symm.wmap[j]]) {
+          selfloop = false;
         }
         else {
           if (act.assign(j) != act.aguard(j)) {
@@ -998,7 +1066,7 @@ candidate_actions(std::vector<uint>& candidates,
           rejs << actidx;
         }
       }
-      if (false && selfloop) {
+      if (explain_rej && selfloop) {
         OPut((DBogOF << "Action " << actidx << " is a self-loop: "), act) << '\n';
       }
     }
@@ -1006,6 +1074,9 @@ candidate_actions(std::vector<uint>& candidates,
     if (add && !act_xn.img(sys.closed_assume).subseteq_ck(sys.closed_assume)) {
       add = false;
       rejs << actidx;
+      if (explain_rej) {
+        OPut((DBogOF << "Action " << actidx << " leaves assumed states: "), act) << '\n';
+      }
     }
     if (add && !sys.closed_assume.overlap_ck(act_xn.pre())) {
       add = false;
@@ -1029,7 +1100,7 @@ candidate_actions(std::vector<uint>& candidates,
       if (!act_xn.img(sys.invariant & sys.closed_assume).subseteq_ck(sys.invariant)) {
         add = false;
         rejs << actidx;
-        if (false) {
+        if (explain_rej) {
           OPut((DBogOF << "Action " << actidx << " breaks closure: "), act) << '\n';
         }
       }
@@ -1038,7 +1109,7 @@ candidate_actions(std::vector<uint>& candidates,
       {
         add = false;
         rejs << actidx;
-        if (false) {
+        if (explain_rej) {
           OPut((DBogOF << "Action " << actidx << " breaks shadow protocol: "), act) << '\n';
         }
       }

@@ -449,6 +449,32 @@ pre1_PFmla (PFmla* dst, const PFmla a, const PFmla b)
 }
 
   void
+pre2_PFmla (PFmla* dst, const PFmla xn, const PFmla pf, uint list_id)
+{
+  Trit phase_xn = phase_of_PFmla (xn);
+  Trit phase_pf = phase_of_PFmla (pf);
+  if (phase_pf != May)
+  {
+    if (phase_pf == Yes)
+      pre_PFmla (dst, xn);
+    else
+      wipe1_PFmla (dst, false);
+  }
+  else if (phase_xn != May)
+  {
+    if (phase_xn == Yes)
+      smooth_vbls_PFmla (dst, pf, list_id, -1);
+    else
+      wipe1_PFmla (dst, false);
+  }
+  else
+  {
+    pre_op2_PFmla (dst, xn, pf);
+    xn->ctx->vt->pre2_fn (xn->ctx, dst, xn, pf, list_id);
+  }
+}
+
+  void
 img_as_img_PFmla (PFmla* dst, const PFmla a)
 {
   Trit phase = phase_of_PFmla (a);
@@ -498,6 +524,32 @@ img1_PFmla (PFmla* dst, const PFmla a, const PFmla b)
   {
     pre_op2_PFmla (dst, a, b);
     a->ctx->vt->img1_fn (a->ctx, dst, a, b);
+  }
+}
+
+  void
+img2_PFmla (PFmla* dst, const PFmla xn, const PFmla pf, uint list_id)
+{
+  Trit phase_xn = phase_of_PFmla (xn);
+  Trit phase_pf = phase_of_PFmla (pf);
+  if (phase_pf != May)
+  {
+    if (phase_pf == Yes)
+      img_PFmla (dst, xn);
+    else
+      wipe1_PFmla (dst, false);
+  }
+  else if (phase_xn != May)
+  {
+    if (phase_xn == Yes)
+      smooth_vbls_PFmla (dst, pf, list_id, -1);
+    else
+      wipe1_PFmla (dst, false);
+  }
+  else
+  {
+    pre_op2_PFmla (dst, xn, pf);
+    xn->ctx->vt->img2_fn (xn->ctx, dst, xn, pf, list_id);
   }
 }
 

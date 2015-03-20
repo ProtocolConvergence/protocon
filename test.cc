@@ -249,7 +249,7 @@ TestXnSys()
   Claim( (actPF - srcPF).tautology_ck(false) );
 
   {
-    Cx::PFmla cyclePF =
+    X::Fmla cyclePF =
       ((topo.pfmla_vbl(0) == 1) &
        (topo.pfmla_vbl(2) == 2) &
        (topo.pfmla_vbl(1) == 1) &
@@ -586,6 +586,41 @@ TestShadowMatchRing()
   opt.log = &ofile;
   bool solution_found = AddStabilization(sys, opt);
   Claim( solution_found );
+}
+
+
+static void TestProbabilisticLivelock()
+{
+  Xn::Sys sys;
+  ProtoconFileOpt infile_opt;
+  infile_opt.text = textfile_AlphaTab (0, "examplesoln/ColorUniRing.prot");
+
+  if (!ReadProtoconFile(sys, infile_opt)) {
+    Claim( 0 && "Can't parse file" );
+  }
+
+  Xn::Net& topo = sys.topology;
+  X::Fmlae xn(&sys.topology.xfmlae_ctx);
+  for (uint i = 0; i < topo.pcs.sz(); ++i) {
+    const Xn::Pc& pc = topo.pcs[i];
+    xn[i] = pc.puppet_xn;
+  }
+
+  P::Fmla scc(false);
+  P::Fmla assumed = sys.closed_assume;
+
+  bool cycle_found =
+#if 1
+    xn.probabilistic_livelock_ck(&scc, assumed)
+#elif 0
+    xn.cycle_ck(&scc, 0, 0, &assumed)
+#else
+    sys.direct_pfmla.cycle_ck(&scc, 0, 0, &assumed)
+#endif
+    ;
+
+  Claim(scc.subseteq_ck(sys.invariant));
+  Claim(!cycle_found);
 }
 
 static void

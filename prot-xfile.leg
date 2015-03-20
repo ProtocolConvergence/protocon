@@ -48,26 +48,19 @@ ConstDecl =
   ;
 
 OptionalShadowPuppetRole =
-  {$$.sp = 0;}
-  (  'shadow' WS {$$.sp = make_ccstr_Sesp (yy->st->spctx, "shadow");}
-   | ('puppet' | 'superposed') WS {$$.sp = make_ccstr_Sesp (yy->st->spctx, "puppet");}
+  {$$.aux.i = (int) Xn::Vbl::Direct;}
+  (  'shadow' WS {$$.aux.i = (int) Xn::Vbl::Shadow;}
+   | ('puppet' | 'superposed') WS {$$.aux.i = (int) Xn::Vbl::Puppet;}
    | ('direct' | 'underlying') WS
   )?
   ;
 
 VarDecl =
-  r:OptionalShadowPuppetRole 'variable'
+  role:OptionalShadowPuppetRole 'variable'
   WS a:ID '[' WS? b:NatDom WS? ']' WS? IN WS? c:NatDom END_STMT
   {
-    Xn::Vbl::ShadowPuppetRole role = Xn::Vbl::Direct;
-    if (pfxeq_cstr ("shadow", ccstr_of_Sesp (r.sp))) {
-      role = Xn::Vbl::Shadow;
-    }
-    else if (pfxeq_cstr ("puppet", ccstr_of_Sesp (r.sp))) {
-      role = Xn::Vbl::Puppet;
-    }
-    if (r.sp)  lose_Sesp (r.sp);
-    yy->st->add_variables(a.sp, b.sp, c.sp, role);
+    yy->st->add_variables(a.sp, b.sp, c.sp,
+                          (Xn::Vbl::ShadowPuppetRole) role.aux.i);
   }
   ;
 
@@ -75,10 +68,10 @@ ActionExpr =
   '(' WS?
    act:Expr WS? '-->' WS?  {act.sp = list2_ccstr_Sesp ("-->", act.sp);}
    (vbl:VblRef WS? ':=' WS?
-    (  val:Expr
-       {pushlast_Sesp (act.sp, list3_ccstr_Sesp (":=", vbl.sp, val.sp));}
-     | val_wild:WILD
+    (  val_wild:WILD
        {pushlast_Sesp (act.sp, list3_ccstr_Sesp (":=", vbl.sp, val_wild.sp));}
+     | val:Expr
+       {pushlast_Sesp (act.sp, list3_ccstr_Sesp (":=", vbl.sp, val.sp));}
     )
     END_STMT WS?
     | (wild:WILD WS? END_STMT WS? {pushlast_Sesp (act.sp, wild.sp);})
@@ -145,19 +138,20 @@ ProcDecl =
   ( 'let' WS let_name:ID WS? ':=' WS? let_val:Expr END_STMT WS?
     {yy->st->add_let(let_name.sp, let_val.sp);}
   )*
-(
-  ( (  'read:'  WS? u:VblRef WS?  {yy->st->add_access(u.sp, 0);}
-       (','     WS? v:VblRef WS?  {yy->st->add_access(v.sp, 0);} )*
-     | 'write:' WS? u:VblRef WS?  {yy->st->add_access(u.sp, 1);}
-       (','     WS? v:VblRef WS?  {yy->st->add_access(v.sp, 1);} )*
-    )
-    END_STMT WS?
-    |
-    SymmetricLinks WS?
-  )+
-|
-  < [^;]+ >  {yy->st->bad_parse(yytext, "Bad variable declaration.");} END_STMT? WS?
-)
+  (
+     (  random_flag:NOP
+        write_flag:NOP
+        (  'read:'
+         | ('random' WS {random_flag.aux.i=1;})?
+           'write:' {write_flag.aux.i=1;}
+        )
+        WS?      u:VblRef WS? {yy->st->add_access(u.sp, write_flag.aux.i, random_flag.aux.i);}
+        (',' WS? v:VblRef WS? {yy->st->add_access(v.sp, write_flag.aux.i, random_flag.aux.i);} )*
+        END_STMT WS?
+      | SymmetricLinks WS?
+     )+
+   | < [^;]+ >  {yy->st->bad_parse(yytext, "Bad variable declaration.");} END_STMT? WS?
+  )
 
   ((  ProcNamedPredicate
     | ProcAssume
@@ -201,17 +195,19 @@ SymmetricLinks =
   '#}' WS?
   '{' WS?
   { yy->st->add_symmetric_links(let_names.sp, let_vals_list.sp); }
-  ( (  'read:'  WS? u:VblRef WS?  {u.sp = list2_ccstr_Sesp ("r", u.sp);}
-       (','     WS? v:VblRef WS?  {pushlast_Sesp (u.sp, v.sp);} )*
-     | 'write:' WS? u:VblRef WS?  {u.sp = list2_ccstr_Sesp ("w", u.sp);}
-       (','     WS? v:VblRef WS?  {pushlast_Sesp (u.sp, v.sp);} )*
+  ( random_flag:NOP
+    write_flag:NOP
+    (  'read:'
+     | ('random' WS {random_flag.aux.i=1;})?
+       'write:' {write_flag.aux.i=1;}
     )
+    WS? u:VblRef WS? {u.sp = list1_Sesp (u.sp);}
+    (',' WS? v:VblRef WS? {pushlast_Sesp (u.sp, v.sp);} )*
     END_STMT WS?
     {
       Sesp vbls_sp = u.sp;
-      Bool own = eq_cstr ("w", ccstr_of_Sesp (car_of_Sesp (vbls_sp)));
-      vbls_sp = cdr_of_Sesp (vbls_sp);
-      yy->st->add_symmetric_access(let_names.sp, let_vals_list.sp, vbls_sp, own);
+      yy->st->add_symmetric_access(let_names.sp, let_vals_list.sp, vbls_sp,
+                                   write_flag.aux.i, random_flag.aux.i);
     }
   )+
  '}'
@@ -260,17 +256,27 @@ ConstExpr = a:ConstSum {$$ = a;}
 
 ConstSum =
   a:ConstProduct
-  (  (WS? '+' WS? b:ConstProduct {a.sp = list3_ccstr_Sesp ("+", a.sp, b.sp);  a.int_ck = 1;} )
-   | (WS? '-' WS? b:ConstProduct {a.sp = list3_ccstr_Sesp ("-", a.sp, b.sp);  a.int_ck = 1;} )
+  (WS?
+   op:NOP
+   (  '+' {op.aux.s = "+";}
+    | '-' {op.aux.s = "-";}
+   )
+   WS? b:ConstProduct
+   {a.sp = list3_ccstr_Sesp (op.aux.s, a.sp, b.sp);  a.int_ck = 1;}
   )*
   {$$ = a;}
   ;
 
 ConstProduct =
   a:ConstNeg
-  (  (WS? '*' WS? b:ConstNeg {a.sp = list3_ccstr_Sesp ("*", a.sp, b.sp);  a.int_ck = 1;} )
-   | (WS? '/' WS? b:ConstNeg {a.sp = list3_ccstr_Sesp ("/", a.sp, b.sp);  a.int_ck = 1;} )
-   | (WS? '%' WS? b:ConstNeg {a.sp = list3_ccstr_Sesp ("%", a.sp, b.sp);  a.int_ck = 1;} )
+  (WS?
+   op:NOP
+   (  '*' {op.aux.s = "*";}
+    | '/' {op.aux.s = "/";}
+    | '%' {op.aux.s = "%";}
+   )
+   WS? b:ConstNeg
+   {a.sp = list3_ccstr_Sesp (op.aux.s, a.sp, b.sp);  a.int_ck = 1;}
   )*
   {$$ = a;}
   ;
@@ -331,21 +337,16 @@ IfThenElse =
   }
 
 Quantify =
-    'forall' WS a:ID WS? IN WS? b:NatDom WS? ':' WS? c:Expr
-    {
-      $$.sp = list4_ccstr_Sesp ("forall", a.sp, b.sp, c.sp);
-      $$.int_ck = 0;
-    }
-  | 'exists' WS a:ID WS? IN WS? b:NatDom WS? ':' WS? c:Expr
-    {
-      $$.sp = list4_ccstr_Sesp ("exists", a.sp, b.sp, c.sp);
-      $$.int_ck = 0;
-    }
-  | 'unique' WS a:ID WS? IN WS? b:NatDom WS? ':' WS? c:Expr
-    {
-      $$.sp = list4_ccstr_Sesp ("unique", a.sp, b.sp, c.sp);
-      $$.int_ck = 0;
-    }
+  quant:NOP
+  (  'forall' {quant.aux.s = "forall";}
+   | 'exists' {quant.aux.s = "exists";}
+   | 'unique' {quant.aux.s = "unique";}
+  )
+  WS a:ID WS? IN WS? b:NatDom WS? ':' WS? c:Expr
+  {
+    $$.sp = list4_ccstr_Sesp (quant.aux.s, a.sp, b.sp, c.sp);
+    $$.int_ck = 0;
+  }
   ;
 
 Implication =
@@ -373,37 +374,59 @@ ChainlessFormula =
 
 Comparison =
   a:Sum
-  (  (WS? '==' WS? b:Sum {a.sp = list3_ccstr_Sesp ((b.int_ck ? "==" : "xnor"), a.sp, b.sp);  a.int_ck = 0;} )
-   | (WS? '!=' WS? b:Sum {a.sp = list3_ccstr_Sesp ((b.int_ck ? "!=" :  "xor"), a.sp, b.sp);  a.int_ck = 0;} )
-   | (WS? '<=' WS? b:Sum {a.sp = list3_ccstr_Sesp ("<=", a.sp, b.sp);  a.int_ck = 0;} )
-   | (WS? '>=' WS? b:Sum {a.sp = list3_ccstr_Sesp (">=", a.sp, b.sp);  a.int_ck = 0;} )
-   | (WS? '<'  WS? b:Sum {a.sp = list3_ccstr_Sesp ("<", a.sp, b.sp);  a.int_ck = 0;} )
-   | (WS? '>'  WS? b:Sum {a.sp = list3_ccstr_Sesp (">", a.sp, b.sp);  a.int_ck = 0;} )
+  (WS?
+   op:NOP
+   (  '==' {op.aux.s = a.int_ck ? "==" : "xnor";}
+    | '!=' {op.aux.s = a.int_ck ? "!=" : "xor";}
+    | '<=' {op.aux.s = "<=";}
+    | '>=' {op.aux.s = ">=";}
+    | '<'  {op.aux.s = "<";}
+    | '>'  {op.aux.s = ">";}
+   )
+   WS? b:Sum
+   {
+     a.sp = list3_ccstr_Sesp (op.aux.s, a.sp, b.sp);
+     a.int_ck = 0;
+   }
   )?
   {$$ = a;}
   ;
 
 Sum =
   a:Product
-  (  (WS? '+' WS? b:Product {a.sp = list3_ccstr_Sesp ("+", a.sp, b.sp);  a.int_ck = 1;} )
-   | (WS? '-' WS? b:Product {a.sp = list3_ccstr_Sesp ("-", a.sp, b.sp);  a.int_ck = 1;} )
+  (WS?
+   op:NOP
+   (  '+' {op.aux.s = "+";}
+    | '-' {op.aux.s = "-";}
+   )
+   WS? b:Product
+   {a.sp = list3_ccstr_Sesp (op.aux.s, a.sp, b.sp);  a.int_ck = 1;}
   )*
   {$$ = a;}
   ;
 
 Product =
   a:Neg
-  (  (WS? '*' WS? b:Neg {a.sp = list3_ccstr_Sesp ("*", a.sp, b.sp);  a.int_ck = 1;} )
-   | (WS? '/' WS? b:Neg {a.sp = list3_ccstr_Sesp ("/", a.sp, b.sp);  a.int_ck = 1;} )
-   | (WS? '%' WS? b:Neg {a.sp = list3_ccstr_Sesp ("%", a.sp, b.sp);  a.int_ck = 1;} )
+  (WS?
+   op:NOP
+   (  '*' {op.aux.s = "*";}
+    | '/' {op.aux.s = "/";}
+    | '%' {op.aux.s = "%";}
+   )
+   WS? b:Neg
+   {a.sp = list3_ccstr_Sesp (op.aux.s, a.sp, b.sp);  a.int_ck = 1;}
   )*
   {$$ = a;}
   ;
 
 OptionalNeg =
   {$$.sp = 0;}
-  (   '-' WS? {$$.sp = make_ccstr_Sesp (yy->st->spctx, "negate");}
-    | '!' WS? {$$.sp = make_ccstr_Sesp (yy->st->spctx, "!");}
+  ( op:NOP
+    (  '-' {op.aux.s = "negate";}
+     | '!' {op.aux.s = "!";}
+    )
+    WS?
+    {$$.sp = make_ccstr_Sesp (yy->st->spctx, op.aux.s);}
   )?
   ;
 
@@ -546,6 +569,8 @@ WHITE_SPACE = ( [ \t\r] | [\n] { yy->st->text_nlines += 1; } )+
 WS = (WHITE_SPACE | LINE_COMMENT)+ {}
   ;
 END_OF_FILE = !.
+  ;
+NOP = {memset(&$$, 0, sizeof($$));}
   ;
 
 %%

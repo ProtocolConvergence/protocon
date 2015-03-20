@@ -128,6 +128,7 @@ oput_protocon_pc_vbls (Cx::OFile& of, const Xn::PcSymm& pc_symm)
         for (uint v = 0; v < link_symmetry.nvbls; ++v) {
           uint vidx = link_symmetry(v, 0);
           of << "    "
+            << (pc_symm.spec->random_write_flags[vidx] ? "random " : "")
             << (pc_symm.write_flags[vidx] ? "write" : "read") << ": "
             << pc_symm.spec->rvbl_symms[vidx]->name
             << "[" << link_symmetry.index_expressions[v] << "];\n";
@@ -139,9 +140,11 @@ oput_protocon_pc_vbls (Cx::OFile& of, const Xn::PcSymm& pc_symm)
       }
     }
     if (symmetric_link_case)  continue;
-    of << "  " << (pc_symm.write_flags[i] ? "write" : "read") << ": ";
-    of << pc_symm.vbl_name(i);
-    of << ";\n";
+    of << "  "
+      << (pc_symm.spec->random_write_flags[i] ? "random " : "")
+      << (pc_symm.write_flags[i] ? "write" : "read") << ": "
+      << pc_symm.vbl_name(i)
+      << ";\n";
   }
 }
 
@@ -230,7 +233,11 @@ oput_protocon_pc_act (Cx::OFile& of, const Xn::ActSymm& act)
   for (uint i = 0; i < pc_symm.wvbl_symms.sz(); ++i) {
     if (puppet_self_loop && !pc_symm.wvbl_symms[i]->pure_shadow_ck())
       continue;
-    of << pc_symm.vbl_name(pc_symm.wmap[i]) << ":=" << act.assign(i) << "; ";
+    of << pc_symm.vbl_name(pc_symm.wmap[i]) << ":=";
+    if (pc_symm.spec->random_write_flags[pc_symm.wmap[i]])
+      of << "_; ";
+    else
+      of << act.assign(i) << "; ";
   }
   of << ")\n";
 }

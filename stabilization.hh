@@ -11,6 +11,9 @@ namespace Cx {
 namespace Xn {
   class Sys;
 }
+namespace X {
+  class Fmlae;
+}
 
 class StabilizationOpt
 {
@@ -46,7 +49,9 @@ public:
 bool
 shadow_ck(Cx::PFmla* ret_invariant,
           const Xn::Sys& sys,
-          const Cx::PFmla& lo_xn, const Cx::PFmla& hi_xn,
+          const Cx::PFmla& lo_xn,
+          const Cx::PFmla& hi_xn,
+          const X::Fmlae& lo_xfmlae,
           const Cx::PFmla& lo_scc);
 bool
 weak_convergence_ck(const Cx::PFmla& xn, const Cx::PFmla& invariant);
@@ -63,6 +68,7 @@ stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
                  const StabilizationOpt& opt,
                  const Cx::PFmla& lo_xn,
                  const Cx::PFmla& hi_xn,
+                 const X::Fmlae& lo_xfmlae,
                  StabilizationCkInfo* info = 0);
 bool
 stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,

@@ -2,7 +2,6 @@
 // protocon -x examplespec/LeaderRing.prot -x-try tmp/lead.prot
 //   -def N 2 -param N 3 -param N 5
 //   -optimize -no-random -max-height 0 -o tmp/newlead.prot
-// 
 
 constant N := 3;
 constant M := 3;

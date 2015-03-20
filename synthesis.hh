@@ -125,6 +125,8 @@ public:
   Cx::PFmla deadlockPF; ///< Current deadlocks.
   Cx::PFmla lo_xn; ///< Under-approximation of the transition function.
   Cx::PFmla hi_xn; ///< Over-approximation of the transition function.
+  X::Fmlae lo_xfmlae; ///< Under-approximation of the transition function.
+  X::Fmlae hi_xfmlae; ///< Over-approximation of the transition function.
   Cx::PFmla hi_invariant;
   uint lo_nlayers;
 
@@ -220,6 +222,7 @@ public:
     : base_partial( this )
     , log( &Cx::OFile::null() )
     , csp_base_pfmla(true)
+    , optimal_nlayers_sum(0)
     , done_ck_fn(0)
     , done_ck_mem(0)
   {}
