@@ -140,6 +140,25 @@ smooth_vbls_GluPFmla (PFmlaCtx* fmlactx, PFmla* base_b, const PFmla base_a,
 
 static
   void
+subst1_vbls_GluPFmla (PFmlaCtx* fmlactx, PFmla* base_dst, const PFmla base_a,
+                      uint set_id, Bool to_img)
+{
+  GluPFmlaCtx* ctx = castup_as_GluPFmlaCtx (fmlactx);
+  const GluPFmla* a = ccastup_as_GluPFmla (base_a);
+  GluPFmla* dst = castup_as_GluPFmla (*base_dst);
+  array_t* pre_list = ctx->pre_vbl_lists.s[set_id];
+  array_t* img_list = ctx->img_vbl_lists.s[set_id];
+  mdd_t* tmp = dst->mdd;
+
+  if (to_img)
+    dst->mdd = mdd_substitute (ctx->ctx, a->mdd, pre_list, img_list);
+  else
+    dst->mdd = mdd_substitute (ctx->ctx, a->mdd, img_list, pre_list);
+  if (tmp)  mdd_free (tmp);
+}
+
+static
+  void
 subst_vbls_GluPFmla (PFmlaCtx* fmlactx, PFmla* base_b, const PFmla base_a,
                      uint set_id_new, uint set_id_old)
 {
@@ -195,6 +214,7 @@ pre2_GluPFmla (PFmlaCtx* fmlactx, PFmla* base_dst, const PFmla base_xn, const PF
   array_t* img_list = ctx->img_vbl_lists.s[set_id];
   mdd_t* subst = mdd_substitute (ctx->ctx, pf->mdd, pre_list, img_list);
   mdd_t* tmp = dst->mdd;
+
   dst->mdd = mdd_and_smooth (ctx->ctx, xn->mdd, subst, img_list);
   mdd_free (subst);
   if (tmp)  mdd_free (tmp);
@@ -538,6 +558,7 @@ make_GluPFmlaCtx ()
     vt.vbl_size        = sizeof(GluPFmlaVbl);
     vt.op2_fn          =          op2_GluPFmla;
     vt.smooth_vbls_fn  =  smooth_vbls_GluPFmla;
+    vt.subst1_vbls_fn  =  subst1_vbls_GluPFmla;
     vt.subst_vbls_fn   =   subst_vbls_GluPFmla;
     vt.pre_fn          =          pre_GluPFmla;
     vt.pre1_fn         =         pre1_GluPFmla;

@@ -38,6 +38,8 @@ endforeach ()
 
 set (ExampleSpecs
   ColorRing
+  ColorRingDistrib
+  ColorRingSymm
   ColorTree
   ColorUniRing
   MatchRingOneBit
@@ -46,6 +48,7 @@ set (ExampleSpecs
   OrientOddRing
   SortChain
   SumNotTarget
+  TokenRingOdd
   TokenRingThreeBit
   )
 
@@ -78,6 +81,14 @@ foreach (f LeaderRingHuang)
   endif ()
 endforeach ()
 
+add_test (NAME Synth_Sat_sat
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+  COMMAND protocon -def ExpectSat 1 -x examplespec/Sat.prot)
+add_test (NAME Synth_Sat_unsat
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+  COMMAND protocon -def ExpectSat 0 -x examplespec/Sat.prot)
+set_tests_properties (Synth_Sat_unsat PROPERTIES WILL_FAIL TRUE)
+
 list (APPEND ExampleSolns
   ${ExampleSpecs}
   OrientRing
@@ -103,6 +114,7 @@ set (ExampleSynts
   MatchRing
   MatchRingOneBit
   OrientChain
+  SegmentRing
   ShadowColorRing
   TokenChainDijkstra
   TokenRing

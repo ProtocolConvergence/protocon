@@ -228,9 +228,11 @@ LegitMode =
     FUTURE_AND_SILENT {yy->st->assign_legit_mode(Xn::FutureAndSilent);}
   | FUTURE_AND_SHADOW {yy->st->assign_legit_mode(Xn::FutureAndShadow);}
   | FUTURE_AND_ACTIVE_SHADOW {yy->st->assign_legit_mode(Xn::FutureAndActiveShadow);}
-  | FUTURE_AND_SILENT_MOD_PUPPET {yy->st->assign_legit_mode(Xn::FutureAndSilent, true);}
-  | FUTURE_AND_SHADOW_MOD_PUPPET {yy->st->assign_legit_mode(Xn::FutureAndShadow, true);}
-  | FUTURE_AND_ACTIVE_SHADOW_MOD_PUPPET {yy->st->assign_legit_mode(Xn::FutureAndActiveShadow, true);}
+  | FUTURE_AND_SILENT_MOD_PUPPET {yy->st->assign_legit_mode(Xn::FutureAndSilent, Xn::ShadowInvariant);}
+  | FUTURE_AND_SHADOW_MOD_PUPPET {yy->st->assign_legit_mode(Xn::FutureAndShadow, Xn::ShadowInvariant);}
+  | FUTURE_AND_ACTIVE_SHADOW_MOD_PUPPET {yy->st->assign_legit_mode(Xn::FutureAndActiveShadow, Xn::ShadowInvariant);}
+  | FUTURE_AND_FUTURE_SILENT {yy->st->assign_legit_mode(Xn::FutureAndSilent, Xn::FutureInvariant);}
+  | FUTURE_AND_FUTURE_SHADOW {yy->st->assign_legit_mode(Xn::FutureAndShadow, Xn::FutureInvariant);}
   ;
 
 LegitStmt =
@@ -537,9 +539,24 @@ FUTURE_AND_ACTIVE_SHADOW_MOD_PUPPET =
   '(' WS? FUTURE_AND_ACTIVE_SHADOW WS? ')' WS? MOD_PUPPET
   ;
 
+FUTURE_AND_FUTURE_SILENT =
+    FUTURE WS? '&' WS? FUTURE_SILENT
+  | FUTURE_SILENT WS? '&' WS? FUTURE
+  ;
+
+FUTURE_AND_FUTURE_SHADOW =
+    FUTURE WS? '&' WS? FUTURE_SHADOW
+  | FUTURE_SHADOW WS? '&' WS? FUTURE
+  ;
+
 
 FUTURE_SILENT =
   FUTURE WS SILENT
+  ;
+
+# Only used for FUTURE_AND_FUTURE_SHADOW.
+FUTURE_SHADOW =
+  FUTURE WS SHADOW
   ;
 
 FUTURE_ACTIVE_SHADOW =

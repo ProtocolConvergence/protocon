@@ -1,5 +1,6 @@
 ByzantineGenerals
 ColorRing
+ColorRingDistrib
 ColorRingSymm
 ColorTree
 ColorUniRing
@@ -15,6 +16,7 @@ SumNotTarget
 TokenChainDijkstra
 TokenRingDijkstra
 TokenRingFiveState
+TokenRingOdd
 TokenRingSixState
 TokenRingThreeBit
 TokenRingThreeState

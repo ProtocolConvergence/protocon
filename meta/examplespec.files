@@ -7,6 +7,7 @@ ColorKautzReverse
 ColorKautzSymm
 ColorMobius
 ColorRing
+ColorRingDistrib
 ColorRingSymm
 ColorTorus
 ColorTree
@@ -21,6 +22,7 @@ OrientOddRing
 OrientRing
 OrientRingViaToken
 Sat
+SegmentRing
 ShadowColorRing
 SortChain
 SortRing
@@ -29,6 +31,7 @@ SumNotTwo
 TokenChainDijkstra
 TokenRing
 TokenRingDijkstra
+TokenRingOdd
 TokenRingSuperpos
 TokenRingThreeBit
 TokenRingThreeState

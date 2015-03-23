@@ -357,25 +357,50 @@ oput_protocon_pc_assume (Cx::OFile& of, const Xn::PcSymm& pc_symm)
 }
 
 static
-  const char*
-string_of_invariant_style (Xn::InvariantStyle style)
+  Cx::String
+string_of_invariant_style (Xn::InvariantStyle style, Xn::InvariantScope scope)
 {
+  Cx::String s = "";
+  const char* pfx = "";
+  const char* sfx = "";
+
+  switch (scope)
+  {
+    case Xn::DirectInvariant:
+      break;
+    case Xn::ShadowInvariant:
+      s = "(";
+      sfx = " % puppet)";
+      break;
+    case Xn::FutureInvariant:
+      pfx = "future ";
+      break;
+    case Xn::NInvariantScopes:
+      Claim( 0 );
+  }
+
+  s << "(future & " << pfx;
   switch (style)
   {
 #if 0
     case Xn::FutureAndClosed:
-      return "(future & closed)";
+      s << "closed";
+      break;
 #endif
     case Xn::FutureAndSilent:
-      return "(future & silent)";
+      s << "silent";
+      break;
     case Xn::FutureAndShadow:
-      return "(future & shadow)";
+      s << "shadow";
+      break;
     case Xn::FutureAndActiveShadow:
-      return "(future & active shadow)";
+      s << "active shadow";
+      break;
     case Xn::NInvariantStyles:
       Claim( 0 );
   }
-  return 0;
+  s << ")" << sfx;
+  return s;
 }
 
 static
@@ -457,10 +482,9 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys,
     of << "(assume & closed)\n  (" << sys.spec->closed_assume_expression << ")\n  ;\n";
   }
 
-  Cx::String style_str = string_of_invariant_style (sys.spec->invariant_style);
-  if (sys.spec->invariant_mod_puppet) {
-    style_str = Cx::String("(") + style_str + " % puppet)";
-  }
+  Cx::String style_str =
+    string_of_invariant_style (sys.spec->invariant_style,
+                               sys.spec->invariant_scope);
   if (!sys.spec->invariant_expression.empty_ck()) {
     Cx::String legit_str = sys.spec->invariant_expression;
     of << style_str << "\n  (" << legit_str << ")\n  ;\n";

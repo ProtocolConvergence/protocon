@@ -1,0 +1,32 @@
+
+// Partition a ring into segments P[p],...,P[q] such that
+// P[p] has role 0,
+// P[p+1],...,P[q-1] have role 1, and
+// P[q] has role 2
+// Contrast this with MatchRingOneBit.prot.
+
+constant N := 4;
+
+puppet variable x[Nat % N] <- Nat % 2;
+shadow variable role[Nat % N] <- Nat % 3;
+
+// Specify the invariant as a superset of states.
+// This is the style used in "Adaptive Programming".
+(future & future silent)
+  (forall i <- Nat % N : 0==1
+   || role[i]==0 && role[i+1]!=0
+   || role[i]==1 && role[i+1]!=0
+   || role[i]==2 && role[i+1]==0
+  );
+// We also must guard against solutions of all role[i]==1.
+(future & future silent)
+  (exists i <- Nat % N : role[i]==0);
+
+process P[i <- Nat % N]
+{
+  read: x[i-1];
+  write: x[i];
+  read: x[i+1];
+  write: role[i];
+}
+

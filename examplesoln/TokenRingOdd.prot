@@ -1,8 +1,8 @@
 
 constant N := 3;
 
-direct variable t[Nat % N] <- Nat % 2;
 puppet variable e[Nat % N] <- Nat % 2;
+direct variable t[Nat % N] <- Nat % 2;
 puppet variable dec[Nat % N] <- Nat % 2;
 
 // Ensure that N is odd.
@@ -24,8 +24,7 @@ process P[i <- Nat % N]
 
   shadow: ( t[i-1]==t[i] --> t[i]:=1-t[i]; );
 
-  //permit: ( e[i-1]==e[i] --> _; );
-  //puppet: ( e[i-1]==e[i] && t[i-1]==t[i] --> e[i]:=1-e[i]; t[i]:=dec[i]; dec[i]:=_; );
-  //puppet: ( e[i-1]==e[i] && t[i-1]!=t[i] --> e[i]:=1-e[i]; dec[i]:=_; );
+  puppet: ( e[i-1]==e[i] && t[i-1]==t[i] --> e[i]:=1-e[i]; t[i]:=dec[i]; dec[i]:=_; );
+  puppet: ( e[i-1]==e[i] && t[i-1]!=t[i] --> e[i]:=1-e[i]; dec[i]:=_; );
 }
 

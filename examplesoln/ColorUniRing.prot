@@ -10,11 +10,12 @@ process P[i <- Nat % N]
   (future & silent)
     (x[i-1]!=x[i]);
 
-  // When my predecessor in the ring has the same color,
-  // randomly increment (mod 3) my color by either 1 or 2.
+  // When my predecessor in the ring has the same color, randomize my color.
+  // The commented actions can be used instead.
   puppet action:
-    ( x[i-1]==x[i] --> x[i]:=x[i]+1; )
-    ( x[i-1]==x[i] --> x[i]:=x[i]+2; )
+    ( x[i-1]==x[i] --> x[i]:=_; )
+    //( x[i-1]==x[i] --> x[i]:=x[i]+1; )
+    //( x[i-1]==x[i] --> x[i]:=x[i]+2; )
     ;
 }
 

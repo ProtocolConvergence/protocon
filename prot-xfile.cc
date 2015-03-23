@@ -713,7 +713,7 @@ ProtoconFile::add_assume(Sesp assume_sp)
 }
 
   bool
-ProtoconFile::assign_legit_mode(Xn::InvariantStyle style, bool invariant_mod_puppet)
+ProtoconFile::assign_legit_mode(Xn::InvariantStyle style, Xn::InvariantScope scope)
 {
   if (!allgood)  return false;
   Sign good = 1;
@@ -721,11 +721,11 @@ ProtoconFile::assign_legit_mode(Xn::InvariantStyle style, bool invariant_mod_pup
     DoLegit( good, "Invariant must have the same style in all places." ) {
       good =
         (spec->invariant_style == style &&
-         spec->invariant_mod_puppet == invariant_mod_puppet);
+         spec->invariant_scope == scope);
     }
   }
   spec->invariant_style = style;
-  spec->invariant_mod_puppet = invariant_mod_puppet;
+  spec->invariant_scope = scope;
   legit_mode_assigned = true;
   return update_allgood (good);
 }

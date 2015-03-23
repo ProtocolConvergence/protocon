@@ -227,6 +227,13 @@ public:
 
   PFmla smooth(const PFmlaVbl& vbl) const;
 
+  PFmla subst_to_img(uint list_id) const
+  {
+    PFmla b;
+    subst1_vbls_PFmla (&b.g, g, list_id, 1);
+    return b;
+  }
+
   PFmla substitute_new_old(uint newSetIdx, uint oldSetIdx) const
   {
     PFmla b;

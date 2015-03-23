@@ -43,6 +43,7 @@ struct PFmlaVT
   void (*op2_fn) (PFmlaCtx*, PFmla*, BitOp, const PFmla, const PFmla);
 
   void (*smooth_vbls_fn) (PFmlaCtx*, PFmla*, const PFmla, uint, Sign);
+  void (*subst1_vbls_fn) (PFmlaCtx*, PFmla*, const PFmla, uint, Bool);
   void (*subst_vbls_fn) (PFmlaCtx*, PFmla*, const PFmla, uint, uint);
   void (*pre_fn) (PFmlaCtx*, PFmla*, const PFmla);
   void (*pre1_fn) (PFmlaCtx*, PFmla*, const PFmla, const PFmla);
@@ -116,6 +117,8 @@ void
 smooth_vbl_PFmla (PFmla* dst, const PFmla a, const PFmlaVbl* vbl, Sign pre_or_img);
 void
 smooth_vbls_PFmla (PFmla* dst, const PFmla a, uint list_id, Sign pre_or_img);
+void
+subst1_vbls_PFmla (PFmla* dst, const PFmla a, uint list_id, Bool to_img);
 void
 subst_vbls_PFmla (PFmla* dst, const PFmla a, uint list_id_new, uint list_id_old);
 void

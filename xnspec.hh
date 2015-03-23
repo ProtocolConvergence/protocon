@@ -28,6 +28,13 @@ enum InvariantStyle {
   NInvariantStyles
 };
 
+enum InvariantScope {
+  DirectInvariant,
+  ShadowInvariant,
+  FutureInvariant,
+  NInvariantScopes
+};
+
 enum InvariantBehav {
   FutureSilent,
   FutureActiveShadow,
@@ -188,14 +195,14 @@ public:
 
   LetVblMap constant_map;
   InvariantStyle invariant_style;
-  bool invariant_mod_puppet;
+  InvariantScope invariant_scope;
   InvariantBehav invariant_behav;
   Cx::String closed_assume_expression;
   Cx::String invariant_expression;
 
   Spec()
     : invariant_style( Xn::FutureAndShadow )
-    , invariant_mod_puppet( false )
+    , invariant_scope( Xn::DirectInvariant )
     , invariant_behav( Xn::NInvariantBehavs )
   {}
 };

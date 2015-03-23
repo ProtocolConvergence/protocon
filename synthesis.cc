@@ -1128,17 +1128,17 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
     *this->log << "CYCLE" << this->log->endl();
     if (true || !this->no_conflict) {
       Cx::Table<uint> conflict_set;
-#if 0
-      small_cycle_conflict (conflict_set, scc, this->actions, topo, sys.invariant,
-                            *this->ctx);
-#else
-      conflict_set = this->actions;
       if (!topo.probabilistic_ck()) {
+#if 0
+        small_cycle_conflict (conflict_set, scc, this->actions, topo, sys.invariant,
+                              *this->ctx);
+#else
+        conflict_set = this->actions;
         find_livelock_actions (conflict_set, this->lo_xn, scc, sys.invariant, topo);
-      }
 #endif
-      this->ctx->conflicts.add_conflict(conflict_set);
-      *this->log << "cycle conflict size:" << conflict_set.sz() << this->log->endl();
+        this->ctx->conflicts.add_conflict(conflict_set);
+        *this->log << "cycle conflict size:" << conflict_set.sz() << this->log->endl();
+      }
     }
     if (!!this->ctx->opt.livelock_ofilepath && &sys == this->ctx->systems.top()) {
       bool big_livelock = true;

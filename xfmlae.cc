@@ -114,24 +114,14 @@ bool
 {
   const X::Fmla xn = (global_xn ? *global_xn : this->xfmla());
 
-  P::Fmla span0( assumed & xn.pre() );
+  P::Fmla span0( assumed );
+  P::Fmla span1( xn.pre() );
+
   span0.ensure_ctx(*this->ctx->ctx);
 
-#if 0
-  // Regular fixpoint iteration is faster when there is no randomization
-  // being used. But we are expecting randomization to be used.
-  while (true) {
-    const P::Fmla& span1 = span0 & xn.pre(span0);
-    if (span0.equiv_ck(span1))  break;
-    span0 = span1;
-  }
-#endif
-
-  while (true) {
-
-    // The next span computed as (span0 & span1).
-    // We let span0 be a superset of the next span for efficiency.
-    P::Fmla span1( false );
+  do {
+    span0 &= span1;
+    span1 = false;
 
     // For each process...
     for (uint i = 0; i < this->sz(); ++i) {
@@ -150,17 +140,14 @@ bool
       // but will not be resolved by this process.
       span1 |= this->pre(i) - resolved;
     }
-
-    if (span0.subseteq_ck(span1))  break;
-    span0 &= span1;
-  }
+  } while (!span0.subseteq_ck(span1));
 
   if (scc) {
-    while (true) {
-      const P::Fmla& span1 = xn.img(span0);
-      if (span0.subseteq_ck(span1))  break;
+    span1 = xn.img();
+    do {
       span0 &= span1;
-    }
+      span1 = xn.img(span0);
+    } while (!span0.subseteq_ck(span1));
 
     *scc = span0;
   }

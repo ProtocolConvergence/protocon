@@ -1,0 +1,43 @@
+
+// Randomized coloring on a ring where there is communication delay
+// between processes. This models the unfair read/write daemon.
+
+constant N := 3;
+puppet variable x_pd[Nat % N] <- Nat % 3;
+direct variable x[Nat % N] <- Nat % 3;
+puppet variable x_sc[Nat % N] <- Nat % 3;
+
+((future & shadow) % puppet)
+  (forall i <- Nat % N : x[i]!=x[i-1]);
+
+process P[i <- Nat % N]
+{
+  read: x_pd[i];
+  random write: x[i];
+  read: x_sc[i];
+
+  // When my predecessor in the ring has the same color, randomize my color.
+  // The commented actions can be used instead.
+  puppet action:
+    ( x_pd[i]==x[i] --> x[i]:=_; )
+    //( x_pd[i]==x[i] --> x[i]:=x[i]+1; )
+    //( x_pd[i]==x[i] --> x[i]:=x[i]+2; )
+    ;
+}
+
+// Communication delay.
+process GetPd[i <- Nat % N]
+{
+  read: x[i-1];
+  write: x_pd[i];
+  puppet action: ( x[i-1]!=x_pd[i] --> x_pd[i]:=x[i-1]; );
+}
+
+// Communication delay.
+process GetSc[i <- Nat % N]
+{
+  read: x[i+1];
+  write: x_sc[i];
+  puppet action: ( x[i+1]!=x_sc[i] --> x_sc[i]:=x[i+1]; );
+}
+

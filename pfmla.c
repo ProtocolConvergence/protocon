@@ -396,6 +396,21 @@ smooth_vbls_PFmla (PFmla* b, const PFmla a, uint list_id, Sign pre_or_img)
 }
 
   void
+subst1_vbls_PFmla (PFmla* dst, const PFmla a, uint list_id, Bool to_img)
+{
+  Trit phase = phase_of_PFmla (a);
+  if (phase != May)
+  {
+    wipe1_PFmla (dst, phase == Yes);
+  }
+  else
+  {
+    pre_op2_PFmla (dst, a, a);
+    a->ctx->vt->subst1_vbls_fn (a->ctx, dst, a, list_id, to_img);
+  }
+}
+
+  void
 subst_vbls_PFmla (PFmla* b, const PFmla a, uint list_id_new, uint list_id_old)
 {
   Trit phase = phase_of_PFmla (a);

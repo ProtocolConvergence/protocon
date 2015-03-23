@@ -4,23 +4,89 @@
 // A stabilizing protocol can be synthesized if and only if the corresponding
 // 3-SAT instance can be satisfied.
 //
-// In this case, the 3-SAT instance is:
+// For the satisfiable case, the example 3-SAT instance is:
 //   phi = ( v0 ||  v1 ||  v2) &&
 //         (!v1 || !v1 || !v2) &&
 //         (!v1 || !v1 ||  v2) &&
 //         ( v1 || !v2 || !v0)
 // where v0, v1, and v2 are boolean variables.
 //
+// For unsatisfiable case, the example 3-SAT instance
+// is the same as the above case but with two more clauses:
+//   phi = ...                 &&
+//         ( v2 ||  v2 ||  v1) &&
+//         ( v0 ||  v1 ||  v0)
+//
 // This formula defines the protocol's $x[0..2]$ domains (via the constant $M$)
 // and the legitimate states.
 
+constant ExpectSat := 1;
 
 // Number of variables in 3-SAT formula.
 constant M := 3;
 
+//////////////////////////////////////////////////////////////////////////////
+//// System Variables
+
 variable x[Nat % 3] <- Nat % M;
 variable y[Nat % 3] <- Nat % 2;
 variable sat[Nat % 1] <- Nat % 2;
+
+//////////////////////////////////////////////////////////////////////////////
+// Instance-Specific Predicates
+
+predicate SatClauses := 1==1
+  //       v0         v1         v2
+  && (x[0]!=0 || x[1]!=1 || x[2]!=2 ||
+      y[0]==1 || y[1]==1 || y[2]==1)
+  //      !v1        !v1        !v2
+  && (x[0]!=1 || x[1]!=1 || x[2]!=2 ||
+      y[0]==0 || y[1]==0 || y[2]==0)
+  //      !v1        !v1         v2
+  && (x[0]!=1 || x[1]!=1 || x[2]!=2 ||
+      y[0]==0 || y[1]==0 || y[2]==1)
+  //       v1        !v2        !v0
+  && (x[0]!=1 || x[1]!=2 || x[2]!=0 ||
+      y[0]==1 || y[1]==0 || y[2]==0)
+  ;
+
+predicate UnsatClauses := SatClauses
+  //       v2         v2         v1
+  && (x[0]!=2 || x[1]!=2 || x[2]!=1 ||
+      y[0]==1 || y[1]==1 || y[2]==1)
+  //       v0         v1         v0
+  && (x[0]!=0 || x[1]!=0 || x[2]!=1 ||
+      y[0]==1 || y[1]==1 || y[2]==1)
+  ;
+
+
+//////////////////////////////////////////////////////////////////////////////
+//// Invariant
+
+predicate Iden :=
+  (forall i <- Nat % 3 :
+   (forall j <- Nat % 3 :
+    (x[i] != x[j]) || (y[i] == y[j])));
+
+predicate Clauses :=
+  (ExpectSat==1 && SatClauses)
+  ||
+  (ExpectSat==0 && UnsatClauses)
+  ;
+
+(future & silent)
+  (Iden && Clauses && (sat[0] == 1));
+
+// Use the (future & future silent) instead of (future & silent) above
+// if you want to allow the invariant to shrink.
+// When allowing this, a process P[i] might get two actions for some a and b:
+//   (sat[0]==0 && x[i]==a && y[i]==  b --> y[i]:=1-b;)
+//   (sat[0]==1 && x[i]==a && y[i]==1-b --> y[i]:=  b;)
+// Always interpret the action where sat[0]==1 if it exists.
+
+
+//////////////////////////////////////////////////////////////////////////////
+//// Topology
 
 process P[i <- Nat % 3]
 {
@@ -29,12 +95,11 @@ process P[i <- Nat % 3]
   write: y[i];
 }
 
-// Uncomment these instead if you don't want symmetry.
-// (Hint: They will still be symmetric!)
+// Use these processes instead of P[0..2] instead if you want to allow asymmetry.
+// (Hint: The processes will still be symmetric!)
 //process P0[i <- Nat % 1] { read: sat[0], x[0]; write: y[0]; }
 //process P1[i <- Nat % 1] { read: sat[0], x[1]; write: y[1]; }
 //process P2[i <- Nat % 1] { read: sat[0], x[2]; write: y[2]; }
-
 
 process P3[i <- Nat % 1]
 {
@@ -42,32 +107,4 @@ process P3[i <- Nat % 1]
   read: y[0], y[1], y[2];
   write: sat[0];
 }
-
-predicate Iden :=
-  (forall i <- Nat % 3 :
-   (forall j <- Nat % 3 :
-    (x[i] != x[j]) || (y[i] == y[j])));
-
-predicate Clauses :=
-  //      v0           v1           v2
-  (x[0] != 0 || x[1] != 1 || x[2] != 2 ||
-   y[0] == 1 || y[1] == 1 || y[2] == 1)
-  &&
-  //     !v1          !v1          !v2
-  (x[0] != 1 || x[1] != 1 || x[2] != 2 ||
-   y[0] == 0 || y[1] == 0 || y[2] == 0)
-  &&
-  //     !v1          !v1           v2
-  (x[0] != 1 || x[1] != 1 || x[2] != 2 ||
-   y[0] == 0 || y[1] == 0 || y[2] == 1)
-  &&
-  //      v1          !v2          !v0
-  (x[0] != 1 || x[1] != 2 || x[2] != 0 ||
-   y[0] == 1 || y[1] == 0 || y[2] == 0)
-  ;
-
-(future & silent)
-(
-  Iden && Clauses && (sat[0] == 1)
-);
 

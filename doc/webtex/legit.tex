@@ -24,7 +24,7 @@ However, if it were supported, one would write the following in a \ilfile{.prot}
 (future & closed) (I);
 \end{code}
 
-We often want to specify how the protocol behavies within the invariant.
+We often want to specify how the protocol behaves within the invariant.
 The simplest case is that of silent protocols.
 Here we say the protocol should reach the invariant $I$ and no actions should execute within $I$.
 This is written as:
@@ -48,15 +48,28 @@ Write this as:
 \end{code}
 Note that the shadow protocol must not have deadlocks.
 
-\section{Modding out Puppet Variables}
 
-Puppet variables are used for synthesis, but we like to ignore them when it comes to the exact definition of the invariant $I$.
-Definitions in this section allow synthesis to create another invariant $I'$ which is equivalent to $I$ after existential quantification over the puppet variables.
-That is, for every valuation of shadow (or direct) variables that satisfies $I$, a state exists in $I'$ with the same valuation (but some arbitrary valuation of puppet variables).
+\section{Eventual Closure}
 
-\textbf{Note:} Always use the notation from this section when using pure \ilcode{shadow} variables (not \ilcode{direct} variables).
+Sometimes it is okay to find a protocol that stabilizes to some invariant $I'$ which is a subset of the original invariant $I$.
+This is the method of adaptive programs as described in \href{http://dx.doi.org/10.1109/32.92911}{Adaptive Programming} by Gouda and Herman.
+The three invariant styles above can be stated with this notion of eventual closure:
+\begin{code}
+(future & future silent) (I);
+(future & future shadow) (I);
+(future & future active shadow) (I);
+\end{code}
+
+\textbf{Note:} Always use this notation or the next section's notation when using pure \ilcode{shadow} variables (not \ilcode{direct} variables).
 Shadow variables are assigned completely based on puppet (and direct) variables, so any nontrivial protocol will have transitions that leave $I$.
 Therefore $I'$ will need to be a proper subset of $I$.
+
+
+\section{Modding out Puppet Variables}
+
+Sometimes we want to enforce that each state in $I$ is kept within $I'$ for at least some values of puppet variables.
+That is, for every valuation of shadow (or direct) variables that satisfies $I$, a state exists in $I'$ with the same valuation (but some arbitrary valuation of puppet variables).
+In other words, we want $I$ to equal $I'$, ignoring differences caused by puppet variables.
 
 Semantics follow directly from the previous section.
 To synthesize a protocol which is silent in some $I'$, we would write \ilcode{(future & silent) (I_prime);} if we knew $I'$.
@@ -77,12 +90,13 @@ Finally, if we want to force all actions within $I'$ to correspond with actions 
 ((future & active shadow) % puppet) (I);
 \end{code}
 
+
 \section{Eventual Behavior}
 
 In some cases, forcing silence or an active shadow protocol within the entire invariant $I'$ is too strict.
 Rather, we are often content to enforce these constraints on the protocol's eventual behavior.
 This is done by an additional statement in the specification \ilfile{.prot} file.
-That is, the statements inthis section are optional and are given in addition to lines such as \ilcode{(future & shadow) (I);} or \ilcode{((future & shadow) % puppet) (I);}.
+That is, the statements in this section are optional and are given in addition to lines such as \ilcode{(future & shadow) (I);} or \ilcode{((future & shadow) % puppet) (I);}.
 
 When the shadow protocol is silent, we often want to enforce a silent protocol overall in order to minimize network traffic.
 This is expressed by adding the following line:
@@ -105,15 +119,6 @@ Though it is not used in the example itself, we could add \ilcode{future active 
 We would do this over simply defining the invariant do be active, since the alternative ways to define the invariant have deficiencies:
 (1) \ilcode{(future & active shadow) (I);} is too strict, and
 (2) \ilcode{((future & active shadow) % puppet) (I);} does not force $I'=I$, which disables some search optimizations.
-
-\section{Planned Improvements}
-
-One appealing addition to these options (without adding a full LTL-like language) is to simply specify a \ilcode{future} constraint without closure.
-This would allow synthesis of adaptive programs as described in \href{http://dx.doi.org/10.1109/32.92911}{Adaptive Programming} by Gouda and Herman.
-\begin{code}
-future (I);
-future silent;
-\end{code}
 
 \end{document}
 

@@ -29,6 +29,10 @@ In a computer network, a coloring applies to processes that communicate directly
 - 3-coloring on a ring.
 \item ColorRingSymm (\href{examplespec/ColorRingSymm.prot}{spec}, \href{examplesoln/ColorRingSymm.prot}{soln})
 - Unoriented ring.
+\item ColorUniRing (\href{examplespec/ColorUniRing.prot}{spec}, \href{examplesoln/ColorUniRing.prot}{soln})
+- Randomized 3-coloring on a unidirectional ring.
+\item ColorRingDistrib (\href{examplespec/ColorRingDistrib.prot}{spec}, \href{examplesoln/ColorRingDistrib.prot}{soln})
+- Randomized 3-coloring on a ring where processes have communication delay.
 \item ColorChain (\href{examplespec/ColorChain.prot}{spec})
 - 2-coloring on a chain.
 \item ColorTree (\href{examplespec/ColorTree.prot}{spec}, \href{examplesoln/ColorTree.prot}{soln})
@@ -61,6 +65,8 @@ For a matching to be \textit{maximal}, it must be impossible to add another edge
 \item MatchRing (\href{examplespec/MatchRing.prot}{spec}, \href{examplesynt/MatchRing.prot}{synt})
 - Natural specification for matching using the edges in the ring.
 This gives the 1-bit solution.
+\item SegmentRing (\href{examplespec/SegmentRing.prot}{spec}, \href{examplesynt/SegmentRing.prot}{synt})
+- A problem similar to matching where a ring is segmented into chains.
 \end{itemize}
 
 \section{Sorting on Chains and Rings}
@@ -107,6 +113,8 @@ It operates much like the 3-bit token ring.
 \item TokenRingThreeState (\href{examplespec/TokenRingThreeState.prot}{spec}, \href{examplesynt/TokenRingThreeState.prot}{synt}, \href{examplesoln/TokenRingThreeState.prot}{soln})
 - Bidirectional token ring with three states per process.
 One solution is from Dijkstra, the other is from \href{http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.153.6017}{Chernoy, Shalom, and Zaks}.
+\item TokenRingOdd (\href{examplespec/TokenRingOdd.prot}{spec}, \href{examplesoln/TokenRingOdd.prot}{soln})
+- Randomized token passing protocol on odd-sized rings.
 \end{itemize}
 
 %\section{Leader Election}

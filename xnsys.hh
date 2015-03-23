@@ -503,9 +503,6 @@ public:
   bool shadow_puppet_synthesis_ck() const {
     return this->shadow_puppet_synthesis;
   }
-  bool direct_invariant_ck() const {
-    return !spec->invariant_mod_puppet;
-  }
 
   void niceIdxFo(uint pcIdx, uint niceIdx) {
     niceIdcs[pcIdx] = niceIdx;

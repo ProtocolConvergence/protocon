@@ -206,7 +206,7 @@ Net::add_write_access (PcSymm* pc_symm, const VblSymm* vbl_symm,
     pc.act_unchanged_pfmla =
       pc.act_unchanged_pfmla.smooth(pfmla_vbl(*vbl));
 
-    uint pcidx = this->xfmlae_ctx.sz()-pc_symm->membs.sz()+i;
+    const uint pcidx = this->pcs.index_of(&pc);
     pfmla_ctx.add_to_vbl_list(xfmlae_ctx.wvbl_list_ids[pcidx],
                               vbl->pfmla_idx);
     xfmlae_ctx.act_unchanged_xfmlas[pcidx] =
@@ -884,10 +884,16 @@ Xn::Net::xn_of_pc(const Xn::ActSymm& act, uint pcidx) const
   }
   if (probabilistic) {
     puppet_self_loop = false;
-    xn &= (pc.closed_assume.as_img() & ~pc.forbid_xn);
+    const uint global_pcidx = pcs.index_of(&pc);
+    const uint wvbl_list_id = xfmlae_ctx.wvbl_list_ids[global_pcidx];
+
+    P::Fmla okay_xn( pc.closed_assume );
+    okay_xn &= pc.closed_assume.subst_to_img(wvbl_list_id);
+    okay_xn &= ~pc.forbid_xn;
     if (pc.permit_xn.sat_ck()) {
-      xn &= pc.permit_xn;
+      okay_xn &= pc.permit_xn;
     }
+    xn &= okay_xn;
   }
 
   // When there is a self-loop on puppet variables,
@@ -1096,7 +1102,7 @@ candidate_actions(std::vector<uint>& candidates,
         dels << actidx;
       }
     }
-    if (add && sys.direct_invariant_ck()) {
+    if (add && sys.spec->invariant_scope == Xn::DirectInvariant) {
       if (!act_xn.img(sys.invariant & sys.closed_assume).subseteq_ck(sys.invariant)) {
         add = false;
         rejs << actidx;

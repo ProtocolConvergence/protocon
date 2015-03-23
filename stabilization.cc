@@ -62,6 +62,7 @@ shadow_ck(Cx::PFmla* ret_invariant,
   static const bool explain_failure = false;
   const Xn::Net& topo = sys.topology;
   const Xn::InvariantStyle invariant_style = sys.spec->invariant_style;
+  const Xn::InvariantScope invariant_scope = sys.spec->invariant_scope;
   const Xn::InvariantBehav invariant_behav = sys.spec->invariant_behav;
   const Cx::PFmla& shadow_invariant = sys.invariant & sys.closed_assume;
 
@@ -73,7 +74,9 @@ shadow_ck(Cx::PFmla* ret_invariant,
     }
   }
 
-  if (!sys.shadow_puppet_synthesis_ck()) {
+  if (!sys.shadow_puppet_synthesis_ck() &&
+      invariant_scope != Xn::FutureInvariant)
+  {
     // Closure.
     if (!lo_xn.img(shadow_invariant).subseteq_ck(shadow_invariant)) {
       return false;
@@ -157,8 +160,17 @@ shadow_ck(Cx::PFmla* ret_invariant,
 
   Claim( (lo_xn & hi_invariant).subseteq_ck(hi_live | hi_self) );
 
+  if (invariant_scope == Xn::FutureInvariant) {
+    // Over-approximated protocol must preserve some part of the invariant.
+    if (!hi_invariant.sat_ck()) {
+      if (explain_failure) {
+        DBog0( "Does not preserve any invariant." );
+      }
+      return false;
+    }
+  }
   // Over-approximated protocol must preserve shadow invariant.
-  if (!topo.proj_shadow(shadow_invariant).equiv_ck(topo.proj_shadow(hi_invariant))) {
+  else if (!topo.proj_shadow(shadow_invariant).equiv_ck(topo.proj_shadow(hi_invariant))) {
     if (explain_failure) {
       DBog0( "Does not preserve shadow invariant." );
       P::Fmla pf = topo.proj_shadow(shadow_invariant) - topo.proj_shadow(hi_invariant);
@@ -170,15 +182,26 @@ shadow_ck(Cx::PFmla* ret_invariant,
     return false;
   }
 
+  if (invariant_scope == Xn::FutureInvariant) {
+    // Over-approximated protocol must preserve some shadow transitions.
+    // Actually, this should come for free.
+  }
   // Over-approximated protocol must preserve shadow transitions.
-  if (!topo.proj_shadow(shadow_live).equiv_ck(topo.proj_shadow(hi_live))) {
+  else if (!topo.proj_shadow(shadow_live).equiv_ck(topo.proj_shadow(hi_live))) {
     if (explain_failure)
       DBog0( "Does not preserve shadow transitions." );
     return false;
   }
 
-  // Over-approximated protocol must preserve shadow transitions.
-  if (!lo_scc.subseteq_ck(hi_invariant)) {
+  // Under-approximated protocol must not have a cycle outside of the new invariant.
+  if (topo.probabilistic_ck()) {
+    if (lo_xfmlae.probabilistic_livelock_ck(0, lo_scc - hi_invariant, X::Fmla(false), &lo_xn)) {
+      if (explain_failure)
+        DBog0( "Cycle outside invariant." );
+      return false;
+    }
+  }
+  else if (!lo_scc.subseteq_ck(hi_invariant)) {
     if (explain_failure)
       DBog0( "Cycle outside invariant." );
     return false;
@@ -221,7 +244,7 @@ shadow_ck(Cx::PFmla* ret_invariant,
     hi_invariant = lo_xn.closure_within(hi_invariant);
   }
 
-  if (sys.direct_invariant_ck()) {
+  if (invariant_scope == Xn::DirectInvariant) {
     if (!hi_invariant.equiv_ck(shadow_invariant)) {
       if (explain_failure)
         DBog0( "Closure violated." );
