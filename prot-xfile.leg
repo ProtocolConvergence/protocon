@@ -387,6 +387,25 @@ Comparison =
    )
    WS? b:Sum
    {
+     const char* a_cstr = ccstr_of_Sesp (a.sp);
+     if (a_cstr && (eq_cstr ("==", op.aux.s) || eq_cstr ("!=", op.aux.s))) {
+       bool found;
+       if (!b.int_ck) {
+         found = true;
+       }
+       else if (!!yy->st->pc_symm) {
+         found = yy->st->pc_symm->predicate_map.key_ck(a_cstr);
+       }
+       else {
+         found = yy->st->sys->predicate_map.key_ck(a_cstr);
+       }
+       if (found && eq_cstr ("==", op.aux.s)) {
+         op.aux.s = "xnor";
+       }
+       else if (found && eq_cstr ("!=", op.aux.s)) {
+         op.aux.s = "xor";
+       }
+     }
      a.sp = list3_ccstr_Sesp (op.aux.s, a.sp, b.sp);
      a.int_ck = 0;
    }

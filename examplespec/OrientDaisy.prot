@@ -1,0 +1,54 @@
+// Orientation for daisy chain topology (i.e., either a ring or a chain).
+
+constant N := 3;
+constant Chain := 1;
+variable b[Nat % N] <- Nat % 2;
+variable w[Nat % (2*N)] <- Nat % 2;
+
+process End[id <- Nat % (2*Chain)]
+{
+  let i := if (id==0) then (0) else (N-1);
+  let j := if (id==0) then (i+1) else (i-1);
+  let ij := if (id==0) then (2*i+1) else (2*i);
+  let ji := if (id==0) then (2*i+2) else (2*i-1);
+
+  read: w[ji];
+  write: w[ij];
+  read: b[j];
+  write: b[i];
+
+  (future & future silent)
+    (w[ji]!=w[ij]);
+}
+
+process P[id <- Nat % (N-2*Chain)]
+{
+  let i := Chain+id;
+  let j := i-1;
+  let k := i+1;
+  let ji := 2*i-1;
+  let ij := 2*i;
+  let ik := 2*i+1;
+  let ki := 2*i+2;
+
+  symmetric (l, way_idx, adj_way_idx) <- {# (j, ij, ji), (k, ik, ki) #}
+  {
+    read: w[adj_way_idx];
+    write: w[way_idx];
+    read: b[l];
+  }
+  write: b[i];
+
+  predicate OneWay := w[ij]!=w[ik];
+
+  // Assume this process points in exactly one direction.
+  (assume & closed)
+    (OneWay);
+
+  predicate RightWay := w[ji]!=w[ij] && w[ik]!=w[ki];
+
+  // Eventually point the same way as both neighbors.
+  (future & future silent)
+    (RightWay);
+}
+

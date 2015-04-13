@@ -880,26 +880,11 @@ stabilization_search(vector<uint>& ret_actions,
 
 #pragma omp critical (DBog)
     {
-    if (found) {
-      found = (solution_nlayers_sum == 0
-               ||
-               synctx.optimal_nlayers_sum < solution_nlayers_sum);
-
-      if (found) {
-        solution_found = true;
-        ret_actions = actions;
-        solution_nlayers_sum = synctx.optimal_nlayers_sum;
-      }
-
-      if (!opt.optimize_soln)
-        synctx.optimal_nlayers_sum = 0;
-    }
 
     if (synctx.done_ck())
     {}
     else if (found)
     {
-      *opt.log << "SOLUTION FOUND!" << opt.log->endl();
       bool count_solution = true;
       if (opt.solution_as_conflict || global_opt.optimize_soln) {
         FlatSet<uint> flat_actions( actions );
@@ -911,13 +896,29 @@ stabilization_search(vector<uint>& ret_actions,
         }
       }
 
-      if (global_opt.optimize_soln) {
+      if (count_solution && global_opt.optimize_soln) {
+        count_solution =
+          solution_nlayers_sum == 0 ||
+          synctx.optimal_nlayers_sum < solution_nlayers_sum;
+
+      }
+
+      if (count_solution) {
+        *opt.log << "SOLUTION FOUND!" << opt.log->endl();
+        solution_found = true;
+        ret_actions = actions;
+      }
+
+      if (!count_solution) {
+      }
+      else if (global_opt.optimize_soln) {
         // Don't write out files when optimizing, but do keep going.
+        solution_nlayers_sum = synctx.optimal_nlayers_sum;
       }
       else if (!global_opt.try_all) {
         set_done_flag (1);
       }
-      else if (!!exec_opt.ofilepath && count_solution) {
+      else if (!!exec_opt.ofilepath) {
         Cx::OFileB ofb;
         ofb.open(exec_opt.ofilepath + "." + PcIdx + "." + trial_idx);
         oput_protocon_file (ofb, sys, actions,
@@ -928,6 +929,9 @@ stabilization_search(vector<uint>& ret_actions,
 
     if (synctx.opt.optimize_soln) {
       synctx.optimal_nlayers_sum = solution_nlayers_sum;
+    }
+    else {
+      synctx.optimal_nlayers_sum = 0;
     }
 
     if (!synctx.done_ck() || !!exec_opt.conflicts_ofilepath || try_known_solution_ck)

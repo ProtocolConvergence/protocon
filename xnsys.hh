@@ -333,6 +333,7 @@ public:
   }
 
   void commit_initialization();
+  void fixup_pc_xns();
 
   VblSymm*
   add_variables(const String& name, uint nmembs, uint domsz,

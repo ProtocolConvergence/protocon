@@ -64,12 +64,40 @@ Net::commit_initialization()
     uint rep_actidx = representative_action_index(actidx);
     represented_actions[rep_actidx].push(actidx);
   }
+  this->fixup_pc_xns();
   if (this->lightweight)
     return;
   Claim2( act_xfmlaes.sz() ,==, 0 );
   act_xfmlaes.affysz(ntotal, X::Fmlae(&this->xfmlae_ctx));
   for (uint i = 0; i < ntotal; ++i) {
     this->cache_action_xfmla(i);
+  }
+}
+
+  void
+Net::fixup_pc_xns()
+{
+  for (uint pcidx = 0; pcidx < this->pcs.sz(); ++pcidx) {
+    Xn::Pc& pc = this->pcs[pcidx];
+    const Xn::PcSymm& pc_symm = *pc.symm;
+
+    bool probabilistic = false;
+    for (uint i = 0; i < pc.rvbls.sz(); ++i) {
+      if (pc_symm.spec->random_write_flags[i]) {
+        probabilistic = true;
+        break;
+      }
+    }
+    if (probabilistic) {
+      P::Fmla okay_xn( pc.closed_assume );
+      const uint wvbl_list_id = xfmlae_ctx.wvbl_list_ids[pcidx];
+      okay_xn &= pc.closed_assume.subst_to_img(wvbl_list_id);
+      okay_xn &= ~pc.forbid_xn;
+      if (pc.permit_xn.sat_ck()) {
+        okay_xn &= pc.permit_xn;
+      }
+      pc.puppet_xn &= okay_xn;
+    }
   }
 }
 
@@ -321,7 +349,7 @@ Pc::actions(Cx::Table<uint>& ret_actions, Cx::PFmlaCtx& ctx) const
     pfmla_wvbl_idcs.push(pc.wvbls[i]->pfmla_idx);
   }
 
-  Cx::PFmla pfmla( pc.puppet_xn );
+  Cx::PFmla pfmla( pc.puppet_xn & pc.closed_assume );
 
   ActSymm act;
   act.vals.grow(pc.rvbls.sz() + pc.wvbls.sz());
@@ -599,6 +627,20 @@ Sys::commit_initialization()
       const Cx::PFmlaVbl& x = topo.pfmla_ctx.vbl(vbl.pfmla_idx);
       shadow_self &= (x.img_eq(x));
     }
+  }
+
+  this->direct_pfmla = false;
+  for (uint i = 0; i < topo.pc_symms.sz(); ++i) {
+    PcSymm& pc_symm = topo.pc_symms[i];
+    pc_symm.direct_pfmla = false;
+    for (uint j = 0; j < pc_symm.membs.sz(); ++j) {
+      const Pc& pc = *pc_symm.membs[j];
+      pc_symm.direct_pfmla |=
+        pc.puppet_xn
+        & pc.closed_assume
+        & pc.act_unchanged_pfmla;
+    }
+    this->direct_pfmla |= pc_symm.direct_pfmla;
   }
 
 #if 1

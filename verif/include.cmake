@@ -45,6 +45,7 @@ set (ExampleSpecs
   MatchRingOneBit
   MatchRingThreeState
   OldOrientRing
+  OrientDaisy
   OrientOddRing
   SortChain
   SumNotTarget
@@ -113,7 +114,6 @@ set (ExampleSynts
   LeaderRing
   MatchRing
   MatchRingOneBit
-  OrientChain
   SegmentRing
   ShadowColorRing
   TokenChainDijkstra

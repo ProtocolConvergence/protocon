@@ -260,9 +260,12 @@ protocon_options_rec
       Cx::Table<char*> xargs;
       char* xarg;
       do {
-        xarg = nextok_XFile (&olay, 0, WhiteSpaceChars);
+        char matched_delim = '\0';
+        xarg = nextok_XFile (&olay, &matched_delim, WhiteSpaceChars);
         if (pfxeq_cstr("#", xarg)) {
-          skiplined_XFile (&olay, "\n");
+          if (matched_delim != '\n') {
+            skiplined_XFile (&olay, "\n");
+          }
         }
         else {
           xargs.push(xarg);

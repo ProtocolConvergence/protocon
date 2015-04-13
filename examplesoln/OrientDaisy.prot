@@ -1,0 +1,86 @@
+// Orientation for daisy chain topology (i.e., either a ring or a chain).
+
+constant N := 3;
+constant Chain := 1;
+variable b[Nat % N] <- Nat % 2;
+variable w[Nat % (2*N)] <- Nat % 2;
+process End[id <- Nat % (2*Chain)]
+{
+  let i := if (id==0) then (0) else (N-1);
+  let j := if (id==0) then (i+1) else (i-1);
+  let ij := if (id==0) then (2*i+1) else (2*i);
+  let ji := if (id==0) then (2*i+2) else (2*i-1);
+
+  read: w[ji];
+  write: w[ij];
+  read: b[j];
+  write: b[i];
+
+  (future & future silent)
+    (w[ji]!=w[ij]);
+
+  puppet action:
+    ( b[j]==w[ji] && (w[ij]==1 || b[i]==0) --> w[ij]:=0; b[i]:=1; )
+    ( b[j]!=w[ji] && (w[ij]==0 || b[i]==0) --> w[ij]:=1; b[i]:=1; )
+    ;
+}
+
+process P[id <- Nat % (N-2*Chain)]
+{
+  let i := Chain+id;
+  let j := i-1;
+  let k := i+1;
+  let ji := 2*i-1;
+  let ij := 2*i;
+  let ik := 2*i+1;
+  let ki := 2*i+2;
+
+  symmetric (l, way_idx, adj_way_idx) <- {# (j, ij, ji), (k, ik, ki) #}
+  {
+    read: w[adj_way_idx];
+    write: w[way_idx];
+    read: b[l];
+  }
+  write: b[i];
+
+  predicate OneWay := w[ij]!=w[ik];
+
+  // Assume this process points in exactly one direction.
+  (assume & closed)
+    (OneWay);
+
+  predicate RightWay := w[ji]!=w[ij] && w[ik]!=w[ki];
+  predicate WrongWay := w[ji]==w[ij] && w[ik]==w[ki];
+
+  // Eventually point the same way as both neighbors.
+  (future & future silent)
+    (RightWay);
+
+  puppet action:
+    ( WrongWay && b[i]<=b[j]*b[k] || RightWay && b[i]>b[j]*b[k]
+     -->
+      w[ij]:=w[ki]; w[ik]:=w[ji];
+      b[i]:=b[j]*b[k];
+    )
+
+    ( w[ji]==w[ki] && b[i]==1 && b[j]!=w[ji] && b[k]!=w[ki]
+     -->
+      w[ij]:=w[ik]; w[ik]:=w[ij];
+      b[i]:=0;
+    )
+
+    ( w[ji]==b[i] && w[ki]==b[i] &&
+      (b[j]==b[i] || b[j]==w[ij]) &&
+      (b[k]==b[i] || b[k]==w[ik])
+     -->
+      b[i]:=1-b[i];
+    )
+
+    ( w[ji]==0 && w[ki]==0 && b[j]!=w[ij] && b[k]!=w[ik]
+     -->
+      w[ij]:=b[j]; w[ik]:=b[k];
+      b[i]:=1;
+    )
+    ;
+}
+
