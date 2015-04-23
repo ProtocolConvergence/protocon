@@ -292,38 +292,39 @@ IntPFmla::defeq_binop(const IntPFmla& b, IntPFmla::BinIntOp op)
   Cx::Table< uint > state_b( b.vbls.sz() );
   const ujint n = a.state_map.sz();
 
+#define foreach_a for (ujint idx_a = 0; idx_a < n; ++idx_a)
 #define val_a() a.state_map[idx_a]
 #define val_b() intmap_coerce_lookup(a, b, idx_a, vbl_map, &state_a[0], &state_b[0])
   switch (op)
   {
   case IntPFmla::AddOp:
-    for (ujint idx_a = 0; idx_a < n; ++idx_a)
+    foreach_a
       val_a() += val_b();
     break;
   case IntPFmla::SubOp:
-    for (ujint idx_a = 0; idx_a < n; ++idx_a)
+    foreach_a
       val_a() -= val_b();
     break;
   case IntPFmla::MulOp:
-    for (ujint idx_a = 0; idx_a < n; ++idx_a)
+    foreach_a
       val_a() *= val_b();
     break;
   case IntPFmla::DivOp:
-    for (ujint idx_a = 0; idx_a < n; ++idx_a) {
+    foreach_a {
       int x = val_b();
       Claim2( x ,!=, 0 );
       val_a() /= x;
     }
     break;
   case IntPFmla::ModOp:
-    for (ujint idx_a = 0; idx_a < n; ++idx_a) {
+    foreach_a {
       int x = val_b();
       Claim2( x ,>, 0 );
       val_a() = umod_int (val_a(), (uint) x);
     }
     break;
   case IntPFmla::PowOp:
-    for (ujint idx_a = 0; idx_a < n; ++idx_a) {
+    foreach_a {
       int x = val_b();
       Claim2( x ,>=, 0 );
       int val = 1;
@@ -334,10 +335,31 @@ IntPFmla::defeq_binop(const IntPFmla& b, IntPFmla::BinIntOp op)
       val_a() = val;
     }
     break;
+  case IntPFmla::MinOp:
+    foreach_a {
+      int x = val_b();
+      int aa = val_a();
+      if (x < val_a()) {
+        val_a() = x;
+      }
+      DBog3("min(%d %d)==%d", aa, x, val_a());
+    }
+    break;
+  case IntPFmla::MaxOp:
+    foreach_a {
+      int x = val_b();
+      int aa = val_a();
+      if (x > val_a()) {
+        val_a() = x;
+      }
+      DBog3("max(%d %d)==%d", aa, x, val_a());
+    }
+    break;
   case IntPFmla::NBinIntOps:
     Claim( 0 );
     break;
   }
+#undef foreach_a
 #undef val_a
 #undef val_b
 

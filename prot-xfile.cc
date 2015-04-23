@@ -413,6 +413,14 @@ ProtoconFile::parse_action(Cx::PFmla& act_pf, Cx::Table<Cx::PFmla>& pc_xns, Sesp
     }
 
     pc_xns[pcidx] = guard_pf & assign_pf;
+    if (eq_cstr ("-=>", ccstr_of_Sesp (car_of_Sesp (act_sp)))) {
+      X::Fmla self_xn( true );
+      for (uint i = 0; i < pc.wvbls.sz(); ++i) {
+        const Cx::PFmlaVbl& pf_vbl = topo.pfmla_vbl(*pc.wvbls[i]);
+        self_xn &= pf_vbl.img_eq(pf_vbl);
+      }
+      pc_xns[pcidx] &= ~self_xn;
+    }
     if (pc_symm->pure_shadow_ck()) {
       X::Fmla self_xn( true );
       for (uint i = 0; i < pc.wvbls.sz(); ++i) {
@@ -815,7 +823,8 @@ ProtoconFile::string_expression(Cx::String& ss, Sesp a)
   }
   else if (eq_cstr (key, "&&") ||
            eq_cstr (key, "||") ||
-           eq_cstr (key, "=>") ||
+           eq_cstr (key, "==>") ||
+           eq_cstr (key, "<=>") ||
            eq_cstr (key, "<") ||
            eq_cstr (key, "<=") ||
            eq_cstr (key, "!=") ||
@@ -832,16 +841,12 @@ ProtoconFile::string_expression(Cx::String& ss, Sesp a)
     bool pad =
       (eq_cstr (key, "&&") ||
        eq_cstr (key, "||") ||
-       eq_cstr (key, "=>"));
+       eq_cstr (key, "==>") ||
+       eq_cstr (key, "<=>"));
     string_expression (ss, cadr_of_Sesp (a));
     if (pad)  ss += " ";
     ss += key;
     if (pad)  ss += " ";
-    string_expression (ss, caddr_of_Sesp (a));
-  }
-  else if (eq_cstr (key, "xnor")) {
-    string_expression (ss, cadr_of_Sesp (a));
-    ss += "==";
     string_expression (ss, caddr_of_Sesp (a));
   }
   else if (eq_cstr (key, "xor")) {
@@ -849,14 +854,23 @@ ProtoconFile::string_expression(Cx::String& ss, Sesp a)
     ss += "!=";
     string_expression (ss, caddr_of_Sesp (a));
   }
-  else if (eq_cstr (key, "-->")) {
+  else if (eq_cstr (key, "-->") ||
+           eq_cstr (key, "-=>")) {
     string_expression (ss, cadr_of_Sesp (a));
-    ss += " -->";
+    ss << " " << key;
     for (Sesp b = cddr_of_Sesp (a); !nil_ck_Sesp (b); b = cdr_of_Sesp (b)) {
       ss += " ";
       string_expression (ss, car_of_Sesp (b));
       ss += ";";
     }
+  }
+  else if (eq_cstr (key, "min") ||
+           eq_cstr (key, "max")) {
+    ss << key << "(";
+    string_expression (ss, cadr_of_Sesp (a));
+    ss << ",";
+    string_expression (ss, caddr_of_Sesp (a));
+    ss << ")";
   }
   else if (eq_cstr (key, "wild"))
   {
@@ -952,26 +966,36 @@ ProtoconFile::eval(Cx::PFmla& pf, Sesp a)
   }
   else if (eq_cstr (key, "&&")) {
     if (LegitCk( eval(pf, b), good, "" )) {
-      if (LegitCk( eval(pf_c, c), good, "" )) {
+      if (!pf.sat_ck()) {
+        // Short circuit.
+      }
+      else if (LegitCk( eval(pf_c, c), good, "" )) {
         pf &= pf_c;
       }
     }
   }
   else if (eq_cstr (key, "||")) {
     if (LegitCk( eval(pf, b), good, "" )) {
-      if (LegitCk( eval(pf_c, c), good, "" )) {
+      if (pf.tautology_ck()) {
+        // Short circuit.
+      }
+      else if (LegitCk( eval(pf_c, c), good, "" )) {
         pf |= pf_c;
       }
     }
   }
-  else if (eq_cstr (key, "=>")) {
+  else if (eq_cstr (key, "==>")) {
     if (LegitCk( eval(pf, b), good, "" )) {
-      if (LegitCk( eval(pf_c, c), good, "" )) {
+      if (!pf.sat_ck()) {
+        // Short circuit.
+        pf = true;
+      }
+      else if (LegitCk( eval(pf_c, c), good, "" )) {
         pf = ~pf | pf_c;
       }
     }
   }
-  else if (eq_cstr (key, "xnor")) {
+  else if (eq_cstr (key, "<=>")) {
     if (LegitCk( eval(pf, b), good, "" )) {
       if (LegitCk( eval(pf_c, c), good, "" )) {
         pf.defeq_xnor(pf_c);
@@ -1219,6 +1243,20 @@ ProtoconFile::eval(Cx::IntPFmla& ipf, Sesp a)
     if (LegitCk( eval(ipf, b), good, "" )) {
       if (LegitCk( eval(ipf_c, c), good, "" )) {
         ipf.defeq_pow(ipf_c);
+      }
+    }
+  }
+  else if (eq_cstr (key, "min")) {
+    if (LegitCk( eval(ipf, b), good, "" )) {
+      if (LegitCk( eval(ipf_c, c), good, "" )) {
+        ipf.defeq_min(ipf_c);
+      }
+    }
+  }
+  else if (eq_cstr (key, "max")) {
+    if (LegitCk( eval(ipf, b), good, "" )) {
+      if (LegitCk( eval(ipf_c, c), good, "" )) {
+        ipf.defeq_max(ipf_c);
       }
     }
   }

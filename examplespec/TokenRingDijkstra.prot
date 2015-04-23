@@ -1,6 +1,8 @@
 
-// Dijkstra's self-stabilizing token ring.
-// But without the stabilizing actions.
+// This is a clever way to specify the problem of synthesizing
+// Dijkstra's token ring without shadow/puppet variables.
+// Usually we are not so clever and would use the
+// approach given in examplespec/TokenRing.prot.
 
 constant N := 5;
 constant M := N;
@@ -8,15 +10,18 @@ constant M := N;
 variable x[Nat % N] <- Nat % M;
 
 // Eventually one token will exist and the protocol will remain live.
-// The 'active' part just ensures that our given protocol is actually live,
-// which we already know at design time.
-// Other invariant constraints are given within the process definitions.
+// A token here is deviates from Dijkstra's definition in that
+// a P[i] process only has a token when (x[i-1]==(x[i]+1)%M)
+// rather than the more relaxed version (x[i-1]!=x[i]).
 (future & active shadow)
-  (unique i <- Int % N :
-   i == 0 && x[i-1] == x[i]
-   ||
-   i != 0 && x[i-1] != x[i]
+  (exists j <- Int % N :
+   forall i <- Int % N : 0==1
+   || i==0 && i==j && x[i-1]==x[i]
+   || i==0 && i!=j && x[i-1]!=x[i]
+   || i!=0 && i==j && x[i-1]==(x[i]+1)%M
+   || i!=0 && i!=j && x[i-1]==x[i]
   );
+
 
 process Bot[i <- Nat % 1]
 {
@@ -25,10 +30,6 @@ process Bot[i <- Nat % 1]
 
   // Actions in the legitimate states:
   shadow action: ( x[i-1] == x[i] --> x[i] := x[i] + 1; );
-
-  // Conjunct this into the invariant:
-  (future & active shadow)
-    (x[i-1] == x[i] || x[i-1] == (x[i] - 1) % M);
 }
 
 process P[j <- Nat % (N-1)]
@@ -39,9 +40,5 @@ process P[j <- Nat % (N-1)]
 
   // Actions in the legitimate states:
   shadow action: ( x[i-1] == (x[i] + 1) % M --> x[i] := x[i] + 1; );
-
-  // Conjunct this into the invariant:
-  (future & active shadow)
-    (x[i-1] == (x[i] + 1) % M || x[i-1] == x[i]);
 }
 

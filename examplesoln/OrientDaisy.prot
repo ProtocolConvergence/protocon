@@ -1,9 +1,17 @@
 // Orientation for daisy chain topology (i.e., either a ring or a chain).
+// The b[i] values are all eventually the same.
+// This is a simplified version of examplesynt/OrientDaisy.prot,
+// which converges in fewer asynchronous steps.
 
 constant N := 3;
 constant Chain := 1;
 variable b[Nat % N] <- Nat % 2;
 variable w[Nat % (2*N)] <- Nat % 2;
+
+// When it is a chain, just zero out the unused {w} variables.
+(assume & closed)
+  (Chain==1 ==> w[0]==0 && w[2*(N-1)+1]==0);
+
 process End[id <- Nat % (2*Chain)]
 {
   let i := if (id==0) then (0) else (N-1);
@@ -16,12 +24,11 @@ process End[id <- Nat % (2*Chain)]
   read: b[j];
   write: b[i];
 
-  (future & future silent)
-    (w[ji]!=w[ij]);
+  (future & silent)
+    (w[ij]!=w[ji] && b[i]==1 && b[j]==1);
 
   puppet action:
-    ( b[j]==w[ji] && (w[ij]==1 || b[i]==0) --> w[ij]:=0; b[i]:=1; )
-    ( b[j]!=w[ji] && (w[ij]==0 || b[i]==0) --> w[ij]:=1; b[i]:=1; )
+    ( 1==1 -=> b[i]:=1; w[ij]:=w[ji]+b[j]; )
     ;
 }
 
@@ -49,38 +56,16 @@ process P[id <- Nat % (N-2*Chain)]
   (assume & closed)
     (OneWay);
 
-  predicate RightWay := w[ji]!=w[ij] && w[ik]!=w[ki];
-  predicate WrongWay := w[ji]==w[ij] && w[ik]==w[ki];
-
   // Eventually point the same way as both neighbors.
-  (future & future silent)
-    (RightWay);
+  (future & silent)
+    (w[ji]!=w[ij] && w[ik]!=w[ki] && b[j]==b[i] && b[k]==b[i]);
 
   puppet action:
-    ( WrongWay && b[i]<=b[j]*b[k] || RightWay && b[i]>b[j]*b[k]
-     -->
-      w[ij]:=w[ki]; w[ik]:=w[ji];
-      b[i]:=b[j]*b[k];
-    )
-
-    ( w[ji]==w[ki] && b[i]==1 && b[j]!=w[ji] && b[k]!=w[ki]
-     -->
-      w[ij]:=w[ik]; w[ik]:=w[ij];
-      b[i]:=0;
-    )
-
-    ( w[ji]==b[i] && w[ki]==b[i] &&
-      (b[j]==b[i] || b[j]==w[ij]) &&
-      (b[k]==b[i] || b[k]==w[ik])
-     -->
-      b[i]:=1-b[i];
-    )
-
-    ( w[ji]==0 && w[ki]==0 && b[j]!=w[ij] && b[k]!=w[ik]
-     -->
-      w[ij]:=b[j]; w[ik]:=b[k];
-      b[i]:=1;
-    )
+    ( w[ji]==0 && w[ki]==0               -=> b[i]:=0; )
+    ( w[ji]==1 && w[ki]==1 && b[j]==b[k] -=> b[i]:=1-b[j]; )
+    ( w[ji]==1 && w[ki]==1 && b[j]!=b[k] -=> b[i]:=1;         w[ij]:=b[k];  w[ik]:=b[j]; )
+    ( w[ji]!=w[ki]                       -=> b[i]:=b[j]*b[k]; w[ij]:=w[ki]; w[ik]:=w[ji]; )
     ;
 }
+
 

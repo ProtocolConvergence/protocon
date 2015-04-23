@@ -23,6 +23,11 @@ process End[id <- Nat % (2*Chain)]
 
   (future & future silent)
     (w[ji]!=w[ij]);
+
+  puppet action:
+    ( b[j]==w[ji] && (b[i]==0 || w[ij]==1) --> b[i]:=1; w[ij]:=0; )
+    ( b[j]!=w[ji] && (b[i]==0 || w[ij]==0) --> b[i]:=1; w[ij]:=1; )
+    ;
 }
 
 process P[id <- Nat % (N-2*Chain)]
@@ -50,9 +55,38 @@ process P[id <- Nat % (N-2*Chain)]
     (OneWay);
 
   predicate RightWay := w[ji]!=w[ij] && w[ik]!=w[ki];
+  predicate WrongWay := w[ji]==w[ij] && w[ik]==w[ki];
 
   // Eventually point the same way as both neighbors.
   (future & future silent)
     (RightWay);
+
+  puppet action:
+    ( WrongWay && b[i]<=b[j]*b[k] || RightWay && b[i]>b[j]*b[k]
+     -->
+      b[i]:=b[j]*b[k];
+      w[ij]:=w[ki]; w[ik]:=w[ji];
+    )
+
+    ( w[ji]==w[ki] && b[j]==b[k] && b[i]==1
+      &&     w[ki] != b[j]
+     -->
+      b[i]:=0;
+      w[ij]:=w[ik]; w[ik]:=w[ij];
+    )
+
+    ( w[ji]==b[i] && w[ki]==b[i] &&
+      (b[j]==b[i] || b[j]==w[ij]) &&
+      (b[k]==b[i] || b[k]==w[ik])
+     -->
+      b[i]:=1-b[i];
+    )
+
+    ( w[ji]==0 && w[ki]==0 && b[j]!=w[ij] && b[k]!=w[ik]
+     -->
+      b[i]:=1;
+      w[ij]:=b[j]; w[ik]:=b[k];
+    )
+    ;
 }
 

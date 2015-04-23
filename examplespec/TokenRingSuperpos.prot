@@ -1,4 +1,8 @@
 
+// This is a way to specify a token ring without using pure shadow
+// variables. Rather, a non-stabilizing 1-bit token ring on the t[i]
+// variables is used to define the invariant and behavior.
+
 constant N := 4;
 constant M := 3;
 

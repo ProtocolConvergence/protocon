@@ -10,17 +10,22 @@
 
 constant N := 5;
 
-variable x[Int % N] <- Int % 3;
+constant L := 0;
+constant S := 1;
+constant R := 2;
 
-process P[i <- Int % N]
+variable x[Nat % N] <- Nat % 3;
+
+process P[i <- Nat % N]
 {
-  read: x[i-1];
+  read:  x[i-1];
   write: x[i];
-  read: x[i+1];
+  read:  x[i+1];
+
   (future & silent)
-    (   x[i-1] == 2 && x[i] == 0
-     || x[i-1] == 0 && x[i] == 1 && x[i+1] == 2
-     ||                x[i] == 2 && x[i+1] == 0
+    (   x[i-1]==R && x[i]==L
+     || x[i-1]==L && x[i]==S && x[i+1]==R
+     ||              x[i]==R && x[i+1]==L
     );
 }
 

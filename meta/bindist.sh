@@ -1,6 +1,6 @@
 #!/bin/sh
 
-metapath=$(readlink -f $(dirname "$0"))
+metapath=$(dirname $(readlink -f "$0"))
 srcpath=$(dirname "$metapath")
 toppath=$(dirname "$srcpath")
 

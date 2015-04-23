@@ -88,6 +88,17 @@ shadow_ck(Cx::PFmla* ret_invariant,
     if (!(lo_xn & shadow_invariant).subseteq_ck(sys.shadow_pfmla)) {
       return false;
     }
+    // Specification said this should be an active protocol.
+    if (invariant_behav == Xn::FutureActiveShadow ||
+        invariant_style == Xn::FutureAndActiveShadow)
+    {
+      if (!shadow_invariant.subseteq_ck(hi_xn.pre())) {
+        if (explain_failure)
+          DBog0( "Deadlock in invariant." );
+        return false;
+      }
+    }
+
     if (ret_invariant)
       *ret_invariant = shadow_invariant;
     return true;
@@ -283,6 +294,22 @@ stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
     }
     of.flush();
     return false;
+  }
+
+  of << "Checking for closure...\n";
+  if (!sys.closed_assume.tautology_ck()) {
+    Cx::PFmla pf = lo_xn.img(sys.closed_assume) - sys.closed_assume;
+    if (pf.sat_ck()) {
+      of << "Assumed states are not closed.\n";
+      if (show_failure) {
+        pf = pf.pick_pre();
+        topo.oput_vbl_names(of);
+        topo.oput_one_pf(of, lo_xn.pre(pf) & sys.closed_assume);
+        topo.oput_one_pf(of, pf);
+      }
+      of.flush();
+      return false;
+    }
   }
 
   of << "Checking for deadlocks..." << of.endl();

@@ -45,7 +45,6 @@ set (ExampleSpecs
   MatchRingOneBit
   MatchRingThreeState
   OldOrientRing
-  OrientDaisy
   OrientOddRing
   SortChain
   SumNotTarget
@@ -114,6 +113,7 @@ set (ExampleSynts
   LeaderRing
   MatchRing
   MatchRingOneBit
+  OrientDaisy
   SegmentRing
   ShadowColorRing
   TokenChainDijkstra
@@ -151,6 +151,7 @@ add_test (NAME TrySynt5_TokenRingFourState
 
 list (APPEND VerifyBySynthesis
   ColorRing
+  OrientDaisy
   OrientRing
   OrientOddRing
   TokenRingThreeBit

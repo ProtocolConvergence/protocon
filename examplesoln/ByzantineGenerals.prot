@@ -49,7 +49,7 @@ process Captain[i <- Nat % N]
     ( loyal[N]==0 --> _; );
 
   puppet:
-   ( loyal[N]==1 && cplan[i]!=plan[N] --> cplan[i]:=plan[N]; );
+   ( loyal[N]==1 -=> cplan[i]:=plan[N]; );
 }
 
 // Lieutenant General.
@@ -72,12 +72,8 @@ process Lieutenant[i <- Nat % N]
     ( loyal[i]==0 --> _; );
 
   puppet:
-   ( loyal[i]==1 &&
-     (   y[2*i+0]!=cplan[i]
-      || y[2*i+1]!=cplan[i]
-      || plan[i]!=(y[2*i-1]+cplan[i]+y[2*i+2])/2
-     )
-    -->
+   ( loyal[i]==1
+    -=>
      y[2*i+0]:=cplan[i];
      y[2*i+1]:=cplan[i];
      plan[i]:=(y[2*i-1]+cplan[i]+y[2*i+2])/2;

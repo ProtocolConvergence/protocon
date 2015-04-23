@@ -49,9 +49,10 @@ ConstDecl =
 
 OptionalShadowPuppetRole =
   {$$.aux.i = (int) Xn::Vbl::Direct;}
-  (  'shadow' WS {$$.aux.i = (int) Xn::Vbl::Shadow;}
-   | ('puppet' | 'superposed') WS {$$.aux.i = (int) Xn::Vbl::Puppet;}
-   | ('direct' | 'underlying') WS
+  (  SHADOW WS {$$.aux.i = (int) Xn::Vbl::Shadow;}
+   | PUPPET WS {$$.aux.i = (int) Xn::Vbl::Puppet;}
+   | DIRECT WS
+   | 'underlying' WS
   )?
   ;
 
@@ -66,7 +67,11 @@ VarDecl =
 
 ActionExpr =
   '(' WS?
-   act:Expr WS? '-->' WS?  {act.sp = list2_ccstr_Sesp ("-->", act.sp);}
+   act:Expr WS?
+   (  '-->' {act.sp = list2_ccstr_Sesp ("-->", act.sp);}
+    | '-=>' {act.sp = list2_ccstr_Sesp ("-=>", act.sp);}
+   )
+   WS?
    (vbl:VblRef WS? ':=' WS?
     (  val_wild:WILD
        {pushlast_Sesp (act.sp, list3_ccstr_Sesp (":=", vbl.sp, val_wild.sp));}
@@ -81,21 +86,21 @@ ActionExpr =
    ;
 
 ShadowActionDef =
-  ('shadow' | 'underlying') (WS ACTION | ':') WS? act:ActionExpr
+  (SHADOW | 'underlying') (WS ACTION | ':') WS? act:ActionExpr
   {yy->st->add_action (act.sp, Xn::Vbl::Shadow);}
   (WS? (',' WS?)? act2:ActionExpr {yy->st->add_action (act2.sp, Xn::Vbl::Shadow);} )*
   END_STMT
   ;
 
 DirectActionDef =
-  ('direct:' | ('direct' WS)? ACTION) WS? act:ActionExpr
+  ((DIRECT WS)? ACTION | DIRECT ':') WS? act:ActionExpr
   {yy->st->add_action (act.sp, Xn::Vbl::Direct);}
   (WS? (',' WS?)? act2:ActionExpr {yy->st->add_action (act2.sp, Xn::Vbl::Direct);} )*
   END_STMT
   ;
 
 PuppetActionDef =
-  ('puppet' | 'superposed') (WS ACTION | ':') WS? act:ActionExpr
+  PUPPET (WS ACTION | ':') WS? act:ActionExpr
   {yy->st->add_action (act.sp, Xn::Vbl::Puppet);}
   (WS? (',' WS?)? act2:ActionExpr {yy->st->add_action (act2.sp, Xn::Vbl::Puppet);} )*
   END_STMT
@@ -318,7 +323,7 @@ ConstValue =
 Expr =
     a:Quantify {$$ = a;}
   | a:IfThenElse {$$ = a;}
-  | a:Implication {$$ = a;}
+  | a:BiImplication {$$ = a;}
   | < [^)}\];]+ >
     {
       yy->st->bad_parse(yytext, "Malformed expression.");
@@ -351,9 +356,15 @@ Quantify =
   }
   ;
 
+BiImplication =
+  a:Implication
+  (WS? '<=>' WS? b:Implication {a.sp = list3_ccstr_Sesp ("<=>", a.sp, b.sp);  a.int_ck = 0;} )*
+  {$$ = a;}
+  ;
+
 Implication =
   a:Disjunction
-  (WS? '=>' WS? b:Disjunction {a.sp = list3_ccstr_Sesp ("=>", a.sp, b.sp);  a.int_ck = 0;} )*
+  (WS? '==>' WS? b:Disjunction {a.sp = list3_ccstr_Sesp ("==>", a.sp, b.sp);  a.int_ck = 0;} )*
   {$$ = a;}
   ;
 
@@ -375,17 +386,17 @@ ChainlessFormula =
   ;
 
 Comparison =
-  a:Sum
+  a:IntExpr
   (WS?
    op:NOP
-   (  '==' {op.aux.s = a.int_ck ? "==" : "xnor";}
+   (  '==' {op.aux.s = a.int_ck ? "==" : "<=>";}
     | '!=' {op.aux.s = a.int_ck ? "!=" : "xor";}
     | '<=' {op.aux.s = "<=";}
     | '>=' {op.aux.s = ">=";}
     | '<'  {op.aux.s = "<";}
     | '>'  {op.aux.s = ">";}
    )
-   WS? b:Sum
+   WS? b:IntExpr
    {
      const char* a_cstr = ccstr_of_Sesp (a.sp);
      if (a_cstr && (eq_cstr ("==", op.aux.s) || eq_cstr ("!=", op.aux.s))) {
@@ -400,7 +411,7 @@ Comparison =
          found = yy->st->sys->predicate_map.key_ck(a_cstr);
        }
        if (found && eq_cstr ("==", op.aux.s)) {
-         op.aux.s = "xnor";
+         op.aux.s = "<=>";
        }
        else if (found && eq_cstr ("!=", op.aux.s)) {
          op.aux.s = "xor";
@@ -412,6 +423,8 @@ Comparison =
   )?
   {$$ = a;}
   ;
+
+IntExpr = a:Sum {$$ = a};
 
 Sum =
   a:Product
@@ -460,10 +473,23 @@ Neg =
   }
 
 Power =
-  a:Value
+  a:IntFuncall
   (  (WS? '^' WS? b:Neg {a.sp = list3_ccstr_Sesp ("^", a.sp, b.sp);  a.int_ck = 1;} )
   )*
   {$$ = a;}
+  ;
+
+IntFuncall =
+    op:NOP
+    (  'max' {op.aux.s = "max";}
+     | 'min' {op.aux.s = "min";}
+    )
+    WS? '(' WS? a:IntExpr WS? ',' WS? b:IntExpr WS? ')'
+    {
+      $$.sp = list3_ccstr_Sesp (op.aux.s, a.sp, b.sp);
+      $$.int_ck = 1;
+    }
+  | a:Value {$$=a;}
   ;
 
 Value =
@@ -510,6 +536,7 @@ IN = '<-'
 FUTURE = 'future' | 'eventually' | '<>' ;
 SHADOW = 'shadow' ;
 PUPPET = 'puppet' | 'superposed' ;
+DIRECT = 'direct';
 CLOSED = 'closed' ;
 ASSUME = 'assume' ;
 SILENT = 'silent' ;

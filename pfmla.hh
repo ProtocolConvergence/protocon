@@ -422,6 +422,7 @@ private:
     AddOp, SubOp,
     MulOp, DivOp, ModOp,
     PowOp,
+    MinOp, MaxOp,
     NBinIntOps
   };
 public:
@@ -470,6 +471,8 @@ public:
   IntPFmla& operator%=(const IntPFmla& b) { return this->defeq_binop(b, ModOp); }
 
   IntPFmla& defeq_pow(const IntPFmla& b)  { return this->defeq_binop(b, PowOp); }
+  IntPFmla& defeq_min(const IntPFmla& b)  { return this->defeq_binop(b, MinOp); }
+  IntPFmla& defeq_max(const IntPFmla& b)  { return this->defeq_binop(b, MaxOp); }
 
   IntPFmla operator+(const IntPFmla& b) const { return IntPFmla(*this) += b; }
   IntPFmla operator-(const IntPFmla& b) const { return IntPFmla(*this) -= b; }
