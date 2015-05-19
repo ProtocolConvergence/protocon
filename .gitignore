@@ -1,11 +1,14 @@
 
-/Makefile
-
+/bin/
 /bld/
-/biring
-/deadfree
-/test
-/udp
+
+/dep/glu-*/
+/dep/peg-*/
+
+/src/biring
+/src/deadfree
+/src/test
+/src/udp
 
 /doc/html/
 /doc/*/main.pdf
