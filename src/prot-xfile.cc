@@ -609,15 +609,13 @@ ProtoconFile::add_pc_assume(Sesp assume_sp)
 
   Cx::String assume_expression;
   DoLegit( good, "" )
-    good = string_expression(assume_expression, assume_sp);
+    good = parend_string_expression(assume_expression, assume_sp);
 
-  DoLegit( good, "" )
-  {
+  DoLegit( good, "" ) {
     if (!pc_symm_spec->closed_assume_expression.empty_ck()) {
-      pc_symm_spec->closed_assume_expression =
-        Cx::String("(") + pc_symm_spec->closed_assume_expression + ") && ";
+      pc_symm_spec->closed_assume_expression << " && ";
     }
-    pc_symm_spec->closed_assume_expression += assume_expression;
+    pc_symm_spec->closed_assume_expression << assume_expression;
   }
   index_map.erase(idx_name);
   return update_allgood (good);
@@ -707,14 +705,13 @@ ProtoconFile::add_assume(Sesp assume_sp)
 
   Cx::String str;
   DoLegit( good, "convert invariant expression to string" )
-    good = string_expression(str, assume_sp);
+    good = parend_string_expression(str, assume_sp);
 
   DoLegit( good, "" ) {
     if (spec->closed_assume_expression != "") {
-      spec->closed_assume_expression =
-        Cx::String("(") + spec->closed_assume_expression + ")\n  &&\n  ";
+      spec->closed_assume_expression << "\n  &&\n  ";
     }
-    spec->closed_assume_expression += str;
+    spec->closed_assume_expression << str;
   }
 
   return update_allgood (good);
@@ -915,6 +912,20 @@ ProtoconFile::string_expression(Cx::String& ss, Sesp a)
   return update_allgood (good);
 }
 
+  bool
+ProtoconFile::parend_string_expression(Cx::String& ss, Sesp a)
+{
+  const char* key = 0;
+  if (list_ck_Sesp (a)) {
+    key = ccstr_of_Sesp (car_of_Sesp (a));
+  }
+  bool wrap = (!eq_cstr (key, "(bool)") &&
+               !eq_cstr (key, "(int)"));
+  if (wrap)  ss << '(';
+  bool good = string_expression(ss, a);
+  if (wrap)  ss << ')';
+  return good;
+}
 
   bool
 ProtoconFile::eval(Cx::PFmla& pf, Sesp a)
@@ -954,7 +965,9 @@ ProtoconFile::eval(Cx::PFmla& pf, Sesp a)
 
   //DBog1("key is: %s", key);
 
-  if (eq_cstr (key, "(bool)")) {
+  if (eq_cstr (key, "(bool)") ||
+      eq_cstr (key, "(int)" ))
+  {
     if (LegitCk( eval(pf, b), good, "" )) {
       // That's all.
     }

@@ -36,4 +36,15 @@ test:
 clean:
 	$(GODO) $(BldPath) $(MAKE)/ext clean
 
+.PHONY: init
+init:
+	if [ ! -f $(CxPath)/cx.c ] ; then git submodule init dep/cx ; fi
+	if [ ! -f $(CxPath)-pp/cx.c ] ; then git submodule init dep/cx-pp ; fi
+
+.PHONY: update
+update:
+	git pull
+	git submodule update
+	git submodule foreach git checkout master
+	git submodule foreach git merge --ff-only origin/master
 

@@ -133,6 +133,7 @@ public:
   bool add_legit(Sesp legit_sp);
 
   bool string_expression(Cx::String& ss, Sesp a);
+  bool parend_string_expression(Cx::String& ss, Sesp a);
 
   bool eval(Cx::PFmla& pf, Sesp a);
 
