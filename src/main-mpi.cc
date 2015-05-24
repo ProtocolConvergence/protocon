@@ -12,7 +12,9 @@ extern "C" {
 #include "search.hh"
 #include "synthesis.hh"
 #include "stabilization.hh"
-#include "mpidissem.hh"
+#include "cx/mpidissem.hh"
+
+using Cx::MpiDissem;
 
 #define MpiTag_MpiDissem 1
 #define MpiTag_Conflict 2

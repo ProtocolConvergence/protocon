@@ -36,13 +36,13 @@ test:
 	$(GODO) $(BldPath) $(MAKE) test
 
 clean:
-	$(GODO) $(TopBldPath) $(MAKE) clean
+	$(GODO) $(BldPath) $(MAKE) clean
 
 distclean:
 	rm -fr $(BldPath) $(BinPath)
 
 init:
-	if [ ! -f $(CxPath)/cx.c ] ; then git submodule init dep/cx ; git submodule update dep/cx ; fi
+	if [ ! -f $(CxPath)/src/cx.c ] ; then git submodule init dep/cx ; git submodule update dep/cx ; fi
 	if [ ! -f $(CxPath)-pp/cx.c ] ; then git submodule init dep/cx-pp ; git submodule update dep/cx-pp ; fi
 
 update:

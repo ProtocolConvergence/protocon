@@ -15,7 +15,7 @@ find_package(OpenMP)
 
 set (TopPath ${CMAKE_CURRENT_SOURCE_DIR}/..)
 set (DepPath ${TopPath}/dep)
-set (CxPath ${DepPath}/cx)
+set (CxPath ${DepPath}/cx/src)
 set (BinPath ${CMAKE_CURRENT_SOURCE_DIR}/../bin)
 if (NOT DEFINED GluPath)
   set (GluPath ${DepPath}/glu-2.4)
@@ -44,8 +44,8 @@ list (APPEND CCFiles
   pfmla.cc xfmlae.cc xnsys.cc xnspec.cc
   opt.cc search.cc
   test.cc inst.cc main.cc
-  main-mpi.cc mpidissem.cc
-  promela.cc graphviz.cc kautz.cc
+  main-mpi.cc
+  promela.cc graphviz.cc
   interactive.cc
   conflictfamily.cc
   stabilization.cc
@@ -58,8 +58,7 @@ list (APPEND HHFiles
   pfmla.hh xfmlae.hh xnsys.hh xnspec.hh
   opt.hh search.hh
   inst.hh
-  mpidissem.hh
-  promela.hh graphviz.hh kautz.hh
+  promela.hh graphviz.hh
   interactive.hh
   conflictfamily.hh
   stabilization.hh
@@ -91,7 +90,8 @@ set_bld_cfile_properties (${BldPath}/prot-xfile.leg.cc)
 list (APPEND ProtoconSources
   pfmla.cc xfmlae.cc xnsys.cc inst.cc
   opt.cc
-  promela.cc graphviz.cc kautz.cc
+  promela.cc graphviz.cc
+  ${CxBldPath}/kautz.cc
   stabilization.cc
   synthesis.cc
   interactive.cc
@@ -148,7 +148,8 @@ endif ()
 
 if (MPI_FOUND)
   addbinexe (protocon-mpi
-    main-mpi.cc mpidissem.cc
+    main-mpi.cc
+    ${CxBldPath}/mpidissem.cc
     search.cc
     ${ProtoconSources}
     )
