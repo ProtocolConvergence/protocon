@@ -50,9 +50,9 @@ ExternalProject_Add(glu
 
 ExternalProject_Add(protocon
   DEPENDS cx peg glu
-  PREFIX ${CMAKE_CURRENT_BINARY_DIR}/external/protocon
+  PREFIX ${CMAKE_CURRENT_BINARY_DIR}/external/src
   SOURCE_DIR ${TopPath}/src
-  BINARY_DIR ${TopPath}/bld/
+  BINARY_DIR ${TopPath}/bld
   CONFIGURE_COMMAND ${CMAKE_COMMAND}
   -D PegExe:string=${DepPath}/${PegPfx}/leg
   -D GluPath:string=${DepPath}/${GluPfx}
