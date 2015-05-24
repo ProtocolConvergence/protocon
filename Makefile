@@ -11,7 +11,9 @@ CMAKE=cmake
 GODO=$(CMAKE) -E chdir
 MKDIR=$(CMAKE) -E make_directory
 
-.PHONY: default all cmake proj test clean distclean init update
+.PHONY: default all cmake proj \
+	test clean distclean \
+	init update pull
 
 default:
 	$(MAKE) init
@@ -50,4 +52,8 @@ update:
 	git submodule update
 	git submodule foreach git checkout master
 	git submodule foreach git merge --ff-only origin/master
+
+pull:
+	git pull
+	git submodule foreach git pull
 
