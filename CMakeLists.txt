@@ -14,7 +14,7 @@ set (DepPath ${TopPath}/dep)
 ExternalProject_Add(cx-pp
   PREFIX ${CMAKE_CURRENT_BINARY_DIR}/external/cx-pp
   SOURCE_DIR ${DepPath}/cx-pp
-  GIT_REPOSITORY git@github.com:grencez/cx-pp.git
+  #GIT_REPOSITORY git@github.com:grencez/cx-pp.git
   BUILD_IN_SOURCE 1
   CONFIGURE_COMMAND echo "No configure step."
   BUILD_COMMAND echo "No build step."
@@ -26,7 +26,7 @@ ExternalProject_Add(cx
   PREFIX ${CMAKE_CURRENT_BINARY_DIR}/external/cx
   SOURCE_DIR ${DepPath}/cx
   #BINARY_DIR ${DepPath}/cx/bld
-  GIT_REPOSITORY git@github.com:grencez/cx.git
+  #GIT_REPOSITORY git@github.com:grencez/cx.git
   INSTALL_COMMAND echo "No install step."
   )
 

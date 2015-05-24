@@ -1,6 +1,6 @@
 [submodule "dep/cx"]
 	path = dep/cx
-	url = git@github.com:grencez/cx.git
+  url = https://github.com/grencez/cx.git
 [submodule "dep/cx-pp"]
 	path = dep/cx-pp
-	url = git@github.com:grencez/cx-pp.git
+  url = https://github.com/grencez/cx-pp.git
