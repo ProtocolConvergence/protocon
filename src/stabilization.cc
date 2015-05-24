@@ -279,6 +279,16 @@ stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
   const Xn::Net& topo = sys.topology;
   const bool show_failure = true;
 
+  if (!sys.invariant.overlap_ck(sys.closed_assume)) {
+    if (!sys.invariant.sat_ck())
+      of << "Invariant is empty." << of.endl();
+    else if (!sys.closed_assume.sat_ck())
+      of << "Assumed states are empty." << of.endl();
+    else
+      of << "No overlap between invariant and assumed states." << of.endl();
+    return false;
+  }
+
   of << "Checking for self-loops...\n";
   if (topo.probabilistic_ck()) {
   }

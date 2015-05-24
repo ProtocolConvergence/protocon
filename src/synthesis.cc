@@ -1050,7 +1050,12 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
     return false;
   }
 
-  this->lo_xn |= add_act_xfmlae.xfmla();
+  if (this->stabilization_opt().synchronous) {
+    this->lo_xn = topo.sync_xn(Cx::Table<uint>(this->actions));
+  }
+  else {
+    this->lo_xn |= add_act_xfmlae.xfmla();
+  }
   this->lo_xfmlae |= add_act_xfmlae;
   if (!candidates_contain_all_adds) {
     this->hi_xn |= add_act_xfmlae.xfmla();
@@ -1128,7 +1133,7 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
     *this->log << "CYCLE" << this->log->endl();
     if (true || !this->no_conflict) {
       Cx::Table<uint> conflict_set;
-      if (!topo.probabilistic_ck()) {
+      if (!topo.probabilistic_ck() && !this->stabilization_opt().synchronous) {
 #if 0
         small_cycle_conflict (conflict_set, scc, this->actions, topo, sys.invariant,
                               *this->ctx);
