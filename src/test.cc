@@ -18,7 +18,7 @@ extern "C" {
 #include "conflictfamily.hh"
 #include "prot-xfile.hh"
 #include "stabilization.hh"
-#include "kautz.hh"
+#include "cx/kautz.hh"
 #include "search.hh"
 #include "synthesis.hh"
 #include <stdio.h>
