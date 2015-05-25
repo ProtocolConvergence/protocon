@@ -86,23 +86,6 @@ done_ck (void* dat)
   return mpi_dissem->done_ck();
 }
 
-static
-  void
-complete_dissemination(SynthesisCtx& synctx)
-{
-  Cx::Table<uint> msg;
-  mpi_dissem->done_fo();
-
-  /* DBog1("completing... %u", mpi_dissem->PcIdx); */
-  MpiDissem::Tag tag = 0;
-  while (mpi_dissem->xwait(tag, msg)) {
-    /* DBog1("waiting... %u", mpi_dissem->PcIdx); */
-    synctx.conflicts.add_conflicts(msg);
-    handle_dissem_msg (tag, msg, synctx);
-  }
-  /* DBog1("done... %u", mpi_dissem->PcIdx); */
-}
-
 // Forward declaration
 bool
 stabilization_search_init
@@ -324,7 +307,7 @@ stabilization_search(vector<uint>& ret_actions,
   if (global_opt.try_all)
     mpi_dissem->terminate();
 
-  complete_dissemination(synctx);
+  mpi_dissem->finish();
 
   if (!!exec_opt.conflicts_ofilepath) {
     Cx::Table<uint> flattest_conflicts;
