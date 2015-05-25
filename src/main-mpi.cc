@@ -43,7 +43,7 @@ handle_dissem_msg(MpiDissem::Tag tag,
     synctx.conflicts.add_conflicts(msg);
   }
   else if (tag == DissemTag_NLayers) {
-    if ((synctx.optimal_nlayers_sum == 0)
+    if ((synctx.optimal_nlayers_sum == 0 && msg[0] > 0)
         ||
         (0 < msg[0] && msg[0] < synctx.optimal_nlayers_sum))
     {
@@ -242,6 +242,12 @@ stabilization_search(vector<uint>& ret_actions,
         }
       }
 
+      if (synctx.opt.optimize_soln) {
+        Cx::Table<uint> msg;
+        msg.push(synctx.optimal_nlayers_sum);
+        mpi_dissem->push(DissemTag_NLayers, msg);
+      }
+
       if (global_opt.optimize_soln) {
         // Don't write out files when optimizing, but do keep going.
       }
@@ -259,13 +265,6 @@ stabilization_search(vector<uint>& ret_actions,
     else {
       if (!synctx.conflicts.sat_ck())
         set_term_flag (1);
-    }
-
-    if (!synctx.done_ck() && synctx.opt.optimize_soln) {
-      Cx::Table<uint> msg;
-      msg.push(synctx.optimal_nlayers_sum);
-      mpi_dissem->push(DissemTag_NLayers, msg);
-      mpi_dissem->maysend();
     }
 
     synctx.conflicts.oput_conflict_sizes(*opt.log);

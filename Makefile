@@ -48,12 +48,12 @@ init:
 	if [ ! -f $(CxPath)-pp/cx.c ] ; then git submodule init dep/cx-pp ; git submodule update dep/cx-pp ; fi
 
 update:
-	git pull
+	git pull origin master
 	git submodule update
 	git submodule foreach git checkout master
 	git submodule foreach git merge --ff-only origin/master
 
 pull:
-	git pull
-	git submodule foreach git pull
+	git pull origin master
+	git submodule foreach git pull origin master
 
