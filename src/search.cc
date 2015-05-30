@@ -526,7 +526,7 @@ stabilization_search_init
    Cx::Table< Cx::Table<uint> >& act_layers
    )
 {
-  Sign good = 1;
+  DeclLegit( good );
 
   if (!!exec_opt.log_ofilename) {
     Cx::String ofilename( exec_opt.log_ofilename );
@@ -540,13 +540,13 @@ stabilization_search_init
   }
 
 
-  DoLegit(good, "reading file")
+  DoLegit("reading file")
   {
     if (exec_opt.task != ProtoconOpt::VerifyTask)
       good = ReadProtoconFile(sys, infile_opt);
   }
 
-  DoLegit(good, "Repeated variable references in all processes!")
+  DoLegit("Repeated variable references in all processes!")
   {
     for (uint i = 0; i < sys.topology.pc_symms.sz(); ++i) {
       const Xn::PcSymm& pc_symm = sys.topology.pc_symms[i];
@@ -568,7 +568,7 @@ stabilization_search_init
     }
   }
 
-  DoLegit(good, "initialization")
+  DoLegit("initialization")
   {
     if (exec_opt.task != ProtoconOpt::VerifyTask)
       good = synctx.init(opt);
@@ -582,13 +582,13 @@ stabilization_search_init
     Xn::Sys& param_sys = systems.grow1();
     param_sys.topology.pfmla_ctx.use_context_of(sys.topology.pfmla_ctx);
     param_sys.topology.lightweight = !exec_opt.params[i].partial_ck();
-    DoLegit(good, "reading param file")
-      good = ReadProtoconFile(param_sys, param_infile_opt);
-    DoLegit(good, "add param sys")
-      good = synctx.add(param_sys, exec_opt.params[i].stabilization_opt);
+    DoLegitLine("reading param file")
+      ReadProtoconFile(param_sys, param_infile_opt);
+    DoLegitLine("add param sys")
+      synctx.add(param_sys, exec_opt.params[i].stabilization_opt);
   }
 
-  DoLegit(good, "The -def flag changes variable domains, put it before -x")
+  DoLegit("The -def flag changes variable domains, put it before -x")
   {
     for (uint i = 0; i < sys.topology.pc_symms.sz(); ++i) {
       const Xn::PcSymm& a = sys.topology.pc_symms[i];
@@ -598,7 +598,7 @@ stabilization_search_init
     }
   }
 
-  DoLegit(good, "A -param flag changes variable domains, don't do this")
+  DoLegit("A -param flag changes variable domains, don't do this")
   {
     for (uint sysidx = 1; sysidx < systems.sz(); ++sysidx) {
       for (uint i = 0; i < sys.topology.pc_symms.sz(); ++i) {
@@ -619,7 +619,7 @@ stabilization_search_init
   }
 
   if (exec_opt.task != ProtoconOpt::VerifyTask)
-  DoLegit( good, "initializing actions" )
+  DoLegit( "initializing actions" )
   {
     Set<uint> act_set(sys.actions);
     good = synlvl.revise_actions(act_set, synctx.conflicts.impossible_set);
@@ -630,12 +630,15 @@ stabilization_search_init
 
   if (opt.search_method == opt.RankShuffleSearch)
   {
-    DoLegit(good, "ranking actions")
-      good =
-      rank_actions (act_layers, sys.topology,
-                    synlvl.candidates,
-                    synlvl.hi_xn,
-                    synlvl.hi_invariant);
+    // TODO: Figure some way to incorporate all systems.
+    for (uint i = 0; i < 1 /*synlvl.sz()*/; ++i) {
+      act_layers.clear();
+      DoLegitLine("ranking actions")
+        rank_actions (act_layers, systems[i].topology,
+                      synlvl[i].candidates,
+                      synlvl[i].hi_xn,
+                      synlvl[i].hi_invariant);
+    }
   }
 
   return !!good;
@@ -725,7 +728,7 @@ stabilization_search(vector<uint>& ret_actions,
 #pragma omp parallel shared(done_flag,NPcs,solution_found,solution_nlayers_sum,\
                             ret_actions,conflicts,flat_conflicts)
   {
-  Sign good = 1;
+  DeclLegit( good );
   AddConvergenceOpt opt(global_opt);
   uint PcIdx;
   Cx::OFileB log_ofile;
@@ -750,10 +753,9 @@ stabilization_search(vector<uint>& ret_actions,
 
   Cx::Table< Cx::Table<uint> > act_layers;
 
-  DoLegit( good, "init call failed" ) {
-    good = stabilization_search_init
-      (synctx, sys, systems, log_ofile, opt, infile_opt, exec_opt, act_layers);
-  }
+  DoLegitLine( "init call failed" )
+    stabilization_search_init
+    (synctx, sys, systems, log_ofile, opt, infile_opt, exec_opt, act_layers);
 
   PartialSynthesis& synlvl = synctx.base_partial;
   synctx.done_ck_fn = done_ck;

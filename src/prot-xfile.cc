@@ -33,19 +33,25 @@ ProtoconFile::add_variables(Sesp vbl_name_sp, Sesp vbl_nmembs_sp, Sesp vbl_dom_s
                             Xn::Vbl::ShadowPuppetRole role)
 {
   if (!allgood)  return false;
-  bool good = true;
+  DeclLegit( good );
   const char* name = 0;
   uint nmembs = 0;
   uint domsz = 0;
 
-  name = ccstr_of_Sesp (vbl_name_sp);
-  if (LegitCk(name, good, "")) {}
-  if (LegitCk(eq_cstr ("NatDom", ccstr_of_Sesp (car_of_Sesp (vbl_nmembs_sp))), good, "")) {}
-  if (LegitCk(eq_cstr ("NatDom", ccstr_of_Sesp (car_of_Sesp (vbl_dom_sp))), good, "")) {}
+  DoLegitLineP(name, "")
+    ccstr_of_Sesp (vbl_name_sp);
+  DoLegitLine("Domain of variable index strange.")
+    eq_cstr ("NatDom", ccstr_of_Sesp (car_of_Sesp (vbl_nmembs_sp)));
+  DoLegitLine("Domain of variable is strange.")
+    eq_cstr ("NatDom", ccstr_of_Sesp (car_of_Sesp (vbl_dom_sp)));
 
-  if (LegitCk(eval_gtz (&nmembs, cadr_of_Sesp (vbl_nmembs_sp)), good, ""))
-  {}
-  if (LegitCk(eval_gtz (&domsz, cadr_of_Sesp (vbl_dom_sp)), good, ""))
+  DoLegitLine( "" )
+    eval_gtz (&nmembs, cadr_of_Sesp (vbl_nmembs_sp));
+
+  DoLegitLine( "" )
+    eval_gtz (&domsz, cadr_of_Sesp (vbl_dom_sp));
+
+  DoLegit(0)
   {
     Xn::VblSymm* symm = sys->topology.add_variables(name, nmembs, domsz, role);
     vbl_map[name] = symm;
@@ -62,20 +68,25 @@ ProtoconFile::add_processes(Sesp pc_name, Sesp idx_name, Sesp npcs)
 {
   if (!allgood)  return false;
   Claim2( index_map.sz() ,==, 0 );
-  bool good = true;
-  const char* name_a = ccstr_of_Sesp (pc_name);
-  const char* name_b = ccstr_of_Sesp (idx_name);
-  if (LegitCk(name_a && name_b, good, "")) {
-    uint domsz = 0;
-    if (LegitCk(eval_nat (&domsz, cadr_of_Sesp (npcs)), good, "")) {
-      this->pc_symm =
-        sys->topology.add_processes(name_a, name_b, (uint) domsz);
-      this->pc_symm_spec = pc_symm->spec;
-      pc_symm_spec->nmembs_expression = "";
-      string_expression (pc_symm_spec->nmembs_expression, cadr_of_Sesp (npcs));
-    }
-  }
-  if (good) {
+  DeclLegit( good );
+  const char* name_a;
+  const char* name_b;
+
+  DoLegitLineP( name_a, 0 )
+    ccstr_of_Sesp (pc_name);
+  DoLegitLineP( name_b, 0 )
+    ccstr_of_Sesp (idx_name);
+
+  uint domsz = 0;
+  DoLegitLine( "" )
+    eval_nat (&domsz, cadr_of_Sesp (npcs));
+
+  DoLegit( 0 ) {
+    this->pc_symm =
+      sys->topology.add_processes(name_a, name_b, (uint) domsz);
+    this->pc_symm_spec = pc_symm->spec;
+    pc_symm_spec->nmembs_expression = "";
+    string_expression (pc_symm_spec->nmembs_expression, cadr_of_Sesp (npcs));
   }
   return update_allgood (good);
 }
@@ -84,17 +95,17 @@ ProtoconFile::add_processes(Sesp pc_name, Sesp idx_name, Sesp npcs)
 ProtoconFile::add_constant(Sesp name_sp, Sesp val_sp)
 {
   if (!allgood)  return false;
-  Sign good = 1;
+  DeclLegit( good );
 
-  const char* name = ccstr_of_Sesp (name_sp);
-  DoLegit( good, "" )
-    good = !!name;
+  const char* name;
+  DoLegitLineP( name, "" )
+    ccstr_of_Sesp (name_sp);
   Xn::NatMap val(1);
-  DoLegit(good, "evaluating int")
-    good = eval_int (&val.membs[0], val_sp);
-  DoLegit( good, "finding expression" )
-    good = string_expression (val.expression, val_sp);
-  DoLegit( good, "" )
+  DoLegitLine("evaluating int")
+    eval_int (&val.membs[0], val_sp);
+  DoLegitLine( "finding expression" )
+    string_expression (val.expression, val_sp);
+  DoLegit(0)
     if (!spec->constant_map.key_ck(name))
       spec->constant_map.add(name, val);
 
@@ -105,22 +116,22 @@ ProtoconFile::add_constant(Sesp name_sp, Sesp val_sp)
 ProtoconFile::add_let(Sesp name_sp, Sesp val_sp)
 {
   if (!allgood)  return false;
-  Sign good = 1;
-  const char* name = ccstr_of_Sesp (name_sp);
-  DoLegit(  good, "" )
-    good = !!name;
+  DeclLegit( good );
+  const char* name;
+  DoLegitLineP( name, "" )
+    ccstr_of_Sesp (name_sp);
 
   const Cx::String& idx_name = pc_symm_spec->idx_name;
   Xn::NatMap let_vals( pc_symm->membs.sz() );
   for (uint i = 0; good && i < pc_symm->membs.sz(); ++i) {
     index_map[idx_name] = i;
-    DoLegit( good, "" )
-      good = eval_int (&let_vals.membs[i], val_sp);
+    DoLegitLine( "" )
+      eval_int (&let_vals.membs[i], val_sp);
   }
   index_map.erase(idx_name);
-  DoLegit( good, "finding expression" )
-    good = string_expression (let_vals.expression, val_sp);
-  DoLegit( good, "" )
+  DoLegitLine( "finding expression" )
+    string_expression (let_vals.expression, val_sp);
+  DoLegit(0)
     pc_symm_spec->let_map.add(name, let_vals);
   return update_allgood (good);
 }
@@ -129,12 +140,12 @@ ProtoconFile::add_let(Sesp name_sp, Sesp val_sp)
 ProtoconFile::add_scope_let(Sesp name_sp, Sesp val_sp)
 {
   if (!allgood)  return false;
-  Sign good = 1;
-  const char* name = ccstr_of_Sesp (name_sp);
-  DoLegit(  good, "" )
-    good = !!name;
+  DeclLegit( good );
+  const char* name;
+  DoLegitLineP( name, "" )
+    ccstr_of_Sesp (name_sp);
 
-  DoLegit(  good, "" )
+  DoLegit(0)
     scope_let_map[name] = val_sp;
 
   return update_allgood (good);
@@ -150,44 +161,45 @@ ProtoconFile::del_scope_let(Sesp name_sp)
 ProtoconFile::add_access(Sesp vbl_sp, Bit write, Bit random)
 {
   if (!allgood)  return false;
-  bool legit = true;
+  DeclLegit( good );
   const char* vbl_name = 0;
   Sesp vbl_idx_sp = 0;
   Xn::Net& topo = sys->topology;
   const Xn::VblSymm* vbl_symm = 0;
 
   // (aref vbl_name vbl_idx)
-  vbl_name = ccstr_of_Sesp (cadr_of_Sesp (vbl_sp));
-  if (LegitCk( vbl_name, legit, "" ))
+  DoLegitLineP( vbl_name, "" )
+    ccstr_of_Sesp (cadr_of_Sesp (vbl_sp));
+
+  DoLegitP( vbl_symm, "" )
   {
     const Xn::VblSymm** tmp = 0;
     tmp = vbl_map.lookup(vbl_name);
     if (tmp)  vbl_symm = *tmp;
   }
-  if (LegitCk( vbl_symm, legit, "" ))
-  {
-    vbl_idx_sp = caddr_of_Sesp (vbl_sp);
-  }
 
-  if (LegitCk( topo.pc_symms.sz() > 0, legit, "" ))
+  DoLegit(0)
+    vbl_idx_sp = caddr_of_Sesp (vbl_sp);
+
+  DoLegitLine("")
+    topo.pc_symms.sz() > 0;
+
+  DoLegit("")
   {
-    Cx::IntPFmla ipf;
     const Cx::String& idx_name = pc_symm_spec->idx_name;
     Xn::NatMap indices( pc_symm->membs.sz() );
 
     for (uint i = 0; i < pc_symm->membs.sz(); ++i) {
       index_map[idx_name] = i;
-      if (LegitCk( eval_int (&indices.membs[i], vbl_idx_sp), legit, "" )) {}
+      DoLegitLine("")
+        eval_int (&indices.membs[i], vbl_idx_sp);
     }
     index_map.erase(idx_name);
 
-    if (legit) {
-      bool bstat = string_expression(indices.expression, vbl_idx_sp);
-      if (LegitCk(bstat, legit, "string_expression()"))
-      {}
-    }
+    DoLegitLine( "string_expression()" )
+      string_expression(indices.expression, vbl_idx_sp);
 
-    if (legit) {
+    DoLegit(0) {
       if (write) {
         topo.add_write_access(+pc_symm, vbl_symm, indices);
         if (random) {
@@ -200,14 +212,14 @@ ProtoconFile::add_access(Sesp vbl_sp, Bit write, Bit random)
     }
   }
 
-  return update_allgood (legit);
+  return update_allgood (good);
 }
 
   bool
 ProtoconFile::add_symmetric_links(Sesp let_names_sp, Sesp let_vals_list_sp)
 {
   if (!allgood)  return false;
-  Sign good = 1;
+  DeclLegit( good );
   pc_symm_spec->link_symmetries.push(Xn::LinkSymmetry(sz_of_Sesp (let_vals_list_sp)));
   Xn::LinkSymmetry& link_symmetry = pc_symm_spec->link_symmetries.top();
   if (sz_of_Sesp (let_names_sp) == 1) {
@@ -242,8 +254,8 @@ ProtoconFile::add_symmetric_links(Sesp let_names_sp, Sesp let_vals_list_sp)
       tuple_expression.push_delim("(", ", ");
 
       Cx::String val_expression;
-      DoLegit( good, "" )
-        good = string_expression(val_expression, car_of_Sesp (let_val_sp));
+      DoLegitLine( "" )
+        string_expression(val_expression, car_of_Sesp (let_val_sp));
       if (!good)  break;
       tuple_expression += val_expression;
       let_val_sp = cdr_of_Sesp (let_val_sp);
@@ -262,7 +274,7 @@ ProtoconFile::add_symmetric_access(Sesp let_names_sp, Sesp let_vals_list_sp,
                                    Sesp vbls_sp, Bit write, Bit random)
 {
   if (!allgood)  return false;
-  Sign good = 1;
+  DeclLegit( good );
   Xn::LinkSymmetry& link_symmetry = pc_symm_spec->link_symmetries.top();
 
   while (!nil_ck_Sesp (vbls_sp)) {
@@ -272,16 +284,16 @@ ProtoconFile::add_symmetric_access(Sesp let_names_sp, Sesp let_vals_list_sp,
       Sesp let_name_sp = let_names_sp;
       Sesp let_val_sp = car_of_Sesp (let_vals_sp);
       while (good && !nil_ck_Sesp (let_name_sp)) {
-        DoLegit( good, "Tuple must be of the same size!" )
-          good = !nil_ck_Sesp (let_val_sp);
+        DoLegitLine( "Tuple must be of the same size!" )
+          !nil_ck_Sesp (let_val_sp);
         if (!good)  break;
 
         add_scope_let(car_of_Sesp (let_name_sp), car_of_Sesp (let_val_sp));
         let_name_sp = cdr_of_Sesp (let_name_sp);
         let_val_sp = cdr_of_Sesp (let_val_sp);
       }
-      DoLegit( good, "Tuples must be of the same size!" )
-        good = nil_ck_Sesp (let_val_sp);
+      DoLegitLine( "Tuples must be of the same size!" )
+        nil_ck_Sesp (let_val_sp);
       if (!good)  break;
 
       vbl_idcs.push(pc_symm_spec->rvbl_symms.sz());
@@ -309,7 +321,7 @@ ProtoconFile::parse_action(Cx::PFmla& act_pf, Cx::Table<Cx::PFmla>& pc_xns, Sesp
                            bool selfloop, Xn::Vbl::ShadowPuppetRole role)
 {
   if (!allgood)  return false;
-  Sign good = 1;
+  DeclLegit( good );
   Claim( pc_symm );
   const Xn::Net& topo = sys->topology;
   act_pf = false;
@@ -323,8 +335,8 @@ ProtoconFile::parse_action(Cx::PFmla& act_pf, Cx::Table<Cx::PFmla>& pc_xns, Sesp
     const Xn::Pc& pc = *pc_symm->membs[pcidx];
     index_map[idx_name] = pcidx;
     Cx::PFmla guard_pf;
-    DoLegit( good, "eval guard" )
-      good = eval(guard_pf, cadr_of_Sesp (act_sp));
+    DoLegitLine( "eval guard" )
+      eval(guard_pf, cadr_of_Sesp (act_sp));
     if (!good)  continue;
 
     Cx::PFmla assign_pf( true );
@@ -351,14 +363,14 @@ ProtoconFile::parse_action(Cx::PFmla& act_pf, Cx::Table<Cx::PFmla>& pc_xns, Sesp
       Xn::Vbl* vbl = 0;
       Cx::IntPFmla val;
 
-      DoLegit( good, "eval variable" )
+      DoLegit( "eval variable" )
       {
         if (!all_wild)
           good = eval_vbl(&vbl, vbl_sp);
       }
 
       bool wild = false;
-      DoLegit( good, "eval value" )
+      DoLegit( "eval value" )
       {
         if (all_wild) {
         }
@@ -370,7 +382,7 @@ ProtoconFile::parse_action(Cx::PFmla& act_pf, Cx::Table<Cx::PFmla>& pc_xns, Sesp
         }
       }
 
-      DoLegit( good, "non-writable variable in assignment" )
+      DoLegit( "non-writable variable in assignment" )
       {
         bool found = false;
         for (uint i = 0; i < pc.wvbls.sz(); ++i) {
@@ -441,11 +453,11 @@ ProtoconFile::parse_action(Cx::PFmla& act_pf, Cx::Table<Cx::PFmla>& pc_xns, Sesp
 ProtoconFile::add_action(Sesp act_sp, Xn::Vbl::ShadowPuppetRole role)
 {
   if (!allgood)  return false;
-  Sign good = 1;
+  DeclLegit( good );
   Claim( pc_symm );
   Xn::Net& topo = sys->topology;
 
-  DoLegit( good, "" )
+  DoLegit( "" )
   {
     if (role != Xn::Vbl::Puppet) {
       Cx::String act_expression;
@@ -458,8 +470,8 @@ ProtoconFile::add_action(Sesp act_sp, Xn::Vbl::ShadowPuppetRole role)
 
   Cx::PFmla act_pf( false );
   Cx::Table<Cx::PFmla> pc_xns;
-  DoLegit( good, "parse action" )
-    good = parse_action(act_pf, pc_xns, act_sp, true, role);
+  DoLegitLine( "parse action" )
+    parse_action(act_pf, pc_xns, act_sp, true, role);
 
   if (good) {
     for (uint i = 0; i < pc_symm->membs.sz(); ++i) {
@@ -473,10 +485,10 @@ ProtoconFile::add_action(Sesp act_sp, Xn::Vbl::ShadowPuppetRole role)
   }
 
   if (false)
-  DoLegit(good, "self-loop")
-    good = !act_pf.overlap_ck(topo.identity_xn);
+  DoLegitLine("self-loop")
+    !act_pf.overlap_ck(topo.identity_xn);
 
-  DoLegit(good, "")
+  DoLegit("")
   {
     if (role != Xn::Vbl::Puppet) {
       const Cx::PFmla& shadow_act_pf =
@@ -506,10 +518,10 @@ ProtoconFile::add_action(Sesp act_sp, Xn::Vbl::ShadowPuppetRole role)
 ProtoconFile::forbid_action(Sesp act_sp)
 {
   if (!allgood)  return false;
-  Sign good = 1;
+  DeclLegit( good );
   Claim( pc_symm );
 
-  DoLegit( good, "" )
+  DoLegit( "" )
   {
     Cx::String act_expression;
     good = string_expression (act_expression, act_sp);
@@ -520,11 +532,10 @@ ProtoconFile::forbid_action(Sesp act_sp)
 
   Cx::PFmla act_pf( false );
   Cx::Table<Cx::PFmla> pc_xns;
-  DoLegit( good, "parse action" ) {
-    good = parse_action(act_pf, pc_xns, act_sp, false, Xn::Vbl::Puppet);
-  }
+  DoLegitLine( "parse action" )
+    parse_action(act_pf, pc_xns, act_sp, false, Xn::Vbl::Puppet);
 
-  DoLegit( good, "" ) {
+  DoLegit( "" ) {
     for (uint i = 0; i < pc_symm->membs.sz(); ++i) {
       pc_symm->membs[i]->forbid_xn |= pc_xns[i];
     }
@@ -537,10 +548,10 @@ ProtoconFile::forbid_action(Sesp act_sp)
 ProtoconFile::permit_action(Sesp act_sp)
 {
   if (!allgood)  return false;
-  Sign good = 1;
+  DeclLegit( good );
   Claim( pc_symm );
 
-  DoLegit( good, "" )
+  DoLegit( "" )
   {
     Cx::String act_expression;
     good = string_expression (act_expression, act_sp);
@@ -551,11 +562,10 @@ ProtoconFile::permit_action(Sesp act_sp)
 
   Cx::PFmla act_pf( false );
   Cx::Table<Cx::PFmla> pc_xns;
-  DoLegit( good, "parse action" ) {
-    good = parse_action(act_pf, pc_xns, act_sp, false, Xn::Vbl::Puppet);
-  }
+  DoLegitLine( "parse action" )
+    parse_action(act_pf, pc_xns, act_sp, false, Xn::Vbl::Puppet);
 
-  DoLegit( good, "" ) {
+  DoLegit( "" ) {
     for (uint i = 0; i < pc_symm->membs.sz(); ++i) {
       pc_symm->membs[i]->permit_xn |= pc_xns[i];
     }
@@ -568,22 +578,22 @@ ProtoconFile::permit_action(Sesp act_sp)
 ProtoconFile::add_pc_predicate(Sesp name_sp, Sesp val_sp)
 {
   if (!allgood)  return false;
-  Sign good = 1;
-  const char* name = ccstr_of_Sesp (name_sp);
-  DoLegit(  good, "" )
-    good = !!name;
+  DeclLegit( good );
+  const char* name;
+  DoLegitLineP( name, "" )
+    ccstr_of_Sesp (name_sp);
 
   const Cx::String& idx_name = pc_symm_spec->idx_name;
   Xn::NatPredicateMap let_vals( pc_symm->membs.sz() );
   for (uint i = 0; good && i < pc_symm->membs.sz(); ++i) {
     index_map[idx_name] = i;
-    DoLegit( good, "" )
-      good = eval (let_vals.membs[i], val_sp);
+    DoLegitLine( "" )
+      eval (let_vals.membs[i], val_sp);
   }
   index_map.erase(idx_name);
-  DoLegit( good, "finding expression" )
-    good = string_expression (let_vals.expression, val_sp);
-  DoLegit( good, "" )
+  DoLegitLine( "finding expression" )
+    string_expression (let_vals.expression, val_sp);
+  DoLegit( "" )
     pc_symm->predicate_map.add(name, let_vals);
   return update_allgood (good);
 }
@@ -592,15 +602,15 @@ ProtoconFile::add_pc_predicate(Sesp name_sp, Sesp val_sp)
 ProtoconFile::add_pc_assume(Sesp assume_sp)
 {
   if (!allgood)  return false;
-  Sign good = 1;
+  DeclLegit( good );
 
   const Cx::String& idx_name = pc_symm_spec->idx_name;
   Cx::PFmla pf;
 
   for (uint i = 0; i < pc_symm->membs.sz(); ++i) {
     index_map[idx_name] = i;
-    DoLegit( good, "" )
-      good = eval(pf, assume_sp);
+    DoLegitLine( "" )
+      eval(pf, assume_sp);
 
     if (!good)  break;
     pc_symm->membs[i]->closed_assume &= pf;
@@ -608,10 +618,10 @@ ProtoconFile::add_pc_assume(Sesp assume_sp)
   }
 
   Cx::String assume_expression;
-  DoLegit( good, "" )
-    good = parend_string_expression(assume_expression, assume_sp);
+  DoLegitLine( "" )
+    parend_string_expression(assume_expression, assume_sp);
 
-  DoLegit( good, "" ) {
+  DoLegit( "" ) {
     if (!pc_symm_spec->closed_assume_expression.empty_ck()) {
       pc_symm_spec->closed_assume_expression << " && ";
     }
@@ -625,17 +635,17 @@ ProtoconFile::add_pc_assume(Sesp assume_sp)
 ProtoconFile::add_pc_legit(Sesp legit_sp)
 {
   if (!allgood)  return false;
-  Sign good = 1;
+  DeclLegit( good );
 
   const Cx::String& idx_name = pc_symm_spec->idx_name;
   Cx::PFmla pf;
 
   for (uint i = 0; i < pc_symm->membs.sz(); ++i) {
     index_map[idx_name] = i;
-    DoLegit( good, "" )
-      good = eval(pf, legit_sp);
+    DoLegitLine( "" )
+      eval(pf, legit_sp);
 
-    DoLegit( good, "" )
+    DoLegit( "" )
     {
       sys->invariant &= pf;
       pc_symm->membs[i]->invariant &= pf;
@@ -643,10 +653,10 @@ ProtoconFile::add_pc_legit(Sesp legit_sp)
   }
 
   Cx::String invariant_expression;
-  DoLegit( good, "" )
-    good = string_expression(invariant_expression, legit_sp);
+  DoLegitLine( "" )
+    string_expression(invariant_expression, legit_sp);
 
-  DoLegit( good, "" )
+  DoLegit( "" )
   {
     if (!pc_symm_spec->invariant_expression.empty_ck()) {
       pc_symm_spec->invariant_expression =
@@ -671,20 +681,21 @@ ProtoconFile::finish_pc_def()
 ProtoconFile::add_predicate(Sesp name_sp, Sesp val_sp)
 {
   if (!allgood)  return false;
-  Sign good = 1;
-  const char* name = ccstr_of_Sesp (name_sp);
-  DoLegit(  good, "" )
-    good = !!name;
+  DeclLegit( good );
+  const char* name;
+
+  DoLegitLineP( name, "" )
+    ccstr_of_Sesp (name_sp);
 
   Cx::PFmla pf(false);
   Cx::String expression;
-  DoLegit( good, 0 )
-    good = eval(pf, val_sp);
+  DoLegitLine( 0 )
+    eval(pf, val_sp);
 
-  DoLegit( good, "finding expression" )
-    good = string_expression (expression, val_sp);
+  DoLegitLine( "finding expression" )
+    string_expression (expression, val_sp);
 
-  DoLegit( good, 0 )
+  DoLegit( 0 )
     sys->predicate_map.add(name, pf, expression);
 
   return update_allgood (good);
@@ -694,20 +705,20 @@ ProtoconFile::add_predicate(Sesp name_sp, Sesp val_sp)
 ProtoconFile::add_assume(Sesp assume_sp)
 {
   if (!allgood)  return false;
-  Sign good = 1;
+  DeclLegit( good );
 
   Cx::PFmla pf;
-  DoLegit( good, "parse invariant" )
-    good = eval(pf, assume_sp);
+  DoLegitLine( "parse invariant" )
+    eval(pf, assume_sp);
 
-  DoLegit( good, "" )
+  DoLegit(0)
     sys->closed_assume &= pf;
 
   Cx::String str;
-  DoLegit( good, "convert invariant expression to string" )
-    good = parend_string_expression(str, assume_sp);
+  DoLegitLine( "convert invariant expression to string" )
+    parend_string_expression(str, assume_sp);
 
-  DoLegit( good, "" ) {
+  DoLegit(0) {
     if (spec->closed_assume_expression != "") {
       spec->closed_assume_expression << "\n  &&\n  ";
     }
@@ -721,13 +732,11 @@ ProtoconFile::add_assume(Sesp assume_sp)
 ProtoconFile::assign_legit_mode(Xn::InvariantStyle style, Xn::InvariantScope scope)
 {
   if (!allgood)  return false;
-  Sign good = 1;
+  DeclLegit( good );
   if (legit_mode_assigned) {
-    DoLegit( good, "Invariant must have the same style in all places." ) {
-      good =
-        (spec->invariant_style == style &&
-         spec->invariant_scope == scope);
-    }
+    DoLegitLine( "Invariant must have the same style in all places." )
+      (spec->invariant_style == style &&
+       spec->invariant_scope == scope);
   }
   spec->invariant_style = style;
   spec->invariant_scope = scope;
@@ -739,20 +748,20 @@ ProtoconFile::assign_legit_mode(Xn::InvariantStyle style, Xn::InvariantScope sco
 ProtoconFile::add_legit(Sesp legit_sp)
 {
   if (!allgood)  return false;
-  Sign good = 1;
+  DeclLegit( good );
 
   Cx::PFmla pf;
-  DoLegit( good, "parse invariant" )
-    good = eval(pf, legit_sp);
+  DoLegitLine( "parse invariant" )
+    eval(pf, legit_sp);
 
-  DoLegit( good, "" )
+  DoLegit(0)
     sys->invariant &= pf;
 
   Cx::String invariant_expression;
-  DoLegit( good, "convert invariant expression to string" )
-    good = string_expression(invariant_expression, legit_sp);
+  DoLegitLine( "convert invariant expression to string" )
+    string_expression(invariant_expression, legit_sp);
 
-  DoLegit( good, "" ) {
+  DoLegit(0) {
     if (spec->invariant_expression != "") {
       spec->invariant_expression =
         Cx::String("(") + spec->invariant_expression + ")\n  &&\n  ";
@@ -767,14 +776,14 @@ ProtoconFile::add_legit(Sesp legit_sp)
 ProtoconFile::string_expression(Cx::String& ss, Sesp a)
 {
   if (!allgood)  return false;
-  Sign good = 1;
+  DeclLegit( good );
 
   const char* key = 0;
 
-  DoLegit( good, "" )
-    good = !!a;
+  DoLegitLine( "" )
+    !!a;
 
-  DoLegit( good, "" )
+  DoLegitP( key, "ccstr_of_Sesp()" )
   {
     const char* name = ccstr_of_Sesp (a);
     if (name)
@@ -798,9 +807,6 @@ ProtoconFile::string_expression(Cx::String& ss, Sesp a)
 
     key = ccstr_of_Sesp (car_of_Sesp (a));
   }
-
-  DoLegit( good, "ccstr_of_Sesp()" )
-    good = !!key;
 
   if (!good) {
   }
@@ -931,18 +937,19 @@ ProtoconFile::parend_string_expression(Cx::String& ss, Sesp a)
 ProtoconFile::eval(Cx::PFmla& pf, Sesp a)
 {
   if (!allgood)  return false;
-  bool good = true;
+  DeclLegit( good );
 
-  if (LegitCk(a, good, ""))
-  {
+  DoLegitLine("")
+    !!a;
+
+  DoLegit(0) {
     const char* name = ccstr_of_Sesp (a);
     if (name)
     {
-      if (!lookup_pfmla(&pf, name)) {
+      good = lookup_pfmla(&pf, name);
+      if (!good)
         bad_parse(name, "Unknown predicate name.");
-        return update_allgood(false);
-      }
-      return good;
+      return update_allgood(good);
     }
   }
 
@@ -968,59 +975,80 @@ ProtoconFile::eval(Cx::PFmla& pf, Sesp a)
   if (eq_cstr (key, "(bool)") ||
       eq_cstr (key, "(int)" ))
   {
-    if (LegitCk( eval(pf, b), good, "" )) {
-      // That's all.
-    }
+    DoLegitLine("")
+      eval(pf, b);
   }
   else if (eq_cstr (key, "!")) {
-    if (LegitCk( eval(pf, b), good, "" )) {
+    DoLegitLine("")
+      eval(pf, b);
+    DoLegit(0)
       pf = !pf;
-    }
   }
   else if (eq_cstr (key, "&&")) {
-    if (LegitCk( eval(pf, b), good, "" )) {
+    DoLegitLine("")
+      eval(pf, b);
+
+    DoLegit(0) {
       if (!pf.sat_ck()) {
         // Short circuit.
       }
-      else if (LegitCk( eval(pf_c, c), good, "" )) {
-        pf &= pf_c;
+      else {
+        DoLegitLine("")
+          eval(pf_c, c);
+        if (good)
+          pf &= pf_c;
       }
     }
   }
   else if (eq_cstr (key, "||")) {
-    if (LegitCk( eval(pf, b), good, "" )) {
+    DoLegitLine("")
+      eval(pf, b);
+
+    DoLegit(0) {
       if (pf.tautology_ck()) {
         // Short circuit.
       }
-      else if (LegitCk( eval(pf_c, c), good, "" )) {
-        pf |= pf_c;
+      else {
+        DoLegitLine("")
+          eval(pf_c, c);
+        if (good)
+          pf |= pf_c;
       }
     }
   }
   else if (eq_cstr (key, "==>")) {
-    if (LegitCk( eval(pf, b), good, "" )) {
+    DoLegitLine("")
+      eval(pf, b);
+    DoLegit(0) {
       if (!pf.sat_ck()) {
         // Short circuit.
         pf = true;
       }
-      else if (LegitCk( eval(pf_c, c), good, "" )) {
-        pf = ~pf | pf_c;
+      else {
+        DoLegitLine("")
+          eval(pf_c, c);
+        if (good)
+          pf = ~pf | pf_c;
       }
     }
   }
-  else if (eq_cstr (key, "<=>")) {
-    if (LegitCk( eval(pf, b), good, "" )) {
-      if (LegitCk( eval(pf_c, c), good, "" )) {
-        pf.defeq_xnor(pf_c);
-      }
-    }
-  }
-  else if (eq_cstr (key, "xor")) {
-    if (LegitCk( eval(pf, b), good, "" )) {
-      if (LegitCk( eval(pf_c, c), good, "" )) {
-        pf ^= pf_c;
-      }
-    }
+  else if (eq_cstr (key, "<=>") ||
+           eq_cstr (key, "xor")
+          )
+  {
+    DoLegitLine("")
+      eval(pf, b);
+    DoLegitLine("")
+      eval(pf_c, c);
+
+    if (!good)
+      /* Nothing.*/;
+    else if (eq_cstr (key, "<=>"))
+      pf.defeq_xnor(pf_c);
+    else if (eq_cstr (key, "xor"))
+      pf ^= pf_c;
+    else
+      Claim( 0 && "Missing case." );
   }
   else if (eq_cstr (key, "<" ) ||
            eq_cstr (key, "<=") ||
@@ -1029,15 +1057,19 @@ ProtoconFile::eval(Cx::PFmla& pf, Sesp a)
            eq_cstr (key, ">=") ||
            eq_cstr (key, ">" ))
   {
-    if (LegitCk( eval(ipf_b, b), good, "" )) {
-      if (LegitCk( eval(ipf_c, c), good, "" )) {
-        if      (eq_cstr (key, "<" ))  pf = (ipf_b < ipf_c);
-        else if (eq_cstr (key, "<="))  pf = (ipf_b <= ipf_c);
-        else if (eq_cstr (key, "!="))  pf = (ipf_b != ipf_c);
-        else if (eq_cstr (key, "=="))  pf = (ipf_b == ipf_c);
-        else if (eq_cstr (key, ">="))  pf = (ipf_b >= ipf_c);
-        else if (eq_cstr (key, ">" ))  pf = (ipf_b > ipf_c);
-      }
+    DoLegitLine("")
+      eval(ipf_b, b);
+    DoLegitLine("")
+      eval(ipf_c, c);
+
+    DoLegit(0) {
+      if      (eq_cstr (key, "<" ))  pf = (ipf_b < ipf_c);
+      else if (eq_cstr (key, "<="))  pf = (ipf_b <= ipf_c);
+      else if (eq_cstr (key, "!="))  pf = (ipf_b != ipf_c);
+      else if (eq_cstr (key, "=="))  pf = (ipf_b == ipf_c);
+      else if (eq_cstr (key, ">="))  pf = (ipf_b >= ipf_c);
+      else if (eq_cstr (key, ">" ))  pf = (ipf_b > ipf_c);
+      else Claim(0 && "Missing case.");
     }
   }
   else if (eq_cstr (key, "forall") ||
@@ -1046,11 +1078,14 @@ ProtoconFile::eval(Cx::PFmla& pf, Sesp a)
           )
   {
     const char* idxname = ccstr_of_Sesp (b);
-    if (LegitCk( idxname, good, "" ))
-    {}
-    if (LegitCk( eval(ipf_c, c), good, "" ))
-    {}
-    if (LegitCk( ipf_c.vbls.sz() == 0, good, "" )) {
+    DoLegitLine("")
+      !!idxname;
+    DoLegitLine("")
+      eval(ipf_c, c);
+    DoLegitLine("")
+      ipf_c.vbls.sz() == 0;
+
+    DoLegit("") {
       const uint n = ipf_c.state_map.sz();
 
       if (eq_cstr (key, "forall")) {
@@ -1066,8 +1101,9 @@ ProtoconFile::eval(Cx::PFmla& pf, Sesp a)
 #if 1
       for (uint i = 0; good && i < n; ++i) {
         index_map[idxname] = ipf_c.state_map[i];
-        if (LegitCk( eval(pf_c, d), good, "" ))
-        {
+        DoLegitLine("")
+          eval(pf_c, d);
+        DoLegit("") {
           if (eq_cstr (key, "forall")) {
             pf &= pf_c;
           }
@@ -1087,8 +1123,8 @@ ProtoconFile::eval(Cx::PFmla& pf, Sesp a)
 
       for (uint i = 0; good && i < n; ++i) {
         index_map[idxname] = ipf_c.state_map[i];
-        if (LegitCk( eval(pfmlas[i], d), good, "" ))
-        {}
+        DoLegitLine("")
+          eval(pfmlas[i], d);
       }
 
       if (good) {
@@ -1139,39 +1175,42 @@ ProtoconFile::eval(Cx::PFmla& pf, Sesp a)
 ProtoconFile::eval(Cx::IntPFmla& ipf, Sesp a)
 {
   if (!allgood)  return false;
-  bool good = true;
+  DeclLegit( good );
 
-  if (LegitCk(a, good, ""))
+  DoLegitLine( "" )
+    !!a;
+
+  DoLegit( "" )
   {
     const char* name = ccstr_of_Sesp (a);
     if (name)
     {
-      {
-        Sesp* val_sp = scope_let_map.lookup(name);
-        if (val_sp) {
-          if (LegitCk( eval(ipf, *val_sp), good, "evaluating scope'd let" )) {
-            return true;
-          }
-          return update_allgood (false);
-        }
+      Sesp* val_sp = scope_let_map.lookup(name);
+      if (val_sp) {
+        DoLegitLine( "evaluating scope'd let" )
+          eval(ipf, *val_sp);
+        return update_allgood (good);
       }
 
       int val = 0;
-      if (LegitCk( lookup_int(&val, name), good, "lookup_int()" )) {
+      DoLegitLine( "lookup_int()" )
+        lookup_int(&val, name);
+
+      DoLegit(0)
         ipf = Cx::IntPFmla( val );
-        //DBog2("index %s is: %d", name, *val);
-      }
-      if (LegitCk( good, allgood, "" )) {}
-      return good;
+      return update_allgood (good);
     }
 
     uint x = 0;
     if (uint_of_Sesp (a, &x)) {
       ipf = Cx::IntPFmla( x );
       //DBog1("int is: %u", x);
-      return good;
+      return update_allgood (good);
     }
   }
+
+  if (!good)
+    return update_allgood (good);
 
   Sesp b = cdr_of_Sesp (a);
   Sesp c = cdr_of_Sesp (b);
@@ -1186,12 +1225,11 @@ ProtoconFile::eval(Cx::IntPFmla& ipf, Sesp a)
 
   Cx::IntPFmla ipf_c;
 
-  if (LegitCk(a, good, "car_of_Sesp()"))
-  {}
-  if (LegitCk(key, good, "ccstr_of_Sesp()"))
-  {
-    //DBog1("key is: %s", key);
-  }
+  DoLegitLine("car_of_Sesp()")
+    !!a;
+  DoLegitLine("ccstr_of_Sesp()")
+    !!key;
+
   if (false && !good)
   {
     if (nil_ck_Sesp (a))
@@ -1208,80 +1246,62 @@ ProtoconFile::eval(Cx::IntPFmla& ipf, Sesp a)
   if (!good)
   {}
   else if (eq_cstr (key, "(int)")) {
-    if (LegitCk( eval(ipf, b), good, "" )) {
-      // That's all.
-    }
+    DoLegitLine("")
+      eval(ipf, b);
   }
   else if (eq_cstr (key, "negate")) {
-    if (LegitCk( eval(ipf, b), good, "" )) {
+    DoLegitLine("")
+      eval(ipf, b);
+    DoLegit(0)
       ipf.negate();
-    }
   }
-  else if (eq_cstr (key, "+")) {
-    if (LegitCk( eval(ipf, b), good, "" )) {
-      if (LegitCk( eval(ipf_c, c), good, "" )) {
-        ipf += ipf_c;
-      }
-    }
-  }
-  else if (eq_cstr (key, "-")) {
-    if (LegitCk( eval(ipf, b), good, "" )) {
-      if (LegitCk( eval(ipf_c, c), good, "" )) {
-        ipf -= ipf_c;
-      }
-    }
-  }
-  else if (eq_cstr (key, "*")) {
-    if (LegitCk( eval(ipf, b), good, "" )) {
-      if (LegitCk( eval(ipf_c, c), good, "" )) {
-        ipf *= ipf_c;
-      }
-    }
-  }
-  else if (eq_cstr (key, "/")) {
-    if (LegitCk( eval(ipf, b), good, "" )) {
-      if (LegitCk( eval(ipf_c, c), good, "" )) {
-        ipf /= ipf_c;
-      }
-    }
-  }
-  else if (eq_cstr (key, "%")) {
-    if (LegitCk( eval(ipf, b), good, "" )) {
-      if (LegitCk( eval(ipf_c, c), good, "" )) {
-        ipf %= ipf_c;
-      }
-    }
-  }
-  else if (eq_cstr (key, "^")) {
-    if (LegitCk( eval(ipf, b), good, "" )) {
-      if (LegitCk( eval(ipf_c, c), good, "" )) {
-        ipf.defeq_pow(ipf_c);
-      }
-    }
-  }
-  else if (eq_cstr (key, "min")) {
-    if (LegitCk( eval(ipf, b), good, "" )) {
-      if (LegitCk( eval(ipf_c, c), good, "" )) {
-        ipf.defeq_min(ipf_c);
-      }
-    }
-  }
-  else if (eq_cstr (key, "max")) {
-    if (LegitCk( eval(ipf, b), good, "" )) {
-      if (LegitCk( eval(ipf_c, c), good, "" )) {
-        ipf.defeq_max(ipf_c);
-      }
-    }
+  else if (eq_cstr (key, "+") ||
+           eq_cstr (key, "-") ||
+           eq_cstr (key, "*") ||
+           eq_cstr (key, "/") ||
+           eq_cstr (key, "%") ||
+           eq_cstr (key, "^") ||
+           eq_cstr (key, "min") ||
+           eq_cstr (key, "max")
+          ) {
+    DoLegitLine("")
+      eval(ipf, b);
+    DoLegitLine("")
+      eval(ipf_c, c);
+    if (!good)
+      /*Nothing*/;
+    else if (eq_cstr (key, "+"))
+      ipf += ipf_c;
+    else if (eq_cstr (key, "-"))
+      ipf -= ipf_c;
+    else if (eq_cstr (key, "*"))
+      ipf *= ipf_c;
+    else if (eq_cstr (key, "/"))
+      ipf /= ipf_c;
+    else if (eq_cstr (key, "%"))
+      ipf %= ipf_c;
+    else if (eq_cstr (key, "^"))
+      ipf.defeq_pow(ipf_c);
+    else if (eq_cstr (key, "min"))
+      ipf.defeq_min(ipf_c);
+    else if (eq_cstr (key, "max"))
+      ipf.defeq_max(ipf_c);
+    else
+      Claim(0 && "Missed a case!");
   }
   else if (eq_cstr (key, "NatDom")) {
     uint domsz = 0;
-    if (LegitCk(eval_gtz (&domsz, b), good, "")) {
+    DoLegitLine("")
+      eval_gtz (&domsz, b);
+    DoLegit(0)
       ipf = Cx::IntPFmla( 1, 0, domsz );
-    }
   }
   else if (eq_cstr (key, "iif")) {
     Cx::PFmla pf( true );
-    if (LegitCk(eval(pf, b), good, "")) {
+    DoLegitLine("")
+      eval(pf, b);
+
+    DoLegit("") {
       if (pf.tautology_ck()) {
         b = c;
       }
@@ -1293,14 +1313,15 @@ ProtoconFile::eval(Cx::IntPFmla& ipf, Sesp a)
         good = false;
       }
     }
-    if (LegitCk(eval(ipf, b), good, "")) {
-    }
+    DoLegitLine("")
+      eval(ipf, b);
   }
   else if (eq_cstr (key, "aref")) {
     Xn::Vbl* vbl = 0;
-    if (LegitCk( eval_vbl(&vbl, b, c), good, "" )) {
+    DoLegitLine("")
+      eval_vbl(&vbl, b, c);
+    DoLegit(0)
       ipf = Cx::IntPFmla(sys->topology.pfmla_vbl(*vbl));
-    }
   }
   else {
     good = false;
@@ -1313,36 +1334,47 @@ ProtoconFile::eval(Cx::IntPFmla& ipf, Sesp a)
   bool
 ProtoconFile::eval_int(int* ret, Sesp sp)
 {
-  bool legit = true;
+  DeclLegit( good );
   Cx::IntPFmla ipf;
-  if (LegitCk( eval(ipf, sp), legit, "" )) {
-    if (LegitCk( ipf.state_map.sz() == 1, legit, "" )) {
-      *ret = ipf.state_map[0];
-    }
-  }
-  return update_allgood (legit);
+  DoLegitLine("")
+    eval(ipf, sp);
+
+  DoLegitLine("")
+    ipf.state_map.sz() == 1;
+
+  DoLegit(0)
+    *ret = ipf.state_map[0];
+  return update_allgood (good);
 }
 
   bool
 ProtoconFile::eval_nat(uint* ret, Sesp sp)
 {
   int x = 0;
-  bool legit = eval_int (&x, sp);
-  if (LegitCk( x >= 0, legit, "" )) {
+  DeclLegit( good );
+  DoLegitLine("")
+    eval_int (&x, sp);
+
+  DoLegitLine("cannot be negative")
+    x >= 0;
+
+  DoLegit(0)
     *ret = (uint) x;
-  }
-  return update_allgood (legit);
+  return update_allgood (good);
 }
 
   bool
 ProtoconFile::eval_gtz(uint* ret, Sesp sp)
 {
   int x = 0;
-  bool legit = eval_int (&x, sp);
-  if (LegitCk( x > 0, legit, "" )) {
+  DeclLegit( good );
+  DoLegitLine("")
+    eval_int (&x, sp);
+  DoLegitLine("must be positive")
+    x > 0;
+  DoLegit(0)
     *ret = (uint) x;
-  }
-  return update_allgood (legit);
+  return update_allgood (good);
 }
 
   bool
@@ -1355,20 +1387,20 @@ ProtoconFile::eval_vbl(Xn::Vbl** ret, Sesp a)
   bool
 ProtoconFile::eval_vbl(Xn::Vbl** ret, Sesp b, Sesp c)
 {
-  Sign good = 1;
+  DeclLegit( good );
 
-  DoLegit( good, "null variable or index?!" )
-    good = b && c;
+  DoLegitLine( "null variable or index?!" )
+    b && c;
 
   const char* name = 0;
-  DoLegit( good, "variable needs name" )
+  DoLegit( "variable needs name" )
   {
     name = ccstr_of_Sesp (b);
     good = !!name;
   }
 
   const Xn::VblSymm* symm = 0;
-  DoLegit( good, "variable lookup" )
+  DoLegit( "variable lookup" )
   {
     const Xn::VblSymm** tmp = vbl_map.lookup(name);
     good = !!tmp;
@@ -1377,13 +1409,13 @@ ProtoconFile::eval_vbl(Xn::Vbl** ret, Sesp b, Sesp c)
   }
 
   int idx = 0;
-  DoLegit( good, "eval array index" )
-    good = eval_int(&idx, c);
+  DoLegitLine( "eval array index" )
+    eval_int(&idx, c);
 
-  DoLegit( good, "" )
+  DoLegit(0)
     *ret = symm->membs[umod_int (idx, symm->membs.sz())];
 
-  DoLegit( good, "process needs read access to variable" ) {
+  DoLegit( "process needs read access to variable" ) {
     if ((bool)pc_symm) {
       const int* pcidx = index_map.lookup(pc_symm_spec->idx_name);
       if (pcidx) {

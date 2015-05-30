@@ -153,17 +153,16 @@ oput_protocon_pc_act (Cx::OFile& of, XFile* xf,
                       const Cx::Table<Cx::String>& guard_vbls,
                       const Cx::Table<Cx::String>& assign_vbls)
 {
-  Sign good = 1;
+  DeclLegit( good );
   bool clause = false;
   of << "    ( ";
   for (uint i = 0;
        good && i < (guard_vbls.sz() + assign_vbls.sz());
        ++i)
   {
-    const char* tok = nextok_XFile (xf, 0, 0);
-
-    DoLegit(good, "read token")
-      good = !!tok;
+    const char* tok;
+    DoLegitLineP(tok, "read token")
+      nextok_XFile (xf, 0, 0);
 
     uint m = 0;
     Cx::Table<uint> vals;
@@ -248,7 +247,7 @@ oput_protocon_pc_acts (Cx::OFile& of, const Xn::PcSymm& pc_symm,
                        OSPc* ospc,
                        bool use_espresso)
 {
-  Sign good = 1;
+  DeclLegit( good );
   const Xn::PcSymmSpec& pc_symm_spec = *pc_symm.spec;
   if (pc_symm_spec.shadow_act_strings.sz() > 0) {
     of << "  shadow action:\n";
@@ -308,8 +307,8 @@ oput_protocon_pc_acts (Cx::OFile& of, const Xn::PcSymm& pc_symm,
     return true;
   }
 
-  DoLegit( good, "spawn espresso" )
-    good = spawn_OSPc (ospc);
+  DoLegitLine( "spawn espresso" )
+    spawn_OSPc (ospc);
 
   if (good) {
     Cx::OFile espresso_xf(ospc->of);
@@ -319,24 +318,23 @@ oput_protocon_pc_acts (Cx::OFile& of, const Xn::PcSymm& pc_symm,
 
   while (good && !skip_cstr_XFile (ospc->xf, ".p"))
   {
-    DoLegit(good, "get line")
-      good = !!getline_XFile (ospc->xf);
+    DoLegitLine("get line")
+      !!getline_XFile (ospc->xf);
   }
 
   uint n = 0;
-  DoLegit(good, "read number of lines from espresso")
-    good = xget_uint_XFile (ospc->xf, &n);
+  DoLegitLine("read number of lines from espresso")
+    xget_uint_XFile (ospc->xf, &n);
 
   getline_XFile (ospc->xf);
 
   for (uint i = 0; good && i < n; ++i) {
     XFile olay[1];
 
-    DoLegit(good, "get line from espresso")
-      good = getlined_olay_XFile (olay, ospc->xf, "\n");
+    DoLegitLine("get line from espresso")
+      getlined_olay_XFile (olay, ospc->xf, "\n");
 
-    DoLegit(good, 0)
-      good =
+    DoLegitLine(0)
       oput_protocon_pc_act (of, olay, guard_vbls, assign_vbls);
   }
   of << "    ;\n";
@@ -439,7 +437,7 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys,
                     bool use_espresso,
                     const char* comment)
 {
-  Sign good = 1;
+  DeclLegit( good );
   OSPc ospc[1];
   *ospc = dflt_OSPc ();
 
@@ -510,12 +508,12 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys,
     oput_protocon_pc_lets (of, pc_symm);
     oput_protocon_pc_vbls (of, pc_symm);
     oput_protocon_pc_predicates (of, pc_symm);
-    DoLegit(good, "output assume")
-      good = oput_protocon_pc_assume (of, pc_symm);
-    DoLegit(good, "output invariant")
-      good = oput_protocon_pc_invariant (of, pc_symm, style_str);
-    DoLegit(good, "output actions")
-      good = oput_protocon_pc_acts (of, pc_symm, acts, ospc, use_espresso);
+    DoLegitLine("output assume")
+      oput_protocon_pc_assume (of, pc_symm);
+    DoLegitLine("output invariant")
+      oput_protocon_pc_invariant (of, pc_symm, style_str);
+    DoLegitLine("output actions")
+      oput_protocon_pc_acts (of, pc_symm, acts, ospc, use_espresso);
     of << "}\n";
   }
 

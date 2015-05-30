@@ -65,8 +65,7 @@ xget_dimacs_result (XFile* xf, bool* sat, BitTable evs)
     void
 extl_solve_CnfFmla (CnfFmla* fmla, bool* sat, BitTable evs)
 {
-    bool legit = true;
-    bool good = true;
+  DeclLegit( good );
     DecloStack1( OSPc, ospc, dflt_OSPc () );
     OFileB ofb[1];
     XFileB xfb[1];
@@ -98,8 +97,10 @@ extl_solve_CnfFmla (CnfFmla* fmla, bool* sat, BitTable evs)
         PushTable( ospc->args, cons1_AlphaTab ("sat.out") );
     }
 
-    good = spawn_OSPc (ospc);
-    if (LegitCk( good, legit, "spawn_OSPc()" ))
+    DoLegitLine( "spawning solver" )
+      spawn_OSPc (ospc);
+
+    DoLegit( 0 )
     {
       if (SatSolve_Z3)
       {

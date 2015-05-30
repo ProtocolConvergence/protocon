@@ -125,7 +125,7 @@ stabilization_search(vector<uint>& ret_actions,
   }
   conflicts.flush_new_conflicts();
 
-  Sign good = 1;
+  DeclLegit( good );
   AddConvergenceOpt opt(global_opt);
   Cx::OFileB log_ofile;
 
@@ -139,10 +139,9 @@ stabilization_search(vector<uint>& ret_actions,
 
   Cx::Table< Cx::Table<uint> > act_layers;
 
-  DoLegit( good, 0 ) {
-    good = stabilization_search_init
-      (synctx, sys, systems, log_ofile, opt, infile_opt, exec_opt, act_layers);
-  }
+  DoLegitLine( 0 )
+    stabilization_search_init
+    (synctx, sys, systems, log_ofile, opt, infile_opt, exec_opt, act_layers);
 
   PartialSynthesis& synlvl = synctx.base_partial;
   synctx.done_ck_fn = done_ck;

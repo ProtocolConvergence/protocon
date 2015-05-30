@@ -107,8 +107,7 @@ oput_pla_pc (OFile* of, const XnPc* pc, const XnSys* sys,
   bool
 do_pla_XnSys (const XnSys* sys, const TableT(XnRule) rules)
 {
-  bool good = true;
-  bool legit = true;
+  DeclLegit( good );
   DecloStack1( OSPc, ospc, dflt_OSPc () );
   OFile* of = stdout_OFile ();
 
@@ -126,8 +125,10 @@ do_pla_XnSys (const XnSys* sys, const TableT(XnRule) rules)
   ospc->cmd = cons1_AlphaTab ("espresso");
   /* Using -Dexact can take a long time.*/
   /* PushTable( ospc->args, cons1_AlphaTab ("-Dexact") ); */
-  good = spawn_OSPc (ospc);
-  if (LegitCk( good, legit, "spawn_OSPc()" ))
+  DoLegitLine( "spawning espresso" )
+    spawn_OSPc (ospc);
+
+  DoLegit( "" )
   {
     oput_pla_legit (ospc->of, sys);
     close_OFile (ospc->of);
@@ -138,7 +139,8 @@ do_pla_XnSys (const XnSys* sys, const TableT(XnRule) rules)
 
     if (0)
     {:for (pcidx ; sys->pcs.sz)
-      good = spawn_OSPc (ospc);
+      DoLegitLine( "spawning espresso" )
+        spawn_OSPc (ospc);
       if (!good)  break;
       oput_pla_pc (ospc->of, &sys->pcs.s[pcidx], sys, rules);
       close_OFile (ospc->of);
@@ -146,11 +148,9 @@ do_pla_XnSys (const XnSys* sys, const TableT(XnRule) rules)
       close_OSPc (ospc);
     }
   }
-  if (LegitCk( good, legit, "spawn_OSPc()" ))
-  {}
 
   /* lose_FileB (&ofb); */
   lose_OSPc (ospc);
-  return legit;
+  return !!good;
 }
 

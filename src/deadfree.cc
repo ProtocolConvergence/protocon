@@ -25,14 +25,14 @@ static
   bool
 deadlock_freedom_ck(const Xn::Sys& sys)
 {
-  Sign good = 1;
+  DeclLegit( good );
   Cx::Table<uint> actions;
   const Xn::Net& topo = sys.topology;
   const Xn::PcSymm& pc_symm = topo.pc_symms[0];
   uint pcidx = 0;
 
-  DoLegit( good, "No representative process." )
-    good = pc_symm.representative(&pcidx);
+  DoLegitLine( "No representative process." )
+    pc_symm.representative(&pcidx);
   if (!good)  return false;
 
   const Xn::Pc& pc = topo.pcs[pcidx];
