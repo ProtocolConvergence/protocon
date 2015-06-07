@@ -12,6 +12,9 @@ ColorRingSymm
 ColorTorus
 ColorTree
 ColorUniRing
+DiningCrypto
+DiningPhilo
+DiningPhiloRand
 LeaderRing
 LeaderRingHuang
 MatchRing

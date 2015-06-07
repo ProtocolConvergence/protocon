@@ -1,6 +1,7 @@
 
 /bin/
 /bld/
+/tags
 
 /dep/glu-*/
 /dep/peg-*/

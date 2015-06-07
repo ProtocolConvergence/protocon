@@ -1,0 +1,63 @@
+
+// The Dining Philosophers Problem allowing randomized actions.
+
+constant N := 3;
+
+variable hungry[Nat % N] <- Nat % 2;
+variable chopstick[Nat % (2*N)] <- Nat % 2;
+variable b[Nat % N] <- Nat % 2;
+
+// Converge to a state where no philosopher is hungry or has a chopstick.
+(future & future silent)
+  (forall i <- Nat % N : 1==1
+   && hungry[i]==0
+   && chopstick[2*i  ]==0
+   && chopstick[2*i+1]==0
+  );
+
+// Assume two philosophers can't have the same chopstick.
+(assume & closed)
+  (forall i <- Nat % N :
+   chopstick[2*i+1]==0 || chopstick[2*i+2]==0
+  );
+
+
+process P[i <- Nat % N]
+{
+  let L := 2*i;
+  let R := 2*i+1;
+
+
+  // Whether the philosopher is hungry.
+  write: hungry[i];
+
+  read: chopstick[L-1];
+  write: chopstick[L];
+  write: chopstick[R];
+  read: chopstick[R+1];
+
+  // Random value to influence decisions.
+  random write: b[i];
+
+
+  predicate HasChopsticks :=
+    (chopstick[L]==1 && chopstick[R]==1);
+
+  // Permit actions where hungry status is not changed.
+  // (But only those that are not also forbidden.)
+  permit:
+    ( 1==1 --> hungry[i]; )
+    ;
+
+  // Can only change to be not hungry when having chopsticks.
+  // The chopsticks are not given up during this step.
+  permit:
+    ( HasChopsticks && hungry[i]==1 --> hungry[i]:=0; _; )
+    ;
+
+  // Forbid changing position of both chopsticks at the same time.
+  forbid:
+    ( 1==1 --> chopstick[L]:=1-chopstick[L]; chopstick[R]:=1-chopstick[R]; )
+    ;
+}
+

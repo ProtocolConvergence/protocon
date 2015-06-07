@@ -318,7 +318,7 @@ ProtoconFile::add_symmetric_access(Sesp let_names_sp, Sesp let_vals_list_sp,
 
   bool
 ProtoconFile::parse_action(Cx::PFmla& act_pf, Cx::Table<Cx::PFmla>& pc_xns, Sesp act_sp,
-                           bool selfloop, Xn::Vbl::ShadowPuppetRole role)
+                           bool auto_iden, Xn::Vbl::ShadowPuppetRole role)
 {
   if (!allgood)  return false;
   DeclLegit( good );
@@ -340,41 +340,42 @@ ProtoconFile::parse_action(Cx::PFmla& act_pf, Cx::Table<Cx::PFmla>& pc_xns, Sesp
     if (!good)  continue;
 
     Cx::PFmla assign_pf( true );
-    Sesp assign_sp = cddr_of_Sesp (act_sp);
 
-    Cx::BitTable wvbl_assigned( pc.wvbls.sz(), (selfloop ? 0 : 1) );
+    Cx::BitTable wvbl_assigned( pc.wvbls.sz(), 0 );
 
-    while (!nil_ck_Sesp (assign_sp)) {
+    bool all_wild = false;
+    for (Sesp assign_sp = cddr_of_Sesp (act_sp);
+         !nil_ck_Sesp (assign_sp);
+         assign_sp = cdr_of_Sesp (assign_sp))
+    {
       Sesp sp = car_of_Sesp (assign_sp);
       Claim( list_ck_Sesp (sp) );
 
-      bool all_wild = false;
       if (eq_cstr ("wild", ccstr_of_Sesp (car_of_Sesp (sp)))) {
-        all_wild = true;
+        auto_iden = true;
+        continue;
       }
-      else {
-        Claim( eq_cstr (":=", ccstr_of_Sesp (car_of_Sesp (sp))) );
-      }
+      Claim( eq_cstr (":=", ccstr_of_Sesp (car_of_Sesp (sp))) );
 
       Sesp vbl_sp = cadr_of_Sesp (sp);
       Sesp val_sp = caddr_of_Sesp (sp);
-      assign_sp = cdr_of_Sesp (assign_sp);
+
+      if (eq_cstr ("wild", ccstr_of_Sesp (car_of_Sesp (vbl_sp)))) {
+        Claim( eq_cstr ("wild", ccstr_of_Sesp (car_of_Sesp (val_sp))) );
+        all_wild = true;
+        continue;
+      }
 
       Xn::Vbl* vbl = 0;
       Cx::IntPFmla val;
 
-      DoLegit( "eval variable" )
-      {
-        if (!all_wild)
-          good = eval_vbl(&vbl, vbl_sp);
-      }
+      DoLegitLine( "eval variable" )
+        eval_vbl(&vbl, vbl_sp);
 
       bool wild = false;
       DoLegit( "eval value" )
       {
-        if (all_wild) {
-        }
-        else if (list_ck_Sesp(val_sp) && eq_cstr ("wild", ccstr_of_Sesp (car_of_Sesp (val_sp)))) {
+        if (list_ck_Sesp(val_sp) && eq_cstr ("wild", ccstr_of_Sesp (car_of_Sesp (val_sp)))) {
           wild = true;
         }
         else {
@@ -386,11 +387,7 @@ ProtoconFile::parse_action(Cx::PFmla& act_pf, Cx::Table<Cx::PFmla>& pc_xns, Sesp
       {
         bool found = false;
         for (uint i = 0; i < pc.wvbls.sz(); ++i) {
-          if (all_wild) {
-            found = true;
-            wvbl_assigned[i] = 1;
-          }
-          else if (pc.wvbls[i] == vbl) {
+          if (pc.wvbls[i] == vbl) {
             found = true;
             wvbl_assigned[i] = 1;
             break;
@@ -412,15 +409,19 @@ ProtoconFile::parse_action(Cx::PFmla& act_pf, Cx::Table<Cx::PFmla>& pc_xns, Sesp
     }
 
     for (uint i = 0; i < pc.wvbls.sz(); ++i) {
-      if (!wvbl_assigned[i]) {
-        if (role != Xn::Vbl::Shadow && pc_symm->wvbl_symms[i]->pure_shadow_ck()) {
-          DBog0( "All writable shadow variables must be assigned in a puppet action!" );
-          good = false;
-        }
-        else {
-          const Cx::PFmlaVbl& pf_vbl = topo.pfmla_vbl(*pc.wvbls[i]);
-          assign_pf &= pf_vbl.img_eq(pf_vbl);
-        }
+      if (all_wild) {
+        wvbl_assigned[i] = true;
+      }
+      if (!auto_iden || wvbl_assigned[i]) {
+        continue;
+      }
+      if (role != Xn::Vbl::Shadow && pc_symm->wvbl_symms[i]->pure_shadow_ck()) {
+        DBog0( "All writable shadow variables must be assigned in a puppet action!" );
+        good = false;
+      }
+      else {
+        const Cx::PFmlaVbl& pf_vbl = topo.pfmla_vbl(*pc.wvbls[i]);
+        assign_pf &= pf_vbl.img_eq(pf_vbl);
       }
     }
 

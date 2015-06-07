@@ -140,7 +140,7 @@ protocon_options_rec
 
     const char* arg = argv[argi++];
     if (eq_cstr (arg, "-o-promela") ||
-        eq_cstr (arg, "-o-model")) {
+        eq_cstr (arg, "-o-pml")) {
       if (!argv[argi]) {
         DBog1("No path given for %s!!!", arg);
         return false;

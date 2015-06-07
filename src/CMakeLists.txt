@@ -5,6 +5,8 @@ set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
 
 project (protocon)
 
+#SET(CMAKE_CXX_FLAGS_DEBUG "-g3")
+#SET(CMAKE_C_FLAGS_DEBUG "-g3")
 #set (CMAKE_BUILD_TYPE DEBUG)
 #set (CMAKE_BUILD_TYPE RELEASE)
 #set (CMAKE_BUILD_TYPE RelWithDebInfo)
@@ -53,6 +55,7 @@ list (APPEND CCFiles
   prot-xfile.cc prot-ofile.cc
   biring.cc
   deadfree.cc
+  msat.cc
   )
 list (APPEND HHFiles
   pfmla.hh xfmlae.hh xnsys.hh xnspec.hh
@@ -186,6 +189,26 @@ if (OPENMP_FOUND)
       APPEND_STRING PROPERTY LINK_FLAGS " ${OpenMP_C_FLAGS}")
   endforeach ()
 endif ()
+
+
+
+set (satccflags "${DEFAULT_COMPILE_FLAGS}")
+string (REGEX REPLACE "(^| )[/-]ansi($| )" " "
+  satccflags "${satccflags}")
+string (REGEX REPLACE "(^| )[/-]pedantic($| )" " "
+  satccflags "${satccflags}")
+
+if (FALSE)
+  addbinexe (msat msat.cc ${ProtoconSources})
+  target_link_libraries (msat minisat cu glu cal ${M_LIB})
+  set_target_properties (msat PROPERTIES
+    COMPILE_FLAGS ${satccflags})
+  set_property (TARGET msat
+    APPEND PROPERTY INCLUDE_DIRECTORIES ${GluIncludePath})
+  set_property (TARGET msat
+    APPEND PROPERTY INCLUDE_DIRECTORIES "/usr/include/minisat2")
+endif()
+
 
 if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/verif/include.cmake)
   include (${CMAKE_CURRENT_SOURCE_DIR}/verif/include.cmake)

@@ -41,7 +41,7 @@ Protocol = 'protocol' WS name:ID END_STMT {}
   ;
 
 ConstDecl =
-  'constant' WS name:ID WS? ':=' WS? v:ConstExpr END_STMT
+  'constant' WS name:ID DEFEQ v:ConstExpr END_STMT
   {
     yy->st->add_constant(name.sp, v.sp);
   }
@@ -72,14 +72,20 @@ ActionExpr =
     | '-=>' {act.sp = list2_ccstr_Sesp ("-=>", act.sp);}
    )
    WS?
-   (vbl:VblRef WS? ':=' WS?
-    (  val_wild:WILD
-       {pushlast_Sesp (act.sp, list3_ccstr_Sesp (":=", vbl.sp, val_wild.sp));}
-     | val:Expr
-       {pushlast_Sesp (act.sp, list3_ccstr_Sesp (":=", vbl.sp, val.sp));}
+   ((  vbl:VblRef DEFEQ
+       (  wild:WILD
+          {pushlast_Sesp (act.sp, list3_ccstr_Sesp (":=", vbl.sp, wild.sp));}
+        | val:Expr
+          {pushlast_Sesp (act.sp, list3_ccstr_Sesp (":=", vbl.sp, val.sp));}
+       )
+     | vbl:VblRef
+       {pushlast_Sesp (act.sp, list3_ccstr_Sesp (":=", vbl.sp, vbl.sp));}
+     | wild:WILD DEFEQ wild2:WILD
+       {pushlast_Sesp (act.sp, list3_ccstr_Sesp (":=", wild.sp, wild2.sp));}
+     | wild:WILD
+       {pushlast_Sesp (act.sp, wild.sp);}
     )
     END_STMT WS?
-    | (wild:WILD WS? END_STMT WS? {pushlast_Sesp (act.sp, wild.sp);})
    )*
    ')'
    {$$ = act;}
@@ -107,21 +113,23 @@ PuppetActionDef =
   ;
 
 PermitActionDef =
-  'permit' (WS ACTION | ':') WS? act:ActionExpr
-  {yy->st->permit_action (act.sp);}
-  (WS? (',' WS?)? act2:ActionExpr {yy->st->permit_action (act2.sp);} )*
+  'permit' (WS ACTION | ':')
+  (WS? act:ActionExpr {yy->st->permit_action (act.sp);}
+   (WS? (',' WS?)? act2:ActionExpr {yy->st->permit_action (act2.sp);} )*
+  )?
   END_STMT
   ;
 
 ForbidActionDef =
-  'forbid' (WS ACTION | ':') WS? act:ActionExpr
-  {yy->st->forbid_action (act.sp);}
-  (WS? (',' WS?)? act2:ActionExpr {yy->st->forbid_action (act2.sp);} )*
+  'forbid' (WS ACTION | ':')
+  (WS? act:ActionExpr {yy->st->forbid_action (act.sp);}
+   (WS? (',' WS?)? act2:ActionExpr {yy->st->forbid_action (act2.sp);} )*
+  )?
   END_STMT
   ;
 
 ProcNamedPredicate =
-  'predicate' WS name:ID WS? ':=' WS? a:Expr END_STMT
+  'predicate' WS name:ID DEFEQ a:Expr END_STMT
   {yy->st->add_pc_predicate(name.sp, a.sp);}
   ;
 
@@ -140,7 +148,7 @@ ProcDecl =
   'process' WS pc_name:ID '[' WS? idx_name:ID WS? IN WS? npcs:NatDom WS? ']'
   {yy->st->add_processes(pc_name.sp, idx_name.sp, npcs.sp);}
   WS? '{' WS?
-  ( 'let' WS let_name:ID WS? ':=' WS? let_val:Expr END_STMT WS?
+  ( 'let' WS let_name:ID DEFEQ let_val:Expr END_STMT WS?
     {yy->st->add_let(let_name.sp, let_val.sp);}
   )*
   (
@@ -219,7 +227,7 @@ SymmetricLinks =
   ;
 
 NamedPredicate =
-  'predicate' WS name:ID WS? ':=' WS? a:Expr END_STMT
+  'predicate' WS name:ID DEFEQ a:Expr END_STMT
   {yy->st->add_predicate(name.sp, a.sp);}
   ;
 
@@ -610,6 +618,8 @@ FUTURE_ACTIVE_SHADOW =
   ;
 
 ACTION = 'act:' | 'action:' ;
+
+DEFEQ = WS? ':=' WS?;
 
 END_STMT = WS? ';' ;
 

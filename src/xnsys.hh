@@ -207,11 +207,16 @@ public:
   uint pre_dom_offset;
   uint pre_domsz;
   uint img_domsz;
+private:
+  uint representative_pcidx;
 
+public:
   PcSymm()
     : shadow_pfmla( false )
     , direct_pfmla( false )
-  {}
+  {
+    InitDomMax( representative_pcidx );
+  }
 
   String vbl_name(uint i) const {
     const String& name = rvbl_symms[i]->spec->name;
@@ -223,6 +228,7 @@ public:
   }
 
   bool dom_equiv_ck(const PcSymm& b) const;
+  bool init_representative();
   bool representative(uint* ret_pcidx) const;
   void action(ActSymm& act, uint actidx) const;
   void actions(Cx::Table<uint>& ret_actions, Cx::PFmlaCtx& ctx) const;
@@ -401,6 +407,8 @@ public:
   bool pure_shadow_vbl_ck() const {
     return pure_shadow_vbl_exists;
   }
+
+  bool safe_ck(const Xn::ActSymm& act) const;
 
   Cx::PFmla smooth_pure_shadow_vbls(const Cx::PFmla& pf) const {
     if (!pure_shadow_vbl_exists) {

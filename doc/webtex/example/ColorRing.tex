@@ -39,7 +39,7 @@ Check if the protocol is self-stabilizing rings of size $7$. It should be fine!
 We can also verify this protocol's correctness in the \href{http://spinroot.com}{Spin model checker} (here's a \href{../../tut/spin.html}{quick setup guide}).
 First output a model in the Promela language for a ring of $6$ processes.
 \begin{code}
-./bin/protocon -nop -x tmp/color.prot -def N 6 -o-model tmp/color.pml
+./bin/protocon -nop -x tmp/color.prot -def N 6 -o-promela tmp/color.pml
 \end{code}
 Now open the model in iSpin.
 \begin{code}

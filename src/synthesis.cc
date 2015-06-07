@@ -11,7 +11,7 @@ typedef Cx::PFmla PF;
  * deterministic protocol of self-disabling processes.
  */
   bool
-coexist_ck(const Xn::ActSymm& a, const Xn::ActSymm& b)
+coexist_ck(const Xn::ActSymm& a, const Xn::ActSymm& b, const Xn::Net& topo)
 {
   if (a.pc_symm != b.pc_symm)  return true;
   const Xn::PcSymm& pc = *a.pc_symm;
@@ -85,13 +85,25 @@ coexist_ck(const Xn::ActSymm& a, const Xn::ActSymm& b)
   if (!shadow_exists && (a_self_loop || b_self_loop)) {
     return false;
   }
-  if ((a_enables && !b_self_loop) || (b_enables && !a_self_loop)) {
-    return false;
+  if (a_enables && !b_self_loop) {
+    Xn::ActSymm ab = a;
+    const uint off = pc.rvbl_symms.sz();
+    for (uint j = off; j < ab.vals.sz(); ++j) {
+      ab.vals[j] = b.vals[j];
+    }
+    return !topo.safe_ck(ab);
+  }
+  if (b_enables && !a_self_loop) {
+    Xn::ActSymm ba = b;
+    const uint off = pc.rvbl_symms.sz();
+    for (uint j = off; j < ba.vals.sz(); ++j) {
+      ba.vals[j] = a.vals[j];
+    }
+    return !topo.safe_ck(ba);
   }
   return true;
 }
 
-#if 1
   void
 RankDeadlocksMRV(vector<DeadlockConstraint>& dlsets,
                  const Xn::Net& topo,
@@ -99,6 +111,7 @@ RankDeadlocksMRV(vector<DeadlockConstraint>& dlsets,
                  const PF& deadlockPF)
 {
   dlsets.clear();
+  if (!deadlockPF.sat_ck())  return;
   dlsets.push_back(DeadlockConstraint(deadlockPF));
   for (uint cidx = 0; cidx < candidates.size(); ++cidx) {
     uint actidx = candidates[cidx];
@@ -126,78 +139,6 @@ RankDeadlocksMRV(vector<DeadlockConstraint>& dlsets,
     }
   }
 }
-#else
-
-/** Rank the deadlocks by how many actions can resolve them.*/
-  void
-RankDeadlocksMRV(vector<DeadlockConstraint>& dlsets,
-                 const Xn::Net& topo,
-                 const vector<uint>& actions,
-                 const PF& deadlockPF)
-{
-  dlsets.clear();
-  dlsets.push_back(DeadlockConstraint(deadlockPF));
-
-  Cx::LgTable< Set<uint> > actidcs;
-  {
-    Cx::Map< Cx::Tuple<uint,2>, uint > same_pre;
-    for (uint i = 0; i < actions.size(); ++i) {
-      const uint actidx = actions[i];
-      Xn::ActSymm act;
-      topo.action(act, actions[i]);
-      Cx::Tuple<uint,2> key;
-      key[0] = topo.pc_symms.index_of(act.pc_symm);
-      key[1] = act.pre_idx;
-
-      const uint* j = same_pre.lookup(key);
-      if (j) {
-        actidcs[*j] << actidx;
-      }
-      else {
-        same_pre[key] = actidcs.sz();
-        actidcs.push(Set<uint>(actidx));
-      }
-    }
-  }
-
-  for (uint i = 0; i < actidcs.sz(); ++i) {
-    const uint actidx = actidcs[i].elem();
-    const Cx::PFmla& guard = topo.action_pfmla(actidx).pre();
-
-    for (uint j = dlsets.size(); j > 0; --j) {
-      const Cx::PFmla& resolved = dlsets[j-1].deadlockPF & guard;
-
-      if (resolved.sat_ck()) {
-        //dlsets[j-1].deadlockPF -= guard;
-        dlsets[j-1].deadlockPF -= resolved;
-        const uint dst_idx = j-1 + actidcs[i].sz();
-        if (dst_idx >= dlsets.size()) {
-          dlsets.resize(dst_idx+1);
-        }
-        dlsets[dst_idx].deadlockPF |= resolved;
-      }
-    }
-  }
-
-  for (uint i = 0; i < actidcs.sz(); ++i) {
-    const uint actidx = actidcs[i].elem();
-    const Cx::PFmla& guard = topo.action_pfmla(actidx).pre();
-    for (uint j = 0; j < dlsets.size(); ++j) {
-      if (guard.overlap_ck(dlsets[j].deadlockPF)) {
-        dlsets[j].candidates |= actidcs[i];
-      }
-    }
-  }
-
-  if (DBog_RankDeadlocksMRV) {
-    for (uint i = 0; i < dlsets.size(); ++i) {
-      if (!dlsets[i].deadlockPF.tautology_ck(false)) {
-        DBog2( "Rank %u has %u actions.", i, (uint) dlsets[i].candidates.size() );
-      }
-    }
-  }
-}
-#endif
 
 /**
  * Revise the ranks of deadlocks which are ranked by number candidate actions
@@ -708,7 +649,7 @@ QuickTrim(Set<uint>& delSet,
     topo.action(act1, candidates[i]);
     for (uint j = 0; j < topo.represented_actions[actidx].sz(); ++j) {
       topo.action(act0, topo.represented_actions[actidx][j]);
-      if (!coexist_ck(act0, act1)) {
+      if (!coexist_ck(act0, act1, topo)) {
         delSet << candidates[i];
         break;
       }
@@ -1052,6 +993,10 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
 
   if (this->stabilization_opt().synchronous) {
     this->lo_xn = topo.sync_xn(Cx::Table<uint>(this->actions));
+    if (!this->lo_xn.img(sys.closed_assume).subseteq_ck(sys.closed_assume)) {
+      *this->log << "SYNC_BREAKS_ASSUME" << this->log->endl();
+      return false;
+    }
   }
   else {
     this->lo_xn |= add_act_xfmlae.xfmla();
@@ -1418,9 +1363,6 @@ SynthesisCtx::add(const Xn::Sys& sys, const StabilizationOpt& stabilization_opt)
   if (!good) {
     return false;
   }
-  if (good && partial.candidates.size() == 0) {
-    return true;
-  }
 
   partial.lo_xfmlae = X::Fmlae(&topo.xfmlae_ctx);
   partial.hi_xfmlae = X::Fmlae(&topo.xfmlae_ctx);
@@ -1440,19 +1382,6 @@ SynthesisCtx::add(const Xn::Sys& sys, const StabilizationOpt& stabilization_opt)
                    partial.candidates,
                    partial.deadlockPF);
 
-  if (partial.mcv_deadlocks.size() < 2) {
-    DBog0("Cannot resolve all deadlocks with known actions!");
-    return false;
-  }
-
-#if 0
-  if (!inst.deadlockPF.sat_ck() &&
-      inst.actions.size() == sys.actions.size() &&
-      inst.candidates.size() == 0)
-  {
-    DBog1("The given protocol is self-stabilizing for system %u.", inst.sys_idx);
-  }
-#endif
   return good;
 }
 

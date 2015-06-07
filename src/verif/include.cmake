@@ -46,6 +46,8 @@ set (ExampleSpecs
   ColorRingSymm
   ColorTree
   ColorUniRing
+  DiningCrypto
+  DiningPhiloRand
   MatchRingOneBit
   MatchRingThreeState
   OldOrientRing
@@ -95,6 +97,7 @@ set_tests_properties (Synth_Sat_unsat PROPERTIES WILL_FAIL TRUE)
 
 list (APPEND ExampleSolns
   ${ExampleSpecs}
+  DiningPhilo
   OrientRing
   OrientRingViaToken
   TokenChainDijkstra

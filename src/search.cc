@@ -661,7 +661,8 @@ void
   verif_infile_opt.constant_map = exec_opt.params[0].constant_map;
   const Cx::String& xfilepath = exec_opt.xfilepaths[i];
   if (xfilepath != exec_opt.xfilepath) {
-    verif_infile_opt.text = textfile_AlphaTab (0, xfilepath.cstr());
+    verif_infile_opt.text.moveq
+      (textfile_AlphaTab (0, xfilepath.cstr()));
   }
   *opt.log << "VERIFYING: " << xfilepath << opt.log->endl();
   const bool lightweight = !exec_opt.conflicts_ofilepath;

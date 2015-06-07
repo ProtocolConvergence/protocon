@@ -18,23 +18,23 @@ adds convergence to shared memory protocols.
 Randomized backtracking with restarts.
 This is the default.
 .TP
-.B -rank-shuffle
-Run the original swarm synthesis algorithm which ranks actions and permutes the actions within each rank.
-No backtracking is involved.
-.TP
 .B -verify
 Verify a given protocol.
-.TP
-.B -minimize-conflicts
-Attempt to minimize the conflicts recorded from a previous run.
 .TP
 .B -nop
 Do not perform any verification or synthesis.
 This is useful when paired with
 .B -o
-or
-.B -o-model
-to output files.
+or any of the other output options.
+.TP
+.B -rank-shuffle
+This is a
+.B -search
+that uses incomplete heuristics rather than backtracking.
+This is a swarm synthesis algorithm that ranks actions and permutes the actions within each rank.
+.TP
+.B -minimize-conflicts
+Attempt to minimize the conflicts recorded from a previous run.
 .SH OPTIONS
 .TP
 .B -h
@@ -76,23 +76,24 @@ For performance, is assumed that the
 .B -param
 flags specify systems in order of increasing computational cost.
 .TP
-.BR -param\ '('\  ... \ ')'
-.PD 0
-.TP
-.PD 1
-.BR -param\ '['\  ... \ ']'
+.BI -param\ [\ -def\  key\ val\  \fR...\fB\ ]
 This alternative form of
 .B -param
-allows some extra options to be specified between parentheses.
+allows some extra options to be specified between brackets (note: parentheses are allowed too).
+Except for
+.BR -no-partial ,
+these options are all valid outside of a
+.B -param
+block as well.
 .IP
 .BI -def\  key\ val
 Multiple constants can be defined.
 .IP
 .B -no-conflict
 Do not consider this parameterized system when minimizing and recording conflicts.
-This flag can also be used outside of a
+When used outside of and before all
 .B -param
-block, but affects completeness of the search.
+blocks, this can affect the completeness of the search.
 .IP
 .B -no-partial
 Do not build a partial solution for this parameterized system.
@@ -100,6 +101,9 @@ This system will only be considered when a solution is found which satisfies all
 In the case of a failed verification, the search will restart.
 This flag also implies
 .BR -no-conflict .
+.IP
+.B -synchronous
+Consider this system to be synchronous.
 .TP
 .B -sysrand
 Use a system random number generator which takes includes system entropy.
@@ -175,9 +179,13 @@ Limit the number of trials per thread to
 .B -optimize
 Optimize the result by minimizing the number of asynchronous layers required to reach a fixpoint.
 The minimization applies to the sum of such layers of all systems being considered.
-This does not work with the
-.B parallel
-flag.
+.TP
+.BI -x-try\  possible-solution.prot
+Try a solution before others.
+Multiple solutions may be specified by multiple flags.
+This flag is useful with
+.B -optimize
+to start optimization at a fairly good solution.
 .TP
 .B -try-all
 Keep searching, even if a solution is found.
@@ -202,15 +210,22 @@ A value of
 .I 0
 disables restarts.
 .TP
-.BI -o-model\  model-file.pml
-Write a Promela model.
-This functionality is incomplete, in that the invariant is not included in the model.
-.TP
 .BI -x-test-known\  known-solution.prot
 After each iteration, test to make sure a known solution can still be found.
 This is useful with the
 .B -try-all
 flag to test (to some degree) that the search method is complete.
+.TP
+.BI -o-promela\  model-file.pml
+.PD 0
+.TP
+.PD 1
+.BI -o-pml\  model-file.pml
+Write a Promela model.
+This functionality is incomplete, in that the invariant is not included in the model.
+.TP
+.BI -o-graphviz\  dot-file.gv
+Write the system topology to a GraphViz DOT file to show which processes access the same variables.
 .SH EXAMPLES
 The
 .B examplesoln/
@@ -362,5 +377,6 @@ flag to just verify the protocol on that system after finding a protocol which i
 .SH BUGS
 The MPI version currently does not support
 .B -nop
+and never will.
 .
 

@@ -245,7 +245,7 @@ public:
 
 
 bool
-coexist_ck(const Xn::ActSymm& a, const Xn::ActSymm& b);
+coexist_ck(const Xn::ActSymm& a, const Xn::ActSymm& b, const Xn::Net& topo);
 void
 RankDeadlocksMRV(vector<DeadlockConstraint>& dlsets,
                  const Xn::Net& topo,

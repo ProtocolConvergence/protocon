@@ -31,9 +31,9 @@ process P[i <- Nat % N]
   (assume & closed)
     (way[2*i] != way[2*i+1]);
 
-  forbid: ( way[2*i-2]==way[2*i-1] --> _; );
-  forbid: ( way[2*i+0]==way[2*i+1] --> _; );
-  forbid: ( way[2*i+2]==way[2*i+3] --> _; );
+  forbid: ( way[2*i-2]==way[2*i-1] --> );
+  forbid: ( way[2*i+0]==way[2*i+1] --> );
+  forbid: ( way[2*i+2]==way[2*i+3] --> );
 }
 
 // Eventually, all processes are pointing in the same direction.

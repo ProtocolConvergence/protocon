@@ -46,7 +46,7 @@ process Captain[i <- Nat % N]
 
   // No actions are allowed when this general is disloyal.
   forbid:
-    ( loyal[N]==0 --> _; );
+    ( loyal[N]==0 --> );
 
   puppet:
    ( loyal[N]==1 -=> cplan[i]:=plan[N]; );
@@ -69,7 +69,7 @@ process Lieutenant[i <- Nat % N]
 
   // No actions are allowed when this general is disloyal.
   forbid:
-    ( loyal[i]==0 --> _; );
+    ( loyal[i]==0 --> );
 
   puppet:
    ( loyal[i]==1

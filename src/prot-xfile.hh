@@ -110,7 +110,7 @@ public:
                             Bit write, Bit random);
 
   bool parse_action(Cx::PFmla& act_pf, Cx::Table<Cx::PFmla>& pc_xns, Sesp act_sp,
-                    bool selfloop, Xn::Vbl::ShadowPuppetRole role);
+                    bool auto_iden, Xn::Vbl::ShadowPuppetRole role);
 
   bool add_action(Sesp act_sp, Xn::Vbl::ShadowPuppetRole role);
 

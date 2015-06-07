@@ -127,6 +127,13 @@ One solution is from Dijkstra, the other is from \href{http://citeseerx.ist.psu.
 \begin{itemize}
 \item ByzantineGenerals (\href{examplespec/ByzantineGenerals.prot}{spec}, \href{examplesoln/ByzantineGenerals.prot}{soln})
 - The Byzantine generals problem formulated as an instance of self-stabilization.
+\item DiningCrypto (\href{examplespec/DiningCrypto.prot}{spec}, \href{examplesoln/DiningCrypto.prot}{soln})
+- The dining cryptographers problem as an instance of self-stabilization, where the initial state is assumed to randomize the coins.
+We can't model anonymity, only determination of whether a cryptographer or the NSA pays for dinner.
+\item DiningPhilo (\href{examplespec/DiningPhilo.prot}{spec}, \href{examplesoln/DiningPhilo.prot}{soln})
+- The dining philosophers problem. This version assumes a coloring in order to break symmetry.
+\item DiningPhiloRand (\href{examplespec/DiningPhiloRand.prot}{spec}, \href{examplesoln/DiningPhiloRand.prot}{soln})
+- The dining philosophers problem. This version uses randomization to break symmetry.
 \item LeaderRingHuang (\href{examplespec/LeaderRingHuang.prot}{spec}, \href{examplesoln/LeaderRingHuang.prot}{soln})
 - Leader election protocol on prime-sized rings from \href{http://dx.doi.org/10.1145/169683.174161}{Huang}.
 \item Sat (\href{examplespec/Sat.prot}{spec})

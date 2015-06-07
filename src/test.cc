@@ -1,4 +1,6 @@
 
+#define TestClaim
+
 extern "C" {
 #include "cx/syscx.h"
 }
@@ -337,7 +339,8 @@ TestProtoconFile(bool agreement)
     filename = "examplespec/SumNotTwo.prot";
 
   ProtoconFileOpt infile_opt;
-  infile_opt.text = textfile_AlphaTab (0, filename);
+  infile_opt.text.moveq
+    (textfile_AlphaTab (0, filename));
 
   if (!ReadProtoconFile(sys_f, infile_opt)) {
     Claim( 0 && "Can't parse file" );
@@ -577,7 +580,7 @@ TestShadowMatchRing()
     act2.pc_symm = &topo.pc_symms[0];
     act1.vals << 0 << 0 << 0 << 0 << 1 << 2;
     act2.vals << 0 << 1 << 0 << 0 << 1 << 2;
-    Claim( coexist_ck(act1, act2) );
+    Claim( coexist_ck(act1, act2, topo) );
   }
 
   AddConvergenceOpt opt;
@@ -593,7 +596,8 @@ static void TestProbabilisticLivelock()
 {
   Xn::Sys sys;
   ProtoconFileOpt infile_opt;
-  infile_opt.text = textfile_AlphaTab (0, "examplesoln/ColorUniRing.prot");
+  infile_opt.text.moveq
+    (textfile_AlphaTab (0, "examplesoln/ColorUniRing.prot"));
 
   if (!ReadProtoconFile(sys, infile_opt)) {
     Claim( 0 && "Can't parse file" );

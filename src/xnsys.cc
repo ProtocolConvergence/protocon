@@ -30,6 +30,7 @@ Net::commit_initialization()
   uint ntotal = 0;
   for (uint i = 0; i < pc_symms.sz(); ++i) {
     Xn::PcSymm& pc = pc_symms[i];
+    pc.init_representative();
     pc.act_idx_offset = ntotal;
     pc.pre_dom_offset = total_pre_domsz;
 
@@ -275,7 +276,7 @@ PcSymm::dom_equiv_ck(const PcSymm& b) const
 }
 
   bool
-PcSymm::representative(uint* ret_pcidx) const
+PcSymm::init_representative()
 {
   for (uint i = 0; i < membs.sz(); ++i) {
     const Pc& pc = *membs[i];
@@ -295,11 +296,19 @@ PcSymm::representative(uint* ret_pcidx) const
       }
     }
     if (use) {
-      if (ret_pcidx) {
-        *ret_pcidx = i;
-      }
+      representative_pcidx = i;
       return true;
     }
+  }
+  return false;
+}
+
+  bool
+PcSymm::representative(uint* ret_pcidx) const
+{
+  if (representative_pcidx < membs.sz()) {
+    *ret_pcidx = representative_pcidx;
+    return true;
   }
   return false;
 }
@@ -507,6 +516,26 @@ Net::representative_action_index(uint actidx) const
   uint rep_actidx = this->action_index(act);
   Claim2( rep_actidx ,<=, actidx );
   return rep_actidx;
+}
+
+  bool
+Net::safe_ck(const Xn::ActSymm& act) const
+{
+  const PcSymm& pc_symm = *act.pc_symm;
+  if (pc_symm.membs.sz() == 0)  return true;
+  uint pcidx = 0;
+  pc_symm.representative(&pcidx);
+  const Pc& pc = *pc_symm.membs[pcidx];
+  const X::Fmla& xn = this->represented_xns_of_pc(act, pcidx);
+  if (pc.permit_xn.sat_ck()) {
+    if (!xn.subseteq_ck(pc.permit_xn))
+      return false;
+  }
+  if (pc.forbid_xn.sat_ck()) {
+    if (xn.overlap_ck(pc.forbid_xn))
+      return false;
+  }
+  return true;
 }
 
   ostream&
@@ -894,6 +923,9 @@ Xn::Net::sync_xn(const Cx::Table<uint>& actidcs) const
   return xn;
 }
 
+/**
+ * Ensure {pcidx} is relative to {act.pc_symm}.
+ **/
   X::Fmla
 Xn::Net::xn_of_pc(const Xn::ActSymm& act, uint pcidx) const
 {
@@ -961,10 +993,18 @@ Xn::Net::xn_of_pc(const Xn::ActSymm& act, uint pcidx) const
   return xn;
 }
 
+/**
+ * Ensure {pcidx} is relative to {act.pc_symm}.
+ **/
   X::Fmla
 Xn::Net::represented_xns_of_pc(const Xn::ActSymm& act, uint pcidx) const
 {
   uint actidx = this->action_index(act);
+  if (!this->lightweight) {
+    const Xn::Pc* pc = act.pc_symm->membs[pcidx];
+    uint real_pcidx = this->pcs.index_of(pc);
+    return act_xfmlaes[actidx][real_pcidx];
+  }
   const Cx::Table<uint>& reps =
     this->represented_actions[actidx];
   X::Fmla xn( false );
