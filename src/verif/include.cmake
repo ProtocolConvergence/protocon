@@ -133,7 +133,7 @@ set (ExampleSynts
 foreach (f ${ExampleSynts})
   add_test (NAME TrySynt_${f}
     WORKING_DIRECTORY ${TestCwd}
-    COMMAND protocon -test -x examplespec/${f}.prot -x-try examplesynt/${f}.prot -def N 5)
+    COMMAND protocon -test -x examplespec/${f}.prot -x-try-subset examplesynt/${f}.prot -def N 5)
   add_test (NAME VerifSynt_${f}
     WORKING_DIRECTORY ${TestCwd}
     COMMAND protocon -verify -x examplesynt/${f}.prot -def N 5)
@@ -149,12 +149,12 @@ endforeach ()
 add_test (NAME TrySynt2_TokenChainDijkstra
   WORKING_DIRECTORY ${TestCwd}
   COMMAND protocon -test -x examplespec/TokenChainDijkstra.prot
-  -x-try examplesynt/TokenChainDijkstra.prot -def N 2)
+  -x-try-subset examplesynt/TokenChainDijkstra.prot -def N 2)
 
 add_test (NAME TrySynt5_TokenRingFourState
   WORKING_DIRECTORY ${TestCwd}
   COMMAND protocon -test -def M 2 -x examplespec/TokenRingSuperpos.prot
-  -x-try examplesynt/TokenRingFourState.prot -def N 5)
+  -x-try-subset examplesynt/TokenRingFourState.prot -def N 5)
 
 list (APPEND VerifyBySynthesis
   ColorRing

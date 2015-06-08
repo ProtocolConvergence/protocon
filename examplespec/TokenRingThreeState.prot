@@ -8,10 +8,8 @@ shadow variable allup[Int % 1] <- Int % 2;
 shadow variable tok[Int % N] <- Int % 2;
 puppet variable z[Int % N] <- Int % 3;
 
-
 ((future & active shadow) % puppet)
   (unique i <- Int % N : tok[i]==1);
-
 
 process Bot[i <- Int % 1]
 {

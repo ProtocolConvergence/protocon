@@ -80,6 +80,7 @@ public:
   bool solution_as_conflict;
   vector<uint> known_solution;
   Cx::Table< vector<uint> > solution_guesses;
+  Cx::Set< uint > subset_solution_guesses;
   Cx::String livelock_ofilepath;
   uint n_livelock_ofiles;
 
@@ -200,7 +201,8 @@ public:
   bool revise_actions(const Set<uint>& adds, const Set<uint>& dels, uint* ret_nlayers = 0);
   bool pick_action(uint act_idx);
   bool pick_actions(const vector<uint>& act_idcs);
-  bool pick_actions_separately(const vector<uint>& act_idcs);
+  bool pick_actions_separately(const vector<uint>& act_idcs,
+                               bool add_missing=true);
 };
 
 class SynthesisCtx {

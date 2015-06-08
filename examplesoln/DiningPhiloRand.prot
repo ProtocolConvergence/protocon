@@ -7,13 +7,10 @@ variable hungry[Nat % N] <- Nat % 2;
 variable chopstick[Nat % (2*N)] <- Nat % 2;
 variable b[Nat % N] <- Nat % 2;
 
-// Converge to a state where no philosopher is hungry or has a chopstick.
-(future & future silent)
-  (forall i <- Nat % N : 1==1
-   && hungry[i]==0
-   && chopstick[2*i  ]==0
-   && chopstick[2*i+1]==0
-  );
+// These are more intuitively defined within P[i].
+// (future & future silent) ...;
+// (assume & closed) ...;
+
 
 process P[i <- Nat % N]
 {
@@ -33,50 +30,61 @@ process P[i <- Nat % N]
   random write: b[i];
 
 
+  predicate Have2 := chopstick[L] + chopstick[R] == 2;
+  predicate Avail_L := chopstick[L]==0 && chopstick[L-1]==0;
+  predicate Avail_R := chopstick[R]==0 && chopstick[R+1]==0;
+
+
+  // Converge to a state where no philosopher is hungry or has a chopstick.
+  (future & future silent)
+    (hungry[i]==0 && chopstick[L]==0 && chopstick[R]==0);
+
   // Assume two philosophers can't have the same chopstick.
   (assume & closed)
-    (chopstick[2*i+1]==0 || chopstick[2*i+2]==0);
+    (chopstick[L]==0 || chopstick[L-1]==0);
+  (assume & closed)
+    (chopstick[R]==0 || chopstick[R+1]==0);
 
 
-  predicate Have2 :=
-    (chopstick[L] + chopstick[R] == 2);
-
-
-  // Permit actions where hungry status is not changed.
-  // (But only those that are not also forbidden.)
+  // See examplespec/DiningPhiloRand.prot for explanation.
   permit:
     ( 1==1 --> hungry[i]; )
+    ( Have2 -=> hungry[i]:=0; _; )
     ;
-
-  // Can only change to be not hungry when having chopsticks.
-  // The chopsticks are not given up during this step.
-  permit:
-    ( Have2 && hungry[i]==1 --> hungry[i]:=0; _; )
-    ;
-
-  // Forbid changing position of both chopsticks at the same time.
   forbid:
     ( 1==1 --> chopstick[L]:=1-chopstick[L]; chopstick[R]:=1-chopstick[R]; )
     ;
 
+
+  // Unlike the {permit} and {forbid} actions, variables that are not assigned
+  // in {puppet} actions are assumed to not change.
+  // The {-=>} operator does however randomize the random variables
+  // like {b[i]} if they are not explicitly assigned. If we used {-->}, then
+  // we would need to write {b[i]:=_} after {-->} to ensure it is randomized.
   puppet:
     // Use randomization to choose when nobody has a chopstick.
-    ( hungry[i]==1 && chopstick[L-1]==0 && chopstick[L]==0 && chopstick[R]==0 && chopstick[R+1]==0 && b[i]==0 --> chopstick[R]:=1; b[i]:=_; )
-    ( hungry[i]==1 && chopstick[L-1]==0 && chopstick[L]==0 && chopstick[R]==0 && chopstick[R+1]==0 && b[i]==1 --> chopstick[L]:=1; b[i]:=_; )
+    // Note that this is the only place where the random {b[i]} value is used.
+    ( hungry[i]==1 && Avail_L && Avail_R && b[i]==0 -=> chopstick[L]:=1; )
+    ( hungry[i]==1 && Avail_L && Avail_R && b[i]==1 -=> chopstick[R]:=1; )
 
-    // No random choice, but still hungry.
-    ( hungry[i]==1 && chopstick[L-1]==1 && chopstick[R]==1 --> chopstick[R]:=0; b[i]:=_; )
-    ( hungry[i]==1 && chopstick[L]==1 && chopstick[R+1]==1 --> chopstick[L]:=0; b[i]:=_; )
-    ( hungry[i]==1 && chopstick[L]==1 && chopstick[R]==0 && chopstick[R+1]==0 --> chopstick[R]:=1; b[i]:=_; )
-    ( hungry[i]==1 && chopstick[L-1]==0 && chopstick[L]==0 && chopstick[R]==1 --> chopstick[L]:=1; b[i]:=_; )
+    // With one chopstick in hand, pick up a second one if it is available.
+    ( hungry[i]==1 && chopstick[R]==1 && Avail_L -=> chopstick[L]:=1; )
+    ( hungry[i]==1 && chopstick[L]==1 && Avail_R -=> chopstick[R]:=1; )
+
+    // If the second chopstick is not available, put down the first one.
+    // Note that {-=>} allows us to assume we have a chopstick to put down.
+    ( hungry[i]==1 && chopstick[R+1]==1 -=> chopstick[L]:=0; )
+    ( hungry[i]==1 && chopstick[L-1]==1 -=> chopstick[R]:=0; )
 
     // Eat.
-    ( hungry[i]==1 && chopstick[L]==1 && chopstick[R]==1 --> hungry[i]:=0; b[i]:=_; )
+    // Note that {-=>} allows us to assume we begin hungry.
+    ( Have2 -=> hungry[i]:=0; )
 
-    // Put down chopsticks.
-    ( hungry[i]==0 && chopstick[L]==0 && chopstick[R]==1 --> chopstick[R]:=0; b[i]:=_; )
-    ( hungry[i]==0 && chopstick[L]==1 && chopstick[R]==1 --> chopstick[R]:=0; b[i]:=_; )
-    ( hungry[i]==0 && chopstick[L]==1 && chopstick[R]==0 --> chopstick[L]:=0; b[i]:=_; )
+    // Put down chopsticks. First left, then right. The order doesn't actually
+    // matter, but a version allowing both orders would not be synthesized.
+    // Note that {-=>} allows us to assume we have a chopstick to put down.
+    ( hungry[i]==0 -=> chopstick[L]:=0; )
+    ( hungry[i]==0 && chopstick[L]==0 -=> chopstick[R]:=0; )
     ;
 }
 

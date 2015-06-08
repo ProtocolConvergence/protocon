@@ -829,9 +829,6 @@ stabilization_search(vector<uint>& ret_actions,
   }
 
   if (exec_opt.task == ProtoconOpt::TestTask) {
-    if (PcIdx == 0) {
-      solution_found = true;
-    }
 #pragma omp barrier
     for (uint trial_idx = 0;
          !synctx.done_ck() &&
@@ -840,12 +837,43 @@ stabilization_search(vector<uint>& ret_actions,
     {
       bool sat = true;
       PartialSynthesis partial( synlvl );
-      sat = sat && partial.pick_actions_separately(global_opt.solution_guesses[NPcs * trial_idx + PcIdx]);
+      const uint guess_idx = NPcs * trial_idx + PcIdx;;
+      vector<uint> guess = global_opt.solution_guesses[guess_idx];
+      bool subset_guess =
+        global_opt.subset_solution_guesses.elem_ck(guess_idx);
+
+      if (opt.randomize_pick) {
+        synctx.urandom.shuffle(&guess[0], guess.size());
+      }
+
+      sat = sat && partial.pick_actions_separately(guess, !subset_guess);
       sat = sat && !partial.deadlocks_ck();
       vector<uint> actions;
       sat = sat && AddStabilization(actions, partial, opt);
-      if (!sat) {
-        solution_found = false;
+      synctx.optimal_nlayers_sum = 0;
+      if (sat) {
+        Set<uint> guess_set( guess );
+        Set<uint> action_set( actions );
+        sat = action_set.subseteq_ck(guess_set);
+#pragma omp critical (DBog)
+        if (!sat) {
+          DBog0( "Synthesized more actions than necessary!" );
+        }
+        if (sat && !subset_guess)
+          sat = guess_set.subseteq_ck(action_set);
+      }
+#pragma omp critical (DBog)
+      if (!synctx.done_ck())
+      {
+        if (!sat) {
+          solution_found = false;
+          ret_actions.clear();
+          set_done_flag(1);
+        }
+        else if (!solution_found) {
+          solution_found = true;
+          ret_actions = actions;
+        }
       }
     }
   }

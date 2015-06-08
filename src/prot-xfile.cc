@@ -330,6 +330,9 @@ ProtoconFile::parse_action(Cx::PFmla& act_pf, Cx::Table<Cx::PFmla>& pc_xns, Sesp
     pc_xns[i] = false;
   }
 
+  const bool actto_op =
+    eq_cstr ("-=>", ccstr_of_Sesp (car_of_Sesp (act_sp)));
+
   const Cx::String& idx_name = pc_symm_spec->idx_name;
   for (uint pcidx = 0; good && pcidx < pc_symm->membs.sz(); ++pcidx) {
     const Xn::Pc& pc = *pc_symm->membs[pcidx];
@@ -412,6 +415,12 @@ ProtoconFile::parse_action(Cx::PFmla& act_pf, Cx::Table<Cx::PFmla>& pc_xns, Sesp
       if (all_wild) {
         wvbl_assigned[i] = true;
       }
+      else if (actto_op) {
+        // The {-=>} operator automatically randomizes values.
+        if (pc_symm_spec->random_write_flags[pc_symm->wmap[i]]) {
+          wvbl_assigned[i] = true;
+        }
+      }
       if (!auto_iden || wvbl_assigned[i]) {
         continue;
       }
@@ -426,13 +435,23 @@ ProtoconFile::parse_action(Cx::PFmla& act_pf, Cx::Table<Cx::PFmla>& pc_xns, Sesp
     }
 
     pc_xns[pcidx] = guard_pf & assign_pf;
-    if (eq_cstr ("-=>", ccstr_of_Sesp (car_of_Sesp (act_sp)))) {
+
+    if (actto_op) {
       X::Fmla self_xn( true );
       for (uint i = 0; i < pc.wvbls.sz(); ++i) {
+        if (!wvbl_assigned[i]) {
+          continue;
+        }
+        if (pc_symm_spec->random_write_flags[pc_symm->wmap[i]]) {
+          continue;
+        }
+        if (role != Xn::Vbl::Shadow && pc_symm->wvbl_symms[i]->pure_shadow_ck()) {
+          continue;
+        }
         const Cx::PFmlaVbl& pf_vbl = topo.pfmla_vbl(*pc.wvbls[i]);
         self_xn &= pf_vbl.img_eq(pf_vbl);
       }
-      pc_xns[pcidx] &= ~self_xn;
+      pc_xns[pcidx] -= self_xn;
     }
     if (pc_symm->pure_shadow_ck()) {
       X::Fmla self_xn( true );
@@ -440,7 +459,7 @@ ProtoconFile::parse_action(Cx::PFmla& act_pf, Cx::Table<Cx::PFmla>& pc_xns, Sesp
         const Cx::PFmlaVbl& pf_vbl = topo.pfmla_vbl(*pc.wvbls[i]);
         self_xn &= pf_vbl.img_eq(pf_vbl);
       }
-      pc_xns[pcidx] &= ~self_xn;
+      pc_xns[pcidx] -= self_xn;
     }
 
     act_pf |= pc_xns[pcidx] & pc.act_unchanged_pfmla;

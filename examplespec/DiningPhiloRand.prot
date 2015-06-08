@@ -40,24 +40,39 @@ process P[i <- Nat % N]
   random write: b[i];
 
 
-  predicate HasChopsticks :=
-    (chopstick[L]==1 && chopstick[R]==1);
+  predicate Have2 := chopstick[L] + chopstick[R] == 2;
+
 
   // Permit actions where hungry status is not changed.
-  // (But only those that are not also forbidden.)
+  // Listing {hungry[i]} after {-->} without an assignment ensures that it remains unchanged.
+  // Not listing a variable or assigning it to a {_} value after {-->} means that
+  // it can be changed arbitrarily as long as it does not violate any other constraints.
   permit:
     ( 1==1 --> hungry[i]; )
-    ;
-
-  // Can only change to be not hungry when having chopsticks.
-  // The chopsticks are not given up during this step.
-  permit:
-    ( HasChopsticks && hungry[i]==1 --> hungry[i]:=0; _; )
+    //// Equivalent:
+    //( 1==1 --> hungry[i]:=hungry[i]; )
+    //( 1==1 --> hungry[i]:=hungry[i]; b[i]:=_; chopstick[L]:=_; chopstick[R]:=_; )
     ;
 
   // Forbid changing position of both chopsticks at the same time.
+  // This constrains the above {permit} statement.
   forbid:
     ( 1==1 --> chopstick[L]:=1-chopstick[L]; chopstick[R]:=1-chopstick[R]; )
+    ;
+
+  // We need 2 chopsticks to eat and become not hungry.
+  // Chopsticks cannot be put down during this action.
+  // The {-=>} operator allows us to assume we begin hungry.
+  // The {_} operator ensures the unassigned variables (the 2 chopsticks) are
+  // left unchanged. The {-=>} operator protects random variables like {b[i]}
+  // from being affected by the {_} operator.
+  permit:
+    ( Have2 -=> hungry[i]:=0; _; )
+    //// Equivalent:
+    //( Have2 -=> hungry[i]:=0; chopstick[L]; chopstick[R]; )
+    //( Have2 && hungry[i]==1 --> hungry[i]:=0; chopstick[L]; chopstick[R]; )
+    //( Have2 && hungry[i]==1 --> hungry[i]:=0; b[i]:=_; chopstick[L]; chopstick[R]; )
+    //( Have2 && hungry[i]==1 --> hungry[i]:=0; b[i]:=_; _; )
     ;
 }
 

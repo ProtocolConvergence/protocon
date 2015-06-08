@@ -1282,11 +1282,29 @@ PartialSynthesis::pick_actions(const vector<uint>& act_idcs)
 }
 
   bool
-PartialSynthesis::pick_actions_separately(const vector<uint>& act_idcs)
+PartialSynthesis::pick_actions_separately(const vector<uint>& act_idcs,
+                                          bool add_missing)
 {
   DBog1("There are %u actions to pick", (uint) act_idcs.size());
   for (uint i = 0; i < act_idcs.size(); ++i) {
     DBog1("picking: %u", i);
+    bool found = false;
+    for (uint j = 0; !found && j < this->candidates.size(); ++j) {
+      if (this->candidates[j] == act_idcs[i])
+        found = true;
+    }
+    if (!add_missing && !found)
+      continue;
+    if (!found) {
+      for (uint j = 0; !found && j < this->actions.size(); ++j) {
+        if (this->actions[j] == act_idcs[i])
+          found = true;
+      }
+      if (found)  continue;
+    }
+    if (!found) {
+      DBog0("Adding missng...");
+    }
     if (!pick_action(act_idcs[i])) {
       return false;
     }

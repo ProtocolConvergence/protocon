@@ -304,7 +304,8 @@ protocon_options_rec
       }
       opt.known_solution = test_sys.actions;
     }
-    else if (eq_cstr (arg, "-x-try")) {
+    else if (eq_cstr (arg, "-x-try") ||
+             eq_cstr (arg, "-x-try-subset")) {
       Xn::Sys try_sys;
       ProtoconFileOpt file_opt;
       file_opt.constant_map = exec_opt.params[0].constant_map;
@@ -315,6 +316,9 @@ protocon_options_rec
       ReadFileText (file_opt.text, filename);
       if (!ReadProtoconFile(try_sys, file_opt)) {
         failout_sysCx("Reading -x-try file.");
+      }
+      if (eq_cstr (arg, "-x-try-subset")) {
+        opt.subset_solution_guesses |= opt.solution_guesses.sz();
       }
       opt.solution_guesses.push(try_sys.actions);
     }
