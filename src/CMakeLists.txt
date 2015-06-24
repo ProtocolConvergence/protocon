@@ -17,7 +17,9 @@ find_package(OpenMP)
 
 set (TopPath ${CMAKE_CURRENT_SOURCE_DIR}/..)
 set (DepPath ${TopPath}/dep)
-set (CxPath ${DepPath}/cx/src)
+set (CxTopPath ${DepPath}/cx)
+set (CxPath ${CxTopPath}/src)
+set (CxBinPath ${CxTopPath}/bin)
 set (BinPath ${CMAKE_CURRENT_SOURCE_DIR}/../bin)
 if (NOT DEFINED GluPath)
   set (GluPath ${DepPath}/glu-2.4)
@@ -40,14 +42,14 @@ list (APPEND HFiles
   pfmla.h pfmla-glu.h pfmla-bittable.h)
 
 list (APPEND CFiles udp.c)
-list (APPEND HFiles udp-act.h testlist.h)
+list (APPEND HFiles udp.h udp-act.h testlist.h)
 
 list (APPEND CCFiles
   pfmla.cc xfmlae.cc xnsys.cc xnspec.cc
   opt.cc search.cc
   test.cc inst.cc main.cc
   main-mpi.cc
-  promela.cc graphviz.cc
+  promela.cc graphviz.cc udp-ofile.cc
   interactive.cc
   conflictfamily.cc
   stabilization.cc
@@ -61,7 +63,7 @@ list (APPEND HHFiles
   pfmla.hh xfmlae.hh xnsys.hh xnspec.hh
   opt.hh search.hh
   inst.hh
-  promela.hh graphviz.hh
+  promela.hh graphviz.hh udp-ofile.hh
   interactive.hh
   conflictfamily.hh
   stabilization.hh
@@ -79,9 +81,14 @@ add_subdirectory (gui)
 addbinexe (satsyn satsyn/satsyn.c satsyn/xnsys.c)
 
 file (MAKE_DIRECTORY ${BldPath}/satsyn)
+file (MAKE_DIRECTORY ${BldPath}/udp-dep)
 
 if (NOT DEFINED PegExe)
   set (PegExe leg)
+endif ()
+
+if (NOT DEFINED CEmbedExe)
+  set (CEmbedExe ${CxBinPath}/cembed)
 endif ()
 
 add_custom_command (
@@ -90,22 +97,52 @@ add_custom_command (
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/prot-xfile.leg)
 set_bld_cfile_properties (${BldPath}/prot-xfile.leg.cc)
 
+#### Set up embedded UDP sources. ####
+set (depfiles)
+foreach (depfile cx/def.h cx/synhax.h udp.h udp.c)
+  pfxeq (in_cx cx/ ${depfile})
+  string(REGEX REPLACE "^.*/" "" depfile "${depfile}")
+  set(ofile ${BldPath}/udp-dep/${depfile})
+
+  if (in_cx)
+    set(xfile ${CxBldPath}/${depfile})
+  else ()
+    set(xfile ${BldPath}/${depfile})
+  endif ()
+
+  add_custom_command (
+    OUTPUT ${ofile}
+    COMMAND ${CxExe} -shallow -no-quote-includes -o ${ofile} -x ${xfile}
+    DEPENDS ${xfile})
+  list (APPEND depfiles ${ofile})
+endforeach()
+
+add_custom_command (
+  OUTPUT ${BldPath}/udp-dep/embed.h
+  COMMAND ${CEmbedExe} -o ${BldPath}/udp-dep/embed.h ${depfiles}
+  DEPENDS ${depfiles})
+add_custom_target (UdpEmbedSources SOURCES ${BldPath}/udp-dep/embed.h)
+#### Done setting up embedded UDP sources ####
+
 list (APPEND ProtoconSources
-  pfmla.cc xfmlae.cc xnsys.cc inst.cc
-  opt.cc
-  promela.cc graphviz.cc
-  ${CxBldPath}/kautz.cc
+  pfmla.c pfmla.cc xfmlae.cc
+  pfmla-glu.c pfmla-bittable.c
+  xnspec.cc xnsys.cc
+  prot-xfile.cc prot-xfile.leg.cc prot-ofile.cc
+  opt.cc inst.cc
   stabilization.cc
   synthesis.cc
-  interactive.cc
   conflictfamily.cc
-  prot-xfile.cc prot-xfile.leg.cc prot-ofile.cc
-  pfmla.c pfmla-glu.c pfmla-bittable.c
   )
 
 link_directories(${GluPath})
 
-addbinexe (test_exe test.cc search.cc ${ProtoconSources})
+addbinexe (test_exe
+  test.cc
+  search.cc
+  ${CxBldPath}/kautz.cc
+  ${ProtoconSources}
+  )
 set_target_properties (test_exe PROPERTIES
   OUTPUT_NAME test
   RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
@@ -116,8 +153,11 @@ target_link_libraries (test_exe cu glu cal ${M_LIB})
 addbinexe (protocon
   main.cc
   search.cc
+  interactive.cc
+  promela.cc graphviz.cc udp-ofile.cc
   ${ProtoconSources}
   )
+add_dependencies(protocon UdpEmbedSources)
 set_property (TARGET protocon
   APPEND PROPERTY INCLUDE_DIRECTORIES ${GluIncludePath})
 target_link_libraries (protocon cu glu cal ${M_LIB})
@@ -152,8 +192,8 @@ endif ()
 if (MPI_FOUND)
   addbinexe (protocon-mpi
     main-mpi.cc
-    ${CxBldPath}/mpidissem.cc
     search.cc
+    ${CxBldPath}/mpidissem.cc ${CxBldPath}/kautz.cc
     ${ProtoconSources}
     )
   set_property (TARGET protocon-mpi

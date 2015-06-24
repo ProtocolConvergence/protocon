@@ -150,6 +150,9 @@ protocon_options_rec
     else if (eq_cstr (arg, "-o-graphviz")) {
       exec_opt.graphviz_ofilepath = argv[argi++];
     }
+    else if (eq_cstr (arg, "-o-udp")) {
+      exec_opt.udp_ofilepath = argv[argi++];
+    }
     else if (eq_cstr (arg, "-serial")) {
       exec_opt.nparallel = 1;
     }

@@ -7,6 +7,7 @@ extern "C" {
 #include "synthesis.hh"
 #include "prot-ofile.hh"
 #include "graphviz.hh"
+#include "udp-ofile.hh"
 #include "cx/fileb.hh"
 #include "opt.hh"
 #include "search.hh"
@@ -97,6 +98,11 @@ int main(int argc, char** argv)
       Cx::OFileB ofb;
       ofb.open(exec_opt.graphviz_ofilepath);
       oput_graphviz_file (ofb, sys.topology);
+    }
+    if (!exec_opt.udp_ofilepath.empty_ck()) {
+      Cx::OFileB ofb;
+      ofb.open(exec_opt.udp_ofilepath);
+      oput_udp_file (ofb, sys);
     }
     if (!exec_opt.ofilepath.empty_ck())
     {

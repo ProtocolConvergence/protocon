@@ -1,59 +1,5 @@
 
-#include "cx/def.h"
-#include <stdint.h>
-#include <stdio.h>
-#include <sys/types.h>
-#include <netdb.h>
-#include <errno.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <sys/wait.h>
-#include <poll.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <signal.h>
-#include <time.h>
-
-static const Bool ShowCommunication = 1;
-static const uint TimeoutMS = 10000;
-static const uint QuickTimeoutMS = 200;
-//static const uint QuickTimeoutMS = 20;
-#define NQuickTimeouts (TimeoutMS / QuickTimeoutMS)
-static const double NetworkReliability = 1;
-//static const double NetworkReliability = 0.5;
-//static const double NetworkReliability = 0.1;
-static const uint32_t ActionLagMS = 256;
-//static const uint32_t ActionLagMS = 0;
-static const char SharedFilePfx[] = "udp-host.";
-
-typedef int fd_t;
-
-typedef struct PcIden PcIden;
-struct PcIden
-{
-  uint idx;
-  uint npcs;
-};
-
-static void
-oput_line(const char* line);
-
-static uint
-process_of_channel(PcIden pc, uint channel_idx);
-static uint
-variable_of_channel(PcIden pc, uint channel_idx, uint i, Bool writing);
-static uint
-domsz_of_variable(PcIden pc, uint vbl_idx);
-static void
-action_assign(PcIden pc, uint8_t* values);
-static void
-action_pre_assign(PcIden pc, const uint8_t* x);
-#define Max_NChannels 2
-#define Max_NVariables 4
-#include "udp-act.h"
+#include "udp.h"
 
 typedef struct Packet Packet;
 typedef struct Channel Channel;
@@ -363,6 +309,17 @@ init_State(State* st, uint PcIdx, uint NPcs)
   host->sin_family = AF_INET;
   host->sin_addr.s_addr = INADDR_ANY;
   host->sin_port = 0;
+
+#ifdef FixedHostname
+  {
+    struct hostent* ent;
+    ent = gethostbyname(FixedHostname);
+    if (!ent)
+      BailOut(-1, "gethostbyname()");
+    memcpy(&host->sin_addr, ent->h_addr, ent->h_length);
+  }
+#endif
+
   if (0 > bind(st->fd, (struct sockaddr *)host, sizeof(*host)))
     BailOut(-1, "bind()");
 
@@ -375,8 +332,12 @@ init_State(State* st, uint PcIdx, uint NPcs)
     char hostname[128];
     char fname[128];
     FILE* f;
+#ifdef FixedHostname
+    strcpy(hostname, FixedHostname);
+#else
     if (0 > gethostname(hostname, sizeof(hostname)))
       BailOut(-1, "gethostname()");
+#endif
     sprintf(fname, "%s%d", SharedFilePfx, st->pc.idx);
     f = fopen(fname, "wb");
     if (!f)
@@ -413,6 +374,14 @@ oput_line(const char* line)
   time_t t = time(0);
   struct tm *tmp;
   const State* st = &StateOfThisProcess;
+  if (!ShowTimestamps) {
+    fprintf(stderr, "%2u %s\n", st->pc.idx, line);
+    if (st->logf) {
+      fprintf(st->logf, "%2u %s\n", st->pc.idx, line);
+      fflush(st->logf);
+    }
+    return;
+  }
 
   tmp = localtime(&t);
   if (tmp) {
@@ -425,8 +394,10 @@ oput_line(const char* line)
   }
 
   fprintf(stderr, "%s %2u %s\n", timebuf, st->pc.idx, line);
-  if (st->logf)
+  if (st->logf) {
     fprintf(st->logf, "%s %2u %s\n", timebuf, st->pc.idx, line);
+    fflush(st->logf);
+  }
 }
 
 static
@@ -958,9 +929,7 @@ int main(int argc, char** argv)
   int argi = 1;
   timer_t timeout_id;
   uint timeout_ms = 0;
-  if (argi + 2 > argc) {
-    BailOut(1, "Need two or three arguments");
-  }
+  (void) argc;
 
   /* remove("shared-resource"); */
 
@@ -973,16 +942,26 @@ int main(int argc, char** argv)
   {
     uint PcIdx;
     uint NPcs;
-    if (1 != sscanf(argv[argi++], "%u", &PcIdx))
+    if (!argv[argi] || 1 != sscanf(argv[argi], "%u", &PcIdx))
       BailOut(1, "First argument must be an unsigned int.");
+    argi += 1;
 
-    if (1 != sscanf(argv[argi++], "%u", &NPcs) || NPcs == 0)
+#ifdef NProcesses
+    NPcs = NProcesses;
+#else
+    if (!argv[argi] || 1 != sscanf(argv[argi], "%u", &NPcs) || NPcs == 0)
       BailOut(1, "Second argument must be a positive unsigned int.");
+    argi += 1;
+#endif
     init_State(st, PcIdx, NPcs);
   }
 
-  if (argv[argi]) {
-    st->logf = fopen(argv[argi++], "wb");
+  if (argv[argi] && 0 == strcmp("-o-log", argv[argi])) {
+    argi += 1;
+    if (!argv[argi])
+      BailOut(1, "-o-log must be followed by a file name.");
+    st->logf = fopen(argv[argi], "wb");
+    argi += 1;
   }
 
   init_timeout(&timeout_id);
