@@ -1,5 +1,8 @@
 #!/bin/sh
 
+FixedHostname=127.0.0.1
+#FixedHostname=10.0.0.1
+
 function eq ()
 {
   return $(expr + "$1" != + "$2")
@@ -50,7 +53,7 @@ else
   npcs=$1
   shift
   vital protocon -nop -def N $npcs "$@" -x "$protfile" -o-udp udp.c
-  vital gcc udp.c -o udp -lrt
+  vital gcc -DFixedHostname=\""$FixedHostname"\" udp.c -o udp -lrt
 fi
 
 rm -f udp-host.*

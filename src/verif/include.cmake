@@ -6,7 +6,8 @@ set (TestCwd ${TopPath})
 set (MetaPath ${TopPath}/meta)
 set (VerifPath ${CMAKE_CURRENT_SOURCE_DIR}/verif)
 
-cat_parenthesized (TestNames "${CMAKE_CURRENT_SOURCE_DIR}/testlist.h")
+file(READ ${CMAKE_CURRENT_SOURCE_DIR}/testlist.txt TestNames)
+string(REPLACE "\n" ";" TestNames "${TestNames}")
 
 ## Unit tests.
 foreach (testname ${TestNames})

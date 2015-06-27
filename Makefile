@@ -5,7 +5,7 @@ BinPath=bin
 
 SrcPath=src
 DepPath=dep
-CxPath=$(DepPath)/cx
+CxTopPath=$(DepPath)/cx
 
 ScanBldPath=clang
 ScanRptPath=$(ScanBldPath)/report
@@ -58,11 +58,12 @@ clean:
 	$(GODO) $(BldPath) $(MAKE) clean
 
 distclean:
+	$(GODO) $(CxTopPath) $(MAKE) distclean
 	rm -fr $(BldPath) $(BinPath) $(ScanBldPath) tags
 
 init:
-	if [ ! -f $(CxPath)/src/cx.c ] ; then git submodule init dep/cx ; git submodule update dep/cx ; fi
-	if [ ! -f $(CxPath)-pp/cx.c ] ; then git submodule init dep/cx-pp ; git submodule update dep/cx-pp ; fi
+	if [ ! -f $(DepPath)/cx/src/cx.c ] ; then git submodule init dep/cx ; git submodule update dep/cx ; fi
+	if [ ! -f $(DepPath)/cx-pp/cx.c ] ; then git submodule init dep/cx-pp ; git submodule update dep/cx-pp ; fi
 
 update:
 	git pull origin master

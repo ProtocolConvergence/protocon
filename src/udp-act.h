@@ -1,4 +1,7 @@
 
+#define Max_NChannels 2
+#define Max_NVariables 4
+
 //#define DoThreeColorRing
 #define DoMatchingRing
 //#define DoThreeBitTokenRing

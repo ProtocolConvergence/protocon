@@ -634,48 +634,31 @@ TestOPutKautz()
   oput_graphviz_kautz(ofile, 4, 25);
 }
 
-static void TestTestOrder();
-static void TestAll();
-
-struct TestInfo
+static
+  void
+Test(const char testname[])
 {
-  const char* name;
-  void (*fn) ();
-};
+  void (*fn) () = 0;
 
-static int CmpTestInfo(const void* a, const void* b)
-{
-  return strcmp(((TestInfo*)a)->name, ((TestInfo*)b)->name);
-}
+  /* cswitch testname
+   *   -case-pfx "fn = Test"
+   *   -array AllTests
+   *   -x testlist.txt
+   *   -o test-dep/switch.c
+   */
+#include "test-dep/switch.c"
 
-#define W(testname)  ,{ Stringify(testname), Test##testname }
-static const TestInfo AllTests[] = {
-  { "", TestAll }
-#include "testlist.h"
-};
-#undef W
-
-void TestTestOrder()
-{
-  for (uint i = 1; i < ArraySz(AllTests); ++i)
-    Claim2( 0 ,>, CmpTestInfo(&AllTests[i-1], &AllTests[i]) );
-}
-
-void TestAll()
-{
-  for (uint i = 1; i < ArraySz(AllTests); ++i)
-    AllTests[i].fn();
-}
-
-static void Test(const char testname[])
-{
-  TestInfo key;
-  key.name = testname;
-  key.fn = 0;
-  const TestInfo* t = (TestInfo*) bsearch
-    (&key, AllTests, ArraySz(AllTests), sizeof(AllTests[0]), CmpTestInfo);
-  Claim( t );
-  t->fn();
+  if (fn) {
+    fn();
+  }
+  else if (!testname[0]) {
+    for (uint i = 0; i < ArraySz(AllTests); ++i) {
+      Test(AllTests[i]);
+    }
+  }
+  else {
+    Claim( 0 && "Test does not exist." );
+  }
 }
 
 
@@ -684,7 +667,7 @@ int main(int argc, char** argv)
   int argi = (init_sysCx (&argc, &argv), 1);
 
   if (argi == argc) {
-    TestAll();
+    Test("");
   }
   else {
     while (argi < argc) {

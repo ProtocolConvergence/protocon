@@ -6,11 +6,6 @@
 /dep/glu-*/
 /dep/peg-*/
 
-/src/biring
-/src/deadfree
-/src/test
-/src/udp
-
 /doc/html/
 /doc/*/main.pdf
 /doc/*/quick.pdf

@@ -1,14 +1,21 @@
 
 #include "udp.h"
 
+typedef struct SeqId SeqId;
 typedef struct Packet Packet;
 typedef struct Channel Channel;
 typedef struct State State;
 
+struct SeqId
+{
+  uint16_t idx;
+  uint16_t key;
+};
+
 struct Packet
 {
-  uint32_t src_seq;
-  uint32_t dst_seq;
+  SeqId src_seq;
+  SeqId dst_seq;
   uint32_t enabled;
   uint8_t values[Max_NVariables];
 };
@@ -20,8 +27,8 @@ struct Packet
 
 struct Channel
 {
-  uint32_t seq;
-  uint32_t adj_seq;
+  SeqId seq;
+  SeqId adj_seq;
   struct sockaddr_in host;
   uint adj_PcIdx;
   Bool adj_acknowledged;
@@ -42,6 +49,11 @@ struct State
 
 State StateOfThisProcess;
 
+
+static Bool eq_seq (SeqId a, SeqId b) {
+  return a.idx == b.idx && a.key == b.key;
+}
+
 #undef BailOut
 #define BailOut( ret, msg ) \
 do \
@@ -61,12 +73,27 @@ void failmsg(const char* msg)
   }
 }
 
+  void
+hton_SeqId (SeqId* seq)
+{
+  seq->idx = htons (seq->idx);
+  seq->key = htons (seq->key);
+}
+
+  void
+ntoh_SeqId (SeqId* seq)
+{
+  seq->idx = ntohs (seq->idx);
+  seq->key = ntohs (seq->key);
+}
+
+
 /** Convert packet data members to network byte order.*/
   void
 hton_Packet (Packet* pkt)
 {
-  pkt->src_seq = htonl (pkt->src_seq);
-  pkt->dst_seq = htonl (pkt->dst_seq);
+  hton_SeqId (&pkt->src_seq);
+  hton_SeqId (&pkt->dst_seq);
   pkt->enabled = htonl (pkt->enabled);
 }
 
@@ -74,8 +101,8 @@ hton_Packet (Packet* pkt)
   void
 ntoh_Packet (Packet* pkt)
 {
-  pkt->src_seq = ntohl (pkt->src_seq);
-  pkt->dst_seq = ntohl (pkt->dst_seq);
+  ntoh_SeqId (&pkt->src_seq);
+  ntoh_SeqId (&pkt->dst_seq);
   pkt->enabled = ntohl (pkt->enabled);
 }
 
@@ -120,7 +147,7 @@ randomize(void* p, uint size) {
 random_Bool()
 {
   uint8_t x = 0;
-  Randomize(&x);
+  Randomize( x );
   return x & 1;
 }
 
@@ -134,13 +161,9 @@ random_Bool()
   void
 CMD_seq(Channel* channel)
 {
-  uint32_t* seq = &channel->seq;
-  uint32_t x = 0;
-  Randomize(&x);
-  x |= 0x0000FFFF;
-  *seq += 1;
-  *seq |= 0xFFFF0000;
-  *seq &= x;
+  SeqId* seq = &channel->seq;
+  seq->idx += 1;
+  Randomize( seq->key );
   channel->adj_acknowledged = 0;
   channel->shake_step = NakShakeStep;
   channel->reply = 1;
@@ -177,11 +200,10 @@ CMD_seq_all(State* st)
   void
 CMD_enable(State* st)
 {
-  Randomize(&st->enabled);
-  // Not allowed to 0.
-  st->enabled |= (1 << 31);
-  // Not allowed to be 0xFFFFFFFF.
-  st->enabled ^= (1 << 30);
+  Randomize( st->enabled );
+  // Not allowed to be all 0 or 1 bits.
+  if (st->enabled == 0 || ~st->enabled == 0)
+    st->enabled ^= 1;
   CMD_seq_all(st);
 }
 
@@ -225,7 +247,7 @@ lookup_host(struct sockaddr_in* host, uint id)
     if (!ent)
       BailOut(-1, "gethostbyname()");
 
-    memset(host, 0, sizeof(*host));
+    Zeroize( *host );
     host->sin_family = AF_INET;
     memcpy(&host->sin_addr, ent->h_addr, ent->h_length);
     host->sin_port = htons(port);
@@ -242,10 +264,10 @@ lookup_host(struct sockaddr_in* host, uint id)
   void
 init_Channel(Channel* channel, State* st)
 {
-  channel->seq = 0;
+  Zeroize( channel->seq );
   CMD_seq(channel);
-  channel->adj_seq = 0;
-  memset(&channel->host, 0, sizeof(channel->host));
+  Zeroize( channel->adj_seq );
+  Zeroize( channel->host );
   {
     uint id = process_of_channel(st->pc, IdxElt(st->channels, channel));
     channel->adj_PcIdx = id;
@@ -279,16 +301,18 @@ init_Channel(Channel* channel, State* st)
   void
 randomize_State(State* st)
 {
-  Randomize(&st->values);
-  Randomize(&st->enabled);
+  //State tmp = *st;
+  //Randomize( *st );
+  Randomize( st->values );
+  Randomize( st->enabled );
   for (uint i = 0; channel_idx_ck(st->pc, i); ++i) {
     Channel* channel = &st->channels[i];
-    Randomize(&channel->seq);
-    Randomize(&channel->adj_seq);
+    Randomize( channel->seq );
+    Randomize( channel->adj_seq );
     channel->adj_acknowledged = random_Bool();
-    Randomize(&channel->shake_step);
+    Randomize( channel->shake_step );
     channel->reply = random_Bool();
-    Randomize(&channel->n_timeout_skips);
+    Randomize( channel->n_timeout_skips );
   }
 }
 
@@ -300,12 +324,12 @@ init_State(State* st, uint PcIdx, uint NPcs)
 {
   struct sockaddr_in host[1];
   socklen_t sz = sizeof(*host);
-  memset(st, 0, sizeof(*st));
+  Zeroize( *st );
   st->pc.idx = PcIdx;
   st->pc.npcs = NPcs;
 
   st->fd = socket(AF_INET, SOCK_DGRAM, 0);
-  memset (host, 0, sizeof (*host));
+  Zeroize( *host );
   host->sin_family = AF_INET;
   host->sin_addr.s_addr = INADDR_ANY;
   host->sin_port = 0;
@@ -322,6 +346,14 @@ init_State(State* st, uint PcIdx, uint NPcs)
 
   if (0 > bind(st->fd, (struct sockaddr *)host, sizeof(*host)))
     BailOut(-1, "bind()");
+
+  if (!UseChecksum)
+  {
+    const int no_checksum = 1;
+    if (0 > setsockopt(st->fd, SOL_SOCKET, SO_NO_CHECK,
+                       &no_checksum, sizeof(no_checksum)))
+      BailOut(-1, "setsockopt(SO_NO_CHECK)");
+  }
 
   /* Fill in the host address and port.*/
   if (0 > getsockname(st->fd, (struct sockaddr*)host, &sz))
@@ -453,9 +485,10 @@ send_Packet (const Packet* packet, const struct sockaddr_in* host, State* st)
     }
     cstr_of_values(local_vals_buf, st->values, st->pc, Max_NChannels, 0);
     cstr_of_values(channel_vals_buf, st->values, st->pc, channel_idx, 1);
-    sprintf(buf, "-> %2u  (%s)  src_seq:%08x  dst_seq:%08x  enabled:%08x  values:(%s)",
+    sprintf(buf, "-> %2u  (%s)  src/dst idx:%04hx/%04hx  key:%04hx/%04hx  enabled:%08x  values:(%s)",
             process_of_channel(st->pc, channel_idx), local_vals_buf,
-            pkt->src_seq, pkt->dst_seq,
+            pkt->src_seq.idx, pkt->dst_seq.idx,
+            pkt->src_seq.key, pkt->dst_seq.key,
             pkt->enabled, channel_vals_buf);
     oput_line(buf);
   }
@@ -463,7 +496,7 @@ send_Packet (const Packet* packet, const struct sockaddr_in* host, State* st)
 
   if (NetworkReliability < 1) {
     uint32_t x = 0;
-    Randomize(&x);
+    Randomize( x );
     if (NetworkReliability * ~(uint32_t)0 < x) {
       // Packet dropped.
       return sizeof(*pkt);
@@ -484,9 +517,10 @@ recv_Packet (Packet* pkt, State* st)
   int cc;
   struct sockaddr_in host[1];
   socklen_t sz = sizeof(*host);
-  memset (host, 0, sz);
+  Zeroize( *host );
   cc = recvfrom(st->fd, pkt, sizeof(*pkt), 0, (struct sockaddr*)host, &sz);
   if (cc != sizeof(*pkt)) {
+    return 0;
     BailOut(0, "recvfrom()");
   }
   ntoh_Packet(pkt);
@@ -502,9 +536,10 @@ recv_Packet (Packet* pkt, State* st)
         char buf[1024];
         cstr_of_values(local_vals_buf, st->values, st->pc, Max_NChannels, 0);
         cstr_of_values(channel_vals_buf, pkt->values, st->pc, i, 0);
-        sprintf(buf, "<- %2u  (%s)  src_seq:%08x  dst_seq:%08x  enabled:%08x  values:(%s)",
+        sprintf(buf, "<- %2u  (%s)  src/dst idx:%04hx/%04hx  key:%04hx/%04hx  enabled:%08x  values:(%s)",
                 channel->adj_PcIdx, local_vals_buf,
-                pkt->src_seq, pkt->dst_seq,
+                pkt->src_seq.idx, pkt->dst_seq.idx,
+                pkt->src_seq.key, pkt->dst_seq.key,
                 pkt->enabled, channel_vals_buf);
         oput_line(buf);
       }
@@ -512,7 +547,8 @@ recv_Packet (Packet* pkt, State* st)
     }
   }
 
-  BailOut(0, "who sent the message?");
+  return 0;
+  //BailOut(0, "who sent the message?");
 }
 
 /**
@@ -546,7 +582,7 @@ CMD_act(State* st, Bool modify)
       {
         // Lag actions a bit to expose livelocks.
         uint32_t x = 0;
-        Randomize(&x);
+        Randomize( x );
         //usleep(1000 * ActionLagMS);
         usleep(1000 * (ActionLagMS/2 + x % ActionLagMS));
       }
@@ -569,7 +605,7 @@ CMD_send1(Channel* channel, State* st, uint32_t enabled)
   pkt->src_seq = channel->seq;
   pkt->dst_seq = channel->adj_seq;
   pkt->enabled = enabled;
-  memset(pkt->values, 0, sizeof(*pkt->values)*Max_NVariables);
+  Zeroize( pkt->values );
   for (uint i = 0; i < Max_NVariables; ++i) {
     const uint vbl_idx =
       variable_of_channel(st->pc, IdxElt(st->channels, channel), i, 1);
@@ -694,8 +730,8 @@ handle_recv (Packet* pkt, Channel* channel, State* st)
 
   // If the packet doesn't know this process's sequence number,
   // then reply with the current data.
-  if (pkt->dst_seq != channel->seq) {
-    if (pkt->src_seq == channel->adj_seq && !channel->adj_acknowledged) {
+  if (!eq_seq (pkt->dst_seq, channel->seq)) {
+    if (eq_seq (pkt->src_seq, channel->adj_seq) && !channel->adj_acknowledged) {
       // 50% chance of not replying.
       if (!channel->reply) {
         channel->reply = 1;
@@ -757,13 +793,13 @@ handle_recv (Packet* pkt, Channel* channel, State* st)
     reply = 1;
   }
 
-  if (channel->adj_seq != pkt->src_seq) {
+  if (!eq_seq (channel->adj_seq, pkt->src_seq)) {
     // The adjacent process updated its sequence number.
     channel->adj_seq = pkt->src_seq;
     // If it just became enabled and this process is disabled,
     // update this process's sequence number if it hasn't already.
     if (pkt->enabled != 0 && ~pkt->enabled != 0 && st->enabled == 0) {
-      if (pkt->dst_seq == channel->seq) {
+      if (eq_seq (pkt->dst_seq, channel->seq)) {
         CMD_seq(channel);
       }
     }
@@ -803,7 +839,7 @@ handle_recv (Packet* pkt, Channel* channel, State* st)
       reply = 0;
     }
   }
-  else if (pkt->dst_seq == channel->seq) {
+  else if (eq_seq (pkt->dst_seq, channel->seq)) {
     channel->adj_acknowledged = 1;
     if (!reply) {
       // 50% chance of not replying.
@@ -879,7 +915,7 @@ handle_timeout (State* st)
     }
     {
       uint32_t x = 0;
-      Randomize(&x);
+      Randomize( x );
       channel->n_timeout_skips = NQuickTimeouts / 2 + x % NQuickTimeouts;
     }
   }
@@ -902,7 +938,7 @@ init_timeout(timer_t* timeout_id)
 {
   struct sigevent timeout_sigevent[1];
   int stat = 0;
-  memset(timeout_sigevent, 0, sizeof(*timeout_sigevent));
+  Zeroize( *timeout_sigevent );
   timeout_sigevent->sigev_notify = SIGEV_NONE;
   stat = timer_create(CLOCK_REALTIME, timeout_sigevent, timeout_id);
   if (stat != 0)
@@ -914,7 +950,7 @@ static int
 reset_timeout(timer_t timeout_id, uint timeout_ms) {
   struct itimerspec timeout_spec[1];
   int stat = 0;
-  memset(timeout_spec, 0, sizeof(*timeout_spec));
+  Zeroize( *timeout_spec );
   timeout_spec->it_value.tv_sec = timeout_ms / 1000;
   timeout_spec->it_value.tv_nsec = 1000000 * (timeout_ms % 1000);
   stat = timer_settime(timeout_id, 0, timeout_spec, 0);

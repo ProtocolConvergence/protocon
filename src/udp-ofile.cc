@@ -100,9 +100,7 @@ void oput_udp_file(Cx::OFile& ofile, const Xn::Sys& sys)
   }
 
   ofile
-    << "\n#undef Max_NChannels"
     << "\n#define Max_NChannels " << max_nchannels
-    << "\n#undef Max_NVariables"
     << "\n#define Max_NVariables " << max_nvbls
     << "\n#define NProcesses " << pcs.sz()
 

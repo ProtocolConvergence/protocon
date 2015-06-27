@@ -16,11 +16,9 @@ find_package(MPI)
 find_package(OpenMP)
 
 set (TopPath ${CMAKE_CURRENT_SOURCE_DIR}/..)
+set (BinPath ${TopPath}/bin)
 set (DepPath ${TopPath}/dep)
 set (CxTopPath ${DepPath}/cx)
-set (CxPath ${CxTopPath}/src)
-set (CxBinPath ${CxTopPath}/bin)
-set (BinPath ${CMAKE_CURRENT_SOURCE_DIR}/../bin)
 if (NOT DEFINED GluPath)
   set (GluPath ${DepPath}/glu-2.4)
 endif ()
@@ -42,7 +40,7 @@ list (APPEND HFiles
   pfmla.h pfmla-glu.h pfmla-bittable.h)
 
 list (APPEND CFiles udp.c)
-list (APPEND HFiles udp.h udp-act.h testlist.h)
+list (APPEND HFiles udp.h udp-act.h)
 
 list (APPEND CCFiles
   pfmla.cc xfmlae.cc xnsys.cc xnspec.cc
@@ -72,23 +70,23 @@ list (APPEND HHFiles
   tuple.hh
   )
 
-include (${CxPath}/include.cmake)
+include (${CxTopPath}/src/include.cmake)
 
 set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${BinPath})
 
+#### GUI ####
 add_subdirectory (gui)
 
+#### Reduction-to-SAT Solver ####
+# Not really used.
 addbinexe (satsyn satsyn/satsyn.c satsyn/xnsys.c)
 
 file (MAKE_DIRECTORY ${BldPath}/satsyn)
 file (MAKE_DIRECTORY ${BldPath}/udp-dep)
 
+#### Parser Generation ####
 if (NOT DEFINED PegExe)
   set (PegExe leg)
-endif ()
-
-if (NOT DEFINED CEmbedExe)
-  set (CEmbedExe ${CxBinPath}/cembed)
 endif ()
 
 add_custom_command (
@@ -97,32 +95,8 @@ add_custom_command (
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/prot-xfile.leg)
 set_bld_cfile_properties (${BldPath}/prot-xfile.leg.cc)
 
-#### Set up embedded UDP sources. ####
-set (depfiles)
-foreach (depfile cx/def.h cx/synhax.h udp.h udp.c)
-  pfxeq (in_cx cx/ ${depfile})
-  string(REGEX REPLACE "^.*/" "" depfile "${depfile}")
-  set(ofile ${BldPath}/udp-dep/${depfile})
 
-  if (in_cx)
-    set(xfile ${CxBldPath}/${depfile})
-  else ()
-    set(xfile ${BldPath}/${depfile})
-  endif ()
-
-  add_custom_command (
-    OUTPUT ${ofile}
-    COMMAND ${CxExe} -shallow -no-quote-includes -o ${ofile} -x ${xfile}
-    DEPENDS ${xfile})
-  list (APPEND depfiles ${ofile})
-endforeach()
-
-add_custom_command (
-  OUTPUT ${BldPath}/udp-dep/embed.h
-  COMMAND ${CEmbedExe} -o ${BldPath}/udp-dep/embed.h ${depfiles}
-  DEPENDS ${depfiles})
-add_custom_target (UdpEmbedSources SOURCES ${BldPath}/udp-dep/embed.h)
-#### Done setting up embedded UDP sources ####
+#### Common Files ####
 
 list (APPEND ProtoconSources
   pfmla.c pfmla.cc xfmlae.cc
@@ -137,6 +111,8 @@ list (APPEND ProtoconSources
 
 link_directories(${GluPath})
 
+
+#### Unit Test Executable ####
 addbinexe (test_exe
   test.cc
   search.cc
@@ -145,10 +121,26 @@ addbinexe (test_exe
   )
 set_target_properties (test_exe PROPERTIES
   OUTPUT_NAME test
-  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 set_property (TARGET test_exe
   APPEND PROPERTY INCLUDE_DIRECTORIES ${GluIncludePath})
 target_link_libraries (test_exe cu glu cal ${M_LIB})
+
+file (MAKE_DIRECTORY ${BldPath}/test-dep)
+add_custom_command (
+  OUTPUT ${BldPath}/test-dep/switch.c
+  COMMAND cswitch testname
+  -case-pfx "fn = Test"
+  -array AllTests
+  -x ${CMAKE_CURRENT_SOURCE_DIR}/testlist.txt
+  -o ${BldPath}/test-dep/switch.c
+  DEPENDS cswitch ${CMAKE_CURRENT_SOURCE_DIR}/testlist.txt)
+add_custom_target (TestSwitchSources SOURCES ${BldPath}/test-dep/switch.c)
+
+add_dependencies(test_exe TestSwitchSources)
+
+
+#### Main Executable ####
 
 addbinexe (protocon
   main.cc
@@ -157,38 +149,85 @@ addbinexe (protocon
   promela.cc graphviz.cc udp-ofile.cc
   ${ProtoconSources}
   )
-add_dependencies(protocon UdpEmbedSources)
 set_property (TARGET protocon
   APPEND PROPERTY INCLUDE_DIRECTORIES ${GluIncludePath})
 target_link_libraries (protocon cu glu cal ${M_LIB})
 
+## Set up embedded UDP sources.
+# This is an added dependency to the main executable.
+set (depfiles)
+#foreach (depfile cx/def.h cx/synhax.h udp.h udp.c)
+foreach (depfile udp.h udp.c)
+  pfxeq (in_cx cx/ ${depfile})
+  string(REGEX REPLACE "^.*/" "" depfile "${depfile}")
+  set(ofile ${BldPath}/udp-dep/${depfile})
+
+  if (in_cx)
+    set(xfile ${CxBldPath}/${depfile})
+  else ()
+    set(xfile ${BldPath}/${depfile})
+  endif ()
+
+  add_custom_command (
+    OUTPUT ${ofile}
+    COMMAND cx -shallow -no-quote-includes -o ${ofile} -x ${xfile}
+    DEPENDS ${xfile})
+  list (APPEND depfiles ${ofile})
+endforeach()
+
+add_custom_command (
+  OUTPUT ${BldPath}/udp-dep/embed.h
+  COMMAND cembed -o ${BldPath}/udp-dep/embed.h ${depfiles}
+  DEPENDS ${depfiles})
+add_custom_target (UdpEmbedSources SOURCES ${BldPath}/udp-dep/embed.h)
+add_dependencies(protocon UdpEmbedSources)
+
+
+#### Add OpenMP Flags ####
+if (OPENMP_FOUND)
+  foreach (target_name protocon test_exe)
+    set_property (TARGET ${target_name}
+      APPEND_STRING PROPERTY COMPILE_FLAGS " ${OpenMP_C_FLAGS}")
+    set_property (TARGET ${target_name}
+      APPEND_STRING PROPERTY LINK_FLAGS " ${OpenMP_C_FLAGS}")
+  endforeach ()
+endif ()
+
+
+#### Bidirectional Ring Instance Enumeration ####
 addbinexe (biring biring.cc)
 set_target_properties (biring PROPERTIES
   OUTPUT_NAME biring
-  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
+
+#### Deadlock Checking for Generalized Rings ####
 addbinexe (deadfree deadfree.cc ${ProtoconSources})
 set_property (TARGET deadfree
   APPEND PROPERTY INCLUDE_DIRECTORIES ${GluIncludePath})
 target_link_libraries (deadfree cu glu cal ${M_LIB})
 set_target_properties (deadfree PROPERTIES
   OUTPUT_NAME deadfree
-  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
+
+#### Stand-Alone UDP Executable ####
+# Just for testing.
 if (UNIX)
   addbinexe (udp udp.c)
   target_link_libraries (udp rt)
   set_property (TARGET udp
     APPEND PROPERTY COMPILE_DEFINITIONS _POSIX_C_SOURCE=199309L)
   set_property (TARGET udp
-    APPEND PROPERTY COMPILE_DEFINITIONS _BSD_SOURCE)
+    APPEND PROPERTY COMPILE_DEFINITIONS _DEFAULT_SOURCE)
 
   set_target_properties (udp PROPERTIES
     OUTPUT_NAME udp
-    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 endif ()
 
 
+#### Main MPI Executable ####
 if (MPI_FOUND)
   addbinexe (protocon-mpi
     main-mpi.cc
@@ -221,17 +260,9 @@ if (MPI_FOUND)
   endif()
 endif ()
 
-if (OPENMP_FOUND)
-  foreach (target_name protocon test_exe)
-    set_property (TARGET ${target_name}
-      APPEND_STRING PROPERTY COMPILE_FLAGS " ${OpenMP_C_FLAGS}")
-    set_property (TARGET ${target_name}
-      APPEND_STRING PROPERTY LINK_FLAGS " ${OpenMP_C_FLAGS}")
-  endforeach ()
-endif ()
 
-
-
+#### MiniSAT Solver Executable ####
+# It has problems, not built by default.
 set (satccflags "${DEFAULT_COMPILE_FLAGS}")
 string (REGEX REPLACE "(^| )[/-]ansi($| )" " "
   satccflags "${satccflags}")
@@ -249,7 +280,7 @@ if (FALSE)
     APPEND PROPERTY INCLUDE_DIRECTORIES "/usr/include/minisat2")
 endif()
 
-
+#### Tests ####
 if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/verif/include.cmake)
   include (${CMAKE_CURRENT_SOURCE_DIR}/verif/include.cmake)
 endif ()
