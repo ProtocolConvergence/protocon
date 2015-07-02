@@ -87,6 +87,9 @@ public:
     free_SespCtx (this->spctx);
   }
 
+  bool interpret_ck() const
+  { return !sys->topology.featherweight; }
+
   bool update_allgood(bool good);
   void bad_parse(const char* text, const char* reason=0);
   bool add_variables(Sesp vbl_name_sp, Sesp vbl_nmembs_sp, Sesp vbl_dom_sp,

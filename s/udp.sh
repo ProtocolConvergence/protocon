@@ -30,8 +30,8 @@ then
   ExeName=udp.sh
 cat 1>&2 <<HERE
 Example usages:
-Ex #1: Run InputFile.prot with 5 processes.
-  $ExeName InputFile.prot -def N 5"
+Ex #1: Run InputFile.prot with N=5 processes and M=4.
+  $ExeName InputFile.prot 5 -def M 4"
 Ex #2: Run the default udp program with 5 processes.
   $ExeName -- 5
 HERE
@@ -52,7 +52,7 @@ else
   shift
   npcs=$1
   shift
-  vital protocon -nop -def N $npcs "$@" -x "$protfile" -o-udp udp.c
+  vital protocon -nop "$@" -x "$protfile" -def N $npcs -o-udp udp.c
   vital gcc -DFixedHostname=\""$FixedHostname"\" udp.c -o udp -lrt
 fi
 
@@ -62,15 +62,15 @@ rm -f pids
 
 for i in $(seq 0 $(expr $npcs - 1))
 do
-  arg2=
+  cmd="$udp $i"
   if empty_ck "$protfile"; then
-    arg2=$npcs
+    cmd="$cmd $npcs"
   fi
-  "$udp" $i $arg2 -o-log out.log.$i 2>&1 &
+  cmd="$cmd -o-log out.log.$i"
+
+  $cmd 2>&1 &
+  #valgrind --track-origins=yes $cmd 2>&1 &
   echo $! >> pids
-  #valgrind --track-origins=yes "$udp" $i $npcs out.log.$i 2>&1 &
-  #"$udp" $i $npcs 2>&1 | tee out.log.$i &
-  #"$udp" $i $npcs 2>&1 &
 done
 
 for i in $(seq 0 $(expr $npcs - 1))

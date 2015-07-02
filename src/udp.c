@@ -30,11 +30,12 @@ struct Channel
   SeqId seq;
   SeqId adj_seq;
   struct sockaddr_in host;
-  uint adj_PcIdx;
   Bool adj_acknowledged;
   uint8_t shake_step;  ///< Not used yet.
   Bool reply;
   uint32_t n_timeout_skips;
+  /* The rest is for convenience.*/
+  uint adj_PcIdx;
 };
 
 struct State
@@ -42,9 +43,11 @@ struct State
   fd_t fd;
   uint32_t enabled;
   uint8_t values[Max_NVariables];
-  PcIden pc;
   Channel channels[Max_NChannels];
+  /* The rest is for convenience.*/
+  PcIden pc;
   FILE* logf;
+  uint32_t rng[2];
 };
 
 State StateOfThisProcess;
@@ -106,8 +109,51 @@ ntoh_Packet (Packet* pkt)
   pkt->enabled = ntohl (pkt->enabled);
 }
 
-Bool
-randomize(void* p, uint size) {
+/** Hash function from Thomas Wang.**/
+  uint32_t
+hash32_wang(uint32_t seed)
+{
+  seed = (seed ^ 61) ^ (seed >> 16);
+  seed *= 9;
+  seed = seed ^ (seed >> 4);
+  seed *= 0x27d4eb2d;
+  seed = seed ^ (seed >> 15);
+  return seed;
+}
+
+  void
+init_rng_State (State* st, uint PcIdx)
+{
+  st->rng[0] = hash32_wang(PcIdx+1);
+  st->rng[1] = hash32_wang(PcIdx);
+}
+
+  uint32_t
+rand32_xorshift(uint32_t* state)
+{
+  // Xorshift algorithm from George Marsaglia's paper
+  *state ^= (*state << 13);
+  *state ^= (*state >> 17);
+  *state ^= (*state << 5);
+  return *state;
+}
+
+  Bool
+randomize(void* p, size_t size)
+{
+#ifndef UseRandomDevice
+  size_t off;
+  State* st = &StateOfThisProcess;
+  for (off = 0; off < size; off += sizeof(uint32_t)) {
+    uint32_t x = rand32_xorshift(&st->rng[0]);
+    size_t n = sizeof(uint32_t);
+    if (size - off < n)
+      n = size - off;
+    x ^= st->rng[1];
+    memcpy(&((byte*) p)[off], &x, n);
+  }
+  return 1;
+#else
   static uint8_t buf[4096];
   static uint off = sizeof(buf);
   const uint buf_size = sizeof(buf);
@@ -141,6 +187,15 @@ randomize(void* p, uint size) {
     BailOut(0, "Failed to read from /dev/urandom");
 
   return 1;
+#endif
+}
+
+  uint
+RandomMod(uint n)
+{
+  uint x = 0;
+  Randomize( x );
+  return x % n;
 }
 
   Bool
@@ -280,40 +335,45 @@ init_Channel(Channel* channel, State* st)
 /**
  * Randomly assign all protocol data within reason.
  *
- * Basically this means that we randomize all data which does not
+ * Basically this means that we randomize all data that does not
  * define the topology or interact with the operating system.
- * A comprehensive list of all data which is not randomized follows.
+ * A comprehensive list of all data that is not randomized follows.
  *
- * NOT randomized in State:
- * - {fd}, the socket file descriptor.
- * - {pc.idx}, this process index (convenience).
- * - {pc.npcs}, the number of processes (convenience).
- * - {logf}, pointer to log file.
- * NOT randomized in members of {channels}:
- * - {host}, host information for adjacent process.
- * - {adj_PcIdx}, adjacent process index (convenience).
- * NOT randomized elsewhere:
+ * Essential data NOT randomized:
+ * - {State.fd}, the socket file descriptor.
+ * - {Channel.host}, host information for adjacent process.
+ * - Timing variables in main().
  * - Program counter.
  * - Operating system data.
- * - Timing variables in main(). The same reasoning holds here as
- *   for not corrupting file descriptors.
+ *
+ * Convenience data NOT randomized:
+ * - {State.pc.idx}, this process index.
+ * - {State.pc.npcs}, the number of processes.
+ * - {State.logf}, pointer to log file.
+ * - {State.rng}, data for random numbers.
+ * - {Channel.adj_PcIdx}, adjacent process index.
+ * - {terminating}, flag that tells this program to terminate.
+ *
+ * It is easy to verify that everything else is randomized.
  */
   void
 randomize_State(State* st)
 {
-  //State tmp = *st;
-  //Randomize( *st );
-  Randomize( st->values );
-  Randomize( st->enabled );
+  State tmp;
+  Randomize( tmp );
+
+  tmp.fd = st->fd;
+  tmp.pc.idx = st->pc.idx;
+  tmp.pc.npcs = st->pc.npcs;
+  tmp.logf = st->logf;
+  memcpy(tmp.rng, st->rng, sizeof(st->rng));
+
   for (uint i = 0; channel_idx_ck(st->pc, i); ++i) {
-    Channel* channel = &st->channels[i];
-    Randomize( channel->seq );
-    Randomize( channel->adj_seq );
-    channel->adj_acknowledged = random_Bool();
-    Randomize( channel->shake_step );
-    channel->reply = random_Bool();
-    Randomize( channel->n_timeout_skips );
+    tmp.channels[i].host  = st->channels[i].host;
+    tmp.channels[i].adj_PcIdx  = st->channels[i].adj_PcIdx;
   }
+
+  *st = tmp;
 }
 
 /**
@@ -327,6 +387,7 @@ init_State(State* st, uint PcIdx, uint NPcs)
   Zeroize( *st );
   st->pc.idx = PcIdx;
   st->pc.npcs = NPcs;
+  init_rng_State (st, PcIdx);
 
   st->fd = socket(AF_INET, SOCK_DGRAM, 0);
   Zeroize( *host );

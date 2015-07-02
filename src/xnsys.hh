@@ -181,6 +181,10 @@ public:
   uint aguard(uint vbl_idx) const;
   void swap_vals(uint ridx_a, uint ridx_b);
   bool puppet_self_loop_ck() const;
+
+  bool operator<(const Xn::ActSymm& b) const {
+    return (this->vals < b.vals);
+  }
 };
 
 class PcSymm {
@@ -307,6 +311,7 @@ public:
   uint n_possible_acts;
   uint total_pre_domsz;
   bool lightweight;
+  bool featherweight;
   Cx::PFmla identity_xn;
 
   bool random_write_exists;
@@ -327,6 +332,7 @@ public:
     , n_possible_acts(0)
     , total_pre_domsz(0)
     , lightweight(false)
+    , featherweight(false)
     , identity_xn(true)
     , random_write_exists(false)
     , pure_shadow_vbl_exists(false)
@@ -463,7 +469,7 @@ public:
 
   X::Fmla sync_xn(const Cx::Table<uint>& actidcs) const;
   X::Fmla xn_of_pc(const Xn::ActSymm& act, uint pcidx) const;
-  X::Fmla represented_xns_of_pc(const Xn::ActSymm& act, uint pcidx) const;
+  X::Fmla represented_xns_of_pc(const Xn::ActSymm& act, uint relative_pcidx) const;
   void make_action_pfmla(X::Fmla* ret_xn, uint actid) const;
   void make_action_xfmlae(X::Fmlae* ret_xn, uint actidx) const;
 private:

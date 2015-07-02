@@ -488,6 +488,8 @@ ProtoconFile::add_action(Sesp act_sp, Xn::Vbl::ShadowPuppetRole role)
     }
   }
 
+  if (!this->interpret_ck())  return update_allgood (good);
+
   Cx::PFmla act_pf( false );
   Cx::Table<Cx::PFmla> pc_xns;
   DoLegitLine( "parse action" )
@@ -550,6 +552,8 @@ ProtoconFile::forbid_action(Sesp act_sp)
     }
   }
 
+  if (!this->interpret_ck())  return update_allgood (good);
+
   Cx::PFmla act_pf( false );
   Cx::Table<Cx::PFmla> pc_xns;
   DoLegitLine( "parse action" )
@@ -580,6 +584,8 @@ ProtoconFile::permit_action(Sesp act_sp)
     }
   }
 
+  if (!this->interpret_ck())  return update_allgood (good);
+
   Cx::PFmla act_pf( false );
   Cx::Table<Cx::PFmla> pc_xns;
   DoLegitLine( "parse action" )
@@ -599,6 +605,9 @@ ProtoconFile::add_pc_predicate(Sesp name_sp, Sesp val_sp)
 {
   if (!allgood)  return false;
   DeclLegit( good );
+
+  if (!this->interpret_ck())  return update_allgood (good);
+
   const char* name;
   DoLegitLineP( name, "" )
     ccstr_of_Sesp (name_sp);
@@ -611,6 +620,7 @@ ProtoconFile::add_pc_predicate(Sesp name_sp, Sesp val_sp)
       eval (let_vals.membs[i], val_sp);
   }
   index_map.erase(idx_name);
+
   DoLegitLine( "finding expression" )
     string_expression (let_vals.expression, val_sp);
   DoLegit( "" )
@@ -623,6 +633,19 @@ ProtoconFile::add_pc_assume(Sesp assume_sp)
 {
   if (!allgood)  return false;
   DeclLegit( good );
+
+  Cx::String assume_expression;
+  DoLegitLine( "" )
+    parend_string_expression(assume_expression, assume_sp);
+
+  DoLegit( "" ) {
+    if (!pc_symm_spec->closed_assume_expression.empty_ck()) {
+      pc_symm_spec->closed_assume_expression << " && ";
+    }
+    pc_symm_spec->closed_assume_expression << assume_expression;
+  }
+
+  if (!this->interpret_ck())  return update_allgood (good);
 
   const Cx::String& idx_name = pc_symm_spec->idx_name;
   Cx::PFmla pf;
@@ -637,16 +660,6 @@ ProtoconFile::add_pc_assume(Sesp assume_sp)
     sys->closed_assume &= pf;
   }
 
-  Cx::String assume_expression;
-  DoLegitLine( "" )
-    parend_string_expression(assume_expression, assume_sp);
-
-  DoLegit( "" ) {
-    if (!pc_symm_spec->closed_assume_expression.empty_ck()) {
-      pc_symm_spec->closed_assume_expression << " && ";
-    }
-    pc_symm_spec->closed_assume_expression << assume_expression;
-  }
   index_map.erase(idx_name);
   return update_allgood (good);
 }
@@ -656,6 +669,21 @@ ProtoconFile::add_pc_legit(Sesp legit_sp)
 {
   if (!allgood)  return false;
   DeclLegit( good );
+
+  Cx::String invariant_expression;
+  DoLegitLine( "" )
+    string_expression(invariant_expression, legit_sp);
+
+  DoLegit( "" )
+  {
+    if (!pc_symm_spec->invariant_expression.empty_ck()) {
+      pc_symm_spec->invariant_expression =
+        Cx::String("(") + pc_symm_spec->invariant_expression + ") && ";
+    }
+    pc_symm_spec->invariant_expression += invariant_expression;
+  }
+
+  if (!this->interpret_ck())  return update_allgood (good);
 
   const Cx::String& idx_name = pc_symm_spec->idx_name;
   Cx::PFmla pf;
@@ -672,18 +700,6 @@ ProtoconFile::add_pc_legit(Sesp legit_sp)
     }
   }
 
-  Cx::String invariant_expression;
-  DoLegitLine( "" )
-    string_expression(invariant_expression, legit_sp);
-
-  DoLegit( "" )
-  {
-    if (!pc_symm_spec->invariant_expression.empty_ck()) {
-      pc_symm_spec->invariant_expression =
-        Cx::String("(") + pc_symm_spec->invariant_expression + ") && ";
-    }
-    pc_symm_spec->invariant_expression += invariant_expression;
-  }
   index_map.erase(idx_name);
   return update_allgood (good);
 }
@@ -707,13 +723,16 @@ ProtoconFile::add_predicate(Sesp name_sp, Sesp val_sp)
   DoLegitLineP( name, "" )
     ccstr_of_Sesp (name_sp);
 
-  Cx::PFmla pf(false);
   Cx::String expression;
-  DoLegitLine( 0 )
-    eval(pf, val_sp);
-
   DoLegitLine( "finding expression" )
     string_expression (expression, val_sp);
+
+
+  Cx::PFmla pf(false);
+  if (this->interpret_ck()) {
+    DoLegitLine( 0 )
+      eval(pf, val_sp);
+  }
 
   DoLegit( 0 )
     sys->predicate_map.add(name, pf, expression);
@@ -727,13 +746,6 @@ ProtoconFile::add_assume(Sesp assume_sp)
   if (!allgood)  return false;
   DeclLegit( good );
 
-  Cx::PFmla pf;
-  DoLegitLine( "parse invariant" )
-    eval(pf, assume_sp);
-
-  DoLegit(0)
-    sys->closed_assume &= pf;
-
   Cx::String str;
   DoLegitLine( "convert invariant expression to string" )
     parend_string_expression(str, assume_sp);
@@ -744,6 +756,14 @@ ProtoconFile::add_assume(Sesp assume_sp)
     }
     spec->closed_assume_expression << str;
   }
+  if (!this->interpret_ck())  return update_allgood (good);
+
+  Cx::PFmla pf;
+  DoLegitLine( "parse invariant" )
+    eval(pf, assume_sp);
+
+  DoLegit(0)
+    sys->closed_assume &= pf;
 
   return update_allgood (good);
 }
@@ -770,13 +790,6 @@ ProtoconFile::add_legit(Sesp legit_sp)
   if (!allgood)  return false;
   DeclLegit( good );
 
-  Cx::PFmla pf;
-  DoLegitLine( "parse invariant" )
-    eval(pf, legit_sp);
-
-  DoLegit(0)
-    sys->invariant &= pf;
-
   Cx::String invariant_expression;
   DoLegitLine( "convert invariant expression to string" )
     string_expression(invariant_expression, legit_sp);
@@ -788,6 +801,15 @@ ProtoconFile::add_legit(Sesp legit_sp)
     }
     spec->invariant_expression += invariant_expression;
   }
+  if (!this->interpret_ck())  return update_allgood (good);
+
+
+  Cx::PFmla pf;
+  DoLegitLine( "parse invariant" )
+    eval(pf, legit_sp);
+
+  DoLegit(0)
+    sys->invariant &= pf;
 
   return update_allgood (good);
 }

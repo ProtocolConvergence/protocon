@@ -23,27 +23,28 @@ struct Process {
 };
 }
 
-void oput_udp_file(Cx::OFile& ofile, const Xn::Sys& sys)
+void oput_udp_file(Cx::OFile& ofile, const Xn::Sys& sys, const Xn::Net& o_topology)
 {
 #include "udp-dep/embed.h"
+  const Xn::Net& topo = sys.topology;
+
   for (uint i = 0; i < nfiles-1; ++i) {
     ofile.write((char*) files_bytes[i], files_nbytes[i]);
   }
 
-  const Xn::Net& topo = sys.topology;
-  Cx::Table<uint> owning(topo.vbls.sz());
-  Cx::Table<Process> pcs(topo.pcs.sz());
+  Cx::Table<uint> owning(o_topology.vbls.sz());
+  Cx::Table<Process> pcs(o_topology.pcs.sz());
 
   for (uint i = 0; i < owning.sz(); ++i) {
     owning[i] = pcs.sz();
   }
 
   for (uint pcidx = 0; pcidx < pcs.sz(); ++pcidx) {
-    const Xn::Pc& pc = topo.pcs[pcidx];
+    const Xn::Pc& pc = o_topology.pcs[pcidx];
     for (uint i = 0; i < pc.rvbls.sz(); ++i) {
       const Xn::Vbl& vbl = *pc.rvbls[i];
       if (vbl.symm->pure_shadow_ck())  continue;
-      const uint vidx =  topo.vbls.index_of(&vbl);
+      const uint vidx =  o_topology.vbls.index_of(&vbl);
       Variable v;
       v.vbl_idx = vidx;
       v.domsz = vbl.symm->domsz;
@@ -65,28 +66,45 @@ void oput_udp_file(Cx::OFile& ofile, const Xn::Sys& sys)
       if (owning_pcidx == pcs.sz()) {
         owning_pcidx = pcidx;
       }
+    }
+  }
 
-      if (owning_pcidx != pcidx) {
-        uint& o_idx = process.chan_map.ensure(owning_pcidx,
-                                              (uint)process.chans.sz());
-        if (o_idx == process.chans.sz()) {
-          Channel& o_channel = process.chans.grow1();
-          o_channel.pcidx = owning_pcidx;
-        }
-
-        Process& other = pcs[owning_pcidx];
-        uint& x_idx = other.chan_map.ensure(pcidx,
-                                            (uint)other.chans.sz());
-        if (x_idx == other.chans.sz()) {
-          other.chans.grow1();
-        }
-        Channel& x_channel = other.chans[x_idx];
-        x_channel.pcidx = pcidx;
-        x_channel.vbls.push(v.vbl_idx);
-
+  // Set up channels for to others.
+  for (uint pcidx = 0; pcidx < pcs.sz(); ++pcidx) {
+    Process& process = pcs[pcidx];
+    for (uint i = 0; i < process.vbls.sz(); ++i) {
+      const Variable& v = process.vbls[i];
+      uint owning_pcidx = owning[v.vbl_idx];
+      if (owning_pcidx == pcidx)  continue;
+      uint& o_idx = process.chan_map.ensure(owning_pcidx,
+                                            (uint)process.chans.sz());
+      if (o_idx == process.chans.sz()) {
+        Channel& o_channel = process.chans.grow1();
+        o_channel.pcidx = owning_pcidx;
       }
     }
   }
+
+  // Set up channels from others.
+  for (uint pcidx = 0; pcidx < pcs.sz(); ++pcidx) {
+    Process& process = pcs[pcidx];
+    for (uint i = 0; i < process.vbls.sz(); ++i) {
+      const Variable& v = process.vbls[i];
+      uint owning_pcidx = owning[v.vbl_idx];
+      if (owning_pcidx == pcidx)  continue;
+
+      Process& other = pcs[owning_pcidx];
+      uint& x_idx = other.chan_map.ensure(pcidx,
+                                          (uint)other.chans.sz());
+      if (x_idx == other.chans.sz()) {
+        other.chans.grow1();
+      }
+      Channel& x_channel = other.chans[x_idx];
+      x_channel.pcidx = pcidx;
+      x_channel.vbls.push(v.vbl_idx);
+    }
+  }
+
 
   uint max_nchannels = 0;
   uint max_nvbls = 0;
@@ -106,116 +124,211 @@ void oput_udp_file(Cx::OFile& ofile, const Xn::Sys& sys)
 
     << "\nuint process_of_channel(PcIden pc, uint channel_idx)"
     << "\n{"
-    << "\n#define L(pcidx, chanidx, ret)\\"
-    << "\n  if (pc.idx==pcidx && channel_idx==chanidx)  return ret"
+    << "\n#define T(ret)  if (0==channel_idx)  return ret; channel_idx -= 1"
+    << "\n  switch (pc.idx) {"
     ;
   for (uint pcidx = 0; pcidx < pcs.sz(); ++pcidx) {
     Process& process = pcs[pcidx];
+    ofile << "\n  case " << pcidx << ":";
     for (uint chanidx = 0; chanidx < process.chans.sz(); ++chanidx) {
-      ofile << "\nL(" << pcidx << "," << chanidx << ","
-        << process.chans[chanidx].pcidx << ");";
+      ofile << " T( " << process.chans[chanidx].pcidx << " );";
     }
+    ofile << " break;";
   }
   ofile
+    << "\n  default: break;"
+    << "\n  }"
     << "\n  return pc.idx;"
-    << "\n#undef L"
+    << "\n#undef T"
     << "\n}"
 
     << "\nuint variable_of_channel(PcIden pc, uint channel_idx, uint i, Bool writing)"
     << "\n{"
-    << "\n#define W(pcidx, chanidx, access_idx, ret)\\"
-    << "\n  if (pc.idx==pcidx && writing && channel_idx==chanidx && i==access_idx)\\"
-    << "\n    return ret"
-    << "\n#define R(pcidx, chanidx, access_idx, ret)\\"
-    << "\n  if (pc.idx==pcidx && !writing && channel_idx==chanidx && i==access_idx)\\"
-    << "\n    return ret"
+    << "\n  "
     ;
+  Cx::String prev_str = "";
   for (uint pcidx = 0; pcidx < pcs.sz(); ++pcidx) {
     Process& process = pcs[pcidx];
+    Cx::String str = "";
+    str << "\n    if (writing) {";
+    for (uint chanidx = 0; chanidx < process.chans.sz(); ++chanidx) {
+      const Channel& o_channel = process.chans[chanidx];
+      for (uint i = 0; i < o_channel.vbls.sz(); ++i) {
+        str << "\n      if (channel_idx==" << chanidx
+          << " && i==" << i
+          << ")  return " << process.local_idcs[o_channel.vbls[i]] << ";";
+      }
+    }
+    str << "\n    }\n    else {";
     for (uint chanidx = 0; chanidx < process.chans.sz(); ++chanidx) {
       const Channel& o_channel = process.chans[chanidx];
       const Process& other = pcs[o_channel.pcidx];
       const Channel& x_channel = other.chans[*other.chan_map.lookup(pcidx)];
-      for (uint i = 0; i < o_channel.vbls.sz(); ++i) {
-        ofile << "\nW(" << pcidx << "," << chanidx << "," << i << ","
-          << process.local_idcs[o_channel.vbls[i]] << ");";
-      }
       for (uint i = 0; i < x_channel.vbls.sz(); ++i) {
-        ofile << "\nR(" << pcidx << "," << chanidx << "," << i << ","
-          << process.local_idcs[x_channel.vbls[i]] << ");";
+        str << "\n      if (channel_idx==" << chanidx
+          << " && i==" << i
+          << ")  return " << process.local_idcs[x_channel.vbls[i]] << ";";
       }
     }
+    str << "\n    }";
+    if (str != prev_str) {
+      if (!prev_str.empty_ck()) {
+        ofile << "if (pc.idx < " << pcidx << ") {" << prev_str << "\n  }\n  else ";
+      }
+      prev_str = str;
+    }
+  }
+  if (!prev_str.empty_ck()) {
+    ofile << "if (pc.idx < " << pcs.sz() << ") {" << prev_str << "\n  }";
   }
   ofile
     << "\n  return Max_NVariables;"
-    << "\n#undef W"
-    << "\n#undef R"
     << "\n}"
 
     << "\nuint domsz_of_variable(PcIden pc, uint vbl_idx)"
-    << "\n{"
-    << "\n#define L(pcidx, vidx, ret)\\"
-    << "\n  if (pc.idx==pcidx && vbl_idx==vidx)\\"
-    << "\n    return ret"
-    ;
-  for (uint pcidx = 0; pcidx < pcs.sz(); ++pcidx) {
-    Process& process = pcs[pcidx];
-    for (uint i = 0; i < process.vbls.sz(); ++i) {
-      ofile << "\nL(" << pcidx << "," << i << ","
-        << process.vbls[i].domsz << ");";
-    }
-  }
-  ofile
-    << "\n  return 0;"
-    << "\n#undef L"
-    << "\n}"
-    << "\nvoid action_assign(PcIden pc, uint8_t* x)"
     << "\n{"
     ;
   uint symm_cutoff = 0;
   for (uint pc_symm_idx = 0; pc_symm_idx < topo.pc_symms.sz(); ++pc_symm_idx) {
     const Xn::PcSymm& pc_symm = topo.pc_symms[pc_symm_idx];
-    symm_cutoff += pc_symm.membs.sz();
+    if (pc_symm.membs.sz() == 0)  continue;
+
+    symm_cutoff += o_topology.pc_symms[pc_symm_idx].membs.sz();
     ofile << "\n  " << (pc_symm_idx == 0 ? "" : "else ") << "if (pc.idx < "
       << symm_cutoff << ") {";
 
-    for (uint ai = 0; ai < sys.actions.size(); ++ai) {
-      Xn::ActSymm act;
-      topo.action(act, sys.actions[ai]);
-      if (act.pc_symm != &pc_symm) {
+    uint puppet_i = 0;
+    for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
+      if (pc_symm.rvbl_symms[i]->pure_shadow_ck()) {
         continue;
       }
-
-      uint puppet_i = 0;
-      Cx::Table<uint> writable;
-      ofile << "\n    if (";
-      for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
-        if (pc_symm.rvbl_symms[i]->pure_shadow_ck()) {
-          continue;
-        }
-        if (pc_symm.write_flags[i]) {
-          writable.push(puppet_i);
-        }
-
-        if (puppet_i > 0) {
-          ofile << " && ";
-        }
-        ofile << "x[" << puppet_i << "]==" << act.guard(i);
-        puppet_i += 1;
-      }
-
-      ofile << ") { ";
-      puppet_i = 0;
-      for (uint i = 0; i < pc_symm.wvbl_symms.sz(); ++i) {
-        if (pc_symm.wvbl_symms[i]->pure_shadow_ck()) {
-          continue;
-        }
-        ofile << "x[" << writable[puppet_i] << "]=" << act.assign(i) << "; ";
-        puppet_i += 1;
-      }
-      ofile << "}";
+      ofile << "\n    if (vbl_idx==" << puppet_i << ")  return "
+        << pc_symm.rvbl_symms[i]->domsz
+        << ";";
+      puppet_i += 1;
     }
+
     ofile << "\n  }";
+  }
+
+  ofile
+    << "\n  return 0;"
+    << "\n}"
+    << "\nvoid action_assign(PcIden pc, uint8_t* x)"
+    << "\n{"
+    ;
+  symm_cutoff = 0;
+
+  Cx::Table<X::Fmla> rep_xns( topo.pc_symms.sz() );
+  rep_xns.wipe (P::Fmla(false));
+
+#if 0
+  Cx::Table<uint> actions;
+  {
+    Cx::Set<uint> action_set( sys.actions );
+    for (uint i = 0; i < sys.actions.size(); ++i) {
+      for (uint j = 0; j < topo.represented_actions[sys.actions[i]].sz(); ++j) {
+        action_set << topo.represented_actions[sys.actions[i]][j];
+      }
+    }
+    action_set.fill( actions );
+  }
+#else
+  Cx::Table<uint> actions( sys.actions );
+#endif
+
+  for (uint ai = 0; ai < actions.sz(); ++ai) {
+    Xn::ActSymm act;
+    topo.action(act, actions[ai]);
+
+    uint pc_symm_idx = topo.pc_symms.index_of(act.pc_symm);
+    const Xn::PcSymm& pc_symm = topo.pc_symms[pc_symm_idx];
+    uint rep_pcidx = 0;
+    pc_symm.representative(&rep_pcidx);
+    //rep_xns[pc_symm_idx] |= topo.xn_of_pc (act, rep_pcidx);
+    rep_xns[pc_symm_idx] |= topo.represented_xns_of_pc (act, rep_pcidx);
+  }
+
+  for (uint pc_symm_idx = 0; pc_symm_idx < topo.pc_symms.sz(); ++pc_symm_idx) {
+    const Xn::PcSymm& pc_symm = topo.pc_symms[pc_symm_idx];
+    if (pc_symm.membs.sz() == 0)  continue;
+
+    symm_cutoff += o_topology.pc_symms[pc_symm_idx].membs.sz();
+    ofile << "\n  " << (pc_symm_idx == 0 ? "" : "else ")
+      << "if (pc.idx < "
+      << symm_cutoff << ") {"
+      << "\n    /* */"
+      ;
+
+    uint rep_pcidx = 0;
+    pc_symm.representative(&rep_pcidx);
+    const Xn::Pc& pc = *pc_symm.membs[rep_pcidx];
+
+    Cx::Table<uint> writable;
+    Cx::Table<uint> pfmla_rvbl_idcs;
+    Cx::Table<uint> pfmla_wvbl_idcs;
+
+    for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
+      if (pc_symm.rvbl_symms[i]->pure_shadow_ck())  continue;
+      if (pc_symm.write_flags[i]) {
+        uint puppet_i = pfmla_rvbl_idcs.sz();
+        writable << puppet_i;
+        pfmla_wvbl_idcs << pc.rvbls[i]->pfmla_idx;
+      }
+      pfmla_rvbl_idcs << pc.rvbls[i]->pfmla_idx;
+    }
+
+    X::Fmla& xn = rep_xns[pc_symm_idx];
+    xn.ensure_ctx(topo.pfmla_ctx);
+
+    Cx::Table<uint> pre_state( pfmla_rvbl_idcs.sz() );
+    Cx::Table<uint> img_state( pfmla_wvbl_idcs.sz() );
+
+    while (xn.sat_ck()) {
+      xn.state (+pre_state, pfmla_rvbl_idcs);
+      const P::Fmla pre_pf = topo.pfmla_ctx.pfmla_of_state (+pre_state, pfmla_rvbl_idcs);
+      P::Fmla img_pf = xn.img(pre_pf);
+      xn -= pre_pf;
+
+      ofile << "if (";
+      for (uint i = 0; i < pre_state.sz(); ++i) {
+        if (i > 0)
+          ofile << " && ";
+        ofile << "x[" << i << "]==" << pre_state[i];
+      }
+      ofile << ")";
+
+      Cx::Table<Cx::String> choice_statements;
+      while (img_pf.sat_ck()) {
+        img_pf.state (+img_state, pfmla_wvbl_idcs);
+        P::Fmla tmp_pf = topo.pfmla_ctx.pfmla_of_state (+img_state, pfmla_wvbl_idcs);
+        img_pf -= tmp_pf;
+        if (pre_pf.subseteq_ck(tmp_pf))  continue;
+
+        choice_statements.grow1();
+        for (uint i = 0; i < img_state.sz(); ++i) {
+          choice_statements.top() << " x[" << writable[i] << "]=" << img_state[i] << ";";
+        }
+      }
+
+      if (choice_statements.sz() == 0) {
+        // Only shadow is changing.
+        ofile << " {}";
+      }
+      else if (choice_statements.sz() == 1) {
+        ofile << " {" << choice_statements[0] << " }";
+      }
+      else {
+        ofile << " switch (RandomMod(" << choice_statements.sz() << ")) {";
+        for (uint i = 0; i < choice_statements.sz(); ++i) {
+          ofile << "\n      case " << i << ":" << choice_statements[i] << " break;";
+        }
+        ofile << "\n    }";
+      }
+      ofile << "\n    else ";
+
+    }
+    ofile << "{}\n  }";
   }
   ofile
     << "\n}"

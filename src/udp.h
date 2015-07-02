@@ -17,8 +17,11 @@
 #include <signal.h>
 #include <time.h>
 
-// Can leave this undefined.
+//// Define these to change behavior.
+
 //#define FixedHostname "10.0.0.1"
+//#define UseRandomDevice
+
 typedef char Bool;
 typedef unsigned char byte;
 typedef unsigned int uint;
@@ -41,7 +44,8 @@ static const char SharedFilePfx[] = "udp-host.";
 #define CastOff( T, p ,op, off ) ((T*) ((size_t) (p) op (ptrdiff_t) (off)))
 #define IdxEltZ( a, e, elsz ) ((size_t) ((size_t) (e) - (size_t) (a)) / (elsz))
 #define IdxElt( a, e ) IdxEltZ( a, e, sizeof(*a) )
-Bool randomize(void* p, uint size);
+Bool randomize(void* p, size_t size);
+uint RandomMod(uint n);
 #define Randomize(x)  randomize(&(x), sizeof(x))
 #define Zeroize(x)  memset(&(x), 0, sizeof(x))
 

@@ -122,9 +122,9 @@ OPutPromelaPc(ostream& of, const Xn::PcSymm& pc_symm, const Cx::Table<Xn::ActSym
  * system is self-stabilizing.
  **/
   void
-OPutPromelaModel(ostream& of, const Xn::Sys& sys)
+OPutPromelaModel(ostream& of, const Xn::Sys& sys, const Xn::Net& topo)
 {
-  const Xn::Net& topo = sys.topology;
+  const Xn::Net& specnet = sys.topology;
   const Xn::Spec& spec = *sys.spec;
   for (uint i = 0; i < spec.constant_map.keys.sz(); ++i) {
     of << "#define " << spec.constant_map.keys[i];
@@ -145,8 +145,8 @@ OPutPromelaModel(ostream& of, const Xn::Sys& sys)
   Cx::Table<Xn::ActSymm> acts;
   const vector<uint>& actions = sys.actions;
   for (uint i = 0; i < actions.size(); ++i) {
-    for (uint j = 0; j < topo.represented_actions[actions[i]].sz(); ++j) {
-      topo.action(acts.grow1(), topo.represented_actions[actions[i]][j]);
+    for (uint j = 0; j < specnet.represented_actions[actions[i]].sz(); ++j) {
+      specnet.action(acts.grow1(), specnet.represented_actions[actions[i]][j]);
     }
   }
   for (uint i = 0; i < topo.pc_symms.sz(); ++i) {

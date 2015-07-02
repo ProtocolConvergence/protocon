@@ -83,13 +83,23 @@ int main(int argc, char** argv)
   }
 
   if (found || exec_opt.task == ProtoconOpt::NoTask) {
+    Xn::Sys osys;
+    osys.topology.featherweight = true;
+    const Xn::Net* o_topology = &sys.topology;
+    if (exec_opt.task == ProtoconOpt::NoTask) {
+      ProtoconFileOpt file_opt = infile_opt;
+      file_opt.constant_map = exec_opt.params[0].constant_map;
+      ReadProtoconFile(osys, file_opt);
+      o_topology = &osys.topology;
+    }
+
     if (!exec_opt.model_ofilepath.empty_ck()) {
       const char* modelFilePath = exec_opt.model_ofilepath.cstr();
       std::fstream of(modelFilePath,
                       std::ios::binary |
                       std::ios::out |
                       std::ios::trunc);
-      OPutPromelaModel(of, sys);
+      OPutPromelaModel(of, sys, *o_topology);
       of.close();
       DBog1("Model written to \"%s\".", modelFilePath);
       //DBog0("WARNING: The model is not working at this time.");
@@ -97,16 +107,19 @@ int main(int argc, char** argv)
     if (!exec_opt.graphviz_ofilepath.empty_ck()) {
       Cx::OFileB ofb;
       ofb.open(exec_opt.graphviz_ofilepath);
-      oput_graphviz_file (ofb, sys.topology);
+      oput_graphviz_file (ofb, *o_topology);
     }
     if (!exec_opt.udp_ofilepath.empty_ck()) {
+      Claim2( exec_opt.task ,==, ProtoconOpt::NoTask );
       Cx::OFileB ofb;
       ofb.open(exec_opt.udp_ofilepath);
-      oput_udp_file (ofb, sys);
+      oput_udp_file (ofb, sys, *o_topology);
     }
     if (!exec_opt.ofilepath.empty_ck())
     {
-      oput_protocon_file (exec_opt.ofilepath, sys,
+      oput_protocon_file (exec_opt.ofilepath,
+                          sys, *o_topology,
+                          sys.actions,
                           exec_opt.use_espresso,
                           exec_opt.argline.ccstr());
     }

@@ -433,6 +433,7 @@ oput_protocon_pc_invariant (Cx::OFile& of, const Xn::PcSymm& pc_symm,
 
   bool
 oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys,
+                    const Xn::Net& o_topology,
                     const vector<uint>& actions,
                     bool use_espresso,
                     const char* comment)
@@ -458,7 +459,7 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys,
   if (comment) {
     of << "// " << comment << "\n";
   }
-  oput_protocon_constants (of, *sys.spec);
+  oput_protocon_constants (of, *o_topology.spec);
   for (uint i = 0; i < topo.vbl_symms.sz(); ++i) {
     const Xn::VblSymm& vbl_symm = topo.vbl_symms[i];
     if (vbl_symm.pure_shadow_ck())
@@ -495,15 +496,16 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys,
 
   Cx::Table<Xn::ActSymm> acts;
   for (uint i = 0; i < actions.size(); ++i) {
-    for (uint j = 0; j < topo.represented_actions[actions[i]].sz(); ++j) {
-      topo.action(acts.grow1(), topo.represented_actions[actions[i]][j]);
+    for (uint j = 0; j < sys.topology.represented_actions[actions[i]].sz(); ++j) {
+      sys.topology.action(acts.grow1(), sys.topology.represented_actions[actions[i]][j]);
     }
   }
 
-  for (uint i = 0; i < topo.pc_symms.sz(); ++i) {
-    const Xn::PcSymm& pc_symm = topo.pc_symms[i];
+  for (uint i = 0; i < sys.topology.pc_symms.sz(); ++i) {
+    const Xn::PcSymm& pc_symm = sys.topology.pc_symms[i];
     of << "process " << pc_symm.spec->name
-      << "[" << pc_symm.spec->idx_name << " <- Nat % " << pc_symm.spec->nmembs_expression << "]\n";
+      << "[" << pc_symm.spec->idx_name << " <- Nat % "
+      << o_topology.pc_symms[i].spec->nmembs_expression << "]\n";
     of << "{\n";
     oput_protocon_pc_lets (of, pc_symm);
     oput_protocon_pc_vbls (of, pc_symm);
@@ -522,6 +524,13 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys,
 }
 
   bool
+oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys, const vector<uint>& actions,
+                    bool use_espresso, const char* comment)
+{
+  return oput_protocon_file (of, sys, sys.topology, actions, use_espresso, comment);
+}
+
+  bool
 oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys,
                     bool use_espresso, const char* comment)
 {
@@ -529,18 +538,20 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys,
 }
 
   bool
-oput_protocon_file (const Cx::String& ofilename, const Xn::Sys& sys,
+oput_protocon_file (const Cx::String& ofilename,
+                    const Xn::Sys& sys,
+                    const Xn::Net& o_topology,
                     const vector<uint>& actions,
                     bool use_espresso,
                     const char* comment)
 {
   if (ofilename == "-") {
     Cx::OFile ofile( stdout_OFile () );
-    return oput_protocon_file (ofile, sys, actions, use_espresso, comment);
+    return oput_protocon_file (ofile, sys, o_topology, actions, use_espresso, comment);
   }
   Cx::OFileB ofb;
   ofb.open(ofilename);
-  return oput_protocon_file (ofb, sys, actions, use_espresso, comment);
+  return oput_protocon_file (ofb, sys, o_topology, actions, use_espresso, comment);
 }
 
   bool
@@ -548,6 +559,6 @@ oput_protocon_file (const Cx::String& ofilename, const Xn::Sys& sys,
                     bool use_espresso,
                     const char* comment)
 {
-  return oput_protocon_file (ofilename, sys, sys.actions, use_espresso, comment);
+  return oput_protocon_file (ofilename, sys, sys.topology, sys.actions, use_espresso, comment);
 }
 

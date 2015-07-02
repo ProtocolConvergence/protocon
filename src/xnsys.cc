@@ -60,6 +60,8 @@ Net::commit_initialization()
   }
 
   this->n_possible_acts = ntotal;
+  if (this->featherweight)
+    return;
   represented_actions.resize(ntotal);
   for (uint actidx = 0; actidx < ntotal; ++actidx) {
     uint rep_actidx = representative_action_index(actidx);
@@ -127,6 +129,9 @@ Net::commit_variable(VblSymm& symm, uint i)
 {
   Vbl* vbl = &vbls.push(Vbl(&symm, i));
   symm.membs[i] = vbl;
+
+  if (this->featherweight)  return;
+
   vbl->pfmla_idx = pfmla_ctx.add_vbl(name_of (*vbl), symm.domsz);
   pfmla_ctx.add_to_vbl_list(symm.pfmla_list_id, vbl->pfmla_idx);
 
@@ -197,6 +202,7 @@ Net::add_processes(const String& name, const String& idx_name, uint nmembs)
     xfmlae_ctx.wvbl_list_ids.push(pfmla_ctx.add_vbl_list());
     Pc& pc = pcs.push(Pc(&symm, i));
     symm.membs.push(&pc);
+    if (this->featherweight)  continue;;
     pc.act_unchanged_pfmla = this->identity_xn;
     xfmlae_ctx.act_unchanged_xfmlas.push(this->identity_xn);
   }
@@ -232,6 +238,7 @@ Net::add_write_access (PcSymm* pc_symm, const VblSymm* vbl_symm,
     const Vbl* vbl = vbl_symm->membs[indices.index(i, vbl_symm->membs.sz())];
     Pc& pc = *pc_symm->membs[i];
     pc.wvbls.push(vbl);
+    if (this->featherweight)  continue;
     pc.act_unchanged_pfmla =
       pc.act_unchanged_pfmla.smooth(pfmla_vbl(*vbl));
 
@@ -642,6 +649,8 @@ Sys::commit_initialization()
   Xn::Net& topo = this->topology;
   topo.commit_initialization();
 
+  if (topo.featherweight)  return;
+
   this->shadow_self = true;
 
   for (uint i = 0; i < topo.vbls.sz(); ++i) {
@@ -702,6 +711,8 @@ Sys::integrityCk() const
 {
   bool good = true;
   const Net& topo = this->topology;
+
+  if (topo.featherweight)  return true;
 
   Claim(topo.identity_xn.sat_ck());
   Claim(topo.identity_xn.subseteq_ck(this->shadow_self));
@@ -997,11 +1008,11 @@ Xn::Net::xn_of_pc(const Xn::ActSymm& act, uint pcidx) const
  * Ensure {pcidx} is relative to {act.pc_symm}.
  **/
   X::Fmla
-Xn::Net::represented_xns_of_pc(const Xn::ActSymm& act, uint pcidx) const
+Xn::Net::represented_xns_of_pc(const Xn::ActSymm& act, uint relative_pcidx) const
 {
   uint actidx = this->action_index(act);
   if (!this->lightweight) {
-    const Xn::Pc* pc = act.pc_symm->membs[pcidx];
+    const Xn::Pc* pc = act.pc_symm->membs[relative_pcidx];
     uint real_pcidx = this->pcs.index_of(pc);
     return act_xfmlaes[actidx][real_pcidx];
   }
@@ -1011,7 +1022,7 @@ Xn::Net::represented_xns_of_pc(const Xn::ActSymm& act, uint pcidx) const
   for (uint i = 0; i < reps.sz(); ++i) {
     ActSymm tmp_act;
     this->action(tmp_act, reps[i]);
-    xn |= this->xn_of_pc(tmp_act, pcidx);
+    xn |= this->xn_of_pc(tmp_act, relative_pcidx);
   }
   return xn;
 }
