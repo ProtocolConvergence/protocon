@@ -376,7 +376,7 @@ stabilization_search(vector<uint>& ret_actions,
 int main(int argc, char** argv)
 {
   MPI_Init (&argc, &argv);
-  int argi = (init_sysCx (&argc, &argv), 1);
+  int argi = init_sysCx (&argc, &argv);
   (void) argi;
   push_losefn_sysCx ((void (*) ()) MPI_Finalize);
   uint PcIdx = 0;

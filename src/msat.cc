@@ -20,7 +20,7 @@ using std::vector;
 
 int main(int argc, char** argv)
 {
-  int argi = (init_sysCx (&argc, &argv), 1);
+  int argi = init_sysCx (&argc, &argv);
   (void) argi;
   //const char filename[] = "examplespec/SumNotTwo.prot";
   //const char filename[] = "examplespec/ColorRing.prot";

@@ -156,7 +156,7 @@ deadlock_freedom_ck(const Xn::Sys& sys)
 
 /** Execute me now!**/
 int main(int argc, char** argv) {
-  int argi = (init_sysCx(&argc, &argv), 1);
+  int argi = init_sysCx(&argc, &argv);
 
   const char* in_filepath = argv[argi];
 
