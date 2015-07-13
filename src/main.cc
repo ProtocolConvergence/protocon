@@ -21,11 +21,13 @@ int main(int argc, char** argv)
   ProtoconFileOpt infile_opt;
   ProtoconOpt exec_opt;
   Xn::Sys sys;
+  DeclLegit( good );
 
   sys.topology.lightweight = true;
-  bool good =
+  DoLegitLine( "" )
     protocon_options
     (sys, argi, argc, argv, opt, infile_opt, exec_opt);
+
   if (!good)  failout_sysCx ("Bad args.");
 
   bool found = false;
@@ -94,26 +96,29 @@ int main(int argc, char** argv)
     }
 
     if (!exec_opt.model_ofilepath.empty_ck()) {
-      const char* modelFilePath = exec_opt.model_ofilepath.cstr();
-      std::fstream of(modelFilePath,
-                      std::ios::binary |
-                      std::ios::out |
-                      std::ios::trunc);
-      OPutPromelaModel(of, sys, *o_topology);
-      of.close();
-      DBog1("Model written to \"%s\".", modelFilePath);
-      //DBog0("WARNING: The model is not working at this time.");
+      Cx::OFileB ofb;
+      Cx::OFile ofile;
+      DoLegitLineP( ofile, "Open Promela file" )
+        ofb.uopen(exec_opt.model_ofilepath);
+      DoLegit( 0 )
+        OPutPromelaModel(ofile, sys, *o_topology);
     }
     if (!exec_opt.graphviz_ofilepath.empty_ck()) {
       Cx::OFileB ofb;
-      ofb.open(exec_opt.graphviz_ofilepath);
-      oput_graphviz_file (ofb, *o_topology);
+      Cx::OFile ofile;
+      DoLegitLineP( ofile, "Open GraphViz file" )
+        ofb.uopen(exec_opt.graphviz_ofilepath);
+      DoLegit( 0 )
+        oput_graphviz_file (ofile, *o_topology);
     }
     if (!exec_opt.udp_ofilepath.empty_ck()) {
       Claim2( exec_opt.task ,==, ProtoconOpt::NoTask );
       Cx::OFileB ofb;
-      ofb.open(exec_opt.udp_ofilepath);
-      oput_udp_file (ofb, sys, *o_topology);
+      Cx::OFile ofile;
+      DoLegitLineP( ofile, "Open UDP file" )
+        ofb.uopen(exec_opt.udp_ofilepath);
+      DoLegit( 0 )
+        oput_udp_file (ofile, sys, *o_topology);
     }
     if (!exec_opt.ofilepath.empty_ck())
     {
@@ -127,12 +132,13 @@ int main(int argc, char** argv)
   DBogOF.flush();
 
   lose_sysCx ();
-  if (exec_opt.task == ProtoconOpt::InteractiveTask) {
+
+  if (!good)  return 1;
+
+  if (exec_opt.task == ProtoconOpt::InteractiveTask)
     return 0;
-  }
-  if (exec_opt.task == ProtoconOpt::NoTask) {
+  if (exec_opt.task == ProtoconOpt::NoTask)
     return 0;
-  }
   return found ? 0 : 2;
 }
 

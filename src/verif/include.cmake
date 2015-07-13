@@ -2,7 +2,11 @@
 enable_testing ()
 #include (CTest)
 
-set (TestCwd ${TopPath})
+set (TestPath ${TopPath}/test)
+set (SpecPath ${TopPath}/examplespec)
+set (SyntPath ${TopPath}/examplesynt)
+set (SolnPath ${TopPath}/examplesoln)
+
 set (MetaPath ${TopPath}/meta)
 set (VerifPath ${CMAKE_CURRENT_SOURCE_DIR}/verif)
 
@@ -12,7 +16,7 @@ string(REPLACE "\n" ";" TestNames "${TestNames}")
 ## Unit tests.
 foreach (testname ${TestNames})
   add_test (NAME ${testname}
-    WORKING_DIRECTORY ${TestCwd}
+    WORKING_DIRECTORY ${TopPath}
     COMMAND test_exe ${testname})
 endforeach ()
 
@@ -22,10 +26,9 @@ cat_parenthesized (DistribSolns ${MetaPath}/examplesoln.files)
 ## Ensure that the specifications that we distribute can be parsed.
 foreach (f ${DistribSpecs})
   add_test (NAME ofile_spec_${f}
-    WORKING_DIRECTORY ${TestCwd}
     COMMAND "${CMAKE_COMMAND}"
-    -Dprotocon_exe=$<TARGET_FILE:protocon>
-    -Dxfile=examplespec/${f}.prot
+    -Dprotocon_exe=${protocon_exe}
+    -Dxfile=${SpecPath}/${f}.prot
     -P ${VerifPath}/ofile.cmake
     )
 endforeach ()
@@ -33,10 +36,9 @@ endforeach ()
 ## Ensure that the solutions that we distribute can be parsed.
 foreach (f ${DistribSolns})
   add_test (NAME ofile_soln_${f}
-    WORKING_DIRECTORY ${TestCwd}
     COMMAND "${CMAKE_COMMAND}"
-    -Dprotocon_exe=$<TARGET_FILE:protocon>
-    -Dxfile=examplesoln/${f}.prot
+    -Dprotocon_exe=${protocon_exe}
+    -Dxfile=${SolnPath}/${f}.prot
     -P ${VerifPath}/ofile.cmake
     )
 endforeach ()
@@ -61,39 +63,33 @@ set (ExampleSpecs
 
 foreach (f ${ExampleSpecs})
   add_test (NAME Synth3_${f}
-    WORKING_DIRECTORY ${TestCwd}
-    COMMAND protocon -x examplespec/${f}.prot -def N 3)
+    COMMAND protocon -x ${SpecPath}/${f}.prot -def N 3)
 endforeach ()
 
 foreach (f SortRing TokenRingDijkstra)
   list (APPEND ExampleSpecs ${f})
   add_test (NAME Synth_${f}
-    WORKING_DIRECTORY ${TestCwd}
-    COMMAND protocon -x examplespec/${f}.prot)
+    COMMAND protocon -x ${SpecPath}/${f}.prot)
 endforeach ()
 
 foreach (f LeaderRingHuang)
   list (APPEND ExampleSpecs ${f})
   add_test (NAME SynthOpenMP_${f}
-    WORKING_DIRECTORY ${TestCwd}
-    COMMAND protocon -parallel 4 -x examplespec/${f}.prot)
+    COMMAND protocon -parallel 4 -x ${SpecPath}/${f}.prot)
   set_tests_properties (SynthOpenMP_${f} PROPERTIES PROCESSORS 4)
 
   if (MPI_FOUND)
     add_test (NAME SynthMPI_${f}
-      WORKING_DIRECTORY ${TestCwd}
       COMMAND ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} 4 ${MPIEXEC_PREFLAGS}
-      ${BinPath}/protocon-mpi ${MPIEXEC_POSTFLAGS} -x examplespec/${f}.prot)
+      ${BinPath}/protocon-mpi ${MPIEXEC_POSTFLAGS} -x ${SpecPath}/${f}.prot)
     set_tests_properties (SynthMPI_${f} PROPERTIES PROCESSORS 4)
   endif ()
 endforeach ()
 
 add_test (NAME Synth_Sat_sat
-  WORKING_DIRECTORY ${TestCwd}
-  COMMAND protocon -def ExpectSat 1 -x examplespec/Sat.prot)
+  COMMAND protocon -def ExpectSat 1 -x ${SpecPath}/Sat.prot)
 add_test (NAME Synth_Sat_unsat
-  WORKING_DIRECTORY ${TestCwd}
-  COMMAND protocon -def ExpectSat 0 -x examplespec/Sat.prot)
+  COMMAND protocon -def ExpectSat 0 -x ${SpecPath}/Sat.prot)
 set_tests_properties (Synth_Sat_unsat PROPERTIES WILL_FAIL TRUE)
 
 list (APPEND ExampleSolns
@@ -109,13 +105,11 @@ list (APPEND ExampleSolns
 
 foreach (f ${ExampleSolns})
   add_test (NAME Verif5_${f}
-    WORKING_DIRECTORY ${TestCwd}
-    COMMAND protocon -verify -x examplesoln/${f}.prot -def N 5)
+    COMMAND protocon -verify -x ${SolnPath}/${f}.prot -def N 5)
 endforeach ()
 
 add_test (NAME Verif_ByzantineGenerals
-  WORKING_DIRECTORY ${TestCwd}
-  COMMAND protocon -verify -x examplesoln/ByzantineGenerals.prot)
+  COMMAND protocon -verify -x ${SolnPath}/ByzantineGenerals.prot)
 
 set (ExampleSynts
   LeaderRing
@@ -133,29 +127,24 @@ set (ExampleSynts
 
 foreach (f ${ExampleSynts})
   add_test (NAME TrySynt_${f}
-    WORKING_DIRECTORY ${TestCwd}
-    COMMAND protocon -test -x examplespec/${f}.prot -x-try-subset examplesynt/${f}.prot -def N 5)
+    COMMAND protocon -test -x ${SpecPath}/${f}.prot -x-try-subset ${SyntPath}/${f}.prot -def N 5)
   add_test (NAME VerifSynt_${f}
-    WORKING_DIRECTORY ${TestCwd}
-    COMMAND protocon -verify -x examplesynt/${f}.prot -def N 5)
+    COMMAND protocon -verify -x ${SyntPath}/${f}.prot -def N 5)
   add_test (NAME overify_synt_${f}
-    WORKING_DIRECTORY ${TestCwd}
     COMMAND "${CMAKE_COMMAND}"
-    -Dprotocon_exe=$<TARGET_FILE:protocon>
-    -Dxfile=examplesynt/${f}.prot
+    -Dprotocon_exe=${protocon_exe}
+    -Dxfile=${SyntPath}/${f}.prot
     -P ${VerifPath}/overify.cmake
     )
 endforeach ()
 
 add_test (NAME TrySynt2_TokenChainDijkstra
-  WORKING_DIRECTORY ${TestCwd}
-  COMMAND protocon -test -x examplespec/TokenChainDijkstra.prot
-  -x-try-subset examplesynt/TokenChainDijkstra.prot -def N 2)
+  COMMAND protocon -test -x ${SpecPath}/TokenChainDijkstra.prot
+  -x-try-subset ${SyntPath}/TokenChainDijkstra.prot -def N 2)
 
 add_test (NAME TrySynt5_TokenRingFourState
-  WORKING_DIRECTORY ${TestCwd}
-  COMMAND protocon -test -def M 2 -x examplespec/TokenRingSuperpos.prot
-  -x-try-subset examplesynt/TokenRingFourState.prot -def N 5)
+  COMMAND protocon -test -def M 2 -x ${SpecPath}/TokenRingSuperpos.prot
+  -x-try-subset ${SyntPath}/TokenRingFourState.prot -def N 5)
 
 list (APPEND VerifyBySynthesis
   ColorRing
@@ -167,17 +156,20 @@ list (APPEND VerifyBySynthesis
 
 foreach (f ${VerifyBySynthesis})
   add_test (NAME VerifSyn_${f}
-    WORKING_DIRECTORY ${TestCwd}
-    COMMAND protocon -x examplesoln/${f}.prot -def N 5)
+    COMMAND protocon -x ${SolnPath}/${f}.prot -def N 5)
 endforeach ()
 
 add_test (NAME Verif4_Sync_OrientRing
-  WORKING_DIRECTORY ${TestCwd}
-  COMMAND protocon -verify -synchronous -x examplesoln/OrientRing.prot -def N 4)
+  COMMAND protocon -verify -synchronous -x ${SolnPath}/OrientRing.prot -def N 4)
+
+
+## Promela file output.
+add_test (NAME Promela_OrientDaisy
+  COMMAND comparispawn ${TestPath}/expect/OrientDaisy.pml
+  ${protocon_exe} -nop -x ${SolnPath}/OrientDaisy.prot -def N 5 -o-pml -)
 
 ## Ensure our tests can actually detect failure.
 add_test (NAME Verif4_OrientOddRing
-  WORKING_DIRECTORY ${TestCwd}
-  COMMAND protocon -verify -x examplesoln/OrientOddRing.prot -def N 4)
+  COMMAND protocon -verify -x ${SolnPath}/OrientOddRing.prot -def N 4)
 set_tests_properties (Verif4_OrientOddRing PROPERTIES WILL_FAIL TRUE)
 

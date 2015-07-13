@@ -338,21 +338,21 @@ IntPFmla::defeq_binop(const IntPFmla& b, IntPFmla::BinIntOp op)
   case IntPFmla::MinOp:
     foreach_a {
       int x = val_b();
-      int aa = val_a();
+      //int aa = val_a();
       if (x < val_a()) {
         val_a() = x;
       }
-      DBog3("min(%d %d)==%d", aa, x, val_a());
+      //DBog3("min(%d %d)==%d", aa, x, val_a());
     }
     break;
   case IntPFmla::MaxOp:
     foreach_a {
       int x = val_b();
-      int aa = val_a();
+      //int aa = val_a();
       if (x > val_a()) {
         val_a() = x;
       }
-      DBog3("max(%d %d)==%d", aa, x, val_a());
+      //DBog3("max(%d %d)==%d", aa, x, val_a());
     }
     break;
   case IntPFmla::NBinIntOps:

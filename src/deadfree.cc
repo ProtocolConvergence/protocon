@@ -158,19 +158,16 @@ deadlock_freedom_ck(const Xn::Sys& sys)
 int main(int argc, char** argv) {
   int argi = init_sysCx(&argc, &argv);
 
-  const char* in_filepath = argv[argi];
 
-  if (argi < argc) {
-    in_filepath = argv[argi++];
-  }
-  if (argi < argc) {
-    failout_sysCx("Maximum of one argument!");
-  }
+  if (argi + 1 != argc)
+    failout_sysCx("Need exactly one argument (an input file).");
+
+  const char* in_filepath = argv[argi++];
 
   Xn::Sys sys;
   sys.topology.lightweight = true;
   ProtoconFileOpt infile_opt;
-  infile_opt.text = textfile_AlphaTab (0, in_filepath);
+  infile_opt.text.moveq(textfile_AlphaTab (0, in_filepath));
 
   if (!ReadProtoconFile(sys, infile_opt))
     failout_sysCx("Cannot read file!");

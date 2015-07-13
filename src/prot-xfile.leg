@@ -312,10 +312,23 @@ ConstNeg =
   ;
 
 ConstPower =
-  a:ConstValue
+  a:ConstIntFuncall
   (  (WS? '^' WS? b:ConstNeg {a.sp = list3_ccstr_Sesp ("^", a.sp, b.sp);  a.int_ck = 1;} )
   )*
   {$$ = a;}
+  ;
+
+ConstIntFuncall =
+    op:NOP
+    (  'max' {op.aux.s = "max";}
+     | 'min' {op.aux.s = "min";}
+    )
+    WS? '(' WS? a:ConstExpr WS? ',' WS? b:ConstExpr WS? ')'
+    {
+      $$.sp = list3_ccstr_Sesp (op.aux.s, a.sp, b.sp);
+      $$.int_ck = 1;
+    }
+  | a:ConstValue {$$=a;}
   ;
 
 ConstValue =

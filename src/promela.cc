@@ -4,7 +4,7 @@
 
 static
   void
-OPutPromelaVblRef(ostream& of, const Xn::VblSymm& vbl_symm, const Xn::NatMap& index_map)
+OPutPromelaVblRef(Cx::OFile& of, const Xn::VblSymm& vbl_symm, const Xn::NatMap& index_map)
 {
   uint mod_val = 0;
   uint add_val = 0;
@@ -34,8 +34,8 @@ OPutPromelaVblRef(ostream& of, const Xn::VblSymm& vbl_symm, const Xn::NatMap& in
 }
 
 static
-  ostream&
-OPutPromelaAction(ostream& of, const Xn::ActSymm& act)
+  void
+OPutPromelaAction(Cx::OFile& of, const Xn::ActSymm& act)
 {
   const Xn::PcSymm& pc_symm = *act.pc_symm;
   for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
@@ -49,37 +49,29 @@ OPutPromelaAction(ostream& of, const Xn::ActSymm& act)
     OPutPromelaVblRef(of, *pc_symm.wvbl_symms[i], pc_symm.windices[i]);
     of << "=" << act.assign(i) << ';';
   }
-  return of;
 }
 
 static
   void
-OPutPromelaSelect(ostream& of, const Xn::Vbl& x)
+OPutPromelaSelect(Cx::OFile& ofile, const Xn::Vbl& x)
 {
-#if 0
-  of << "  if\n";
+  ofile << "\n  if";
   for (uint i = 0; i < x.symm->domsz; ++i) {
-    of << "  :: " << x.symm->spec->name
-      << "[" << x.symm_idx << "] = " << i << ";\n";
-  }
-  of << "  fi;\n";
-#else
-  of << "  if";
-  for (uint i = 0; i < x.symm->domsz; ++i) {
-    of << " :: " << x.symm->spec->name
+    ofile
+      << " :: " << x.symm->spec->name
       << "[" << x.symm_idx << "] = " << i << ";";
   }
-  of << " fi;\n";
-#endif
+  ofile << " fi;";
 }
 
 static
   void
-OPutPromelaPc(ostream& of, const Xn::PcSymm& pc_symm, const Cx::Table<Xn::ActSymm>& acts)
+OPutPromelaPc(Cx::OFile& ofile, const Xn::PcSymm& pc_symm, const Cx::Table<Xn::ActSymm>& acts,
+              const Xn::PcSymm& o_pc_symm, uint pcidx_offset)
 {
   const Xn::PcSymmSpec& pc_symm_spec = *pc_symm.spec;
-  of << "proctype " << pc_symm_spec.name
-    << "(int " << pc_symm_spec.idx_name << ")\n{\n";
+  if (o_pc_symm.membs.empty_ck())
+    return;
 
   // Return early if there are no puppet actions.
   {
@@ -94,26 +86,37 @@ OPutPromelaPc(ostream& of, const Xn::PcSymm& pc_symm, const Cx::Table<Xn::ActSym
       return;
   }
 
+  ofile << '\n'
+    << "\nactive [" << o_pc_symm.membs.sz() << "] proctype "
+    << pc_symm_spec.name << "()"
+    << "\n{"
+    << "\n  int " << pc_symm_spec.idx_name
+    << " = (_pid - " << pcidx_offset << ")"
+    << "\n  (initialized==1);"
+    ;
+
   for (uint i = 0; i < pc_symm_spec.let_map.keys.sz(); ++i) {
-    of << "#define " << pc_symm_spec.let_map.keys[i];
-    of << " (" << pc_symm_spec.let_map.vals[i].expression;
-    of << ")\n";
+    ofile
+      << "\n#define " << pc_symm_spec.let_map.keys[i]
+      << " (" << pc_symm_spec.let_map.vals[i].expression << ")"
+      ;
   }
-  of << "end_" << pc_symm_spec.name << ":\n";
-  of << "  do\n";
+  ofile << "\nend_" << pc_symm_spec.name << ":";
+  ofile << "\n  do";
   for (uint i = 0; i < acts.sz(); ++i) {
-    const Xn::ActSymm& act = acts[i];
+    Xn::ActSymm act = acts[i];
     if (act.pc_symm == &pc_symm) {
-      of << "  :: atomic { ";
-      OPutPromelaAction(of, act);
-      of << " }\n";
+      act.pc_symm = &o_pc_symm;
+      ofile << "\n  :: atomic { ";
+      OPutPromelaAction(ofile, act);
+      ofile << " }";
     }
   }
-  of << "  od;\n";
+  ofile << "\n  od;";
   for (uint i = 0; i < pc_symm_spec.let_map.keys.sz(); ++i) {
-    of << "#undef " << pc_symm_spec.let_map.keys[i] << "\n";
+    ofile << "\n#undef " << pc_symm_spec.let_map.keys[i];
   }
-  of << "}\n\n";
+  ofile << "\n}";
 }
 
 /** Output a Promela model for a system.
@@ -122,75 +125,97 @@ OPutPromelaPc(ostream& of, const Xn::PcSymm& pc_symm, const Cx::Table<Xn::ActSym
  * system is self-stabilizing.
  **/
   void
-OPutPromelaModel(ostream& of, const Xn::Sys& sys, const Xn::Net& topo)
+OPutPromelaModel(Cx::OFile& ofile, const Xn::Sys& sys, const Xn::Net& otopology)
 {
-  const Xn::Net& specnet = sys.topology;
-  const Xn::Spec& spec = *sys.spec;
+  const Xn::Net& topo = sys.topology;
+  const Xn::Spec& spec = *otopology.spec;
   for (uint i = 0; i < spec.constant_map.keys.sz(); ++i) {
-    of << "#define " << spec.constant_map.keys[i];
-    of << " (" << spec.constant_map.vals[i].expression;
-    of << ")\n";
+    ofile << "\n#define " << spec.constant_map.keys[i]
+      << " (" << spec.constant_map.vals[i].expression
+      << ")";
   }
+  ofile << "\nbit initialized;";
   for (uint i = 0; i < topo.vbl_symms.sz(); ++i) {
-    const Xn::VblSymm& x = topo.vbl_symms[i];
-    of << (x.domsz == 2 ? "bit" : "byte")
-      << " " << x.spec->name << "[" << x.membs.sz() << "];\n";
+    const Xn::VblSymm& x = otopology.vbl_symms[i];
+    ofile << "\n" <<  (x.domsz == 2 ? "bit" : "byte")
+      << " " << x.spec->name << "[" << x.membs.sz() << "];";
   }
-  of << '\n';
+  ofile << '\n'
+    << "\ninit {"
+    << "\n  atomic{//Begin atomic initialization."
+    ;
+  for (uint i = 0; i < topo.vbl_symms.sz(); ++i) {
+    const Xn::VblSymm& vbl_symm = otopology.vbl_symms[i];
+    for (uint j = 0; j < vbl_symm.membs.sz(); ++j) {
+      OPutPromelaSelect(ofile, *vbl_symm.membs[j]);
+    }
+  }
+  ofile
+    << "\n  initialized = 1;"
+    << "\n  }//End atomic initialization."
+    << "\n}"
+    ;
+#if 0
+  ofile << "  if\n";
+  topo.oput(ofile, sys.invariant, "  :: ", " -> skip;\n");
+  ofile << "  fi;\n";
 
-  of << "// Just in case you use the if/then/else construct from {protocon}\n"
-    << "#define if\n" << "#define then ->\n" << "#define else :\n";
-  of << '\n';
+  ofile << "  Legit = true;\n";
+  //ofile << "progress: skip;\n";
+
+  ofile << "end:\n";
+  ofile << "  if\n";
+
+  topo.oput(ofile, ~sys.invariant, "  :: ", " -> skip;\n");
+  ofile << "  fi;\n";
+  ofile << "  Legit = false;\n";
+  ofile << "  assert(0);\n";
+#endif
+
+  ofile << '\n'
+    << "\n// Just in case you use the if/then/else construct from {protocon}."
+    << "\n#define if"
+    << "\n#define then ->"
+    << "\n#define else :"
+    ;
 
   Cx::Table<Xn::ActSymm> acts;
   const vector<uint>& actions = sys.actions;
   for (uint i = 0; i < actions.size(); ++i) {
-    for (uint j = 0; j < specnet.represented_actions[actions[i]].sz(); ++j) {
-      specnet.action(acts.grow1(), specnet.represented_actions[actions[i]][j]);
+    for (uint j = 0; j < topo.represented_actions[actions[i]].sz(); ++j) {
+      topo.action(acts.grow1(), topo.represented_actions[actions[i]][j]);
     }
   }
+  uint pcidx_offset = 1;
   for (uint i = 0; i < topo.pc_symms.sz(); ++i) {
-    OPutPromelaPc(of, topo.pc_symms[i], acts);
+    OPutPromelaPc(ofile, topo.pc_symms[i], acts, otopology.pc_symms[i], pcidx_offset);
+    pcidx_offset += otopology.pc_symms[i].membs.sz();
   }
-  of << "#undef if\n" << "#undef then\n" << "#undef else\n";
-  of << '\n';
+  ofile << '\n'
+    << "\n#undef if"
+    << "\n#undef then"
+    << "\n#undef else"
+    ;
 
-  of << "init {\n";
-  of << "  atomic{//Begin atomic initialization.\n";
-  for (uint i = 0; i < topo.vbls.sz(); ++i) {
-    OPutPromelaSelect(of, topo.vbls[i]);
-  }
-
-  for (uint i = 0; i < topo.pc_symms.sz(); ++i) {
-    const Xn::PcSymm& pc_symm = topo.pc_symms[i];
-    of << " ";
-    for (uint j = 0; j < pc_symm.membs.sz(); ++j) {
-      of << " run " << pc_symm.spec->name << "(" << j << ");";
+  ofile << '\n'
+    << "\n#if 0  /* Write this yourself (the default is a coloring).*/"
+    << "\nltl {"
+    << "\n  <> [] ("
+    ;
+  if (topo.vbl_symms.sz() > 0 && topo.vbl_symms[0].membs.sz() > 0) {
+    const Xn::VblSymm& x = otopology.vbl_symms[0];
+    ofile << x.spec->name << "[0]";
+    for (uint i = 1; i < x.membs.sz(); ++i) {
+      ofile << "!=" << x.spec->name << "[" << i << "] && "
+        << x.spec->name << "[" << i << "]";
     }
-    of << "\n";
+    ofile << "!=" << x.spec->name << "[0]";
   }
-  of << "  }//End atomic initialization.\n";
+  ofile << ")"
+    << "\n}"
+    << "\n#endif"
+    ;
 
-#if 0
-  of << "  if\n";
-  topo.oput(of, sys.invariant, "  :: ", " -> skip;\n");
-  of << "  fi;\n";
-
-  of << "  Legit = true;\n";
-  //of << "progress: skip;\n";
-
-  of << "end:\n";
-  of << "  if\n";
-
-  topo.oput(of, ~sys.invariant, "  :: ", " -> skip;\n");
-  of << "  fi;\n";
-  of << "  Legit = false;\n";
-  of << "  assert(0);\n";
-#endif
-  of << "}\n\n";
-
-  //of << "ltl {\n";
-  //of << "<> Legit && [] (Legit -> [] Legit)\n";
-  //of << "}\n";
+  ofile << "\n\n";
 }
 

@@ -85,13 +85,13 @@ file (MAKE_DIRECTORY ${BldPath}/satsyn)
 file (MAKE_DIRECTORY ${BldPath}/udp-dep)
 
 #### Parser Generation ####
-if (NOT DEFINED PegExe)
-  set (PegExe leg)
+if (NOT DEFINED peg_exe)
+  set (peg_exe leg)
 endif ()
 
 add_custom_command (
   OUTPUT ${BldPath}/prot-xfile.leg.cc
-  COMMAND ${PegExe} -o ${BldPath}/prot-xfile.leg.cc ${CMAKE_CURRENT_SOURCE_DIR}/prot-xfile.leg
+  COMMAND ${peg_exe} -o ${BldPath}/prot-xfile.leg.cc ${CMAKE_CURRENT_SOURCE_DIR}/prot-xfile.leg
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/prot-xfile.leg)
 set_bld_cfile_properties (${BldPath}/prot-xfile.leg.cc)
 
@@ -152,6 +152,8 @@ addbinexe (protocon
 set_property (TARGET protocon
   APPEND PROPERTY INCLUDE_DIRECTORIES ${GluIncludePath})
 target_link_libraries (protocon cu glu cal ${M_LIB})
+
+set (protocon_exe "$<TARGET_FILE:protocon>")
 
 ## Set up embedded UDP sources.
 # This is an added dependency to the main executable.

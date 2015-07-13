@@ -45,7 +45,7 @@ ExternalProject_Add(protocon
   SOURCE_DIR ${TopPath}/src
   BINARY_DIR ${TopPath}/bld
   CONFIGURE_COMMAND ${CMAKE_COMMAND}
-  -D PegExe:string=${DepPath}/${PegPfx}/leg
+  -D peg_exe:string=${DepPath}/${PegPfx}/leg
   -D GluPath:string=${DepPath}/${GluPfx}
   ../src
   INSTALL_COMMAND echo "No install step."

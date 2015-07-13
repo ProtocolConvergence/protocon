@@ -545,13 +545,10 @@ oput_protocon_file (const Cx::String& ofilename,
                     bool use_espresso,
                     const char* comment)
 {
-  if (ofilename == "-") {
-    Cx::OFile ofile( stdout_OFile () );
-    return oput_protocon_file (ofile, sys, o_topology, actions, use_espresso, comment);
-  }
   Cx::OFileB ofb;
-  ofb.open(ofilename);
-  return oput_protocon_file (ofb, sys, o_topology, actions, use_espresso, comment);
+  Cx::OFile ofile = ofb.uopen(ofilename);
+  if (!ofile)  return false;
+  return oput_protocon_file (ofile, sys, o_topology, actions, use_espresso, comment);
 }
 
   bool

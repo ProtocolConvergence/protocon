@@ -506,9 +506,9 @@ add_vbl_GluPFmlaCtx (PFmlaCtx* fmlactx, uint id)
   array_insert_last(uint, doms, vbl->domsz);
   array_insert_last(uint, doms, vbl->domsz);
   // Notice that the actual variables are added in the order: aux, img, pre.
-  array_insert_last(const char*, names, cstr_of_AlphaTab (&x->aux_name));
-  array_insert_last(const char*, names, cstr_of_AlphaTab (&x->img_name));
-  array_insert_last(const char*, names, cstr_of_AlphaTab (&vbl->name));
+  array_insert_last(const char*, names, ccstr_of_AlphaTab (&x->aux_name));
+  array_insert_last(const char*, names, ccstr_of_AlphaTab (&x->img_name));
+  array_insert_last(const char*, names, ccstr_of_AlphaTab (&vbl->name));
   array_insert_last(uint, ctx->aux_vbl_list, x->aux_id);
   array_insert_last(uint, ctx->img_vbl_list, x->img_id);
   array_insert_last(uint, ctx->pre_vbl_list, x->pre_id);
