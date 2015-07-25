@@ -20,6 +20,7 @@ CTAGS=ctags
 .PHONY: default all cmake proj \
 	test analyze tags \
 	clean-analyze clean distclean \
+	dep \
 	init update pull
 
 default:
@@ -60,6 +61,9 @@ clean:
 distclean:
 	$(GODO) $(CxTopPath) $(MAKE) distclean
 	rm -fr $(BldPath) $(BinPath) $(ScanBldPath) tags
+
+dep:
+	$(GODO) $(CxTopPath) $(MAKE)
 
 init:
 	if [ ! -f $(DepPath)/cx/src/cx.c ] ; then git submodule init dep/cx ; git submodule update dep/cx ; fi

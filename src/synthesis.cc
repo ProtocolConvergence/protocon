@@ -11,19 +11,22 @@ typedef Cx::PFmla PF;
  * deterministic protocol of self-disabling processes.
  */
   bool
-coexist_ck(const Xn::ActSymm& a, const Xn::ActSymm& b, const Xn::Net& topo)
+coexist_ck(const Xn::ActSymm& a, const Xn::ActSymm& b,
+           const Xn::Net& topo, bool pure_actions)
 {
   if (a.pc_symm != b.pc_symm)  return true;
   const Xn::PcSymm& pc = *a.pc_symm;
 
   bool pure_shadow_img_eql = true;
-  bool puppet_img_eql = true;
+  bool puppet_adj_eql = true;
   for (uint i = 0; i < pc.rvbl_symms.sz(); ++i) {
     if (!pc.write_flags[i] && pc.rvbl_symms[i]->puppet_ck()) {
       if (a.guard(i) != b.guard(i))
-        puppet_img_eql = false;
+        puppet_adj_eql = false;
     }
   }
+
+  bool puppet_img_eql = true;
   bool random_write = false;
   for (uint i = 0; i < pc.wvbl_symms.sz(); ++i) {
     if (pc.spec->random_write_flags[pc.wmap[i]])
@@ -38,7 +41,10 @@ coexist_ck(const Xn::ActSymm& a, const Xn::ActSymm& b, const Xn::Net& topo)
     }
   }
 
-  if (puppet_img_eql && !pure_shadow_img_eql)
+  if (puppet_adj_eql && puppet_img_eql && !pure_shadow_img_eql)
+    return false;
+
+  if (pure_actions && puppet_adj_eql && !puppet_img_eql)
     return false;
 
   bool enabling = true;
@@ -637,19 +643,27 @@ pick_action_candidates(Set<uint>& ret_candidates,
  * The pruned candidate actions would break our assumption that processes are
  * self-disabling and deterministic.
  */
+static
   void
 QuickTrim(Set<uint>& delSet,
           const vector<uint>& candidates,
+          uint actidx,
           const Xn::Net& topo,
-          uint actidx)
+          bool pure_actions)
 {
+  const Cx::Table<uint>& represented = topo.represented_actions[actidx];
+
   Xn::ActSymm act0;
   Xn::ActSymm act1;
   for (uint i = 0; i < candidates.size(); ++i) {
+    if (candidates[i] == actidx)  continue;
+
     topo.action(act1, candidates[i]);
-    for (uint j = 0; j < topo.represented_actions[actidx].sz(); ++j) {
-      topo.action(act0, topo.represented_actions[actidx][j]);
-      if (!coexist_ck(act0, act1, topo)) {
+    //Claim( !represented.elem_ck(candidates[i]) );
+
+    for (uint j = 0; j < represented.sz(); ++j) {
+      topo.action(act0, represented[j]);
+      if (!coexist_ck(act0, act1, topo, pure_actions)) {
         delSet << candidates[i];
         break;
       }
@@ -897,6 +911,7 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
   const Xn::Net& topo = sys.topology;
   Set<uint>::const_iterator it;
   const bool use_csp = false;
+
   if (this->ctx->done_ck())
     return false;
 
@@ -907,6 +922,18 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
     topo.action(act, candidates[i]);
     OPut(*this->log, act);
     *this->log << this->log->endl();
+  }
+
+  if (!this->ctx->opt.permissive) {
+    FlatSet<uint> action_set( Set<uint>(this->actions) | adds );
+    FlatSet<uint> candidate_set( this->candidates );
+
+    Set<uint> membs;
+    if (!this->ctx->conflicts.conflict_membs(&membs, action_set, candidate_set)) {
+      *this->log << "CONFLICT" << this->log->endl();
+      return false;
+    }
+    dels |= membs;
   }
 
   if (this->no_partial) {
@@ -943,31 +970,35 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
     }
     Remove1(this->actions, actId); // No duplicates
     this->actions.push_back(actId);
-    Set<uint> tmp_dels;
-    QuickTrim(tmp_dels, this->candidates, topo, actId);
-    if (tmp_dels.overlap_ck(adds)) {
-      tmp_dels -= adds;
-    }
-    if (false) {
-      *this->log << "QuickTrim() rejects an action!!!" << this->log->endl();
-      Xn::ActSymm act;
-      topo.action(act, actId);
-      *this->log
-        << " (sys " << this->sys_idx
-        << ") (lvl " << this->bt_level
-        << ") (sz " << this->actions.size()
-        << ") (rem " << this->candidates.size()
-        << ")  ";
-      OPut(*this->log, act) << this->log->endl();
-      FlatSet<uint> tmp_adds_dels( adds & tmp_dels );
-      for (uint i = 0; i < tmp_adds_dels.sz(); ++i) {
-        *this->log << "Reject:" << this->log->endl();
-        topo.action(act, tmp_adds_dels[i]);
-        OPut(*this->log, act) << this->log->endl();
-      }
-    }
-    dels |= tmp_dels;
     add_act_xfmlae |= topo.action_xfmlae(actId);
+
+    if (this->ctx->opt.permissive) {
+      Set<uint> tmp_dels;
+      QuickTrim(tmp_dels, this->candidates, actId,
+                topo, this->ctx->opt.pure_actions);
+      if (tmp_dels.overlap_ck(adds)) {
+        tmp_dels -= adds;
+      }
+      if (false) {
+        *this->log << "QuickTrim() rejects an action!!!" << this->log->endl();
+        Xn::ActSymm act;
+        topo.action(act, actId);
+        *this->log
+          << " (sys " << this->sys_idx
+          << ") (lvl " << this->bt_level
+          << ") (sz " << this->actions.size()
+          << ") (rem " << this->candidates.size()
+          << ")  ";
+        OPut(*this->log, act) << this->log->endl();
+        FlatSet<uint> tmp_adds_dels( adds & tmp_dels );
+        for (uint i = 0; i < tmp_adds_dels.sz(); ++i) {
+          *this->log << "Reject:" << this->log->endl();
+          topo.action(act, tmp_adds_dels[i]);
+          OPut(*this->log, act) << this->log->endl();
+        }
+      }
+      dels |= tmp_dels;
+    }
   }
 
   if (adds.overlap_ck(dels)) {
@@ -1380,6 +1411,22 @@ SynthesisCtx::add(const Xn::Sys& sys, const StabilizationOpt& stabilization_opt)
 
   if (!good) {
     return false;
+  }
+  if (!synctx.opt.permissive) {
+    for (uint i = 0; i < partial.candidates.size(); ++i) {
+      const uint actidx = partial.candidates[i];
+      Set<uint> tmp_dels;
+      QuickTrim(tmp_dels, partial.candidates, actidx,
+                synctx.systems[0]->topology, synctx.opt.pure_actions);
+      Cx::Table<uint> dels;
+      tmp_dels.fill(dels);
+      for (uint j = 0; j < dels.sz(); ++j) {
+        uint conflict[2];
+        conflict[0] = actidx;
+        conflict[1] = dels[j];
+        synctx.conflicts.add_conflict(FlatSet<uint>(conflict, 2));
+      }
+    }
   }
 
   partial.lo_xfmlae = X::Fmlae(&topo.xfmlae_ctx);

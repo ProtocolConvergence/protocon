@@ -146,17 +146,24 @@ add_test (NAME TrySynt5_TokenRingFourState
   COMMAND protocon -test -def M 2 -x ${SpecPath}/TokenRingSuperpos.prot
   -x-try-subset ${SyntPath}/TokenRingFourState.prot -def N 5)
 
-list (APPEND VerifyBySynthesis
+set (VerifyBySynthesis
   ColorRing
   OrientDaisy
-  OrientRing
-  OrientOddRing
   TokenRingThreeBit
   )
 
 foreach (f ${VerifyBySynthesis})
   add_test (NAME VerifSyn_${f}
     COMMAND protocon -x ${SolnPath}/${f}.prot -def N 5)
+endforeach ()
+
+set (VerifyBySynthesis
+  OrientRing
+  OrientOddRing
+  )
+foreach (f ${VerifyBySynthesis})
+  add_test (NAME VerifSyn_${f}
+    COMMAND protocon -permissive -x ${SolnPath}/${f}.prot -def N 5)
 endforeach ()
 
 add_test (NAME Verif4_Sync_OrientRing

@@ -1,7 +1,7 @@
 #!/bin/sh
 
 proj_path=$(dirname $(dirname $(dirname "$0")))
-protocon_exe="${proj_path}/../bin/protocon"
+protocon_exe="${proj_path}/bin/protocon"
 
 old_name="$1"
 new_name="$2"

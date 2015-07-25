@@ -2,7 +2,7 @@
 
 proj_path=$(dirname $(readlink -f "$0"))
 proj_path=$(dirname $(dirname "$proj_path"))
-biring_exe="${proj_path}/biring"
+biring_exe="${proj_path}/bld/biring"
 
 old_name="$1"
 new_name="$2"
