@@ -31,6 +31,7 @@ struct FilterOpt
   bool subck_match;
   bool ppgck;
   bool xlate_invariant;
+  bool grow_domsz;
   const char* spec_ofilename;
   const char* graphviz_ofilename;
 
@@ -935,8 +936,12 @@ flat_canonical_hack (FlatDigraph& flat, const Cx::BitTable min_bt)
 
   void
 oput_biring_invariant (Cx::OFile& ofile, const Cx::BitTable& legit, const uint domsz,
-                       const char* pfx = "", const char* delim = " || ")
+                       const char* pfx = "", const char* delim = " || ",
+                       const bool print_own = true)
 {
+  if (!delim)
+    delim = pfx;
+
   for (ujint config_enum_idx = legit.begidx();
        config_enum_idx < legit.sz();
        config_enum_idx = legit.nextidx(config_enum_idx))
@@ -946,34 +951,50 @@ oput_biring_invariant (Cx::OFile& ofile, const Cx::BitTable& legit, const uint d
 
     uint config[3];
     pc_config_of_enum_idx (config, config_enum_idx, domsz);
-    ofile
-      << "(x[i-1]==" << config[0]
-      << " && x[i]==" << config[1]
-      << " && x[i+1]==" << config[2] << ")";
+    ofile << "(x[i-1]==" << config[0];
+    if (print_own) {
+      ofile << " && x[i]==" << config[1];
+    }
+    ofile << " && x[i+1]==" << config[2] << ")";
   }
 }
 
   void
 oput_biring_protocon_spec (const Cx::String& ofilepath, const Cx::String& ofilename,
-                           const Cx::BitTable& legit, const uint domsz)
+                           const Cx::BitTable& legit, const uint domsz, bool grow_domsz)
 {
   Cx::OFileB ofb;
   Cx::OFile ofile( ofb.uopen(ofilepath, ofilename) );
 
   ofile
-    << "constant N := 3;\n"
-    << "constant M := " << domsz << ";\n"
-    << "variable x[Nat % N] <- Nat % M;\n"
-    << "process P[i <- Nat % N]\n"
-    << "{\n"
-    << "write: x[i];\n"
-    << "read: x[i-1];\n"
-    << "read: x[i+1];\n"
-    << "(future & silent) (0==1";
-  oput_biring_invariant (ofile, legit, domsz, "\n|| ", "\n|| ");
-  ofile
-    << "\n);\n"
-    << "}";
+    << "constant N := 3;"
+    << "\nconstant M := " << (domsz + OneIf(grow_domsz)) << ";"
+    << "\nvariable x[Nat % N] <- Nat % M;"
+    << "\nprocess P[i <- Nat % N]"
+    << "\n{"
+    << "\n  write: x[i];"
+    << "\n  read: x[i-1];"
+    << "\n  read: x[i+1];"
+    << "\n  (future & silent)"
+    << "\n    (0!=0"
+    ;
+  oput_biring_invariant (ofile, legit, domsz, "\n     || ", 0);
+  ofile << "\n    );";
+  if (grow_domsz) {
+    ofile
+      << "\n  puppet:"
+      << "\n    (   x[i-1]!=" << domsz
+      << "\n     && x[i]!=" << domsz
+      << "\n     && x[i+1]!=" << domsz
+      ;
+    oput_biring_invariant (ofile, legit, domsz, "\n     && !", 0, false);
+    ofile
+      << "\n     -->"
+      << "\n     x[i]:=" << domsz << ";"
+      << "\n    );"
+      ;
+  }
+  ofile << "\n}\n";
 }
 
   void
@@ -1368,7 +1389,7 @@ filter_stdin (const FilterOpt& opt, Cx::OFile& ofile)
       ofile << '\n';
     }
     if (opt.spec_ofilename) {
-      oput_biring_protocon_spec ("", opt.spec_ofilename, set, domsz);
+      oput_biring_protocon_spec ("", opt.spec_ofilename, set, domsz, opt.grow_domsz);
     }
     if (opt.graphviz_ofilename) {
       Cx::OFileB graphviz_ofileb;
@@ -1436,6 +1457,9 @@ int main(int argc, char** argv)
       opt.spec_ofilename = argv[argi++];
       if (!opt.spec_ofilename)
         failout_sysCx("Argument Usage: -o-spec file");
+    }
+    else if (eq_cstr ("-grow-domsz", arg)) {
+      opt.grow_domsz = true;
     }
     else  {
       DBog1( "Unrecognized option: %s", arg );
