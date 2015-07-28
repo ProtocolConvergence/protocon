@@ -12,18 +12,15 @@ extern "C" {
 #include "cx/set.hh"
 #include "tuple.hh"
 
-//#define UseBlissLib
-
-#ifdef UseBlissLib
-#include <graph.hh>
-#endif
-
+//#include "biring-ext.cc"
 #define UseBitTableDB
 
 struct FilterOpt
 {
   uint domsz;
   uint minsz;
+  bool pair;
+  bool trivial;
   bool echo_bits;
   bool echo_subsets;
   bool count_ones;
@@ -38,6 +35,8 @@ struct FilterOpt
   FilterOpt()
     : domsz( 3 )
     , minsz( 3 )
+    , pair( false )
+    , trivial( false )
     , echo_bits( false )
     , echo_subsets( false )
     , count_ones( false )
@@ -45,224 +44,11 @@ struct FilterOpt
     , subck_match( false )
     , ppgck( false )
     , xlate_invariant( false )
+    , grow_domsz( false )
     , spec_ofilename( 0 )
     , graphviz_ofilename( 0 )
   {}
 };
-
-class LocalConfig
-{
-public:
-  uint x_id;
-  uint x_pd;
-  uint x_sc;
-  uint sc_cont_idx;
-};
-
-class LocalCont
-{
-public:
-  uint x_id;
-  uint x_sc;
-  Cx::Table<uint> sc_configs;
-};
-
-class LocalVal
-{
-public:
-  Cx::Table<uint> configs;
-};
-
-class LocalLegit
-{
-public:
-  Cx::Table<LocalConfig> configs;
-  Cx::Table<LocalCont> conts;
-  Cx::Table<LocalVal> vals;
-  Cx::Map<Cx::Tuple<uint,2>, uint> cont_map;
-
-  explicit LocalLegit(uint domsz)
-    : vals(domsz)
-  {}
-};
-
-class FlatDigraph
-{
-private:
-  uint* data;
-
-  uint data_sz() const {
-    const uint nnodes = this->nnodes();
-    return 1 + data[nnodes-1] + (*this)[nnodes-1].sz();
-  }
-public:
-  class Vertex
-  {
-    private:
-      uint* data;
-    public:
-      explicit Vertex(uint* _data) : data(_data) {}
-
-      uint sz() const {
-        return data[-1];
-      }
-      uint operator[](uint i) const {
-        return data[i];
-      }
-      uint& operator[](uint i) {
-        return data[i];
-      }
-      uint* begin() {
-        return &data[0];
-      }
-      uint* end() {
-        return &data[data[-1]];
-      }
-  };
-
-  FlatDigraph() : data(0) {}
-
-  FlatDigraph(const Cx::Table< Cx::Table<uint> >& graph)
-    : data(0)
-  {
-    *this = graph;
-  }
-
-  FlatDigraph(const FlatDigraph& graph)
-    : data(0)
-  {
-    *this = graph;
-  }
-
-  ~FlatDigraph()
-  {
-    if (data) {
-      data = &data[-1];
-      delete[] data;
-    }
-  }
-
-  FlatDigraph& operator=(const Cx::Table< Cx::Table<uint> >& graph)
-  {
-    if (data) {
-      data = &data[-1];
-      delete[] data;
-    }
-    const uint nnodes = graph.sz();
-    uint narcs = 0;
-    for (uint i = 0; i < nnodes; ++i) {
-      narcs += graph[i].sz();
-    }
-    data = new uint[1 + 2*nnodes + narcs];
-    data = &data[1];
-    data[-1] = nnodes;
-    if (nnodes > 0) {
-      data[0] = 1+nnodes;
-      data[data[0]-1] = graph[0].sz();
-    }
-    for (uint i = 1; i < nnodes; ++i) {
-      data[i] = data[i-1] + data[data[i-1]-1] + 1;
-      data[data[i]-1] = graph[i].sz();
-    }
-    for (uint i = 0; i < nnodes; ++i) {
-      for (uint j = 0; j < (*this)[i].sz(); ++j) {
-        (*this)[i][j] = graph[i][j];
-      }
-    }
-
-    for (uint i = 0; i < nnodes; ++i) {
-      std::sort ((*this)[i].begin(), (*this)[i].end());
-    }
-    return *this;
-  }
-
-  FlatDigraph& operator=(const FlatDigraph& graph)
-  {
-    if (data) {
-      data = &data[-1];
-      delete[] data;
-    }
-    const uint data_sz = graph.data_sz();
-    data = new uint[data_sz];
-    data = &data[1];
-
-    RepliT( uint, &data[-1], &graph.data[-1], data_sz );
-    return *this;
-  }
-
-  const Vertex operator[](uint v) const {
-    return Vertex(&data[data[v]]);
-  }
-
-  Vertex operator[](uint v) {
-    return Vertex(&data[data[v]]);
-  }
-
-  uint nnodes() const {
-    return data[-1];
-  }
-  uint narcs() const {
-    return data_sz() - 1 - 2*this->nnodes();
-  }
-
-  Sign cmp(const FlatDigraph& b) const
-  {
-    const FlatDigraph& a = *this;
-    const uint a_data_sz = a.data_sz();
-    const uint b_data_sz = b.data_sz();
-    if (a_data_sz < b_data_sz) return -1;
-    if (b_data_sz < a_data_sz) return  1;
-    int ret = memcmp (&a.data[-1], &b.data[-1], a_data_sz * sizeof(uint));
-    if (ret < 0)  return -1;
-    if (ret > 0)  return  1;
-    return 0;
-  }
-
-  bool operator==(const FlatDigraph& b) const {
-    return (this->cmp(b) == 0);
-  }
-  bool operator!=(const FlatDigraph& b) const {
-    return !(*this == b);
-  }
-  bool operator<=(const FlatDigraph& b) const {
-    return (this->cmp(b) <= 0);
-  }
-  bool operator<(const FlatDigraph& b) const {
-    return (this->cmp(b) < 0);
-  }
-  bool operator>(const FlatDigraph& b) const {
-    return (this->cmp(b) > 0);
-  }
-  bool operator>=(const FlatDigraph& b) const {
-    return (this->cmp(b) >= 0);
-  }
-};
-
-uint domsz_of(const LocalLegit& legit) { return legit.vals.sz(); }
-
-  void
-config_enum_idx_fo(LocalConfig& config, uint idx, uint domsz)
-{
-  uint doms[3];
-  uint tmp[3];
-  doms[0] = doms[1] = doms[2] = domsz;
-  state_of_index (tmp, idx, doms, 3);
-  config.x_id = tmp[0];
-  config.x_pd = tmp[1];
-  config.x_sc = tmp[2];
-}
-
-Cx::OFile& operator<<(Cx::OFile& of, const LocalConfig& config)
-{
-  of << config.x_pd << "," << config.x_id << "," << config.x_sc;
-  return of;
-}
-
-Cx::OFile& operator<<(Cx::OFile& of, const LocalCont& cont)
-{
-  of << cont.x_id << "," << cont.x_sc;
-  return of;
-}
 
 Cx::OFile& operator<<(Cx::OFile& of, const BitTable& bt)
 {
@@ -276,140 +62,6 @@ Cx::OFile& operator<<(Cx::OFile& of, const Cx::BitTable& bt)
   for (ujint i = 0; i < bt.sz(); ++i)
     of << bt[i];
   return of;
-}
-
-  void
-rm_config(LocalLegit& legit, uint config_enum_idx)
-{
-  LocalConfig config;
-  config_enum_idx_fo(config, config_enum_idx, domsz_of(legit));
-}
-
-  void
-construct(LocalLegit& legit, const BitTable set)
-{
-  const uint domsz = domsz_of(legit);
-  Claim2( domsz*domsz*domsz ,==, set.sz );
-
-  for (ujint config_enum_idx = begidx_BitTable (set);
-       config_enum_idx < set.sz;
-       config_enum_idx = nextidx_BitTable (set, config_enum_idx))
-  {
-    uint config_idx = legit.configs.sz();
-    LocalConfig& config = legit.configs.grow1();
-    config_enum_idx_fo(config, config_enum_idx, domsz);
-
-    legit.vals[config.x_id].configs.push(config_idx);
-    Cx::Tuple<uint,2> key;
-
-    key[0] = config.x_id;
-    key[1] = config.x_sc;
-    config.sc_cont_idx = legit.cont_map.ensure(key, legit.conts.sz());
-    if (config.sc_cont_idx == legit.conts.sz()) {
-      LocalCont& cont = legit.conts.grow1();
-      cont.x_id = config.x_id;
-      cont.x_sc = config.x_sc;
-    }
-
-    key[0] = config.x_pd;
-    key[1] = config.x_id;
-    uint cont_idx = legit.cont_map.ensure(key, legit.conts.sz());
-    if (cont_idx == legit.conts.sz()) {
-      LocalCont& cont = legit.conts.grow1();
-      cont.x_id = config.x_pd;
-      cont.x_sc = config.x_id;
-    }
-    legit.conts[cont_idx].sc_configs.push(config_idx);
-  }
-}
-
-  void
-oput_graph(Cx::OFile& of, const LocalLegit& legit)
-{
-  const uint val_offset = 0;
-  const uint config_offset = legit.vals.sz();
-  const uint cont_offset = config_offset + legit.configs.sz();
-
-  for (uint i = 0; i < legit.vals.sz(); ++i) {
-    of << (val_offset + i) << " -> " << (val_offset + i) << '\n';
-    of << "# " << i << " -> " << (val_offset + i) << '\n';
-    for (uint j = 0; j < legit.vals[i].configs.sz(); ++j) {
-      of << (val_offset + i) << " -> " << (config_offset + legit.vals[i].configs[j]) << '\n';
-      of << "# " << i << " -> " << legit.configs[legit.vals[i].configs[j]] << "\n";
-    }
-  }
-  for (uint i = 0; i < legit.configs.sz(); ++i) {
-    of << (config_offset + i) << " -> " << (cont_offset + legit.configs[i].sc_cont_idx) << '\n';
-    of << "# " << legit.configs[i] << " -> " << legit.conts[legit.configs[i].sc_cont_idx] << '\n';
-  }
-  for (uint i = 0; i < legit.conts.sz(); ++i) {
-    of << (cont_offset + i) << " -> " << (val_offset + legit.conts[i].x_sc) << '\n';
-    of << "# " << legit.conts[i] << " -> " << legit.conts[i].x_sc << '\n';
-    for (uint j = 0; j < legit.conts[i].sc_configs.sz(); ++j) {
-      of << (cont_offset + i) << " -> " << (config_offset + legit.conts[i].sc_configs[j]) << '\n';
-      of << "# " << legit.conts[i] << " -> " << legit.configs[legit.conts[i].sc_configs[j]] << '\n';
-    }
-  }
-}
-
-  void
-construct_graph(Cx::Table< Cx::Table<uint> >& graph, const LocalLegit& legit)
-{
-  const uint val_offset = 0;
-  const uint config_offset = val_offset + legit.vals.sz();
-  const uint cont_offset = config_offset + legit.configs.sz();
-
-  const uint nvertices = legit.vals.sz() + legit.configs.sz() + legit.conts.sz();
-  graph.resize(nvertices);
-
-  for (uint i = 0; i < legit.vals.sz(); ++i) {
-    Cx::Table<uint>& edges = graph[val_offset+i];
-    edges.resize(1+legit.vals[i].configs.sz());
-    edges[0] = (val_offset + i);
-    for (uint j = 0; j < legit.vals[i].configs.sz(); ++j) {
-      edges[1+j] = (config_offset + legit.vals[i].configs[j]);
-    }
-  }
-  for (uint i = 0; i < legit.configs.sz(); ++i) {
-    Cx::Table<uint>& edges = graph[config_offset+i];
-    edges.resize(1);
-    edges[0] = (cont_offset + legit.configs[i].sc_cont_idx);
-  }
-  for (uint i = 0; i < legit.conts.sz(); ++i) {
-    Cx::Table<uint>& edges = graph[cont_offset + i];
-    edges.resize(1+legit.conts[i].sc_configs.sz());
-    edges[0] = (val_offset + legit.conts[i].x_sc);
-    for (uint j = 0; j < legit.conts[i].sc_configs.sz(); ++j) {
-      edges[1+j] = (config_offset + legit.conts[i].sc_configs[j]);
-    }
-  }
-}
-
-  void
-construct_graph(Cx::Table< Cx::Table<uint> >& graph, const BitTable& set, const uint domsz)
-{
-  LocalLegit legit( domsz );
-  construct(legit, set);
-  construct_graph(graph, legit);
-}
-
-  void
-dimacs_graph(Cx::OFile& of, const BitTable& set, const uint domsz)
-{
-  Cx::Table< Cx::Table<uint> > graph;
-  construct_graph(graph, set, domsz);
-
-  uint nedges = 0;
-  for (uint i = 0; i < graph.sz(); ++i) {
-    nedges += graph[i].sz();
-  }
-
-  of << "p edge " << graph.sz() << ' ' << nedges << '\n';
-  for (uint i = 0; i < graph.sz(); ++i) {
-    for (uint j = 0; j < graph[i].sz(); ++j) {
-      of << "e " << (1+i) << ' ' << (1+graph[i][j]) << '\n';
-    }
-  }
 }
 
   void
@@ -523,67 +175,12 @@ direct_biring_continuations (uint* conts, uint config_enum_idx, const BitTable s
 
 static inline
   void
-direct_biring_continuations (Cx::Table<uint>& conts, uint config_enum_idx, const BitTable set, const uint domsz)
+biring_continuations (Cx::Table<uint>& conts, uint config_enum_idx, const BitTable set, const uint domsz)
 {
   conts.flush();
   conts.grow(domsz);
   uint n = direct_biring_continuations (&conts[0], config_enum_idx, set, domsz);
   conts.cpop(domsz-n);
-}
-
-static inline
-  void
-biring_continuations (Cx::Table<uint>& conts, uint config_enum_idx, const BitTable set, const uint domsz)
-{
-#if 1
-  direct_biring_continuations (conts, config_enum_idx, set, domsz);
-#else
-  conts.flush();
-  conts.grow(domsz);
-  const uint n =
-    direct_biring_continuations (&conts[0], config_enum_idx, set, domsz);
-  conts.cpop(domsz-n);
-
-  for (uint i = 0; i < n; ++i) {
-    uint nkept = conts.sz();
-    conts.grow(3 * domsz);
-    uint* next  = &conts[nkept + 1 * domsz];
-    uint* equiv = &conts[nkept + 2 * domsz];
-
-    const uint nnext =
-      direct_biring_continuations (next, conts[i], set, domsz);
-
-    uint config[3];
-    pc_config_of_enum_idx (config, conts[i], domsz);
-    const uint orig_pd = config[0];
-
-
-    for (uint pd = 0; pd < domsz; ++pd) {
-      if (pd == orig_pd)  continue;
-      config[0] = pd;
-      const uint idx = enum_idx_of_pc_config (config, domsz);
-      if (!ck_BitTable (set, idx))  continue;
-
-      const uint nequiv =
-        direct_biring_continuations (equiv, idx, set, domsz);
-
-      uint nfound = 0;
-      for (uint j = 0; j < nnext; ++j) {
-        for (uint k = 0; k < nequiv; ++k) {
-          if (next[j] == equiv[k]) {
-            nfound += 1;
-          }
-        }
-      }
-
-      if (nfound == nnext) {
-        conts[nkept++] = idx;
-      }
-    }
-    conts.cpop(conts.sz() - nkept);
-  }
-  /* for (uint i = 0; i < conts.sz(); ++i) DBog2( "%u -> %u",  config_enum_idx, conts[i] ); */
-#endif
 }
 
 static bool
@@ -729,45 +326,107 @@ better_biring_sat_ck (const BitTable set, const uint domsz, const uint N_0)
   return false;
 }
 
+static void
+img(Cx::BitTable& img_pf, const BitTable xn, const Cx::BitTable& pre_pf, uint domsz)
+{
+  img_pf.wipe(0);
+  for (ujint enum_idx = pre_pf.begidx();
+       enum_idx < pre_pf.sz();
+       enum_idx = pre_pf.nextidx(enum_idx))
+  {
+    uint config[3];
+    pc_config_of_enum_idx (config, enum_idx, domsz);
+
+    config[0] = config[1];
+    config[1] = config[2];
+
+    for (uint i = 0; i < domsz; ++i) {
+      config[2] = i;
+      uint idx = enum_idx_of_pc_config (config, domsz);
+      if (ck_BitTable (xn, idx)) {
+        img_pf.set1(idx);
+      }
+    }
+  }
+}
+
+/** For this routine, for every node, we perform a fixpoint iteration starting
+ * from that node until either the set doesn't change or it has been visited
+ * before.
+ **/
+  bool
+true_biring_sat_ck (const BitTable xn, const uint domsz, uint* nsteps)
+{
+  Cx::BitTable pre_pf( xn.sz, 0 );
+  Cx::BitTable img_pf( xn.sz, 0 );
+
+  Cx::Set<Cx::BitTable> visited;
+  for (ujint enum_idx = begidx_BitTable (xn);
+       enum_idx < xn.sz;
+       enum_idx = nextidx_BitTable (xn, enum_idx))
+  {
+    visited.clear();
+
+    pre_pf.wipe(0);
+    pre_pf.set1(enum_idx);
+
+    while (!visited.elem_ck(pre_pf))
+    {
+      visited << pre_pf;
+      img(img_pf, xn, pre_pf, domsz);
+      if (img_pf.ck(enum_idx) && pre_pf==img_pf) {
+        if (nsteps) {
+          *nsteps = visited.sz();
+        }
+        return true;
+      }
+      pre_pf = img_pf;
+    }
+  }
+  return false;
+}
+
   bool
 biring_sat_ck (const BitTable set, const uint domsz, const uint N_0)
 {
 #if 0
   return better_biring_sat_ck (set, domsz, N_0);
 #endif
+  uint N = 0;
 
-  Cx::BitTable reach_pre( set.sz, 0 );
-  Cx::BitTable reach_img( set.sz, 0 );
-  const uint nbits = count_BitTable (set);
-  //const uint N = set.sz;
-  const uint N = nbits * nbits;
+  if (!true_biring_sat_ck (set, domsz, &N)) {
+    return false;
+  }
+  N -= 1;
+  if (N_0 == 0 || N < N_0) {
+    return true;
+  }
+
+  Cx::BitTable pre_pf( set.sz, 0 );
+  Cx::BitTable img_pf( set.sz, 0 );
   Cx::BitTable sats( N+1, 0 );
-  Cx::Table<uint> conts;
 
-  for (uint config_enum_idx = begidx_BitTable (set);
+  for (ujint config_enum_idx = begidx_BitTable (set);
        config_enum_idx < set.sz;
        config_enum_idx = nextidx_BitTable (set, config_enum_idx))
   {
-    reach_img.wipe(0);
-    reach_img[config_enum_idx] = 1;
+    pre_pf.wipe(0);
+    pre_pf.set1(config_enum_idx);
 
-    for (uint step_idx = 0; step_idx < N; ++step_idx) {
-      reach_pre = reach_img;
-      reach_img.wipe(0);
-      for (uint idx = reach_pre.begidx(); idx < reach_pre.sz(); idx = reach_pre.nextidx(idx))
-      {
-        biring_continuations(conts, idx, set, domsz);
-        for (uint i = 0; i < conts.sz(); ++i) {
-          reach_img[conts[i]] = 1;
-        }
+    for (uint step_idx = 1; step_idx < N+1; ++step_idx) {
+      img(img_pf, set, pre_pf, domsz);
+
+      if (img_pf.ck(config_enum_idx)) {
+        sats.set1(step_idx);
       }
-      if (reach_img[config_enum_idx]) {
-        sats[step_idx+1] = 1;
-      }
+      pre_pf = img_pf;
     }
-    for (uint i = N_0; i < N+1; ++i) {
-      if (0 == sats[i])  break;
-      if (i == N)  return true;
+
+    while (N >= N_0 && sats.ck(N)) {
+      N -= 1;
+    }
+    if (N < N_0) {
+      return true;
     }
   }
   return false;
@@ -813,54 +472,6 @@ local_propagation_syn(const BitTable set, const uint domsz)
   return livesyn;
 }
 
-#ifdef UseBlissLib
-  void
-flat_canonical_digraph(FlatDigraph& flat, Cx::BitTable& bt, const BitTable set, const uint domsz)
-{
-  Cx::Table< Cx::Table<uint> > graph;
-  construct_graph(graph, set, domsz);
-
-  const uint nvertices = graph.sz();
-  bliss::Digraph bliss_graph(nvertices);
-  bliss_graph.set_splitting_heuristic(bliss_graph.shs_fsm);
-  bliss_graph.set_component_recursion(false);
-
-  for (uint i = 0; i < graph.sz(); ++i) {
-    for (uint j = 0; j < graph[i].sz(); ++j) {
-      bliss_graph.add_edge(i, graph[i][j]);
-    }
-  }
-
-  bliss::Stats stats;
-  const unsigned int* perm =
-    bliss_graph.canonical_form (stats, 0, 0);
-
-  {
-    Cx::Table<uint> perm_map(domsz);
-    Cx::Table<uint> perm_ord(domsz);
-    for (uint i = 0; i < domsz; ++i) {
-      perm_ord[i] = perm[i];
-    }
-    std::sort(perm_ord.begin(), perm_ord.end());
-    for (uint i = 0; i < domsz; ++i) {
-      for (uint j = 0; j < domsz; ++j) {
-        if (perm_ord[i] == perm[j]) {
-          perm_map[j] = i;
-        }
-      }
-    }
-    //Claim( minimal_unique_ck (&perm_map[0], domsz) );
-    bt = set;
-    permute_pc_config (bt, set, perm_map);
-  }
-
-  Cx::Table< Cx::Table<uint> > graph2( graph );
-  for (uint i = 0; i < graph.sz(); ++i) {
-    graph2[perm[i]] = graph[i];
-  }
-  flat = graph2;
-}
-#endif
 
   void
 canonical_set(Cx::BitTable& min_bt, const BitTable set, const uint domsz)
@@ -922,53 +533,53 @@ subgraph_isomorphism_ck(const BitTable sub_a, const Cx::BitTable& b, uint domsz)
 }
 
   void
-flat_canonical_hack (FlatDigraph& flat, const Cx::BitTable min_bt)
-{
-  Cx::Table< Cx::Table<uint> > list1;
-  Cx::Table<uint>& list = list1.grow1();
-  for (ujint i = 0; i < min_bt.sz(); ++i) {
-    if (min_bt[i]) {
-      list.push(i);
-    }
-  }
-  flat = list1;
-}
-
-  void
 oput_biring_invariant (Cx::OFile& ofile, const Cx::BitTable& legit, const uint domsz,
                        const char* pfx = "", const char* delim = " || ",
+                       const bool pair = false,
                        const bool print_own = true)
 {
   if (!delim)
     delim = pfx;
 
+  Cx::Set< Cx::Tuple<uint, 2> > cache;
   for (ujint config_enum_idx = legit.begidx();
        config_enum_idx < legit.sz();
        config_enum_idx = legit.nextidx(config_enum_idx))
   {
+    uint config[3];
+    pc_config_of_enum_idx (config, config_enum_idx, domsz);
+    if (pair) {
+      Cx::Tuple<uint,2> tup(config[0], config[1]);
+      if (cache.elem_ck(tup))  continue;
+      cache << tup;
+    }
+
     ofile << pfx;
     pfx = delim;
 
-    uint config[3];
-    pc_config_of_enum_idx (config, config_enum_idx, domsz);
     ofile << "(x[i-1]==" << config[0];
     if (print_own) {
       ofile << " && x[i]==" << config[1];
     }
-    ofile << " && x[i+1]==" << config[2] << ")";
+    if (!pair) {
+      ofile << " && x[i+1]==" << config[2];
+    }
+   ofile << ")";
   }
 }
 
   void
 oput_biring_protocon_spec (const Cx::String& ofilepath, const Cx::String& ofilename,
-                           const Cx::BitTable& legit, const uint domsz, bool grow_domsz)
+                           const Cx::BitTable& legit, const FilterOpt& opt)
 {
+  const uint domsz = opt.domsz;
   Cx::OFileB ofb;
   Cx::OFile ofile( ofb.uopen(ofilepath, ofilename) );
 
   ofile
-    << "constant N := 3;"
-    << "\nconstant M := " << (domsz + OneIf(grow_domsz)) << ";"
+    << "// " << legit
+    << "\nconstant N := 3;"
+    << "\nconstant M := " << (domsz + OneIf(opt.grow_domsz)) << ";"
     << "\nvariable x[Nat % N] <- Nat % M;"
     << "\nprocess P[i <- Nat % N]"
     << "\n{"
@@ -978,16 +589,16 @@ oput_biring_protocon_spec (const Cx::String& ofilepath, const Cx::String& ofilen
     << "\n  (future & silent)"
     << "\n    (0!=0"
     ;
-  oput_biring_invariant (ofile, legit, domsz, "\n     || ", 0);
+  oput_biring_invariant (ofile, legit, domsz, "\n     || ", 0, opt.pair, true);
   ofile << "\n    );";
-  if (grow_domsz) {
+  if (opt.grow_domsz) {
     ofile
       << "\n  puppet:"
       << "\n    (   x[i-1]!=" << domsz
       << "\n     && x[i]!=" << domsz
       << "\n     && x[i+1]!=" << domsz
       ;
-    oput_biring_invariant (ofile, legit, domsz, "\n     && !", 0, false);
+    oput_biring_invariant (ofile, legit, domsz, "\n     && !", 0, false, false);
     ofile
       << "\n     -->"
       << "\n     x[i]:=" << domsz << ";"
@@ -998,7 +609,7 @@ oput_biring_protocon_spec (const Cx::String& ofilepath, const Cx::String& ofilen
 }
 
   void
-recurse(const BitTable bt, uint q,
+recurse(BitTable set, uint q,
 #ifdef UseBitTableDB
         Cx::Set<Cx::BitTable>& db,
 #else
@@ -1006,8 +617,6 @@ recurse(const BitTable bt, uint q,
 #endif
         const FilterOpt& opt, Cx::OFile& ofile)
 {
-  BitTable set = cons1_BitTable (bt.sz);
-  op_BitTable (set, BitOp_IDEN1, bt);
   biring_fixpoint (set, opt.domsz);
 
   Cx::String ofilename;
@@ -1023,8 +632,6 @@ recurse(const BitTable bt, uint q,
   }
 
   if (!biring_sat_ck (set, opt.domsz, opt.minsz)) {
-    lose_BitTable (&set);
-    //ofile << ofilename << " unsat\n";
     return;
   }
 
@@ -1037,9 +644,9 @@ recurse(const BitTable bt, uint q,
 #endif
 
   {
-    FlatDigraph digraph;
     Cx::BitTable min_bt;
 #if 0
+    FlatDigraph digraph;
     flat_canonical_digraph(digraph, min_bt, set, opt.domsz);
 #else
     canonical_set(min_bt, set, opt.domsz);
@@ -1054,8 +661,6 @@ recurse(const BitTable bt, uint q,
 
     if (db.elem_ck(db_elem))
     {
-      //ofile << ofilename << ' ' << min_bt << " visited\n";
-      lose_BitTable (&set);
       return;
     }
     db << db_elem;
@@ -1065,20 +670,32 @@ recurse(const BitTable bt, uint q,
     }
   }
   if (q == 0) {
-    lose_BitTable (&set);
     return;
   }
+
+  BitTable bt = cons1_BitTable (set.sz);
 
   while (q > 0)
   {
     q -= 1;
-    if (!set0_BitTable (set, q))
+    if (!ck_BitTable (set, q))
       continue;
 
-    recurse(set, q, db, opt, ofile);
-    set1_BitTable (set, q);
+    op_BitTable (bt, BitOp_IDEN1, set);
+    set0_BitTable (bt, q);
+
+    if (opt.pair) {
+      uint config[3];
+      pc_config_of_enum_idx (config, q, opt.domsz);
+      for (uint i = 0; i < opt.domsz; ++i) {
+        config[2] = i;
+        set0_BitTable (bt, enum_idx_of_pc_config (config, opt.domsz));
+      }
+    }
+
+    recurse(bt, q, db, opt, ofile);
   }
-  lose_BitTable (&set);
+  lose_BitTable (&bt);
 }
 
   void
@@ -1086,13 +703,20 @@ searchit(const FilterOpt& opt, Cx::OFile& ofile)
 {
   const uint domsz = opt.domsz;
   BitTable set = cons2_BitTable (domsz*domsz*domsz, 1);
-  for (uint val = 0; val < domsz; ++val) {
-    uint config[3];
-    uint doms[3];
-    config[0] = config[1] = config[2] = val;
-    doms[0] = doms[1] = doms[2] = domsz;
-    uint config_enum_idx = index_of_state (config, doms, 3);
-    set0_BitTable (set, config_enum_idx);
+  if (!opt.trivial) {
+    for (uint val = 0; val < domsz; ++val) {
+      uint config[3];
+      config[0] = config[1] = config[2] = val;
+      if (!opt.pair) {
+        set0_BitTable (set, enum_idx_of_pc_config (config, domsz));
+      }
+      else {
+        for (uint i = 0; i < domsz; ++i) {
+          config[2] = i;
+          set0_BitTable (set, enum_idx_of_pc_config (config, domsz));
+        }
+      }
+    }
   }
 
 #ifdef UseBitTableDB
@@ -1105,12 +729,39 @@ searchit(const FilterOpt& opt, Cx::OFile& ofile)
 }
 
 static void
-oput_graphviz(Cx::OFile& ofile, const BitTable set, uint domsz)
+oput_graphviz(Cx::OFile& ofile, const BitTable set, uint domsz, bool pair)
 {
 #define NiceLooking
   ofile << "digraph G {\n"
     << " margin=0;\n"
     << " edge [weight=5];\n\n";
+
+  if (pair) {
+
+    for (uint i = 0; i < domsz; ++i) {
+      ofile << "  config_" << i << " [label=\"" << i << "\"];\n";
+    }
+
+    Cx::Set< Cx::Tuple<uint, 2> > cache;
+    for (uint config_enum_idx = begidx_BitTable (set);
+         config_enum_idx < set.sz;
+         config_enum_idx = nextidx_BitTable (set, config_enum_idx))
+    {
+      uint config[3];
+      pc_config_of_enum_idx (config, config_enum_idx, domsz);
+
+      Cx::Tuple<uint,2> tup(config[0], config[1]);
+
+      if (cache.elem_ck(tup))  continue;
+      cache << tup;
+
+      ofile << "  "
+        << "config_" << config[0] << " -> "
+        << "config_" << config[1] << "\n";
+    }
+    ofile << "}\n";
+    return;
+  }
 
   for (ujint config_enum_idx = begidx_BitTable (set);
        config_enum_idx < set.sz;
@@ -1385,16 +1036,16 @@ filter_stdin (const FilterOpt& opt, Cx::OFile& ofile)
     }
 
     if (opt.xlate_invariant) {
-      oput_biring_invariant (ofile, set, domsz, "", " || ");
+      oput_biring_invariant (ofile, set, domsz, "", " || ", opt.pair);
       ofile << '\n';
     }
     if (opt.spec_ofilename) {
-      oput_biring_protocon_spec ("", opt.spec_ofilename, set, domsz, opt.grow_domsz);
+      oput_biring_protocon_spec ("", opt.spec_ofilename, set, opt);
     }
     if (opt.graphviz_ofilename) {
       Cx::OFileB graphviz_ofileb;
       Cx::OFile graphviz_ofile( graphviz_ofileb.uopen(0, opt.graphviz_ofilename) );
-      oput_graphviz (graphviz_ofile, set, domsz);
+      oput_graphviz (graphviz_ofile, set, domsz, opt.pair);
     }
   }
 
@@ -1416,6 +1067,12 @@ int main(int argc, char** argv)
     else if (eq_cstr ("-minsz", arg)) {
       if (!xget_uint_cstr (&opt.minsz, argv[argi++]))
         failout_sysCx("Argument Usage: -minsz n\nWhere n is an unsigned integer!");
+    }
+    else if (eq_cstr ("-pair", arg)) {
+      opt.pair = true;
+    }
+    else if (eq_cstr ("-all", arg)) {
+      opt.trivial = true;
     }
     else if (eq_cstr ("-xlate-invariant", arg)) {
       filter = true;
