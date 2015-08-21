@@ -1,0 +1,72 @@
+
+// Determine a root in a tree.
+// The maximum degree of a node is 3.
+// See exampleargs/LeaderTree.args for example topologies.
+
+constant N_uni := 3;
+constant N_bin := 1;
+constant N_tri := 1;
+constant w_uni := (3, 5, 7);
+constant w_bin := (0,2);
+constant w_tri := (1,4,6);
+
+constant N_conn := (N_uni + 2*N_bin + 3*N_tri) / 2;
+
+variable w[Nat % (2*N_conn)] <- Nat % 2;
+
+process P_uni[i <- Nat % N_uni]
+{
+  let ij := w_uni[i];
+  let ji := if (ij % 2 == 0) then (ij+1) else (ij-1);
+
+  write: w[ij];
+  read: w[ji];
+
+  (future & future silent)
+    (w[ij]!=w[ji]);
+}
+
+process P_bin[i <- Nat % N_bin]
+{
+  let ij := w_bin[2*i+0];
+  let ik := w_bin[2*i+1];
+
+  let ji := if (ij % 2 == 0) then (ij+1) else (ij-1);
+  let ki := if (ik % 2 == 0) then (ik+1) else (ik-1);
+
+  symmetric (w_idx, adj_w_idx) <- {# (ij, ji), (ik, ki) #}
+  {
+    write: w[w_idx];
+    read: w[adj_w_idx];
+  }
+
+  (assume & closed)
+    (w[ij] + w[ik] <= 1);
+
+  (future & future silent)
+    (w[ij]!=w[ji] && w[ik]!=w[ki]);
+}
+
+process P_tri[i <- Nat % N_tri]
+{
+  let ij := w_tri[3*i+0];
+  let ik := w_tri[3*i+1];
+  let il := w_tri[3*i+2];
+
+  let ji := if (ij % 2 == 0) then (ij+1) else (ij-1);
+  let ki := if (ik % 2 == 0) then (ik+1) else (ik-1);
+  let li := if (il % 2 == 0) then (il+1) else (il-1);
+
+  symmetric (w_idx, adj_w_idx) <- {# (ij, ji), (ik, ki), (il, li) #}
+  {
+    write: w[w_idx];
+    read: w[adj_w_idx];
+  }
+
+  (assume & closed)
+    (w[ij] + w[ik] + w[il] <= 1);
+
+  (future & future silent)
+    (w[ij]!=w[ji] && w[ik]!=w[ki] && w[il]!=w[li]);
+}
+

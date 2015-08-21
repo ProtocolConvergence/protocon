@@ -6,6 +6,7 @@
 #include "cx/map.hh"
 #include "cx/table.hh"
 #include "stabilization.hh"
+#include "xnspec.hh"
 
 namespace Xn {
   class Sys;
@@ -60,7 +61,7 @@ public:
 
 class ProtoconParamOpt {
 public:
-  Cx::Map<Cx::String, uint> constant_map;
+  Cx::Map<Cx::String, Xn::NatMap> constant_map;
   bool conflict;
   bool partial;
   StabilizationOpt stabilization_opt;

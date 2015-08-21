@@ -6,6 +6,7 @@ set (TestPath ${TopPath}/test)
 set (SpecPath ${TopPath}/examplespec)
 set (SyntPath ${TopPath}/examplesynt)
 set (SolnPath ${TopPath}/examplesoln)
+set (SettPath ${TopPath}/examplesett)
 
 set (MetaPath ${TopPath}/meta)
 set (VerifPath ${CMAKE_CURRENT_SOURCE_DIR}/verif)
@@ -156,6 +157,16 @@ foreach (f ${VerifyBySynthesis})
   add_test (NAME VerifSyn_${f}
     COMMAND protocon -x ${SolnPath}/${f}.prot -def N 5)
 endforeach ()
+
+foreach (f LeaderTree)
+  add_test (NAME Synth_${f}
+    COMMAND protocon -x ${SpecPath}/${f}.prot -x-args ${SettPath}/${f}.args)
+  add_test (NAME Verif_${f}
+    COMMAND protocon -test -x ${SpecPath}/${f}.prot
+    -x-try-subset ${SolnPath}/${f}.prot
+    -x-args ${SettPath}/${f}.args)
+endforeach ()
+
 
 set (VerifyBySynthesis
   OrientRing

@@ -47,10 +47,19 @@ public:
   Cx::Table< int > membs;
   String expression;
 
-  NatMap(uint nmembs) {
+  NatMap() {}
+
+  explicit NatMap(uint nmembs) {
     for (uint i = 0; i < nmembs; ++i) {
       membs.push(i);
     }
+  }
+
+  const NatMap& operator=(int x) {
+    membs.resize(1);
+    membs[0] = x;
+    expression = x;
+    return *this;
   }
 
   int eval(uint i) const {

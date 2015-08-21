@@ -18,7 +18,7 @@ process P[i <- Nat % N]
   write: e[i];
 
   read: t[i-1];
-  random write: t[i];
+  write: t[i];
 
   random write: dec[i];
 

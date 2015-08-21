@@ -113,6 +113,41 @@ ProtoconFile::add_constant(Sesp name_sp, Sesp val_sp)
 }
 
   bool
+ProtoconFile::add_constant_list(Sesp name_sp, Sesp list_sp)
+{
+  if (!allgood)  return false;
+  DeclLegit( good );
+
+  const char* name;
+  DoLegitLineP( name, "" )
+    ccstr_of_Sesp (name_sp);
+
+  Sesp a = list_sp;
+  Claim( eq_cstr ("list", ccstr_of_Sesp (car_of_Sesp (a))) );
+  Cx::Table<Sesp> membs;
+
+  while (a = cdr_of_Sesp (a),
+         !nil_ck_Sesp (a))
+  {
+    membs << car_of_Sesp (a);
+  }
+
+  Xn::NatMap val( membs.sz() );
+  for (uint i = 0; i < membs.sz(); ++i) {
+    DoLegitLine("evaluating int")
+      eval_int (&val.membs[i], membs[i]);
+  }
+
+  DoLegitLine( "finding expression" )
+    string_expression (val.expression, list_sp);
+  DoLegit(0)
+    if (!spec->constant_map.key_ck(name))
+      spec->constant_map.add(name, val);
+
+  return update_allgood (good);
+}
+
+  bool
 ProtoconFile::add_let(Sesp name_sp, Sesp val_sp)
 {
   if (!allgood)  return false;
@@ -372,8 +407,11 @@ ProtoconFile::parse_action(Cx::PFmla& act_pf, Cx::Table<Cx::PFmla>& pc_xns, Sesp
       Xn::Vbl* vbl = 0;
       Cx::IntPFmla val;
 
-      DoLegitLine( "eval variable" )
-        eval_vbl(&vbl, vbl_sp);
+      DoLegit( "lookup variable" ) {
+        Claim( eq_cstr ("aref", ccstr_of_Sesp (car_of_Sesp (vbl_sp))) );
+        const char* name = ccstr_of_Sesp (cadr_of_Sesp (vbl_sp));
+        good = lookup_vbl(&vbl, name, caddr_of_Sesp (vbl_sp));
+      }
 
       bool wild = false;
       DoLegit( "eval value" )
@@ -952,6 +990,17 @@ ProtoconFile::string_expression(Cx::String& ss, Sesp a)
     ss += " : ";
     string_expression (ss, cadddr_of_Sesp (a));
   }
+  else if (eq_cstr (key, "list")) {
+    bool first = true;
+    Sesp b = a;
+    while (b = cdr_of_Sesp (b), !nil_ck_Sesp (b)) {
+      if (first)  ss << '(';
+      else        ss << ",";
+      first = false;
+      string_expression (ss, car_of_Sesp (b));
+    }
+    ss << ')';
+  }
   else {
     good = false;
     DBog1( "No matching string, key is: \"%s\"", key );
@@ -1359,11 +1408,8 @@ ProtoconFile::eval(Cx::IntPFmla& ipf, Sesp a)
       eval(ipf, b);
   }
   else if (eq_cstr (key, "aref")) {
-    Xn::Vbl* vbl = 0;
     DoLegitLine("")
-      eval_vbl(&vbl, b, c);
-    DoLegit(0)
-      ipf = Cx::IntPFmla(sys->topology.pfmla_vbl(*vbl));
+      eval_vbl(&ipf, ccstr_of_Sesp (b), c);
   }
   else {
     good = false;
@@ -1420,54 +1466,59 @@ ProtoconFile::eval_gtz(uint* ret, Sesp sp)
 }
 
   bool
-ProtoconFile::eval_vbl(Xn::Vbl** ret, Sesp a)
-{
-  Claim( eq_cstr ("aref", ccstr_of_Sesp (car_of_Sesp (a))) );
-  return eval_vbl(ret, cadr_of_Sesp (a), caddr_of_Sesp (a));
-}
-
-  bool
-ProtoconFile::eval_vbl(Xn::Vbl** ret, Sesp b, Sesp c)
+ProtoconFile::eval_vbl(Cx::IntPFmla* ret, const Cx::String& name, Sesp idx_sp)
 {
   DeclLegit( good );
 
-  DoLegitLine( "null variable or index?!" )
-    b && c;
-
-  const char* name = 0;
-  DoLegit( "variable needs name" )
-  {
-    name = ccstr_of_Sesp (b);
-    good = !!name;
+  const Xn::NatMap* tup = spec->constant_map.lookup(name);
+  if (tup) {
+    int idx = 0;
+    DoLegitLine( "eval array index" )
+      eval_int(&idx, idx_sp);
+    if (good) {
+      *ret = Cx::IntPFmla(tup->membs[umod_int (idx, tup->membs.sz())]);
+    }
   }
-
-  const Xn::VblSymm* symm = 0;
-  DoLegit( "variable lookup" )
-  {
-    const Xn::VblSymm** tmp = vbl_map.lookup(name);
-    good = !!tmp;
-    if (tmp)
-      symm = *tmp;
+  else {
+    Xn::Vbl* vbl = 0;
+    DoLegitLine( "" )
+      lookup_vbl(&vbl, name, idx_sp);
+    DoLegit(0)
+      *ret = Cx::IntPFmla(sys->topology.pfmla_vbl(*vbl));
   }
+  return update_allgood (good);
+}
+
+  bool
+ProtoconFile::lookup_vbl(Xn::Vbl** ret, const Cx::String& name, Sesp idx_sp)
+{
+  DeclLegit( good );
+  Claim( idx_sp && "null index expression" );
 
   int idx = 0;
   DoLegitLine( "eval array index" )
-    eval_int(&idx, c);
+    eval_int(&idx, idx_sp);
 
-  DoLegit(0)
-    *ret = symm->membs[umod_int (idx, symm->membs.sz())];
+  const Xn::VblSymm** tmp = vbl_map.lookup(name);
+  if (!tmp)
+    return false;
+
+  const Xn::VblSymm* symm = *tmp;
+  *ret = symm->membs[umod_int (idx, symm->membs.sz())];
+  Claim( *ret );
+
+  if (!pc_symm)
+    return true;
 
   DoLegit( "process needs read access to variable" ) {
-    if ((bool)pc_symm) {
-      const int* pcidx = index_map.lookup(pc_symm_spec->idx_name);
-      if (pcidx) {
-        const Xn::Pc& pc = *pc_symm->membs[*pcidx];
-        bool found = false;
-        for (uint i = 0; !found && i < pc.rvbls.sz(); ++i) {
-          found = (pc.rvbls[i] == *ret);
-        }
-        good = found;
+    const int* pcidx = index_map.lookup(pc_symm_spec->idx_name);
+    if (pcidx) {
+      const Xn::Pc& pc = *pc_symm->membs[*pcidx];
+      bool found = false;
+      for (uint i = 0; !found && i < pc.rvbls.sz(); ++i) {
+        found = (pc.rvbls[i] == *ret);
       }
+      good = found;
     }
   }
 

@@ -41,10 +41,21 @@ Protocol = 'protocol' WS name:ID END_STMT {}
   ;
 
 ConstDecl =
-  'constant' WS name:ID DEFEQ v:ConstExpr END_STMT
-  {
-    yy->st->add_constant(name.sp, v.sp);
-  }
+  'constant' WS name:ID DEFEQ
+  (  v:ConstExpr
+     {yy->st->add_constant(name.sp, v.sp);}
+   | v:ConstIntList
+     {yy->st->add_constant_list(name.sp, v.sp);}
+  )
+  END_STMT
+  ;
+
+
+ConstIntList =
+  '(' WS? a:ConstExpr WS?  {a.sp = list2_ccstr_Sesp ("list", a.sp);}
+  (',' WS? b:ConstExpr WS?  {pushlast_Sesp (a.sp, b.sp);})*
+  ')'
+  {$$ = a;}
   ;
 
 OptionalShadowPuppetRole =
@@ -247,6 +258,7 @@ LegitMode =
   | FUTURE_AND_FUTURE_SILENT {yy->st->assign_legit_mode(Xn::FutureAndSilent, Xn::FutureInvariant);}
   | FUTURE_AND_FUTURE_SHADOW {yy->st->assign_legit_mode(Xn::FutureAndShadow, Xn::FutureInvariant);}
   | FUTURE_AND_FUTURE_ACTIVE_SHADOW {yy->st->assign_legit_mode(Xn::FutureAndActiveShadow, Xn::FutureInvariant);}
+  | FUTURE_AND_CLOSED_AND_FUTURE_SILENT {yy->st->assign_legit_mode(Xn::FutureAndSilent, Xn::FutureInvariant);}
   ;
 
 LegitStmt =
@@ -555,6 +567,8 @@ NAT = < [0-9]+ >
 IN = '<-'
   ;
 
+ANDPOS = WS? '&' WS?;
+
 FUTURE = 'future' | 'eventually' | '<>' ;
 SHADOW = 'shadow' ;
 PUPPET = 'puppet' | 'superposed' ;
@@ -567,28 +581,23 @@ ACTIVE_SHADOW = ACTIVE WS SHADOW ;
 
 
 ASSUME_AND_CLOSED =
-    ASSUME WS? '&' WS? CLOSED
-  | CLOSED WS? '&' WS? ASSUME
+    ASSUME ANDPOS CLOSED
+  | CLOSED ANDPOS ASSUME
   ;
 
-#FUTURE_AND_CLOSED =
-#    FUTURE WS? '&' WS? CLOSED
-#  | CLOSED WS? '&' WS? FUTURE
-#  ;
-
 FUTURE_AND_SILENT =
-    FUTURE WS? '&' WS? SILENT
-  | SILENT WS? '&' WS? FUTURE
+    FUTURE ANDPOS SILENT
+  | SILENT ANDPOS FUTURE
   ;
 
 FUTURE_AND_SHADOW =
-    FUTURE WS? '&' WS? SHADOW
-  | SHADOW WS? '&' WS? FUTURE
+    FUTURE ANDPOS SHADOW
+  | SHADOW ANDPOS FUTURE
   ;
 
 FUTURE_AND_ACTIVE_SHADOW =
-    FUTURE WS? '&' WS? ACTIVE_SHADOW
-  | ACTIVE_SHADOW WS? '&' WS? FUTURE
+    FUTURE ANDPOS ACTIVE_SHADOW
+  | ACTIVE_SHADOW ANDPOS FUTURE
   ;
 
 MOD_PUPPET =
@@ -608,18 +617,30 @@ FUTURE_AND_ACTIVE_SHADOW_MOD_PUPPET =
   ;
 
 FUTURE_AND_FUTURE_SILENT =
-    FUTURE WS? '&' WS? FUTURE_SILENT
-  | FUTURE_SILENT WS? '&' WS? FUTURE
+    FUTURE ANDPOS FUTURE_SILENT
+  | FUTURE_SILENT ANDPOS FUTURE
   ;
 
 FUTURE_AND_FUTURE_SHADOW =
-    FUTURE WS? '&' WS? FUTURE_SHADOW
-  | FUTURE_SHADOW WS? '&' WS? FUTURE
+    FUTURE ANDPOS FUTURE_SHADOW
+  | FUTURE_SHADOW ANDPOS FUTURE
   ;
 
 FUTURE_AND_FUTURE_ACTIVE_SHADOW =
-    FUTURE WS? '&' WS? FUTURE_ACTIVE_SHADOW
-  | FUTURE_ACTIVE_SHADOW WS? '&' WS? FUTURE
+    FUTURE ANDPOS FUTURE_ACTIVE_SHADOW
+  | FUTURE_ACTIVE_SHADOW ANDPOS FUTURE
+  ;
+
+FUTURE_AND_CLOSED =
+    FUTURE ANDPOS CLOSED
+  | CLOSED ANDPOS FUTURE
+  ;
+
+FUTURE_AND_CLOSED_AND_FUTURE_SILENT =
+    FUTURE_AND_CLOSED ANDPOS FUTURE_SILENT
+  | FUTURE_AND_FUTURE_SILENT ANDPOS CLOSED
+  | FUTURE_SILENT ANDPOS FUTURE_AND_CLOSED
+  | CLOSED ANDPOS FUTURE_AND_FUTURE_SILENT
   ;
 
 FUTURE_SILENT =
@@ -677,13 +698,14 @@ ReadProtoconFile(Xn::Sys& sys, const ProtoconFileOpt& opt)
   XFile xfile[1];
   init_XFile_olay_AlphaTab (xfile, &text);
   yyctx.st = new ProtoconFile(&sys, xfile);
-  for (Cx::Map<Cx::String,uint>::const_iterator itr = opt.constant_map.begin();
+  for (Cx::Map<Cx::String,Xn::NatMap>::const_iterator itr = opt.constant_map.begin();
        itr != opt.constant_map.end();
        ++itr)
   {
-    Xn::NatMap x(1);
-    x.membs[0] = itr->second;
-    x.expression = x.membs[0];
+    Xn::NatMap x( itr->second );
+    if (!x.expression) {
+      x.expression = x.membs[0];
+    }
     yyctx.st->sys->spec->constant_map.add(itr->first, x);
   }
   if (!yyparse(&yyctx) || !yyctx.st->allgood) {

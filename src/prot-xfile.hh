@@ -13,7 +13,7 @@ class ProtoconFileOpt
 {
 public:
   Cx::String text;
-  Map< Cx::String, uint > constant_map;
+  Map< Cx::String, Xn::NatMap > constant_map;
 
   ProtoconFileOpt()
   {}
@@ -99,6 +99,8 @@ public:
 
   bool add_constant(Sesp name_sp, Sesp val_sp);
 
+  bool add_constant_list(Sesp name_sp, Sesp list_sp);
+
   bool add_let(Sesp name_sp, Sesp val_sp);
 
   bool add_scope_let(Sesp name_sp, Sesp val_sp);
@@ -148,9 +150,9 @@ public:
 
   bool eval_gtz(uint* ret, Sesp sp);
 
-  bool eval_vbl(Xn::Vbl** ret, Sesp sp);
-  bool eval_vbl(Xn::Vbl** ret, Sesp b, Sesp c);
+  bool eval_vbl(Cx::IntPFmla* ret, const Cx::String& name, Sesp idx_sp);
 
+  bool lookup_vbl(Xn::Vbl** ret, const Cx::String& name, Sesp c);
   bool lookup_pfmla(Cx::PFmla* ret, const Cx::String& name);
   bool lookup_int(int* ret, const Cx::String& name);
 };

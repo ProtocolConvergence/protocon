@@ -73,6 +73,39 @@ handle_param_arg(ProtoconParamOpt& psys_opt, const char* arg, int& argi, int arg
 
 static
   bool
+parse_NatMap (Xn::NatMap& tup, const char* line)
+{
+  tup = Xn::NatMap();
+  Cx::C::XFile xf[1];
+  init_XFile_olay_cstr (xf, (char*)line);
+  skipds_XFile (xf, "(");
+  int x = 0;
+  while (xget_int_XFile (xf, &x)) {
+    tup.membs << x;
+    skipds_XFile (xf, 0);
+    skipds_XFile (xf, ",)");
+  }
+
+  if (tup.membs.sz() == 0 && line[0]!='(')
+    return false;
+
+  if (tup.membs.sz() == 1) {
+    tup.expression << tup.membs[0];
+  }
+  else {
+    tup.expression << '(';
+    for (uint i = 0; i < tup.membs.sz(); ++i) {
+      if (i > 0)
+        tup.expression << ",";
+      tup.expression << tup.membs[i];
+    }
+    tup.expression << ')';
+  }
+  return true;
+}
+
+static
+  bool
 parse_param(ProtoconOpt& opt, int& argi, int argc, char** argv)
 {
   ProtoconParamOpt& psys_opt = opt.params.grow1();
@@ -84,10 +117,8 @@ parse_param(ProtoconOpt& opt, int& argi, int argc, char** argv)
     }
     const char* key = argv[argi++];
     const char* val = argv[argi++];
-    uint x = 0;
-    if (!xget_uint_cstr (&x, val))
-      failout_sysCx("Argument Usage: -param KEY VAL\nWhere VAL is an unsigned integer!");
-    psys_opt.constant_map[key] = x;
+    if (!parse_NatMap (psys_opt.constant_map[key], val))
+      failout_sysCx("Argument Usage: -param KEY VAL\nWhere VAL is an integer or list!");
     return true;
   }
   ++ argi;
@@ -103,10 +134,8 @@ parse_param(ProtoconOpt& opt, int& argi, int argc, char** argv)
       }
       const char* key = argv[argi++];
       const char* val = argv[argi++];
-      uint x = 0;
-      if (!xget_uint_cstr (&x, val))
-        failout_sysCx("Argument Usage: -def KEY VAL\nWhere VAL is an unsigned integer!");
-      psys_opt.constant_map[key] = x;
+      if (!parse_NatMap (psys_opt.constant_map[key], val))
+        failout_sysCx("Argument Usage: -def KEY VAL\nWhere VAL is an integer or list!");
     }
     else if (handle_param_arg (psys_opt, arg, argi, argc, argv))
     {}
@@ -208,10 +237,8 @@ protocon_options_rec
       }
       const char* key = argv[argi++];
       const char* val = argv[argi++];
-      uint x = 0;
-      if (!xget_uint_cstr (&x, val))
-        failout_sysCx("Argument Usage: -def KEY VAL\nWhere VAL is an unsigned integer!");
-      exec_opt.params[0].constant_map[key] = x;
+      if (!parse_NatMap (exec_opt.params[0].constant_map[key], val))
+        failout_sysCx("Argument Usage: -def KEY VAL\nWhere VAL is an integer or list!");
     }
     else if (handle_param_arg (exec_opt.params[0], arg, argi, argc, argv))
     {}
