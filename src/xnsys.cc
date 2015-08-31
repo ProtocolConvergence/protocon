@@ -1203,7 +1203,8 @@ candidate_actions(std::vector<uint>& candidates,
           OPut((DBogOF << "Action " << actidx << " breaks closure: "), act) << '\n';
         }
       }
-      else if (!(act_xn & sys.invariant & sys.closed_assume)
+      else if (sys.spec->invariant_style != Xn::FutureAndClosed &&
+               !(act_xn & sys.invariant & sys.closed_assume)
                .subseteq_ck(sys.shadow_pfmla | sys.shadow_self))
       {
         add = false;

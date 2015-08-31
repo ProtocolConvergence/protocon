@@ -251,6 +251,7 @@ GlobalAssume =
 LegitMode =
     FUTURE_AND_SILENT {yy->st->assign_legit_mode(Xn::FutureAndSilent);}
   | FUTURE_AND_SHADOW {yy->st->assign_legit_mode(Xn::FutureAndShadow);}
+  | FUTURE_AND_CLOSED {yy->st->assign_legit_mode(Xn::FutureAndClosed);}
   | FUTURE_AND_ACTIVE_SHADOW {yy->st->assign_legit_mode(Xn::FutureAndActiveShadow);}
   | FUTURE_AND_SILENT_MOD_PUPPET {yy->st->assign_legit_mode(Xn::FutureAndSilent, Xn::ShadowInvariant);}
   | FUTURE_AND_SHADOW_MOD_PUPPET {yy->st->assign_legit_mode(Xn::FutureAndShadow, Xn::ShadowInvariant);}
@@ -258,7 +259,8 @@ LegitMode =
   | FUTURE_AND_FUTURE_SILENT {yy->st->assign_legit_mode(Xn::FutureAndSilent, Xn::FutureInvariant);}
   | FUTURE_AND_FUTURE_SHADOW {yy->st->assign_legit_mode(Xn::FutureAndShadow, Xn::FutureInvariant);}
   | FUTURE_AND_FUTURE_ACTIVE_SHADOW {yy->st->assign_legit_mode(Xn::FutureAndActiveShadow, Xn::FutureInvariant);}
-  | FUTURE_AND_CLOSED_AND_FUTURE_SILENT {yy->st->assign_legit_mode(Xn::FutureAndSilent, Xn::FutureInvariant);}
+  | FUTURE_AND_SILENT {yy->st->assign_legit_mode(Xn::FutureAndSilent, Xn::FutureInvariant);}
+#  | FUTURE_AND_CLOSED_AND_FUTURE_SILENT {yy->st->assign_legit_mode(Xn::FutureAndSilent, Xn::FutureInvariant);}
   ;
 
 LegitStmt =

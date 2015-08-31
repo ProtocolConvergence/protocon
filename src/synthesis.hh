@@ -68,8 +68,9 @@ public:
   // For parallel algorithms.
   bool randomize_pick;
   bool system_urandom;
+  bool force_disabling;
   bool pure_actions;
-  bool permissive;
+  bool prep_conflicts;
   uint max_depth;
   uint max_height;
   uint sys_pcidx;
@@ -95,8 +96,9 @@ public:
     , verify_found( true )
     , randomize_pick( true )
     , system_urandom( false )
+    , force_disabling( false )
     , pure_actions( false )
-    , permissive( false )
+    , prep_conflicts( false )
     , max_depth( 0 )
     , max_height( 3 )
     , sys_pcidx( 0 )
@@ -252,7 +254,8 @@ public:
 
 bool
 coexist_ck(const Xn::ActSymm& a, const Xn::ActSymm& b,
-           const Xn::Net& topo, bool pure_actions=false);
+           const Xn::Net& topo,
+           bool force_disabling=false, bool pure_actions=false);
 void
 RankDeadlocksMRV(vector<DeadlockConstraint>& dlsets,
                  const Xn::Net& topo,

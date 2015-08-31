@@ -1,0 +1,40 @@
+
+// Force the problem of synthesizing a bidirectional ring protocol
+// to be equivalent to verifying a unidirectional ring protocol.
+// For every {j}, the example protocol has actions of the form:
+//   ( y[i-1]==a[j] && y[i]==b[j] --> y[i]:=c[j]; )
+
+constant ExpectSynt := 1;
+
+constant N := 3;
+constant M := 3;
+
+constant NActs := 3;
+
+constant a := (0, 1, 2);
+constant b := (2, 1, 0);
+constant c := (1, 2, 1);
+
+//constant a := (0, 1, 2);
+//constant b := (0, 1, 2);
+//constant c := (1, 2, 0);
+
+
+variable y[Nat % N] <- Nat % (M+1);
+variable y1[Nat % N] <- Nat % (M+1);
+
+process P[i <- Nat % N]
+{
+
+  read: y[i-1];
+  read: y1[i];
+  write: y[i];
+  write: y1[i-1];
+
+  (future & closed)
+    (1==1
+     && !( (y[i-1]==M || y1[i]==M) && (y1[i-1]==M || y[i]==M) )
+     && ( forall j <- Nat % NActs : y[i-1]==a[j] && y1[i]==b[j] ==> y[i]==c[j] && y1[i-1]==y[i-1] )
+    );
+}
+

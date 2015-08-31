@@ -380,11 +380,9 @@ string_of_invariant_style (Xn::InvariantStyle style, Xn::InvariantScope scope)
   s << "(future & " << pfx;
   switch (style)
   {
-#if 0
     case Xn::FutureAndClosed:
       s << "closed";
       break;
-#endif
     case Xn::FutureAndSilent:
       s << "silent";
       break;

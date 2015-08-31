@@ -21,7 +21,7 @@ class LinkSymmetry;
 class Spec;
 
 enum InvariantStyle {
-  //FutureAndClosed,
+  FutureAndClosed,
   FutureAndSilent,
   FutureAndShadow,
   FutureAndActiveShadow,
@@ -36,6 +36,8 @@ enum InvariantScope {
 };
 
 enum InvariantBehav {
+  // SilentBehav
+  // ActiveBehav
   FutureSilent,
   FutureActiveShadow,
   //FutureActive,

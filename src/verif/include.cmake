@@ -163,7 +163,7 @@ foreach (f LeaderTree)
     COMMAND protocon -x ${SpecPath}/${f}.prot -x-args ${SettPath}/${f}.args)
   add_test (NAME Verif_${f}
     COMMAND protocon -test -x ${SpecPath}/${f}.prot
-    -x-try-subset ${SolnPath}/${f}.prot
+    -x-try ${SolnPath}/${f}.prot
     -x-args ${SettPath}/${f}.args)
 endforeach ()
 
@@ -174,7 +174,7 @@ set (VerifyBySynthesis
   )
 foreach (f ${VerifyBySynthesis})
   add_test (NAME VerifSyn_${f}
-    COMMAND protocon -permissive -x ${SolnPath}/${f}.prot -def N 5)
+    COMMAND protocon -x ${SolnPath}/${f}.prot -def N 5)
 endforeach ()
 
 add_test (NAME Verif4_Sync_OrientRing

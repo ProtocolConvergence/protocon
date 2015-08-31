@@ -407,11 +407,14 @@ protocon_options_rec
     else if (eq_cstr (arg, "-sysrand")) {
       opt.system_urandom = true;
     }
+    else if (eq_cstr (arg, "-disabling")) {
+      opt.force_disabling = true;
+    }
     else if (eq_cstr (arg, "-pure")) {
       opt.pure_actions = true;
     }
-    else if (eq_cstr (arg, "-permissive")) {
-      opt.permissive = true;
+    else if (eq_cstr (arg, "-prep-conflicts")) {
+      opt.prep_conflicts = true;
     }
     else if (eq_cstr (arg, "-max-depth")) {
       if (!xget_uint_cstr (&opt.max_depth, argv[argi++])) {

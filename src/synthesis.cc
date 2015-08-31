@@ -12,7 +12,8 @@ typedef Cx::PFmla PF;
  */
   bool
 coexist_ck(const Xn::ActSymm& a, const Xn::ActSymm& b,
-           const Xn::Net& topo, bool pure_actions)
+           const Xn::Net& topo,
+           bool force_disabling, bool pure_actions)
 {
   if (a.pc_symm != b.pc_symm)  return true;
   const Xn::PcSymm& pc = *a.pc_symm;
@@ -92,6 +93,7 @@ coexist_ck(const Xn::ActSymm& a, const Xn::ActSymm& b,
     return false;
   }
   if (a_enables && !b_self_loop) {
+    if (force_disabling)  return false;
     Xn::ActSymm ab = a;
     const uint off = pc.rvbl_symms.sz();
     for (uint j = off; j < ab.vals.sz(); ++j) {
@@ -100,6 +102,7 @@ coexist_ck(const Xn::ActSymm& a, const Xn::ActSymm& b,
     return !topo.safe_ck(ab);
   }
   if (b_enables && !a_self_loop) {
+    if (force_disabling)  return false;
     Xn::ActSymm ba = b;
     const uint off = pc.rvbl_symms.sz();
     for (uint j = off; j < ba.vals.sz(); ++j) {
@@ -649,6 +652,7 @@ QuickTrim(Set<uint>& delSet,
           const vector<uint>& candidates,
           uint actidx,
           const Xn::Net& topo,
+          bool force_disabling,
           bool pure_actions)
 {
   const Cx::Table<uint>& represented = topo.represented_actions[actidx];
@@ -663,7 +667,7 @@ QuickTrim(Set<uint>& delSet,
 
     for (uint j = 0; j < represented.sz(); ++j) {
       topo.action(act0, represented[j]);
-      if (!coexist_ck(act0, act1, topo, pure_actions)) {
+      if (!coexist_ck(act0, act1, topo, force_disabling, pure_actions)) {
         delSet << candidates[i];
         break;
       }
@@ -924,7 +928,7 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
     *this->log << this->log->endl();
   }
 
-  if (!this->ctx->opt.permissive) {
+  if (this->ctx->opt.prep_conflicts) {
     FlatSet<uint> action_set( Set<uint>(this->actions) | adds );
     FlatSet<uint> candidate_set( this->candidates );
 
@@ -972,10 +976,12 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
     this->actions.push_back(actId);
     add_act_xfmlae |= topo.action_xfmlae(actId);
 
-    if (this->ctx->opt.permissive) {
+    if (!this->ctx->opt.prep_conflicts) {
       Set<uint> tmp_dels;
       QuickTrim(tmp_dels, this->candidates, actId,
-                topo, this->ctx->opt.pure_actions);
+                topo,
+                this->ctx->opt.force_disabling,
+                this->ctx->opt.pure_actions);
       if (tmp_dels.overlap_ck(adds)) {
         tmp_dels -= adds;
       }
@@ -1412,12 +1418,14 @@ SynthesisCtx::add(const Xn::Sys& sys, const StabilizationOpt& stabilization_opt)
   if (!good) {
     return false;
   }
-  if (!synctx.opt.permissive) {
+  if (synctx.opt.prep_conflicts) {
     for (uint i = 0; i < partial.candidates.size(); ++i) {
       const uint actidx = partial.candidates[i];
       Set<uint> tmp_dels;
       QuickTrim(tmp_dels, partial.candidates, actidx,
-                synctx.systems[0]->topology, synctx.opt.pure_actions);
+                synctx.systems[0]->topology,
+                synctx.opt.force_disabling,
+                synctx.opt.pure_actions);
       Cx::Table<uint> dels;
       tmp_dels.fill(dels);
       for (uint j = 0; j < dels.sz(); ++j) {

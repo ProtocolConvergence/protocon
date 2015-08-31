@@ -82,11 +82,13 @@ shadow_ck(Cx::PFmla* ret_invariant,
       return false;
     }
     // Shadow behavior.
-    if (!(sys.shadow_pfmla & shadow_invariant).subseteq_ck(hi_xn)) {
-      return false;
-    }
-    if (!(lo_xn & shadow_invariant).subseteq_ck(sys.shadow_pfmla)) {
-      return false;
+    if (invariant_style != Xn::FutureAndClosed) {
+      if (!(sys.shadow_pfmla & shadow_invariant).subseteq_ck(hi_xn)) {
+        return false;
+      }
+      if (!(lo_xn & shadow_invariant).subseteq_ck(sys.shadow_pfmla)) {
+        return false;
+      }
     }
     // Specification said this should be an active protocol.
     if (invariant_behav == Xn::FutureActiveShadow ||
