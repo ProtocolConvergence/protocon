@@ -17,7 +17,7 @@ GODO=$(CMakeExe) -E chdir
 MKDIR=$(CMakeExe) -E make_directory
 CTAGS=ctags
 
-.PHONY: default all cmake proj \
+.PHONY: default all release cmake proj \
 	test analyze tags \
 	clean-analyze clean distclean \
 	dep \
@@ -32,6 +32,20 @@ all:
 	$(MAKE) init
 	$(MAKE) cmake
 	$(MAKE) proj
+
+
+release:
+	$(MAKE) CMAKE="$(CMakeExe) -D CMAKE_BUILD_TYPE:string=RELEASE" cmake
+	$(MAKE) CMAKE="$(CMakeExe) -D CMAKE_BUILD_TYPE:string=RELEASE" proj
+
+snappy:
+	$(MAKE) CMAKE="$(CMakeExe) -D CMAKE_BUILD_TYPE:string=RelWithDebInfo" cmake
+	$(MAKE) CMAKE="$(CMakeExe) -D CMAKE_BUILD_TYPE:string=RelWithDebInfo" proj
+
+debug:
+	$(MAKE) CMAKE="$(CMakeExe) -D CMAKE_BUILD_TYPE:string=DEBUG" cmake
+	$(MAKE) CMAKE="$(CMakeExe) -D CMAKE_BUILD_TYPE:string=DEBUG" proj
+
 
 cmake:
 	if [ ! -d $(BldPath) ] ; then $(MKDIR) $(BldPath) ; fi

@@ -46,7 +46,7 @@ then
   npcs=$1
   shift
   ExePath=$(readlink -f "$0")
-  udp=$(dirname $(dirname "$ExePath"))/src/udp
+  udp=$(dirname $(dirname "$ExePath"))/bld/udp
 else
   protfile=$1
   shift

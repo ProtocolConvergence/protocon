@@ -29,7 +29,7 @@ struct Channel
 {
   SeqId seq;
   SeqId adj_seq;
-  struct sockaddr_in host;
+  struct sockaddr_storage host;
   Bool adj_acknowledged;
   uint8_t shake_step;  ///< Not used yet.
   Bool reply;
@@ -279,10 +279,10 @@ CMD_disable(State* st)
  * \sa init_State()
  */
   int
-lookup_host(struct sockaddr_in* host, uint id)
+lookup_host(struct sockaddr_storage* host, uint id)
 {
-  int port;
   char hostname[128];
+  char portname[128];
   char fname[128];
   FILE* f;
   int nmatched;
@@ -291,23 +291,37 @@ lookup_host(struct sockaddr_in* host, uint id)
   if (!f) {
     BailOut(-1, "fopen()");
   }
-  nmatched = fscanf(f, "%128s %d", hostname, &port);
+  nmatched = fscanf(f, "%128s %128s", hostname, portname);
   if (nmatched < 2)
     BailOut(-1, "fscanf()");
   fclose(f);
 
+  Zeroize( *host );
   {
-    struct hostent* ent;
-    ent = gethostbyname(hostname);
-    if (!ent)
-      BailOut(-1, "gethostbyname()");
+    struct addrinfo hint[1];
+    struct addrinfo* info = NULL;
 
-    Zeroize( *host );
-    host->sin_family = AF_INET;
-    memcpy(&host->sin_addr, ent->h_addr, ent->h_length);
-    host->sin_port = htons(port);
+    Zeroize( hint );
+    hint->ai_family = AF_UNSPEC;
+    hint->ai_socktype = SOCK_DGRAM;
+
+    if (0 != getaddrinfo(hostname, portname, hint, &info))
+      BailOut(-1, "getaddrinfo()");
+
+    memcpy(host, info->ai_addr, info->ai_addrlen);
+    freeaddrinfo(info);
   }
   return 0;
+}
+
+  void
+sleep_ms (uint ms)
+{
+  struct timespec ts;
+  ts.tv_sec = ms / 1000;
+  ts.tv_nsec = ms % 1000;
+  ts.tv_nsec *= 1000000;
+  nanosleep(&ts, 0);
 }
 
 /** Initialize a channel.
@@ -327,7 +341,7 @@ init_Channel(Channel* channel, State* st)
     uint id = process_of_channel(st->pc, IdxElt(st->channels, channel));
     channel->adj_PcIdx = id;
     while (0 > lookup_host(&channel->host, id)) {
-      usleep(1000 * QuickTimeoutMS);
+      sleep_ms(QuickTimeoutMS);
     }
   }
 }
@@ -382,31 +396,50 @@ randomize_State(State* st)
   int
 init_State(State* st, uint PcIdx, uint NPcs)
 {
-  struct sockaddr_in host[1];
+  struct sockaddr_storage host[1];
   socklen_t sz = sizeof(*host);
   Zeroize( *st );
   st->pc.idx = PcIdx;
   st->pc.npcs = NPcs;
   init_rng_State (st, PcIdx);
 
-  st->fd = socket(AF_INET, SOCK_DGRAM, 0);
-  Zeroize( *host );
-  host->sin_family = AF_INET;
-  host->sin_addr.s_addr = INADDR_ANY;
-  host->sin_port = 0;
-
-#ifdef FixedHostname
   {
-    struct hostent* ent;
-    ent = gethostbyname(FixedHostname);
-    if (!ent)
-      BailOut(-1, "gethostbyname()");
-    memcpy(&host->sin_addr, ent->h_addr, ent->h_length);
-  }
+    struct addrinfo* info = NULL;
+    struct addrinfo* ad = NULL;
+    struct addrinfo hint[1];
+#ifdef FixedHostname
+    const char* hostname = FixedHostname;
+#else
+    const char* hostname = "localhost";
 #endif
+    int istat;
+    Zeroize( hint );
+    hint->ai_family = AF_UNSPEC;
+    hint->ai_socktype = SOCK_DGRAM;
 
-  if (0 > bind(st->fd, (struct sockaddr *)host, sizeof(*host)))
-    BailOut(-1, "bind()");
+    istat = getaddrinfo(hostname, NULL, hint, &info);
+    if (0 != istat) {
+      fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(istat));
+      BailOut(-1, "getaddrinfo()");
+    }
+
+    st->fd = -1;
+    for (ad = info; ad != NULL; ad = ad->ai_next) {
+      st->fd = socket(ad->ai_family, ad->ai_socktype,
+                      ad->ai_protocol);
+      if (st->fd < 0)
+        continue;
+
+      if (0 == bind(st->fd, ad->ai_addr, ad->ai_addrlen))
+        break;
+
+      close(st->fd);
+      st->fd = -1;
+    }
+    freeaddrinfo(info);
+    if (st->fd < 0)
+      BailOut(-1, "socket()/bind()");
+  }
 
   if (!UseChecksum)
   {
@@ -423,20 +456,22 @@ init_State(State* st, uint PcIdx, uint NPcs)
   /* Write this process's host info to a file assumed to be shared on NFS.*/
   {
     char hostname[128];
+    char portname[128];
     char fname[128];
     FILE* f;
-#ifdef FixedHostname
-    strcpy(hostname, FixedHostname);
-#else
-    if (0 > gethostname(hostname, sizeof(hostname)))
-      BailOut(-1, "gethostname()");
-#endif
+
+    if (0 != getnameinfo((struct sockaddr*) host, sz,
+                         hostname, sizeof(hostname),
+                         portname, sizeof(portname),
+                         NI_DGRAM | NI_NUMERICHOST | NI_NUMERICSERV))
+      BailOut(-1, "getnameinfo()");
+
     sprintf(fname, "%s%d", SharedFilePfx, st->pc.idx);
     f = fopen(fname, "wb");
     if (!f)
       BailOut(-1, "fopen()");
 
-    fprintf(f, "%s\n%d", hostname, ntohs(host->sin_port)),
+    fprintf(f, "%s\n%s", hostname, portname);
     fclose(f);
   }
   for (uint i = 0; channel_idx_ck(st->pc, i); ++i) {
@@ -528,7 +563,7 @@ cstr_of_values(char* s, const uint8_t* values, PcIden pc, uint channel_idx, Bool
  * Send a packet.
  */
   int
-send_Packet (const Packet* packet, const struct sockaddr_in* host, State* st)
+send_Packet (const Packet* packet, const struct sockaddr_storage* host, State* st)
 {
   Packet pkt[1];
   int stat;
@@ -566,7 +601,16 @@ send_Packet (const Packet* packet, const struct sockaddr_in* host, State* st)
 
   stat = sendto(st->fd, pkt, sizeof(*pkt), 0,
                 (struct sockaddr*)host, sizeof(*host));
+  if (stat <= 0)
+    BailOut(-1, "sendto()");
   return stat;
+}
+
+/** Check if the hostname and port are the same for both sockaddrs.**/
+  Bool
+eq_sockaddr(struct sockaddr_storage* a, struct sockaddr_storage* b)
+{
+  return 0 == memcmp(a, b, sizeof(*a));
 }
 
 /**
@@ -576,7 +620,7 @@ send_Packet (const Packet* packet, const struct sockaddr_in* host, State* st)
 recv_Packet (Packet* pkt, State* st)
 {
   int cc;
-  struct sockaddr_in host[1];
+  struct sockaddr_storage host[1];
   socklen_t sz = sizeof(*host);
   Zeroize( *host );
   cc = recvfrom(st->fd, pkt, sizeof(*pkt), 0, (struct sockaddr*)host, &sz);
@@ -588,9 +632,7 @@ recv_Packet (Packet* pkt, State* st)
 
   for (uint i = 0; channel_idx_ck(st->pc, i); ++i) {
     Channel* channel = &st->channels[i];
-    if (channel->host.sin_addr.s_addr == host->sin_addr.s_addr &&
-        channel->host.sin_port == host->sin_port)
-    {
+    if (eq_sockaddr(&channel->host, host)) {
       if (ShowCommunication) {
         char local_vals_buf[100];
         char channel_vals_buf[100];
@@ -644,8 +686,8 @@ CMD_act(State* st, Bool modify)
         // Lag actions a bit to expose livelocks.
         uint32_t x = 0;
         Randomize( x );
-        //usleep(1000 * ActionLagMS);
-        usleep(1000 * (ActionLagMS/2 + x % ActionLagMS));
+        //sleep_ms(ActionLagMS);
+        sleep_ms(ActionLagMS/2 + x % ActionLagMS);
       }
 
       memcpy(st->values, values, sizeof(values));

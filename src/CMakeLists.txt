@@ -219,9 +219,7 @@ if (UNIX)
   addbinexe (udp udp.c)
   target_link_libraries (udp rt)
   set_property (TARGET udp
-    APPEND PROPERTY COMPILE_DEFINITIONS _POSIX_C_SOURCE=199309L)
-  set_property (TARGET udp
-    APPEND PROPERTY COMPILE_DEFINITIONS _DEFAULT_SOURCE)
+    APPEND PROPERTY COMPILE_DEFINITIONS _POSIX_C_SOURCE=200112L)
 
   set_target_properties (udp PROPERTIES
     OUTPUT_NAME udp
@@ -286,4 +284,37 @@ endif()
 if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/verif/include.cmake)
   include (${CMAKE_CURRENT_SOURCE_DIR}/verif/include.cmake)
 endif ()
+
+
+install (TARGETS protocon protocon-mpi DESTINATION bin)
+
+cat_parenthesized (DistribSpecs ${MetaPath}/examplespec.files)
+foreach (f ${DistribSpecs})
+  install (FILES ${TopPath}/examplespec/${f}.prot DESTINATION examplespec)
+endforeach ()
+
+cat_parenthesized (DistribSynts ${MetaPath}/examplesynt.files)
+foreach (f ${DistribSynts})
+  install (FILES ${TopPath}/examplesynt/${f}.prot DESTINATION examplesynt)
+endforeach ()
+
+cat_parenthesized (DistribSolns ${MetaPath}/examplesoln.files)
+foreach (f ${DistribSolns})
+  install (FILES ${TopPath}/examplesoln/${f}.prot DESTINATION examplesoln)
+endforeach ()
+
+# Build a CPack-driven installer package.
+#   cpack --config CPackConfig.cmake
+# Or just:
+#   cpack
+include (InstallRequiredSystemLibraries)
+string (TIMESTAMP CPACK_PACKAGE_VERSION "%Y.%m.%d")
+set (CPACK_PACKAGE_VERSION "2015.08.31")
+#set (CPACK_GENERATOR "STGZ;TGZ;ZIP")
+set (CPACK_GENERATOR "ZIP")
+set (MyName "Alex Klinkhamer (grencez)")
+set (CPACK_PACKAGE_VENDOR ${MyName})
+set (CPACK_PACKAGE_CONTACT ${MyName})
+set (CPACK_RESOURCE_FILE_LICENSE "${TopPath}/COPYING")
+include (CPack)
 

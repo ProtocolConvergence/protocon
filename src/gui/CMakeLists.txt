@@ -23,3 +23,5 @@ add_executable (protocon-gui
   ${gui_FORMS_HEADERS})
 target_link_libraries (protocon-gui ${QT_LIBRARIES})
 
+install (TARGETS protocon-gui DESTINATION bin)
+
