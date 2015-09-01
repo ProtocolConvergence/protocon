@@ -303,6 +303,14 @@ foreach (f ${DistribSolns})
   install (FILES ${TopPath}/examplesoln/${f}.prot DESTINATION examplesoln)
 endforeach ()
 
+cat_parenthesized (DistribSolns ${MetaPath}/examplesoln.files)
+foreach (f ${DistribSolns})
+  install (FILES ${TopPath}/examplesoln/${f}.prot DESTINATION examplesoln)
+endforeach ()
+
+install (FILES ${TopPath}/doc/protocon.1 DESTINATION doc)
+install (DIRECTORY ${TopPath}/doc/html/ DESTINATION doc/html)
+
 # Build a CPack-driven installer package.
 #   cpack --config CPackConfig.cmake
 # Or just:
@@ -312,9 +320,9 @@ string (TIMESTAMP CPACK_PACKAGE_VERSION "%Y.%m.%d")
 set (CPACK_PACKAGE_VERSION "2015.08.31")
 #set (CPACK_GENERATOR "STGZ;TGZ;ZIP")
 set (CPACK_GENERATOR "ZIP")
-set (MyName "Alex Klinkhamer (grencez)")
+set (MyName "Alex Klinkhamer")
 set (CPACK_PACKAGE_VENDOR ${MyName})
 set (CPACK_PACKAGE_CONTACT ${MyName})
-set (CPACK_RESOURCE_FILE_LICENSE "${TopPath}/COPYING")
+#set (CPACK_RESOURCE_FILE_LICENSE "${TopPath}/COPYING")
 include (CPack)
 

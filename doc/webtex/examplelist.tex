@@ -5,16 +5,16 @@
 
 \begin{document}
 
-Example files are given in three directories: (1) \url{examplespec} contains problem specifications, (2) \url{examplesoln} contains solutions, and (3) \url{examplesynt} contains solutions which retain artifacts from the specification.
-For each file in \url{examplesynt}, there is usually a corresponding file in \url{examplesoln} which is more presentable and simpler to verify.
+Example files are given in three directories: (1) \href{\examplespec}{examplespec} contains problem specifications, (2) \href{\examplesoln}{examplesoln} contains solutions, and (3) \href{\examplesynt}{examplesynt} contains solutions which retain artifacts from the specification.
+For each file in \href{\examplesynt}{examplesynt}, there is usually a corresponding file in \href{\examplesoln}{examplesoln} which is more presentable and simpler to verify.
 
 \section{Sum-Not-2}
 
 Aly Farahat's \href{http://digitalcommons.mtu.edu/etds/178}{dissertation} includes a simple yet nontrivial unidirectional ring protocol.
 It has been extremely helpful for reasoning about the nature of \href{http://dx.doi.org/10.1007/978-3-319-03089-0\_12}{livelocks in unidirectional rings} and has a simple enough transition system to actually show in a presentation.
 \begin{itemize}
-\item SumNotTwo (\href{examplespec/SumNotTwo.prot}{spec})
-\item SumNotTarget (\href{examplespec/SumNotTarget.prot}{spec}, \href{examplesoln/SumNotTarget.prot}{soln})
+\item SumNotTwo (\href{\examplespec/SumNotTwo.prot}{spec})
+\item SumNotTarget (\href{\examplespec/SumNotTarget.prot}{spec}, \href{\examplesoln/SumNotTarget.prot}{soln})
 - The general case sum-not-$(l-1)$ protocol given by Farahat.
 \end{itemize}
 
@@ -25,30 +25,30 @@ Each node in the graph is assigned a color.
 For this assignment to be called a \textit{coloring}, each node must have a different color than the nodes adjacent to it.
 In a computer network, a coloring applies to processes that communicate directly with each other rather than nodes connected by edges.
 \begin{itemize}
-\item ColorRing (\href{examplespec/ColorRing.prot}{spec}, \href{examplesoln/ColorRing.prot}{soln})
+\item ColorRing (\href{\examplespec/ColorRing.prot}{spec}, \href{\examplesoln/ColorRing.prot}{soln})
 - 3-coloring on a ring.
-\item ColorRingSymm (\href{examplespec/ColorRingSymm.prot}{spec}, \href{examplesoln/ColorRingSymm.prot}{soln})
+\item ColorRingSymm (\href{\examplespec/ColorRingSymm.prot}{spec}, \href{\examplesoln/ColorRingSymm.prot}{soln})
 - Unoriented ring.
-\item ColorUniRing (\href{examplespec/ColorUniRing.prot}{spec}, \href{examplesoln/ColorUniRing.prot}{soln})
+\item ColorUniRing (\href{\examplespec/ColorUniRing.prot}{spec}, \href{\examplesoln/ColorUniRing.prot}{soln})
 - Randomized 3-coloring on a unidirectional ring.
-\item ColorRingDistrib (\href{examplespec/ColorRingDistrib.prot}{spec}, \href{examplesoln/ColorRingDistrib.prot}{soln})
+\item ColorRingDistrib (\href{\examplespec/ColorRingDistrib.prot}{spec}, \href{\examplesoln/ColorRingDistrib.prot}{soln})
 - Randomized 3-coloring on a ring where processes have communication delay.
-\item ColorChain (\href{examplespec/ColorChain.prot}{spec})
+\item ColorChain (\href{\examplespec/ColorChain.prot}{spec})
 - 2-coloring on a chain.
-\item ColorTree (\href{examplespec/ColorTree.prot}{spec}, \href{examplesoln/ColorTree.prot}{soln})
+\item ColorTree (\href{\examplespec/ColorTree.prot}{spec}, \href{\examplesoln/ColorTree.prot}{soln})
 - Tree.
-\item ColorTorus (\href{examplespec/ColorTorus.prot}{spec})
+\item ColorTorus (\href{\examplespec/ColorTorus.prot}{spec})
 - Torus.
-\item ColorMobius (\href{examplespec/ColorMobius.prot}{spec})
+\item ColorMobius (\href{\examplespec/ColorMobius.prot}{spec})
 - Mobius ladder.
-\item ColorKautz (\href{examplespec/ColorKautz.prot}{spec})
+\item ColorKautz (\href{\examplespec/ColorKautz.prot}{spec})
 - 4-coloring on generalized Kautz graph of degree 2.
 We can find a protocol that stabilizes for up to $13$ processes, but not $14$.
 Tweaking the topology by
-\href{examplespec/ColorKautzReverse.prot}{reversing edges}
+\href{\examplespec/ColorKautzReverse.prot}{reversing edges}
 or
-\href{examplespec/ColorKautzSymm.prot}{removing orientation}
-(even with \href{examplespec/ColorKautzBi.prot}{bidirectional edges})
+\href{\examplespec/ColorKautzSymm.prot}{removing orientation}
+(even with \href{\examplespec/ColorKautzBi.prot}{bidirectional edges})
 gives definite impossibility results at around $8$ processes.
 \end{itemize}
 
@@ -58,24 +58,24 @@ gives definite impossibility results at around $8$ processes.
 A matching is a set of edges which do not share any common vertices.
 For a matching to be \textit{maximal}, it must be impossible to add another edge to the set without breaking the matching property.
 \begin{itemize}
-\item MatchRingThreeState (\href{examplespec/MatchRingThreeState.prot}{spec}, \href{examplesoln/MatchRingThreeState.prot}{soln})
+\item MatchRingThreeState (\href{\examplespec/MatchRingThreeState.prot}{spec}, \href{\examplesoln/MatchRingThreeState.prot}{soln})
 - Maximal matching on a ring where processes point in certain directions.
-\item MatchRingOneBit (\href{examplespec/MatchRingOneBit.prot}{spec}, \href{examplesynt/MatchRingOneBit.prot}{synt}, \href{examplesoln/MatchRingOneBit.prot}{soln})
+\item MatchRingOneBit (\href{\examplespec/MatchRingOneBit.prot}{spec}, \href{\examplesynt/MatchRingOneBit.prot}{synt}, \href{\examplesoln/MatchRingOneBit.prot}{soln})
 - Using the 3-state specification, find a matching using 1 bit per process.
-\item MatchRing (\href{examplespec/MatchRing.prot}{spec}, \href{examplesynt/MatchRing.prot}{synt})
+\item MatchRing (\href{\examplespec/MatchRing.prot}{spec}, \href{\examplesynt/MatchRing.prot}{synt})
 - Natural specification for matching using the edges in the ring.
 This gives the 1-bit solution.
-\item SegmentRing (\href{examplespec/SegmentRing.prot}{spec}, \href{examplesynt/SegmentRing.prot}{synt})
+\item SegmentRing (\href{\examplespec/SegmentRing.prot}{spec}, \href{\examplesynt/SegmentRing.prot}{synt})
 - A problem similar to matching where a ring is segmented into chains.
 \end{itemize}
 
 \section{Sorting on Chains and Rings}
 
 \begin{itemize}
-\item SortChain (\href{examplespec/SortChain.prot}{spec}, \href{examplesoln/SortChain.prot}{soln})
+\item SortChain (\href{\examplespec/SortChain.prot}{spec}, \href{\examplesoln/SortChain.prot}{soln})
 - Sorting a chain of values.
 Easy to synthesize, but solution is manually simplified.
-\item SortRing (\href{examplespec/SortRing.prot}{spec}, \href{examplesoln/SortRing.prot}{soln})
+\item SortRing (\href{\examplespec/SortRing.prot}{spec}, \href{\examplesoln/SortRing.prot}{soln})
 - Sorting a ring of values using a unique zero value to mark the beginning of the sequence.
 Easy to synthesize, but solution is manually simplified.
 \end{itemize}
@@ -83,39 +83,39 @@ Easy to synthesize, but solution is manually simplified.
 \section{Orientation}
 
 \begin{itemize}
-\item OrientDaisy (\href{examplespec/OrientDaisy.prot}{spec}, \href{examplesoln/OrientDaisy.prot}{synt}, \href{examplesoln/OrientDaisy.prot}{soln})
+\item OrientDaisy (\href{\examplespec/OrientDaisy.prot}{spec}, \href{\examplesoln/OrientDaisy.prot}{synt}, \href{\examplesoln/OrientDaisy.prot}{soln})
 - Silent orientation for daisy chains (either ring and chain), verified for $2$ to $15$ processes.
-The version in \url{examplesoln} behaves similarly, is simpler, but is slightly less optimal.
-\item OrientRing (\href{examplespec/OrientRing.prot}{spec}, \href{examplespec/OrientRing.prot}{soln})
+The version in \href{\examplesoln}{examplesoln} behaves similarly, is simpler, but is slightly less optimal.
+\item OrientRing (\href{\examplespec/OrientRing.prot}{spec}, \href{\examplespec/OrientRing.prot}{soln})
 - Manually designed silent ring orientation, verified for $2$ to $26$ processes.
 Also works under synchronous scheduler.
-\item OrientOddRing (\href{examplespec/OrientOddRing.prot}{spec}, \href{examplesoln/OrientOddRing.prot}{soln})
+\item OrientOddRing (\href{\examplespec/OrientOddRing.prot}{spec}, \href{\examplesoln/OrientOddRing.prot}{soln})
 - From \href{http://dx.doi.org/10.1007/BFb0020439}{Hoepman}.
-\item OrientRingViaToken (\href{examplespec/OrientRingViaToken.prot}{spec}, \href{examplesoln/OrientRingViaToken.prot}{soln})
+\item OrientRingViaToken (\href{\examplespec/OrientRingViaToken.prot}{spec}, \href{\examplesoln/OrientRingViaToken.prot}{soln})
 - From \href{http://dx.doi.org/10.1006/inco.1993.1029}{Israeli and Jalfon}.
 \end{itemize}
 
 \section{Token Passing}
 
 \begin{itemize}
-\item TokenRingFiveState (\href{examplespec/TokenRing.prot}{spec}, \href{examplesynt/TokenRing.prot}{synt}, \href{examplesoln/TokenRingFiveState.prot}{soln})
+\item TokenRingFiveState (\href{\examplespec/TokenRing.prot}{spec}, \href{\examplesynt/TokenRing.prot}{synt}, \href{\examplesoln/TokenRingFiveState.prot}{soln})
 - 5-state token ring whose behavior is specified with shadow variables.
-\item TokenRingSixState (\href{examplespec/TokenRingSuperpos.prot}{spec}, \href{examplesynt/TokenRingSuperpos.prot}{synt}, \href{examplesoln/TokenRingSixState.prot}{soln})
+\item TokenRingSixState (\href{\examplespec/TokenRingSuperpos.prot}{spec}, \href{\examplesynt/TokenRingSuperpos.prot}{synt}, \href{\examplesoln/TokenRingSixState.prot}{soln})
 - 6-state token ring specified with variable superposition.
-\item TokenRingThreeBit (\href{examplespec/TokenRingThreeBit.prot}{spec}, \href{examplesynt/TokenRingThreeBit.prot}{synt},\href{examplesoln/TokenRingThreeBit.prot}{soln})
+\item TokenRingThreeBit (\href{\examplespec/TokenRingThreeBit.prot}{spec}, \href{\examplesynt/TokenRingThreeBit.prot}{synt},\href{\examplesoln/TokenRingThreeBit.prot}{soln})
 - 3-bit token ring from \href{http://dx.doi.org/10.1006/jpdc.1996.0066}{Gouda and Haddix}.
-\item TokenRingFourState (\href{examplesynt/TokenRingFourState.prot}{synt})
+\item TokenRingFourState (\href{\examplesynt/TokenRingFourState.prot}{synt})
 - 4-state token ring specified with variable superposition.
 This version is only stabilizing for $2$ to $7$ processes.
 It operates much like the 3-bit token ring.
-\item TokenRingDijkstra (\href{examplespec/TokenRingDijkstra.prot}{spec}, \href{examplesoln/TokenRingDijkstra.prot}{soln})
+\item TokenRingDijkstra (\href{\examplespec/TokenRingDijkstra.prot}{spec}, \href{\examplesoln/TokenRingDijkstra.prot}{soln})
 - Dijkstra's stabilizing token ring.
-\item TokenChainDijkstra (\href{examplespec/TokenChainDijkstra.prot}{spec}, \href{examplesynt/TokenChainDijkstra.prot}{synt}, \href{examplesoln/TokenChainDijkstra.prot}{soln})
+\item TokenChainDijkstra (\href{\examplespec/TokenChainDijkstra.prot}{spec}, \href{\examplesynt/TokenChainDijkstra.prot}{synt}, \href{\examplesoln/TokenChainDijkstra.prot}{soln})
 - Dijkstra's token passing on a chain topology.
-\item TokenRingThreeState (\href{examplespec/TokenRingThreeState.prot}{spec}, \href{examplesynt/TokenRingThreeState.prot}{synt}, \href{examplesoln/TokenRingThreeState.prot}{soln})
+\item TokenRingThreeState (\href{\examplespec/TokenRingThreeState.prot}{spec}, \href{\examplesynt/TokenRingThreeState.prot}{synt}, \href{\examplesoln/TokenRingThreeState.prot}{soln})
 - Bidirectional token ring with three states per process.
 One solution is from Dijkstra, the other is from \href{http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.153.6017}{Chernoy, Shalom, and Zaks}.
-\item TokenRingOdd (\href{examplespec/TokenRingOdd.prot}{spec}, \href{examplesoln/TokenRingOdd.prot}{soln})
+\item TokenRingOdd (\href{\examplespec/TokenRingOdd.prot}{spec}, \href{\examplesoln/TokenRingOdd.prot}{soln})
 - Randomized token passing protocol on odd-sized rings.
 \end{itemize}
 
@@ -125,18 +125,18 @@ One solution is from Dijkstra, the other is from \href{http://citeseerx.ist.psu.
 \section{Other}
 
 \begin{itemize}
-\item ByzantineGenerals (\href{examplespec/ByzantineGenerals.prot}{spec}, \href{examplesoln/ByzantineGenerals.prot}{soln})
+\item ByzantineGenerals (\href{\examplespec/ByzantineGenerals.prot}{spec}, \href{\examplesoln/ByzantineGenerals.prot}{soln})
 - The Byzantine generals problem formulated as an instance of self-stabilization.
-\item DiningCrypto (\href{examplespec/DiningCrypto.prot}{spec}, \href{examplesoln/DiningCrypto.prot}{soln})
+\item DiningCrypto (\href{\examplespec/DiningCrypto.prot}{spec}, \href{\examplesoln/DiningCrypto.prot}{soln})
 - The dining cryptographers problem as an instance of self-stabilization, where the initial state is assumed to randomize the coins.
 We can't model anonymity, only determination of whether a cryptographer or the NSA pays for dinner.
-\item DiningPhilo (\href{examplespec/DiningPhilo.prot}{spec}, \href{examplesoln/DiningPhilo.prot}{soln})
+\item DiningPhilo (\href{\examplespec/DiningPhilo.prot}{spec}, \href{\examplesoln/DiningPhilo.prot}{soln})
 - The dining philosophers problem. This version assumes a coloring in order to break symmetry.
-\item DiningPhiloRand (\href{examplespec/DiningPhiloRand.prot}{spec}, \href{examplesoln/DiningPhiloRand.prot}{soln})
+\item DiningPhiloRand (\href{\examplespec/DiningPhiloRand.prot}{spec}, \href{\examplesoln/DiningPhiloRand.prot}{soln})
 - The dining philosophers problem. This version uses randomization to break symmetry.
-\item LeaderRingHuang (\href{examplespec/LeaderRingHuang.prot}{spec}, \href{examplesoln/LeaderRingHuang.prot}{soln})
+\item LeaderRingHuang (\href{\examplespec/LeaderRingHuang.prot}{spec}, \href{\examplesoln/LeaderRingHuang.prot}{soln})
 - Leader election protocol on prime-sized rings from \href{http://dx.doi.org/10.1145/169683.174161}{Huang}.
-\item Sat (\href{examplespec/Sat.prot}{spec})
+\item Sat (\href{\examplespec/Sat.prot}{spec})
 - Example reduction from 3-SAT to adding stabilization from our \href{http://dx.doi.org/10.1007/978-3-642-40213-5_2}{paper showing NP-completeness} of adding convergence.
 \end{itemize}
 
