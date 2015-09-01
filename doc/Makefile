@@ -3,7 +3,7 @@ default: all
 
 CxPfx = ../../cx
 
-tex2web = ../../bin/tex2web
+tex2web = ../../tex2web/bin/tex2web
 man2html = man2html
 
 html/ html/example/ html/examplespec/ html/examplesynt/ html/examplesoln/:

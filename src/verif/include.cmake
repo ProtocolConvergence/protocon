@@ -76,13 +76,13 @@ endforeach ()
 foreach (f LeaderRingHuang)
   list (APPEND ExampleSpecs ${f})
   add_test (NAME SynthOpenMP_${f}
-    COMMAND protocon -parallel 4 -x ${SpecPath}/${f}.prot)
+    COMMAND protocon -parallel 4 -x ${SpecPath}/${f}.prot -prep-conflicts)
   set_tests_properties (SynthOpenMP_${f} PROPERTIES PROCESSORS 4)
 
   if (MPI_FOUND)
     add_test (NAME SynthMPI_${f}
       COMMAND ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} 4 ${MPIEXEC_PREFLAGS}
-      ${BinPath}/protocon-mpi ${MPIEXEC_POSTFLAGS} -x ${SpecPath}/${f}.prot)
+      ${BinPath}/protocon-mpi ${MPIEXEC_POSTFLAGS} -x ${SpecPath}/${f}.prot -prep-conflicts)
     set_tests_properties (SynthMPI_${f} PROPERTIES PROCESSORS 4)
   endif ()
 endforeach ()
@@ -161,9 +161,9 @@ endforeach ()
 foreach (f LeaderTree)
   add_test (NAME Synth_${f}
     COMMAND protocon -x ${SpecPath}/${f}.prot -x-args ${SettPath}/${f}.args)
-  add_test (NAME Verif_${f}
+  add_test (NAME TrySynt_${f}
     COMMAND protocon -test -x ${SpecPath}/${f}.prot
-    -x-try ${SolnPath}/${f}.prot
+    -x-try-subset ${SolnPath}/${f}.prot
     -x-args ${SettPath}/${f}.args)
 endforeach ()
 

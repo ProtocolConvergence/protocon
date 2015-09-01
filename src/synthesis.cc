@@ -1326,16 +1326,16 @@ PartialSynthesis::pick_actions_separately(const vector<uint>& act_idcs,
   for (uint i = 0; i < act_idcs.size(); ++i) {
     DBog1("picking: %u", i);
     bool found = false;
-    for (uint j = 0; !found && j < this->candidates.size(); ++j) {
-      if (this->candidates[j] == act_idcs[i])
-        found = true;
-    }
-    if (!add_missing && !found)
-      continue;
+    if (this->candidate_ck(act_idcs[i]))
+      found = true;
     if (!found) {
-      for (uint j = 0; !found && j < this->actions.size(); ++j) {
-        if (this->actions[j] == act_idcs[i])
-          found = true;
+      found = this->delegate_ck(act_idcs[i]);
+      if (!add_missing) {
+        if (found)
+          DBog0("Already added.");
+        else
+          DBog0("Not a candidate!");
+        continue;
       }
       if (found)  continue;
     }

@@ -191,6 +191,24 @@ public:
     return false;
   }
 
+  bool candidate_ck(uint actidx) const {
+    for (uint i = 0; i < this->sz(); ++i) {
+      const vector<uint>& v = (*this)[i].candidates;
+      for (uint j = 0; j < v.size(); ++j) {
+        if (v[j] == actidx)
+          return true;
+      }
+    }
+    return false;
+  }
+  bool delegate_ck(uint actidx) const {
+    for (uint i = 0; i < this->actions.size(); ++i) {
+      if (this->actions[i] == actidx)
+        return true;
+    }
+    return false;
+  }
+
   bool deadlocks_ck() const {
     for (uint i = 0; i < this->sz(); ++i) {
       if ((*this)[i].no_partial)
