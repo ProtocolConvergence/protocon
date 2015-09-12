@@ -10,10 +10,12 @@ extern "C" {
 #include "cx/table.hh"
 #include "cx/bittable.hh"
 #include "cx/set.hh"
-#include "tuple.hh"
+#include "cx/tuple.hh"
 
 //#include "biring-ext.cc"
 #define UseBitTableDB
+
+using Cx::mk_Tuple;
 
 struct FilterOpt
 {
@@ -549,7 +551,7 @@ oput_biring_invariant (Cx::OFile& ofile, const Cx::BitTable& legit, const uint d
     uint config[3];
     pc_config_of_enum_idx (config, config_enum_idx, domsz);
     if (pair) {
-      Cx::Tuple<uint,2> tup(config[0], config[1]);
+      Cx::Tuple<uint,2> tup = mk_Tuple(config[0], config[1]);
       if (cache.elem_ck(tup))  continue;
       cache << tup;
     }
@@ -750,7 +752,7 @@ oput_graphviz(Cx::OFile& ofile, const BitTable set, uint domsz, bool pair)
       uint config[3];
       pc_config_of_enum_idx (config, config_enum_idx, domsz);
 
-      Cx::Tuple<uint,2> tup(config[0], config[1]);
+      Cx::Tuple<uint,2> tup = mk_Tuple(config[0], config[1]);
 
       if (cache.elem_ck(tup))  continue;
       cache << tup;
@@ -794,7 +796,7 @@ oput_graphviz(Cx::OFile& ofile, const BitTable set, uint domsz, bool pair)
 #ifdef NiceLooking
       uint config_dst[3];
       pc_config_of_enum_idx (config_dst, conts[i], domsz);
-      Cx::Tuple<uint,2> dst_tup(config_dst[0], config_dst[1]);
+      Cx::Tuple<uint,2> dst_tup = mk_Tuple(config_dst[0], config_dst[1]);
       if (cache.elem_ck(dst_tup))  continue;
       cache << dst_tup;
       ofile << "  "

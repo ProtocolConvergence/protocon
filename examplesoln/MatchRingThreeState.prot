@@ -29,9 +29,13 @@ process P[i <- Nat % N]
     );
 
   puppet action:
-    ( x[i-1]==R && x[i]!=L && x[i+1]!=L -=> x[i]:=L; )
-    ( x[i-1]!=R && x[i]!=S && x[i+1]==R -=> x[i]:=S; )
-    ( x[i-1]!=R && x[i]!=R && x[i+1]!=R -=> x[i]:=R; )
+    ( x[i-1]!=R && x[i]!=R && x[i+1]!=R --> x[i]:=R; )
+    ( x[i-1]!=R && x[i]!=S && x[i+1]==R --> x[i]:=S; )
+    ( x[i-1]==R && x[i]!=L && x[i+1]!=L --> x[i]:=L; )
+
+    // Last two action can be rewritten as:
+    //( x[i-1]==R && x[i]==S              --> x[i]:=L; )
+    //( x[i-1]==R && x[i]==R && x[i+1]!=L --> x[i]:=L; )
     ;
 }
 

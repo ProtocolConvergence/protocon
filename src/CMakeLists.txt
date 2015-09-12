@@ -67,7 +67,6 @@ list (APPEND HHFiles
   stabilization.hh
   synthesis.hh
   prot-xfile.hh prot-ofile.hh
-  tuple.hh
   )
 
 include (${CxTopPath}/src/include.cmake)
