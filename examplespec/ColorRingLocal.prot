@@ -1,0 +1,23 @@
+
+// Distance-2 coloring.
+// Processes that are 1 or 2 hops away must have different colors.
+
+constant N := 3;
+constant M := 5;
+
+direct variable x[Nat % N] <- Nat % M;
+puppet variable y[Nat % N] <- Nat % 2;
+
+// Each process P[i] must have a different color than P[i-1] and P[i-2].
+// This implies that P[i] also has a different color than P[i+1] and P[i+2].
+(future & future silent)
+  (forall i <- Nat % N : x[i]!=x[i-1] && x[i]!=x[i-2]);
+
+process P[i <- Nat % N]
+{
+  read: x[i-1];
+  read: y[i-1];
+  write: x[i];
+  random write: y[i];
+}
+

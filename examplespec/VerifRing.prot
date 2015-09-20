@@ -2,7 +2,7 @@
 // Force the problem of synthesizing a bidirectional ring protocol
 // to be equivalent to verifying a unidirectional ring protocol.
 // For every {j}, the example protocol has actions of the form:
-//   ( y[i-1]==a[j] && y[i]==b[j] --> y[i]:=c[j]; )
+//   ( x[i-1]==a[j] && x[i]==b[j] --> x[i]:=c[j]; )
 
 constant N := 3;
 
@@ -25,23 +25,19 @@ constant c := (1, 2, 1);
 //constant b := ( 2 , 0 , 3 , 1 , 3 , 1 , 2 , 0 );
 //constant c := ( 1 , 1 , 2 , 2 , 2 , 2 , 1 , 1 );
 
-variable y[Nat % N] <- Nat % (M+1);
-variable y1[Nat % N] <- Nat % (M+1);
+variable x[Nat % N] <- Nat % M;
+variable x1[Nat % N] <- Nat % M;
 
 process P[i <- Nat % N]
 {
+  read: x[i-1];
+  read: x1[i];
+  write: x1[i-1];
+  write: x[i];
+  //read: x1[i-2];
+  //read: x[i+1];
 
-  read: y[i-1];
-  read: y1[i];
-  write: y[i];
-  write: y1[i-1];
-
-  (assume & closed) (y[i]==M <=> y1[i-1]==M);
-
-  (future & closed)
-    (1==1
-     && (y[i-1]!=M || y[i]!=M)
-     && ( forall j <- Nat % NActs : y[i-1]==a[j] && y1[i]==b[j] ==> y[i]==c[j] && y1[i-1]==y[i-1] )
-    );
+  (future & silent)
+    (forall j <- Nat % NActs : x[i-1]==a[j] && x1[i]==b[j] ==> x1[i-1]==x[i-1] && x[i]==c[j]);
 }
 

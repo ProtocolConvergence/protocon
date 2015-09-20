@@ -1,0 +1,9 @@
+# Recommended to run with a few processes.
+-def N 3
+-param N 4
+-param N 5
+-param N 6
+-param [ -def N 7 -no-conflict ]
+-param [ -def N 8 -no-conflict ]
+-pure
+-prep-conflicts

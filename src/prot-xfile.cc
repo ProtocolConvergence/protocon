@@ -380,6 +380,7 @@ ProtoconFile::parse_action(Cx::PFmla& act_pf, Cx::Table<Cx::PFmla>& pc_xns, Sesp
     Cx::PFmla assign_pf( true );
 
     Cx::BitTable wvbl_assigned( pc.wvbls.sz(), 0 );
+    Cx::BitTable wvbl_randomized( pc.wvbls.sz(), 0 );
 
     bool all_wild = false;
     for (Sesp assign_sp = cddr_of_Sesp (act_sp);
@@ -431,6 +432,9 @@ ProtoconFile::parse_action(Cx::PFmla& act_pf, Cx::Table<Cx::PFmla>& pc_xns, Sesp
           if (pc.wvbls[i] == vbl) {
             found = true;
             wvbl_assigned[i] = 1;
+            if (wild) {
+              wvbl_randomized[i] = 1;
+            }
             break;
           }
         }
@@ -451,12 +455,16 @@ ProtoconFile::parse_action(Cx::PFmla& act_pf, Cx::Table<Cx::PFmla>& pc_xns, Sesp
 
     for (uint i = 0; i < pc.wvbls.sz(); ++i) {
       if (all_wild) {
-        wvbl_assigned[i] = true;
+        wvbl_assigned[i] = 1;
+        wvbl_randomized[i] = 1;
       }
       else if (actto_op) {
         // The {-=>} operator automatically randomizes values.
         if (pc_symm_spec->random_write_flags[pc_symm->wmap[i]]) {
-          wvbl_assigned[i] = true;
+          if (!wvbl_assigned[i]) {
+            wvbl_assigned[i] = 1;
+            wvbl_randomized[i] = 1;
+          }
         }
       }
       if (!auto_iden || wvbl_assigned[i]) {
@@ -477,12 +485,10 @@ ProtoconFile::parse_action(Cx::PFmla& act_pf, Cx::Table<Cx::PFmla>& pc_xns, Sesp
     if (actto_op) {
       X::Fmla self_xn( true );
       for (uint i = 0; i < pc.wvbls.sz(); ++i) {
-        if (!wvbl_assigned[i]) {
+        if (!wvbl_assigned[i])
           continue;
-        }
-        if (pc_symm_spec->random_write_flags[pc_symm->wmap[i]]) {
+        if (wvbl_randomized[i])
           continue;
-        }
         if (role != Xn::Vbl::Shadow && pc_symm->wvbl_symms[i]->pure_shadow_ck()) {
           continue;
         }
