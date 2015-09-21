@@ -64,16 +64,24 @@ Net::commit_initialization()
   if (this->featherweight)
     return;
 
-  for (uint symm_idx = 0; symm_idx < this->vbl_symms.sz(); ++symm_idx) {
-    const Xn::VblSymm& vbl_symm = this->vbl_symms[symm_idx];
-    if (!vbl_symm.random_ck())
+  // Smooth out the 'random read' variables.
+  for (uint vblidx = 0; vblidx < this->vbls.sz(); ++vblidx) {
+    const Xn::Vbl& vbl = this->vbls[vblidx];
+    if (!vbl.random_ck())
       continue;
-    for (uint vblidx = 0; vblidx < vbl_symm.membs.sz(); ++vblidx) {
-      const Cx::PFmlaVbl& pfmla_vbl = this->pfmla_vbl(*vbl_symm.membs[vblidx]);
-      for (uint pcidx = 0; pcidx < this->pcs.sz(); ++pcidx) {
-        pfmla_ctx.add_to_vbl_list(xfmlae_ctx.wvbl_list_ids[pcidx],
-                                  id_of(pfmla_vbl));
-      }
+    this->random_write_exists = true;
+
+    const Cx::PFmlaVbl& pfmla_vbl = this->pfmla_vbl(vbl);
+    this->identity_xn = this->identity_xn.smooth(pfmla_vbl);
+    this->xfmlae_ctx.identity_xn = this->xfmlae_ctx.identity_xn.smooth(pfmla_vbl);
+
+    for (uint pcidx = 0; pcidx < this->pcs.sz(); ++pcidx) {
+      pfmla_ctx.add_to_vbl_list(xfmlae_ctx.wvbl_list_ids[pcidx],
+                                id_of(pfmla_vbl));
+      this->xfmlae_ctx.act_unchanged_xfmlas[pcidx] =
+        this->xfmlae_ctx.act_unchanged_xfmlas[pcidx].smooth(pfmla_vbl);
+      this->pcs[pcidx].act_unchanged_pfmla =
+        this->pcs[pcidx].act_unchanged_pfmla.smooth(pfmla_vbl);
     }
   }
 
@@ -151,13 +159,8 @@ Net::commit_variable(VblSymm& symm, uint i)
   pfmla_ctx.add_to_vbl_list(symm.pfmla_list_id, vbl->pfmla_idx);
 
   const Cx::PFmlaVbl& pf_vbl = this->pfmla_vbl(*vbl);
-  if (symm.random_ck()) {
-    this->random_write_exists = true;
-  }
-  else {
-    this->identity_xn &= pf_vbl.img_eq(pf_vbl);
-    this->xfmlae_ctx.identity_xn &= pf_vbl.img_eq(pf_vbl);
-  }
+  this->identity_xn &= pf_vbl.img_eq(pf_vbl);
+  this->xfmlae_ctx.identity_xn &= pf_vbl.img_eq(pf_vbl);
 
   if (symm.pure_shadow_ck()) {
     pure_shadow_vbl_exists = true;

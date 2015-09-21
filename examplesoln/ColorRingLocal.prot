@@ -6,7 +6,7 @@ constant N := 3;
 constant M := 5;
 
 direct variable x[Nat % N] <- Nat % M;
-random variable b[Nat % N] <- Nat % 2;
+puppet variable b[Nat % N] <- Nat % 2;
 
 // Each process P[i] must have a different color than P[i-1] and P[i-2].
 // This implies that P[i] also has a different color than P[i+1] and P[i+2].
@@ -19,7 +19,7 @@ process P[i <- Nat % N]
   write: x[i];
 
   // This variable is randomized when ANY process acts.
-  read: b[i];
+  random read: b[i];
 
   puppet action:
     ( x[i-1] <= 2 -=> x[i] := 1 + x[i-1]; )

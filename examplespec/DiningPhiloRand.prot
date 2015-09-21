@@ -5,7 +5,7 @@ constant N := 3;
 
 variable hungry[Nat % N] <- Nat % 2;
 variable chopstick[Nat % (2*N)] <- Nat % 2;
-random variable b[Nat % N] <- Nat % 2;
+puppet variable b[Nat % N] <- Nat % 2;
 
 // Converge to a state where no philosopher is hungry or has a chopstick.
 (future & future silent)
@@ -37,7 +37,7 @@ process P[i <- Nat % N]
   read: chopstick[R+1];
 
   // Random value to influence decisions.
-  read: b[i];
+  random read: b[i];
 
 
   predicate Have2 := chopstick[L] + chopstick[R] == 2;

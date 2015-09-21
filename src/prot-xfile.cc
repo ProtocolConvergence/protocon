@@ -234,7 +234,7 @@ ProtoconFile::add_access(Sesp vbl_sp, Bit write, Bit random)
     DoLegitLine( "string_expression()" )
       string_expression(indices.expression, vbl_idx_sp);
 
-    DoLegit(0) {
+    if (good) {
       if (write) {
         topo.add_write_access(+pc_symm, vbl_symm, indices);
         if (random) {
@@ -243,6 +243,14 @@ ProtoconFile::add_access(Sesp vbl_sp, Bit write, Bit random)
       }
       else {
         topo.add_read_access(+pc_symm, vbl_symm, indices);
+        if (random) {
+          for (uint i = 0; i < pc_symm->membs.sz(); ++i) {
+            uint vidx = topo.vbls.index_of(pc_symm->membs[i]->rvbls.top());
+            topo.vbls[vidx].random_flag = true;
+          }
+          DoLegitLine( "Can only 'random read' with puppet variables!" )
+            pc_symm->rvbl_symms.top()->pure_puppet_ck();
+        }
       }
     }
   }

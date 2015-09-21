@@ -272,7 +272,7 @@ void oput_udp_file(Cx::OFile& ofile, const Xn::Sys& sys, const Xn::Net& o_topolo
     for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
       const Xn::VblSymm& vbl_symm = *pc_symm.rvbl_symms[i];
       if (vbl_symm.pure_shadow_ck())  continue;
-      if (vbl_symm.random_ck()) {
+      if (pc.rvbls[i]->random_ck()) {
         ofile << "\n    x[" << pfmla_rvbl_idcs.sz()
           << "] = RandomMod(" << vbl_symm.domsz << ");";
       }

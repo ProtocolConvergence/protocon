@@ -62,7 +62,6 @@ OptionalShadowPuppetRole =
   {$$.aux.i = (int) Xn::Vbl::Direct;}
   (  SHADOW WS {$$.aux.i = (int) Xn::Vbl::Shadow;}
    | PUPPET WS {$$.aux.i = (int) Xn::Vbl::Puppet;}
-   | RANDOM WS (PUPPET WS)? {$$.aux.i = (int) Xn::Vbl::Random;}
    | DIRECT WS
    | 'underlying' WS
   )?
@@ -165,10 +164,10 @@ ProcDecl =
   )*
   (
      (  random_flag:NOP
+        (RANDOM WS {random_flag.aux.i=1;})?
         write_flag:NOP
         (  'read:'
-         | ('random' WS {random_flag.aux.i=1;})?
-           'write:' {write_flag.aux.i=1;}
+         | 'write:' {write_flag.aux.i=1;}
         )
         WS?      u:VblRef WS? {yy->st->add_access(u.sp, write_flag.aux.i, random_flag.aux.i);}
         (',' WS? v:VblRef WS? {yy->st->add_access(v.sp, write_flag.aux.i, random_flag.aux.i);} )*

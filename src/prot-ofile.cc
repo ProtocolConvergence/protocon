@@ -85,9 +85,9 @@ static
 oput_protocon_constants (Cx::OFile& of, const Xn::Spec& spec)
 {
   for (uint i = 0; i < spec.constant_map.keys.sz(); ++i) {
-    of << "constant " << spec.constant_map.keys[i];
+    of << "\nconstant " << spec.constant_map.keys[i];
     of << " := " << spec.constant_map.vals[i].expression;
-    of << ";\n";
+    of << ";";
   }
 }
 
@@ -96,55 +96,73 @@ static
 oput_protocon_pc_lets (Cx::OFile& of, const Xn::PcSymm& pc_symm)
 {
   for (uint i = 0; i < pc_symm.spec->let_map.keys.sz(); ++i) {
-    of << "  let " << pc_symm.spec->let_map.keys[i];
+    of << "\n  let " << pc_symm.spec->let_map.keys[i];
     of << " := " << pc_symm.spec->let_map.vals[i].expression;
-    of << ";\n";
+    of << ";";
   }
 }
 
 static
   void
-oput_protocon_pc_predicates (Cx::OFile& of, const Xn::PcSymm& pc_symm)
+oput_protocon_pc_predicates (Cx::OFile& ofile, const Xn::PcSymm& pc_symm)
 {
   for (uint i = 0; i < pc_symm.predicate_map.keys.sz(); ++i) {
-    of << "  predicate " << pc_symm.predicate_map.keys[i];
-    of << " := " << pc_symm.predicate_map.vals[i].expression;
-    of << ";\n";
+    ofile << "\n  predicate "
+      << pc_symm.predicate_map.keys[i]
+      << " := " << pc_symm.predicate_map.vals[i].expression
+      << ";"
+      ;
   }
 }
 
 static
   void
-oput_protocon_pc_vbls (Cx::OFile& of, const Xn::PcSymm& pc_symm)
+oput_protocon_pc_vbl (Cx::OFile& ofile, const Xn::PcSymm& pc_symm,
+                       uint vidx, const Cx::String& idxname)
+{
+  if (pc_symm.write_flags[vidx]) {
+    if (pc_symm.spec->random_write_flags[vidx])
+      ofile << "random ";
+    ofile << "write";
+  }
+  else {
+    if (pc_symm.membs[0]->rvbls[vidx]->random_ck()) {
+      ofile << "random ";
+    }
+    ofile << "read";
+  }
+  ofile << ": " << pc_symm.spec->rvbl_symms[vidx]->name
+    << "[" << idxname << "];";
+}
+
+static
+  void
+oput_protocon_pc_vbls (Cx::OFile& ofile, const Xn::PcSymm& pc_symm)
 {
   for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
     bool symmetric_link_case = false;
     for (uint j = 0; j < pc_symm.spec->link_symmetries.sz(); ++j) {
       const Xn::LinkSymmetry& link_symmetry = pc_symm.spec->link_symmetries[j];
       if (link_symmetry.elem_ck(i)) {
-        of << "  symmetric " << link_symmetry.let_expression
-          << " <- {# " << link_symmetry.multiset_expression << " #}\n";
-        of << "  {\n";
+        ofile << "\n  symmetric " << link_symmetry.let_expression
+          << " <- {# " << link_symmetry.multiset_expression << " #}"
+          << "\n  {"
+          ;
         for (uint v = 0; v < link_symmetry.nvbls; ++v) {
           uint vidx = link_symmetry(v, 0);
-          of << "    "
-            << (pc_symm.spec->random_write_flags[vidx] ? "random " : "")
-            << (pc_symm.write_flags[vidx] ? "write" : "read") << ": "
-            << pc_symm.spec->rvbl_symms[vidx]->name
-            << "[" << link_symmetry.index_expressions[v] << "];\n";
+          ofile << "\n    ";
+          oput_protocon_pc_vbl ((ofile << "\n    "), pc_symm,
+                                vidx, link_symmetry.index_expressions[v]);
         }
-        of << "  }\n";
+        ofile << "\n  }";
         i += link_symmetry.nlinks * link_symmetry.nvbls - 1;
         symmetric_link_case = true;
         break;
       }
     }
     if (symmetric_link_case)  continue;
-    of << "  "
-      << (pc_symm.spec->random_write_flags[i] ? "random " : "")
-      << (pc_symm.write_flags[i] ? "write" : "read") << ": "
-      << pc_symm.vbl_name(i)
-      << ";\n";
+    oput_protocon_pc_vbl ((ofile << "\n  "), pc_symm,
+                          i, pc_symm.rindices[i].expression);
   }
 }
 
@@ -155,7 +173,7 @@ oput_protocon_pc_act (Cx::OFile& of, XFile* xf,
 {
   DeclLegit( good );
   bool clause = false;
-  of << "    ( ";
+  of << "\n    ( ";
   for (uint i = 0;
        good && i < (guard_vbls.sz() + assign_vbls.sz());
        ++i)
@@ -206,14 +224,14 @@ oput_protocon_pc_act (Cx::OFile& of, XFile* xf,
     }
     if (vals.sz() > 1)  of << ")";
   }
-  of << " )\n";
+  of << " )";
   return good;
 }
 
   void
 oput_protocon_pc_act (Cx::OFile& of, const Xn::ActSymm& act)
 {
-  of << "    ( ";
+  of << "\n    ( ";
   const Xn::PcSymm& pc_symm = *act.pc_symm;
 
   bool need_delim = false;
@@ -238,7 +256,7 @@ oput_protocon_pc_act (Cx::OFile& of, const Xn::ActSymm& act)
     else
       of << act.assign(i) << "; ";
   }
-  of << ")\n";
+  of << ")";
 }
 
   bool
@@ -250,25 +268,25 @@ oput_protocon_pc_acts (Cx::OFile& of, const Xn::PcSymm& pc_symm,
   DeclLegit( good );
   const Xn::PcSymmSpec& pc_symm_spec = *pc_symm.spec;
   if (pc_symm_spec.shadow_act_strings.sz() > 0) {
-    of << "  shadow action:\n";
+    of << "\n  shadow action:";
     for (uint i = 0; i < pc_symm_spec.shadow_act_strings.sz(); ++i) {
-      of << "    ( " << pc_symm_spec.shadow_act_strings[i] << " )\n";
+      of << "\n    ( " << pc_symm_spec.shadow_act_strings[i] << " )";
     }
-    of << "    ;\n";
+    of << "\n    ;";
   }
   if (pc_symm_spec.permit_act_strings.sz() > 0) {
-    of << "  permit action:\n";
+    of << "\n  permit action:";
     for (uint i = 0; i < pc_symm_spec.permit_act_strings.sz(); ++i) {
-      of << "    ( " << pc_symm_spec.permit_act_strings[i] << " )\n";
+      of << "\n    ( " << pc_symm_spec.permit_act_strings[i] << " )";
     }
-    of << "    ;\n";
+    of << "\n    ;";
   }
   if (pc_symm_spec.forbid_act_strings.sz() > 0) {
-    of << "  forbid action:\n";
+    of << "\n  forbid action:";
     for (uint i = 0; i < pc_symm_spec.forbid_act_strings.sz(); ++i) {
-      of << "    ( " << pc_symm_spec.forbid_act_strings[i] << " )\n";
+      of << "\n    ( " << pc_symm_spec.forbid_act_strings[i] << " )";
     }
-    of << "    ;\n";
+    of << "\n    ;";
   }
 
   // Return early if there are no puppet actions.
@@ -296,14 +314,14 @@ oput_protocon_pc_acts (Cx::OFile& of, const Xn::PcSymm& pc_symm,
     assign_vbls[i] = pc_symm.vbl_name(pc_symm.wmap[i]);
   }
 
-  of << "  puppet action:\n";
+  of << "\n  puppet action:";
   if (!use_espresso) {
     for (uint i = 0; i < acts.sz(); ++i) {
       if (acts[i].pc_symm == &pc_symm) {
         oput_protocon_pc_act (of, acts[i]);
       }
     }
-    of << "    ;\n";
+    of << "\n    ;";
     return true;
   }
 
@@ -337,7 +355,7 @@ oput_protocon_pc_acts (Cx::OFile& of, const Xn::PcSymm& pc_symm,
     DoLegitLine(0)
       oput_protocon_pc_act (of, olay, guard_vbls, assign_vbls);
   }
-  of << "    ;\n";
+  of << "\n    ;";
 
   close_OSPc (ospc);
   return good;
@@ -350,7 +368,7 @@ oput_protocon_pc_assume (Cx::OFile& of, const Xn::PcSymm& pc_symm)
   const Cx::String& assume_expression = pc_symm.spec->closed_assume_expression;
   if (assume_expression.empty_ck())
     return true;
-  of << "  (assume & closed)\n    (" << assume_expression << ");\n";
+  of << "\n  (assume & closed)\n    (" << assume_expression << ");";
   return true;
 }
 
@@ -424,8 +442,8 @@ oput_protocon_pc_invariant (Cx::OFile& of, const Xn::PcSymm& pc_symm,
   if (invariant_expression.empty_ck())
     return true;
 
-  of << "  " << style_str
-    << "\n    (" << invariant_expression << ");\n";
+  of << "\n  " << style_str
+    << "\n    (" << invariant_expression << ");";
   return true;
 }
 
@@ -455,30 +473,29 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys,
 
   const Xn::Net& topo = sys.topology;
   if (comment) {
-    of << "// " << comment << "\n";
+    of << "// " << comment;
   }
   oput_protocon_constants (of, *o_topology.spec);
   for (uint i = 0; i < topo.vbl_symms.sz(); ++i) {
     const Xn::VblSymm& vbl_symm = topo.vbl_symms[i];
+    of << '\n';
     if (vbl_symm.pure_shadow_ck())
       of << "shadow ";
-    else if (vbl_symm.random_ck())
-      of << "random ";
     else if (vbl_symm.pure_puppet_ck())
       of << "puppet ";
 
     of << "variable " << vbl_symm.spec->name
       << "[Nat % " << vbl_symm.spec->nmembs_expression
-      << "] <- Nat % " << vbl_symm.spec->domsz_expression << ";\n";
+      << "] <- Nat % " << vbl_symm.spec->domsz_expression << ";";
   }
 
   for (uint i = 0; i < sys.predicate_map.sz(); ++i) {
-    of << "predicate " << sys.predicate_map.keys[i]
-      << " :=\n  " << sys.predicate_map.expressions[i] << ";\n";
+    of << "\npredicate " << sys.predicate_map.keys[i]
+      << " :=\n  " << sys.predicate_map.expressions[i] << ";";
   }
 
   if (!!sys.spec->closed_assume_expression) {
-    of << "(assume & closed)\n  (" << sys.spec->closed_assume_expression << ")\n  ;\n";
+    of << "\n(assume & closed)\n  (" << sys.spec->closed_assume_expression << ")\n  ;";
   }
 
   Cx::String style_str =
@@ -486,11 +503,11 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys,
                                sys.spec->invariant_scope);
   if (!sys.spec->invariant_expression.empty_ck()) {
     Cx::String legit_str = sys.spec->invariant_expression;
-    of << style_str << "\n  (" << legit_str << ")\n  ;\n";
+    of << "\n" << style_str << "\n  (" << legit_str << ")\n  ;";
   }
 
   if (sys.spec->invariant_behav != Xn::NInvariantBehavs) {
-    of << string_of_invariant_behav (sys.spec->invariant_behav) << ";\n";
+    of << "\n" << string_of_invariant_behav (sys.spec->invariant_behav) << ";";
   }
 
 
@@ -503,10 +520,11 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys,
 
   for (uint i = 0; i < sys.topology.pc_symms.sz(); ++i) {
     const Xn::PcSymm& pc_symm = sys.topology.pc_symms[i];
-    of << "process " << pc_symm.spec->name
+    of << "\nprocess " << pc_symm.spec->name
       << "[" << pc_symm.spec->idx_name << " <- Nat % "
-      << o_topology.pc_symms[i].spec->nmembs_expression << "]\n";
-    of << "{\n";
+      << o_topology.pc_symms[i].spec->nmembs_expression << "]"
+      << "\n{"
+      ;
     oput_protocon_pc_lets (of, pc_symm);
     oput_protocon_pc_vbls (of, pc_symm);
     oput_protocon_pc_predicates (of, pc_symm);
@@ -516,7 +534,7 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys,
       oput_protocon_pc_invariant (of, pc_symm, style_str);
     DoLegitLine("output actions")
       oput_protocon_pc_acts (of, pc_symm, acts, ospc, use_espresso);
-    of << "}\n";
+    of << "\n}\n";
   }
 
   lose_OSPc (ospc);

@@ -102,17 +102,21 @@ public:
 
 class Vbl {
 public:
-  enum ShadowPuppetRole { Direct, Shadow, Puppet, Random };
+  enum ShadowPuppetRole { Direct, Shadow, Puppet };
 public:
   const VblSymm* symm;
   uint symm_idx;
   uint pfmla_idx; ///< Index of the variable (in a PmlaFCtx).
+  bool random_flag;
 
   Vbl(VblSymm* symmetry, uint index)
     : symm(symmetry)
     , symm_idx(index)
     , pfmla_idx(Max_uint)
+    , random_flag(false)
   {}
+
+  bool random_ck() const { return random_flag; }
 };
 
 class VblSymm {
@@ -128,9 +132,8 @@ public:
   {}
 
   bool direct_ck() const { return shadow_puppet_role == Vbl::Direct; }
-  bool random_ck() const { return shadow_puppet_role == Vbl::Random; }
   bool pure_shadow_ck() const { return shadow_puppet_role == Vbl::Shadow; }
-  bool pure_puppet_ck() const { return shadow_puppet_role == Vbl::Puppet || random_ck(); }
+  bool pure_puppet_ck() const { return shadow_puppet_role == Vbl::Puppet; }
 
   bool shadow_ck() const { return pure_shadow_ck() || direct_ck(); }
   bool puppet_ck() const { return pure_puppet_ck() || direct_ck(); }
