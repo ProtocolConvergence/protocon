@@ -216,6 +216,8 @@ void oput_udp_file(Cx::OFile& ofile, const Xn::Sys& sys, const Xn::Net& o_topolo
     << "\n}"
     << "\nvoid action_assign(PcIden pc, uint8_t* x)"
     << "\n{"
+    << "\n  uint8_t tmp_x[Max_NVariables];"
+    << "\n  memcpy(tmp_x, x, sizeof(tmp_x));"
     ;
   symm_cutoff = 0;
 
@@ -257,7 +259,6 @@ void oput_udp_file(Cx::OFile& ofile, const Xn::Sys& sys, const Xn::Net& o_topolo
     ofile << "\n  " << (pc_symm_idx == 0 ? "" : "else ")
       << "if (pc.idx < "
       << symm_cutoff << ") {"
-      << "\n    /* */"
       ;
 
     uint rep_pcidx = 0;
@@ -269,7 +270,12 @@ void oput_udp_file(Cx::OFile& ofile, const Xn::Sys& sys, const Xn::Net& o_topolo
     Cx::Table<uint> pfmla_wvbl_idcs;
 
     for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
-      if (pc_symm.rvbl_symms[i]->pure_shadow_ck())  continue;
+      const Xn::VblSymm& vbl_symm = *pc_symm.rvbl_symms[i];
+      if (vbl_symm.pure_shadow_ck())  continue;
+      if (vbl_symm.random_ck()) {
+        ofile << "\n    x[" << pfmla_rvbl_idcs.sz()
+          << "] = RandomMod(" << vbl_symm.domsz << ");";
+      }
       if (pc_symm.write_flags[i]) {
         uint puppet_i = pfmla_rvbl_idcs.sz();
         writable << puppet_i;
@@ -284,6 +290,7 @@ void oput_udp_file(Cx::OFile& ofile, const Xn::Sys& sys, const Xn::Net& o_topolo
     Cx::Table<uint> pre_state( pfmla_rvbl_idcs.sz() );
     Cx::Table<uint> img_state( pfmla_wvbl_idcs.sz() );
 
+    ofile << "\n    /* */";
     while (xn.sat_ck()) {
       xn.state (+pre_state, pfmla_rvbl_idcs);
       const P::Fmla pre_pf = topo.pfmla_ctx.pfmla_of_state (+pre_state, pfmla_rvbl_idcs);
@@ -328,7 +335,7 @@ void oput_udp_file(Cx::OFile& ofile, const Xn::Sys& sys, const Xn::Net& o_topolo
       ofile << "\n    else ";
 
     }
-    ofile << "{}\n  }";
+    ofile << "{ memcpy(x, tmp_x, sizeof(tmp_x)); }\n  }";
   }
   ofile
     << "\n}"

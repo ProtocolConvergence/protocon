@@ -5,7 +5,7 @@ constant N := 3;
 
 variable hungry[Nat % N] <- Nat % 2;
 variable chopstick[Nat % (2*N)] <- Nat % 2;
-variable b[Nat % N] <- Nat % 2;
+random variable b[Nat % N] <- Nat % 2;
 
 // Converge to a state where no philosopher is hungry or has a chopstick.
 (future & future silent)
@@ -37,7 +37,7 @@ process P[i <- Nat % N]
   read: chopstick[R+1];
 
   // Random value to influence decisions.
-  random write: b[i];
+  read: b[i];
 
 
   predicate Have2 := chopstick[L] + chopstick[R] == 2;
@@ -51,7 +51,7 @@ process P[i <- Nat % N]
     ( 1==1 --> hungry[i]; )
     //// Equivalent:
     //( 1==1 --> hungry[i]:=hungry[i]; )
-    //( 1==1 --> hungry[i]:=hungry[i]; b[i]:=_; chopstick[L]:=_; chopstick[R]:=_; )
+    //( 1==1 --> hungry[i]:=hungry[i]; chopstick[L]:=_; chopstick[R]:=_; )
     ;
 
   // Forbid changing position of both chopsticks at the same time.
@@ -64,8 +64,9 @@ process P[i <- Nat % N]
   // Chopsticks cannot be put down during this action.
   // The {-=>} operator allows us to assume we begin hungry.
   // The {_} operator ensures the unassigned variables (the 2 chopsticks) are
-  // left unchanged. The {-=>} operator protects random variables like {b[i]}
-  // from being affected by the {_} operator.
+  // left unchanged. The {-=>} operator protects random write variables from
+  // being affected by the {_} operator.
+  // ({b[i]} used to be a random write variable.)
   permit:
     ( Have2 -=> hungry[i]:=0; _; )
     //// Equivalent:

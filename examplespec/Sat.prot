@@ -74,10 +74,10 @@ predicate Clauses :=
   (ExpectSat==0 && UnsatClauses)
   ;
 
-(future & silent)
+(future & closed)
   (Iden && Clauses && (sat[0] == 1));
 
-// Use the (future & future silent) instead of (future & silent) above
+// Use the (future & future silent) instead of (future & closed) above
 // if you want to allow the invariant to shrink.
 // When allowing this, a process P[i] might get two actions for some a and b:
 //   (sat[0]==0 && x[i]==a && y[i]==  b --> y[i]:=1-b;)

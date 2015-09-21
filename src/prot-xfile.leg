@@ -62,6 +62,7 @@ OptionalShadowPuppetRole =
   {$$.aux.i = (int) Xn::Vbl::Direct;}
   (  SHADOW WS {$$.aux.i = (int) Xn::Vbl::Shadow;}
    | PUPPET WS {$$.aux.i = (int) Xn::Vbl::Puppet;}
+   | RANDOM WS (PUPPET WS)? {$$.aux.i = (int) Xn::Vbl::Random;}
    | DIRECT WS
    | 'underlying' WS
   )?
@@ -574,6 +575,7 @@ ANDPOS = WS? '&' WS?;
 FUTURE = 'future' | 'eventually' | '<>' ;
 SHADOW = 'shadow' ;
 PUPPET = 'puppet' | 'superposed' ;
+RANDOM = 'random' ;
 DIRECT = 'direct';
 CLOSED = 'closed' ;
 ASSUME = 'assume' ;

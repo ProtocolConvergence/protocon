@@ -102,7 +102,7 @@ public:
 
 class Vbl {
 public:
-  enum ShadowPuppetRole { Direct, Shadow, Puppet };
+  enum ShadowPuppetRole { Direct, Shadow, Puppet, Random };
 public:
   const VblSymm* symm;
   uint symm_idx;
@@ -128,8 +128,9 @@ public:
   {}
 
   bool direct_ck() const { return shadow_puppet_role == Vbl::Direct; }
+  bool random_ck() const { return shadow_puppet_role == Vbl::Random; }
   bool pure_shadow_ck() const { return shadow_puppet_role == Vbl::Shadow; }
-  bool pure_puppet_ck() const { return shadow_puppet_role == Vbl::Puppet; }
+  bool pure_puppet_ck() const { return shadow_puppet_role == Vbl::Puppet || random_ck(); }
 
   bool shadow_ck() const { return pure_shadow_ck() || direct_ck(); }
   bool puppet_ck() const { return pure_puppet_ck() || direct_ck(); }

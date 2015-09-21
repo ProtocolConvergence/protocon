@@ -3,7 +3,7 @@ constant N := 3;
 
 puppet variable e[Nat % N] <- Nat % 2;
 direct variable t[Nat % N] <- Nat % 2;
-puppet variable dec[Nat % N] <- Nat % 2;
+random variable dec[Nat % N] <- Nat % 2;
 
 // Ensure that N is odd.
 (assume & closed)
@@ -20,7 +20,8 @@ process P[i <- Nat % N]
   read: t[i-1];
   write: t[i];
 
-  random write: dec[i];
+  // This variable is randomized when ANY process acts.
+  read: dec[i];
 
   shadow: ( t[i-1]==t[i] --> t[i]:=1-t[i]; );
 }

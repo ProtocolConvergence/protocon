@@ -63,6 +63,20 @@ Net::commit_initialization()
   this->n_possible_acts = ntotal;
   if (this->featherweight)
     return;
+
+  for (uint symm_idx = 0; symm_idx < this->vbl_symms.sz(); ++symm_idx) {
+    const Xn::VblSymm& vbl_symm = this->vbl_symms[symm_idx];
+    if (!vbl_symm.random_ck())
+      continue;
+    for (uint vblidx = 0; vblidx < vbl_symm.membs.sz(); ++vblidx) {
+      const Cx::PFmlaVbl& pfmla_vbl = this->pfmla_vbl(*vbl_symm.membs[vblidx]);
+      for (uint pcidx = 0; pcidx < this->pcs.sz(); ++pcidx) {
+        pfmla_ctx.add_to_vbl_list(xfmlae_ctx.wvbl_list_ids[pcidx],
+                                  id_of(pfmla_vbl));
+      }
+    }
+  }
+
   represented_actions.resize(ntotal);
   for (uint actidx = 0; actidx < ntotal; ++actidx) {
     uint rep_actidx = representative_action_index(actidx);
@@ -137,8 +151,13 @@ Net::commit_variable(VblSymm& symm, uint i)
   pfmla_ctx.add_to_vbl_list(symm.pfmla_list_id, vbl->pfmla_idx);
 
   const Cx::PFmlaVbl& pf_vbl = this->pfmla_vbl(*vbl);
-  this->identity_xn &= pf_vbl.img_eq(pf_vbl);
-  this->xfmlae_ctx.identity_xn &= pf_vbl.img_eq(pf_vbl);
+  if (symm.random_ck()) {
+    this->random_write_exists = true;
+  }
+  else {
+    this->identity_xn &= pf_vbl.img_eq(pf_vbl);
+    this->xfmlae_ctx.identity_xn &= pf_vbl.img_eq(pf_vbl);
+  }
 
   if (symm.pure_shadow_ck()) {
     pure_shadow_vbl_exists = true;
@@ -203,7 +222,7 @@ Net::add_processes(const String& name, const String& idx_name, uint nmembs)
     xfmlae_ctx.wvbl_list_ids.push(pfmla_ctx.add_vbl_list());
     Pc& pc = pcs.push(Pc(&symm, i));
     symm.membs.push(&pc);
-    if (this->featherweight)  continue;;
+    if (this->featherweight)  continue;
     pc.act_unchanged_pfmla = this->identity_xn;
     xfmlae_ctx.act_unchanged_xfmlas.push(this->identity_xn);
   }
@@ -838,7 +857,7 @@ find_livelock_actions(Cx::Table<uint>& ret_actions, const Cx::PFmla& xn,
   bool livelock_found = false;
   for (uint i = 0; i < states.sz()-1 && !livelock_found; ++i) {
     if (!states[i].overlap_ck(invariant)) {
-      livelock_found = true;;
+      livelock_found = true;
     }
   }
 

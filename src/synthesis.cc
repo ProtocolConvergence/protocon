@@ -212,7 +212,7 @@ ReviseDeadlocksMRV(vector<DeadlockConstraint>& dlsets,
       for (it = diffCandidates1.begin(); it != diffCandidates1.end(); ++it) {
         const uint actId = *it;
         const PF& candidateGuardPF = topo.action_pfmla(actId).pre();
-        Claim2( minidx ,>, 0 );
+        Claim( minidx > 0 && "BUG! Try again with -force-rank-deadlocks flag." );
         for (uint j = minidx; j < diffDeadlockSets.size(); ++j) {
           const PF& diffPF =
             (candidateGuardPF & diffDeadlockSets[j].deadlockPF);
@@ -1196,7 +1196,8 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
        !this->deadlockPF.subseteq_ck(old_deadlock_pfmla))
       ||
       !candidates_contain_all_adds
-      //|| true
+      ||
+      this->ctx->opt.force_rank_deadlocks
      )
   {
     RankDeadlocksMRV(this->mcv_deadlocks,

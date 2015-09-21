@@ -71,6 +71,7 @@ public:
   bool force_disabling;
   bool pure_actions;
   bool prep_conflicts;
+  bool force_rank_deadlocks;
   uint max_depth;
   uint max_height;
   uint sys_pcidx;
@@ -99,6 +100,7 @@ public:
     , force_disabling( false )
     , pure_actions( false )
     , prep_conflicts( false )
+    , force_rank_deadlocks( false )
     , max_depth( 0 )
     , max_height( 3 )
     , sys_pcidx( 0 )

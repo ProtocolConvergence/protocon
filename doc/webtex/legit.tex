@@ -18,8 +18,7 @@ Since we will use $I$ as an invariant, it must be defined with shadow or direct 
 
 Stabilization can be defined as both convergence and closure.
 That is, a system should eventually reach $I$ and remain within $I$.
-\\\textbf{This definition is not supported} because it is too relaxed to be useful in most cases.
-However, if it were supported, one would write the following in a \ilfile{.prot} file:
+This is generally too relaxed to be useful, but it is supported by writing the following in a \ilfile{.prot} file:
 \begin{code}
 (future & closed) (I);
 \end{code}

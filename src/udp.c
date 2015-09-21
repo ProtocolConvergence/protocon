@@ -684,10 +684,8 @@ CMD_act(State* st, Bool modify)
       if (ActionLagMS > 0)
       {
         // Lag actions a bit to expose livelocks.
-        uint32_t x = 0;
-        Randomize( x );
         //sleep_ms(ActionLagMS);
-        sleep_ms(ActionLagMS/2 + x % ActionLagMS);
+        sleep_ms(ActionLagMS/2 + RandomMod(ActionLagMS));
       }
 
       memcpy(st->values, values, sizeof(values));

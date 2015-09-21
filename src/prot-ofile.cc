@@ -462,7 +462,9 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys,
     const Xn::VblSymm& vbl_symm = topo.vbl_symms[i];
     if (vbl_symm.pure_shadow_ck())
       of << "shadow ";
-    if (vbl_symm.pure_puppet_ck())
+    else if (vbl_symm.random_ck())
+      of << "random ";
+    else if (vbl_symm.pure_puppet_ck())
       of << "puppet ";
 
     of << "variable " << vbl_symm.spec->name

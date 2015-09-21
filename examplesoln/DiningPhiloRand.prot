@@ -5,7 +5,7 @@ constant N := 3;
 
 variable hungry[Nat % N] <- Nat % 2;
 variable chopstick[Nat % (2*N)] <- Nat % 2;
-variable b[Nat % N] <- Nat % 2;
+random variable b[Nat % N] <- Nat % 2;
 
 // These are more intuitively defined within P[i].
 // (future & future silent) ...;
@@ -27,7 +27,7 @@ process P[i <- Nat % N]
   read: chopstick[R+1];
 
   // Random value to influence decisions.
-  random write: b[i];
+  read: b[i];
 
 
   predicate Have2 := chopstick[L] + chopstick[R] == 2;
@@ -58,9 +58,6 @@ process P[i <- Nat % N]
 
   // Unlike the {permit} and {forbid} actions, variables that are not assigned
   // in {puppet} actions are assumed to not change.
-  // The {-=>} operator does however randomize the random variables
-  // like {b[i]} if they are not explicitly assigned. If we used {-->}, then
-  // we would need to write {b[i]:=_} after {-->} to ensure it is randomized.
   puppet:
     // Use randomization to choose when nobody has a chopstick.
     // Note that this is the only place where the random {b[i]} value is used.
