@@ -551,7 +551,7 @@ stabilization_search_init
     for (uint i = 0; i < sys.topology.pc_symms.sz(); ++i) {
       const Xn::PcSymm& pc_symm = sys.topology.pc_symms[i];
       uint pcidx = 0;
-      if (!pc_symm.representative(&pcidx)) {
+      if (pc_symm.membs.sz() > 0 && !pc_symm.representative(&pcidx)) {
         Cx::String msg;
         msg << "Every process "
           << pc_symm.spec->name << "[" << pc_symm.spec->idx_name << "]"

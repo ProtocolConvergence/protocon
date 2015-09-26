@@ -520,6 +520,8 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys,
 
   for (uint i = 0; i < sys.topology.pc_symms.sz(); ++i) {
     const Xn::PcSymm& pc_symm = sys.topology.pc_symms[i];
+    if (pc_symm.membs.sz() == 0)  continue;
+
     of << "\nprocess " << pc_symm.spec->name
       << "[" << pc_symm.spec->idx_name << " <- Nat % "
       << o_topology.pc_symms[i].spec->nmembs_expression << "]"
