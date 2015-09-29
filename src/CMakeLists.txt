@@ -316,7 +316,7 @@ install (DIRECTORY ${TopPath}/doc/html/ DESTINATION doc/html)
 #   cpack
 include (InstallRequiredSystemLibraries)
 string (TIMESTAMP CPACK_PACKAGE_VERSION "%Y.%m.%d")
-set (CPACK_PACKAGE_VERSION "2015.08.31")
+set (CPACK_PACKAGE_VERSION "2015.09.29")
 #set (CPACK_GENERATOR "STGZ;TGZ;ZIP")
 set (CPACK_GENERATOR "ZIP")
 set (MyName "Alex Klinkhamer")
