@@ -1,4 +1,7 @@
 
+// This version contains some tweaks from Dijkstra's original protocol for the
+// sake of synthesis. See examplesoln/TokenChainDijkstra.prot for his version.
+
 constant N := 3;
 
 shadow variable allup[Int % 1] <- Int % 2;
@@ -24,8 +27,8 @@ process Bot[i <- Int % 1]
   puppet:
     ( up[i]==0 || up[i+1]==0
      -=>
-      up[i]:=1;
       z[i]:=1-z[i+1];
+      up[i]:=1;
       allup[0]:=1; tok[i]:=0; tok[i+1]:=1;
     );
 }
@@ -50,16 +53,8 @@ process P[j <- Int % (N-2)]
     ;
 
   puppet:
-    ( z[i-1]!=z[i] && !(up[i+1]==0 && z[i-1]==z[i+1])
-     -->
-      up[i]:=1; z[i]:=z[i-1];
-      tok[i-1]:=0; tok[i]:=0; tok[i+1]:=1;
-    )
-    ( z[i-1]==z[i] &&  (up[i+1]==0 && z[i-1]==z[i+1])
-     -=>
-      up[i]:=0;
-      tok[i-1]:=1; tok[i]:=0; tok[i+1]:=0;
-    )
+    ( z[i-1]!=z[i] && z[i]==z[i+1] --> z[i]:=z[i-1]; up[i]:=1; tok[i-1]:=0; tok[i]:=0; tok[i+1]:=1; )
+    ( z[i-1]==z[i] && z[i]==z[i+1] && up[i+1]==0 -=> up[i]:=0; tok[i-1]:=1; tok[i]:=0; tok[i+1]:=0; )
     ;
 }
 
@@ -76,10 +71,6 @@ process Top[j <- Int % 1]
     ( tok[i]==1 --> allup[0]:=0; tok[i]:=0; tok[i-1]:=1; );
 
   puppet:
-    ( 1==1
-     -=>
-      up[i]:=0; z[i]:=z[i-1];
-      allup[0]:=0; tok[i]:=0; tok[i-1]:=1;
-    );
+    ( 1==1 -=> z[i]:=z[i-1]; up[i]:=0; allup[0]:=0; tok[i]:=0; tok[i-1]:=1; );
 }
 
