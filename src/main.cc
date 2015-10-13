@@ -1,27 +1,22 @@
 
-extern "C" {
-#include "cx/syscx.h"
-}
+#include "main-all.cc"
 
-#include "stabilization.hh"
-#include "synthesis.hh"
-#include "prot-ofile.hh"
 #include "graphviz.hh"
 #include "udp-ofile.hh"
-#include "cx/fileb.hh"
-#include "opt.hh"
-#include "search.hh"
 #include "interactive.hh"
 
 /** Execute me now!*/
 int main(int argc, char** argv)
 {
   int argi = init_sysCx (&argc, &argv);
+  DeclLegit( good );
+  struct timespec begtime, endtime;
   AddConvergenceOpt opt;
   ProtoconFileOpt infile_opt;
   ProtoconOpt exec_opt;
   Xn::Sys sys;
-  DeclLegit( good );
+
+  clock_gettime(CLOCK_MONOTONIC, &begtime);
 
   sys.topology.lightweight = true;
   DoLegitLine( "" )
@@ -72,17 +67,20 @@ int main(int argc, char** argv)
   }
   else if (found) {
     DBog0("Solution found!");
-    for (uint i = 0; i < sys.actions.size(); ++i) {
-      const Xn::Net& topo = sys.topology;
-      Xn::ActSymm act;
-      topo.action(act, sys.actions[i]);
-      //DBogOF << sys.actions[i] << ' ';
-      OPut(DBogOF, act) << '\n';
+    if (exec_opt.ofilepath.empty_ck()) {
+      for (uint i = 0; i < sys.actions.size(); ++i) {
+        const Xn::Net& topo = sys.topology;
+        Xn::ActSymm act;
+        topo.action(act, sys.actions[i]);
+        //DBogOF << sys.actions[i] << ' ';
+        OPut(DBogOF, act) << '\n';
+      }
     }
   }
   else {
     DBog0("No solution found...");
   }
+  clock_gettime(CLOCK_MONOTONIC, &endtime);
 
   if (found || exec_opt.task == ProtoconOpt::NoTask) {
     Xn::Sys osys;
@@ -130,6 +128,11 @@ int main(int argc, char** argv)
     }
   }
   DBogOF.flush();
+
+  if (!exec_opt.stats_ofilepath.empty_ck() ||
+      exec_opt.task == ProtoconOpt::SearchTask) {
+    oput_stats (exec_opt, begtime, endtime);
+  }
 
   lose_sysCx ();
 

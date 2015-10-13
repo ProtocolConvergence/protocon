@@ -157,6 +157,7 @@ protocon_options_rec
   (int& argi,
    int argc,
    char** argv,
+   const char* relpath,
    AddConvergenceOpt& opt,
    ProtoconFileOpt& infile_opt,
    ProtoconOpt& exec_opt,
@@ -164,6 +165,7 @@ protocon_options_rec
 {
   Cx::OFile of( stderr_OFile() );
   while (pfxeq_cstr ("-", argv[argi])) {
+    Cx::C::AlphaTab tmpf = dflt_AlphaTab ();
     const int prev_argi = argi;
     bool copy_to_argline = true;
 
@@ -259,14 +261,16 @@ protocon_options_rec
           if (eq_cstr(arg, ".")) {
             break;
           }
-          exec_opt.xfilepaths.push(arg);
+          pathname2_AlphaTab (&tmpf, relpath, arg);
+          exec_opt.xfilepaths.push(Cx::String(tmpf));
           if (!exec_opt.xfilepath) {
-            exec_opt.xfilepath = arg;
+            exec_opt.xfilepath = tmpf;
           }
         }
       }
       else {
-        exec_opt.xfilepath = arg;
+        pathname2_AlphaTab (&tmpf, relpath, arg);
+        exec_opt.xfilepath = tmpf;
       }
       infile_opt.constant_map = exec_opt.params[0].constant_map;
     }
@@ -279,8 +283,8 @@ protocon_options_rec
       }
       Cx::C::XFileB args_xf;
       init_XFileB (&args_xf);
-      if (!open_FileB (&args_xf.fb, 0, args_xfilepath.cstr())) {
-        of << "-x-args could not be opened!" << of.endl();
+      if (!open_FileB (&args_xf.fb, relpath, args_xfilepath.cstr())) {
+        of << "Could not open -x-args file: " << args_xfilepath.cstr() << of.endl();
         return false;
       }
       xget_XFileB (&args_xf);
@@ -304,7 +308,9 @@ protocon_options_rec
       int tmp_argi = 0;
       int tmp_argc = xargs.sz()-1;
       if (!protocon_options_rec
-          (tmp_argi, tmp_argc, &xargs[0], opt, infile_opt, exec_opt, problem))
+          (tmp_argi, tmp_argc, &xargs[0],
+           ccstr_of_AlphaTab (&args_xf.fb.pathname),
+           opt, infile_opt, exec_opt, problem))
       {
         return false;
       }
@@ -315,7 +321,9 @@ protocon_options_rec
       if (!argv[argi]) {
         failout_sysCx("Not enuff arguments.");
       }
-      exec_opt.ofilepath = argv[argi++];
+
+      pathname2_AlphaTab (&tmpf, relpath, argv[argi++]);
+      exec_opt.ofilepath = tmpf;
     }
     else if (eq_cstr (arg, "-espresso")) {
       exec_opt.use_espresso = true;
@@ -328,7 +336,8 @@ protocon_options_rec
       if (!filename) {
         failout_sysCx("Not enuff arguments for -x-test-known.");
       }
-      ReadFileText (file_opt.text, filename);
+      pathname2_AlphaTab (&tmpf, relpath, filename);
+      ReadFileText (file_opt.text, ccstr_of_AlphaTab (&tmpf));
       if (!ReadProtoconFile(test_sys, file_opt)) {
         failout_sysCx("Reading -x-test-known file.");
       }
@@ -343,7 +352,9 @@ protocon_options_rec
       if (!filename) {
         failout_sysCx("Not enuff arguments for -x-try.");
       }
-      ReadFileText (file_opt.text, filename);
+
+      pathname2_AlphaTab (&tmpf, relpath, filename);
+      ReadFileText (file_opt.text, ccstr_of_AlphaTab (&tmpf));
       if (!ReadProtoconFile(try_sys, file_opt)) {
         failout_sysCx("Reading -x-try file.");
       }
@@ -353,11 +364,12 @@ protocon_options_rec
       opt.solution_guesses.push(try_sys.actions);
     }
     else if (eq_cstr (arg, "-o-log")) {
-      exec_opt.log_ofilename = argv[argi++];
-      if (!exec_opt.log_ofilename) {
+      if (!argv[argi]) {
         of << "-o-log requires an argument!" << of.endl();
         return false;
       }
+      pathname2_AlphaTab (&tmpf, relpath, argv[argi++]);
+      exec_opt.log_ofilename = tmpf;
     }
     else if (eq_cstr (arg, "-ntrials")) {
       if (!xget_uint_cstr (&opt.ntrials, argv[argi++])) {
@@ -392,6 +404,9 @@ protocon_options_rec
         of << "-o-conflicts requires an argument!" << of.endl();
         return false;
       }
+    }
+    else if (eq_cstr (arg, "-o-stats")) {
+      exec_opt.stats_ofilepath = argv[argi++];
     }
     else if (eq_cstr (arg, "-snapshot-conflicts")) {
       opt.snapshot_conflicts = true;
@@ -464,6 +479,7 @@ protocon_options_rec
         exec_opt.argline << " " << argv[i];
       }
     }
+    lose_AlphaTab (&tmpf);
   }
   return true;
 }
@@ -482,7 +498,8 @@ protocon_options
   ProblemInstance problem = NProblemInstances;
   exec_opt.argline = exename_of_sysCx ();
   uint npcs = 4;
-  if (!protocon_options_rec (argi, argc, argv, opt, infile_opt, exec_opt, problem))
+  if (!protocon_options_rec (argi, argc, argv, 0,
+                             opt, infile_opt, exec_opt, problem))
     return false;
 
   if (problem == FromFileInstance) {

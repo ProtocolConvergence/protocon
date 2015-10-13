@@ -56,6 +56,7 @@ list (APPEND CCFiles
   biring.cc
   deadfree.cc
   msat.cc
+  main-all.cc
   )
 list (APPEND HHFiles
   pfmla.hh xfmlae.hh xnsys.hh xnspec.hh

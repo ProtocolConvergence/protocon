@@ -1,17 +1,8 @@
 
 #include <mpi.h>
+#include "main-all.cc"
 
-extern "C" {
-#include "cx/syscx.h"
-}
-#include "cx/fileb.hh"
 #include <errno.h>
-
-#include "opt.hh"
-#include "prot-ofile.hh"
-#include "search.hh"
-#include "synthesis.hh"
-#include "stabilization.hh"
 #include "cx/mpidissem.hh"
 
 using Cx::MpiDissem;
@@ -377,48 +368,65 @@ int main(int argc, char** argv)
 {
   MPI_Init (&argc, &argv);
   int argi = init_sysCx (&argc, &argv);
-  (void) argi;
+  DeclLegit( good );
+  struct timespec begtime, endtime;
   push_losefn_sysCx ((void (*) ()) MPI_Finalize);
   uint PcIdx = 0;
   uint NPcs = 1;
   MPI_Comm_rank (MPI_COMM_WORLD, (int*) &PcIdx);
   MPI_Comm_size (MPI_COMM_WORLD, (int*) &NPcs);
 
+  clock_gettime(CLOCK_MONOTONIC, &begtime);
+
   AddConvergenceOpt opt;
   ProtoconFileOpt infile_opt;
   ProtoconOpt exec_opt;
   Xn::Sys sys;
+
   sys.topology.lightweight = true;
-  bool good =
+  DoLegitLine( "" )
     protocon_options
     (sys, argi, argc, argv, opt, infile_opt, exec_opt);
+
   if (!good)  failout_sysCx ("Bad args.");
 
   int found_papc =
     stabilization_search(sys.actions, infile_opt, exec_opt, opt, PcIdx, NPcs);
   if (found_papc == (int)PcIdx) {
     DBog1("Solution found! (By PcIdx %u)", PcIdx);
-    for (uint i = 0; i < sys.actions.size(); ++i) {
-      const Xn::Net& topo = sys.topology;
-      Xn::ActSymm act;
-      topo.action(act, sys.actions[i]);
-      //DBogOF << sys.actions[i] << ' ';
-      OPut(DBogOF, act) << '\n';
-    }
-
     if (!exec_opt.ofilepath.empty_ck())
     {
       oput_protocon_file (exec_opt.ofilepath, sys,
                           exec_opt.use_espresso,
                           exec_opt.argline.ccstr());
     }
+    else {
+      for (uint i = 0; i < sys.actions.size(); ++i) {
+        const Xn::Net& topo = sys.topology;
+        Xn::ActSymm act;
+        topo.action(act, sys.actions[i]);
+        //DBogOF << sys.actions[i] << ' ';
+        OPut(DBogOF, act) << '\n';
+      }
+    }
   }
   else if (found_papc < 0 && PcIdx == 0) {
     DBog0("No solution found...");
   }
+  clock_gettime(CLOCK_MONOTONIC, &endtime);
   DBogOF.flush();
 
+  if (true) {
+    unsigned long peak = peak_memory_use_sysCx ();
+    unsigned long max_peak = 0;
+    MPI_Reduce(&peak, &max_peak, 1,
+               MPI_UNSIGNED_LONG, MPI_MIN, 0, MPI_COMM_WORLD);
+    if (PcIdx==0) {
+      oput_stats (exec_opt, begtime, endtime);
+    }
+  }
+
   lose_sysCx ();
-  return 0;
+  return good ? 0 : 1;
 }
 

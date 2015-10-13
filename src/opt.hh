@@ -46,6 +46,7 @@ public:
   Cx::String udp_ofilepath;
   Cx::String conflicts_xfilepath;
   Cx::String conflicts_ofilepath;
+  Cx::String stats_ofilepath;
   Cx::String argline;
 
   MinimizeConflictsOrder conflict_order;

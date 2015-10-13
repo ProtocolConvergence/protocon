@@ -1,0 +1,4 @@
+#!mpirun -np 4 protocon-mpi -x-args
+
+-x ../examplespec/LeaderRingHuang.prot
+

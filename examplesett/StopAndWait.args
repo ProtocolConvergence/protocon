@@ -1,0 +1,7 @@
+#!mpirun -np 4 protocon-mpi -x-args
+# Use the following command to properly execute this file:
+#   ./s/example.sh StopAndWait
+
+-x ../examplespec/StopAndWait.prot
+-prep-conflicts
+
