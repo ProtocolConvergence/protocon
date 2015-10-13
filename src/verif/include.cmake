@@ -161,11 +161,11 @@ endforeach ()
 
 foreach (f LeaderTree)
   add_test (NAME Synth_${f}
-    COMMAND protocon -x ${SpecPath}/${f}.prot -x-args ${SettPath}/${f}.args)
+    COMMAND protocon -x-args ${SettPath}/${f}.args)
   add_test (NAME TrySynt_${f}
-    COMMAND protocon -test -x ${SpecPath}/${f}.prot
-    -x-try-subset ${SolnPath}/${f}.prot
-    -x-args ${SettPath}/${f}.args)
+    COMMAND protocon -test
+    -x-args ${SettPath}/${f}.args
+    -x-try-subset ${SolnPath}/${f}.prot)
 endforeach ()
 
 
