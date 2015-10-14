@@ -1,6 +1,6 @@
 #!mpirun -np 4 protocon-mpi -x-args
 
-# AvgRuntime: 33 minutes (serial)
+# ApproxTime: 33 min (serial)
 # Using 4 processes speeds this up.
 
 -x ../examplespec/TokenRingThreeBit.prot

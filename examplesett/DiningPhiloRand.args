@@ -1,5 +1,5 @@
 
-# AvgRuntime: < 5 seconds (serial)
+# ApproxTime: < 5 sec (serial)
 
 -x ../examplespec/DiningPhiloRand.prot
 -def N 2

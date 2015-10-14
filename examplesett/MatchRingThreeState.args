@@ -1,5 +1,5 @@
 
-# AvgRuntime: < 10 seconds (serial)
+# ApproxTime: < 10 sec (serial)
 
 -x ../examplespec/MatchRingThreeState.prot
 -def N 2

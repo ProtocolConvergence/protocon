@@ -1,5 +1,5 @@
 
-# AvgRuntime: < 5 minutes (serial)
+# ApproxTime: < 5 min (serial)
 
 -x ../examplespec/DiningPhilo.prot
 -def N 2

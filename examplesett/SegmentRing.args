@@ -1,7 +1,7 @@
 
 # ApproxTime: < 30 sec (serial)
 
--x ../examplespec/MatchRing.prot
+-x ../examplespec/SegmentRing.prot
 -def N 2
 -param N 3
 -param N 4

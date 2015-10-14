@@ -1,4 +1,5 @@
-#!mpirun -np 4 protocon-mpi -x-args
+
+# ApproxTime: < 30 sec (serial)
 
 -def SeqSz 2
 -x ../examplespec/StopAndWait.prot

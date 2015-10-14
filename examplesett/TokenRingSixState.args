@@ -1,6 +1,6 @@
 #!mpirun -np 4 protocon-mpi -x-args
 
-# AvgRuntime: 25 minutes (serial)
+# ApproxTime: 25 min (serial)
 # Using 4 processes speeds this up.
 
 -def M 3

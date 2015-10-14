@@ -1,4 +1,5 @@
-# Recommended to run with a few processes.
+#!mpirun -np 4 protocon-mpi -x-args
+
 -x ../examplespec/ColorRingLocal.prot
 -def N 3
 -param N 4
@@ -8,3 +9,4 @@
 -param [ -def N 8 -no-conflict ]
 -pure
 -prep-conflicts
+
