@@ -1,4 +1,5 @@
-#!mpirun -np 4 protocon-mpi -x-args
+
+# AvgRuntime: < 1 minute (serial)
 
 -x ../examplespec/OrientDaisy.prot
 -def N 2 -def Chain 1

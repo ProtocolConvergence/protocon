@@ -1,6 +1,6 @@
-#!mpirun -np 4 protocon-mpi -x-args
+#!mpirun -np 16 protocon-mpi -x-args
 
--x ../examplespec/OrientRing.protocon
+-x ../examplespec/OrientRing.prot
 -def N 3
 -param N 4
 -param N 5
