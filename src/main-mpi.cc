@@ -422,7 +422,7 @@ int main(int argc, char** argv)
     MPI_Reduce(&peak, &max_peak, 1,
                MPI_UNSIGNED_LONG, MPI_MIN, 0, MPI_COMM_WORLD);
     if (PcIdx==0) {
-      oput_stats (exec_opt, begtime, endtime);
+      oput_stats (exec_opt, begtime, endtime, max_peak);
     }
   }
 

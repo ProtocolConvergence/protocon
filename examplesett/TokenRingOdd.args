@@ -1,0 +1,6 @@
+
+-x ../examplespec/TokenRingOdd.prot
+-def N 3
+-param N 5
+-param N 7
+

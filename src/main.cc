@@ -131,7 +131,8 @@ int main(int argc, char** argv)
 
   if (!exec_opt.stats_ofilepath.empty_ck() ||
       exec_opt.task == ProtoconOpt::SearchTask) {
-    oput_stats (exec_opt, begtime, endtime);
+    unsigned long peak = peak_memory_use_sysCx ();
+    oput_stats (exec_opt, begtime, endtime, peak);
   }
 
   lose_sysCx ();

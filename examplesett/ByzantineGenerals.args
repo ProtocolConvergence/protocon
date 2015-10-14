@@ -1,0 +1,4 @@
+
+-x ../examplespec/ByzantineGenerals.prot
+-prep-conflicts
+
