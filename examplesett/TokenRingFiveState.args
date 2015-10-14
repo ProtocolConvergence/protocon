@@ -1,5 +1,6 @@
 #!mpirun -np 16 protocon-mpi -x-args
 
+-def M 5
 -x ../examplespec/TokenRing.prot
 -def N 2
 -param N 3

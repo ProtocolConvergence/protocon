@@ -1,0 +1,17 @@
+#!mpirun -np 4 protocon-mpi -x-args
+
+# AvgRuntime: 25 minutes (serial)
+# Using 4 processes speeds this up.
+
+-def M 3
+-x ../examplespec/TokenRingSuperpos.prot
+-def N 2
+-param N 3
+-param N 4
+-param N 5
+-param N 6
+-param N 7
+-param [ -def N 8 -no-conflict ]
+-param [ -def N 9 -no-conflict ]
+-prep-conflicts
+

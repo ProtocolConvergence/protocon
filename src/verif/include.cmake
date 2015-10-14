@@ -56,7 +56,7 @@ set (ExampleSpecs
   MatchRingOneBit
   MatchRingThreeState
   OldOrientRing
-  OrientOddRing
+  OrientRingOdd
   SortChain
   SumNotTarget
   TokenRingOdd
@@ -171,7 +171,7 @@ endforeach ()
 
 set (VerifyBySynthesis
   OrientRing
-  OrientOddRing
+  OrientRingOdd
   )
 foreach (f ${VerifyBySynthesis})
   add_test (NAME VerifSyn_${f}
@@ -188,7 +188,7 @@ add_test (NAME Promela_OrientDaisy
   ${protocon_exe} -nop -x ${SolnPath}/OrientDaisy.prot -def N 5 -o-pml -)
 
 ## Ensure our tests can actually detect failure.
-add_test (NAME Verif4_OrientOddRing
-  COMMAND protocon -verify -x ${SolnPath}/OrientOddRing.prot -def N 4)
-set_tests_properties (Verif4_OrientOddRing PROPERTIES WILL_FAIL TRUE)
+add_test (NAME Verif4_OrientRingOdd
+  COMMAND protocon -verify -x ${SolnPath}/OrientRingOdd.prot -def N 4)
+set_tests_properties (Verif4_OrientRingOdd PROPERTIES WILL_FAIL TRUE)
 

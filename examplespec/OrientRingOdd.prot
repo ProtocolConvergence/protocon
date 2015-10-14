@@ -1,6 +1,6 @@
 
 // Ring orientation using the state-reading model.
-// See examplesoln/OrientOddRing.prot for the stabilizing version.
+// See examplesoln/OrientRingOdd.prot for the stabilizing version.
 
 constant N := 5;
 

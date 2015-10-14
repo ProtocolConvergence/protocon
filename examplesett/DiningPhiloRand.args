@@ -1,0 +1,9 @@
+
+# AvgRuntime: < 5 seconds (serial)
+
+-x ../examplespec/DiningPhiloRand.prot
+-def N 2
+-param N 3
+-param N 4
+-param N 5
+

@@ -1,0 +1,15 @@
+#!mpirun -np 4 protocon-mpi -x-args
+
+-x ../examplespec/OrientDaisy.prot
+-def N 2 -def Chain 1
+-param [ -def N 2 -def Chain 0 ]
+-param [ -def N 3 -def Chain 1 ]
+-param [ -def N 3 -def Chain 0 ]
+-param [ -def N 4 -def Chain 1 ]
+-param [ -def N 4 -def Chain 0 ]
+-param [ -def N 5 -def Chain 1 ]
+-param [ -def N 5 -def Chain 0 ]
+-param [ -def N 6 -def Chain 1 ]
+-param [ -def N 6 -def Chain 0 ]
+-prep-conflicts
+
