@@ -1,5 +1,5 @@
 
-# ApproxTime: < 1 min (serial)
+# ApproxTime: 2 min (serial)
 
 -x ../examplespec/OrientDaisy.prot
 -def N 2 -def Chain 1

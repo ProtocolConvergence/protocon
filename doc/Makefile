@@ -42,12 +42,13 @@ endef
 
 $(eval \
 	$(call webtex_rule,index,webtex/content.tex webtex/changes.tex webtex/thanks.tex) \
+	$(call webtex_rule,benchmark,) \
 	$(call webtex_rule,legit,) \
 	$(call webtex_rule,examplelist,) \
 	$(call webtex_rule,tut,) \
 	$(call webtex_rule,example/ColorRing,$(call example_deps,ColorRing)) \
 	$(call webtex_rule,example/MatchRingOneBit,$(call example_deps,MatchRingOneBit)) \
-	$(call webtex_rule,example/OrientOddRing,$(call example_deps,OrientOddRing)) \
+	$(call webtex_rule,example/OrientRingOdd,$(call example_deps,OrientRingOdd)) \
 	$(call webtex_rule,example/TokenRingThreeBit,$(call example_deps,TokenRingThreeBit)) \
 	)
 

@@ -10,7 +10,7 @@ The topology is taken from the paper by Hoepman titled \textit{Uniform Determini
 
 \section{Problem Instance}
 
-\codeinputlisting{../../../examplespec/OrientOddRing.prot}
+\codeinputlisting{../../../examplespec/OrientRingOdd.prot}
 
 Each process \ttvbl{P[i]} reads \ttvbl{color[i-1]}, \ttvbl{color[i+1]}, \ttvbl{phase[i-1]}, and \ttvbl{phase[i+1]} and writes \ttvbl{color[i]}, \ttvbl{phase[i]}, \ttvbl{way[2*i]}, and \ttvbl{way[2*i+1]}.
 
@@ -24,7 +24,7 @@ Also, the behavior of the protocol within the new invariant $I'$ must be the sam
 
 \section{Stabilizing Version}
 
-\codeinputlisting{../../../examplesoln/OrientOddRing.prot}
+\codeinputlisting{../../../examplesoln/OrientRingOdd.prot}
 
 \end{document}
 

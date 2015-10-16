@@ -1,0 +1,47 @@
+
+\title{Protocon Benchmarks}
+%\author{}
+\date{}
+
+\begin{document}
+
+\begin{tabular}{l|c|r|r|r|l}
+& \begin{center}\textbf{Protocol}\end{center}
+& \begin{center}\textbf{Compute}\end{center}
+& \begin{center}\textbf{Compute}\end{center}
+& \begin{center}\textbf{Peak}\end{center}
+&
+\\ \begin{center}\textbf{Protocol}\end{center}
+& \begin{center}\textbf{Processes}\end{center}
+& \begin{center}\textbf{Processes}\end{center}
+& \begin{center}\textbf{Time}\end{center}
+& \begin{center}\textbf{Memory}\end{center}
+& \textbf{Notes}
+\\ \hline 3-State Token Ring (Dijkstra)
+& 2--5  & 16 & 26h57m30.300s & 113.9 MB & Bidirectional ring.
+\\ 4-State Token Chain (Dijkstra)
+& 2--4  & 16 &     1m00.763s &  97.7 MB & Bidirectional chain (line).
+\\ 5-State Token Ring
+& 2--9  & 16 & 12h07m15.277s &2486.8 MB &
+\\ 6-State Token Ring
+& 2--9  &  4 &    20m17.846s & 266.6 MB & Allows actions that do not pass a token.
+\\ 3-Bit Token Ring (Gouda and Haddix)
+& 2--9  &  4 &    17m17.564s & 495.7 MB & Allows actions that do not pass a token.
+\\ \hline Odd-Sized Ring Orientation (Hoepman)
+& 3,5,7 &  4 &    34m05.289s & 104.7 MB & Only works for rings of odd-size. Not necessarily silent.
+\\ Ring Orientation
+& 3--9  & 16 &    13m06.687s & 176.5 MB &
+\\ Daisy Chain Orientation
+& 2--6  &  1 &     2m01.112s &  78.8 MB & Works on ring and chain topologies.
+\\ \hline Stop-and-Wait
+& 2     &  4 &     3m03.217s & 101.9 MB & Ternary version of the alternating-bit protocol.
+\\ \hline 3-Coloring on Ring
+& 2--5  &  1 &        0.067s  & 38.5 MB &
+\\ Distributed 3-Coloring on Ring
+& 2--4  &  1 &       24.786s &  75.7 MB & A 1-capacity buffer between each process. Uses randomization.
+\\ Distance-2 5-Coloring on Ring
+& 3--5  &  4 &     7m24.513s & 810.8 MB & Uses randomization.
+\end{tabular}
+
+\end{document}
+

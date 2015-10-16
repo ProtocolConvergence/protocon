@@ -9,8 +9,8 @@ variable x[Nat % N] <- Nat % 2;
 
 process Bot[i <- Int % 1]
 {
-  write: x[0];
-  read: x[1];
+  write: x[i];
+  read: x[i+1];
 }
 
 process P[j <- Int % (N-2)]
@@ -23,7 +23,8 @@ process P[j <- Int % (N-2)]
 
 process Top[j <- Int % 1]
 {
-  read: x[N-2];
-  write: x[N-1];
+  let i := N-1;
+  read: x[i-1];
+  write: x[i];
 }
 
