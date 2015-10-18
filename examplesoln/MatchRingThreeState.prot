@@ -1,9 +1,9 @@
 
 // Matching ring protocol.
 // Each process has a variable whose value represents a direction.
-//  x[i] == 0  means P[i] is pointing to P[i-1].
-//  x[i] == 1  means P[i] is pointing to itself.
-//  x[i] == 2  means P[i] is pointing to P[i+1].
+//  m[i] == 0  means P[i] is pointing to P[i-1].
+//  m[i] == 1  means P[i] is pointing to itself.
+//  m[i] == 2  means P[i] is pointing to P[i+1].
 // Our goal is to end up in a state where processes are pointing to each other
 // or, if both P[i-1] and P[i+1] are pointing away from P[i], then P[i] should
 // point to itself.
@@ -14,28 +14,28 @@ constant L := 0;
 constant S := 1;
 constant R := 2;
 
-variable x[Nat % N] <- Nat % 3;
+variable m[Nat % N] <- Nat % 3;
 
 process P[i <- Nat % N]
 {
-  read:  x[i-1];
-  write: x[i];
-  read:  x[i+1];
+  read:  m[i-1];
+  write: m[i];
+  read:  m[i+1];
 
   (future & silent)
-    (   x[i-1]==R && x[i]==L
-     || x[i-1]==L && x[i]==S && x[i+1]==R
-     ||              x[i]==R && x[i+1]==L
+    (   m[i-1]==R && m[i]==L
+     || m[i-1]==L && m[i]==S && m[i+1]==R
+     ||              m[i]==R && m[i+1]==L
     );
 
   puppet action:
-    ( x[i-1]!=R && x[i]!=R && x[i+1]!=R --> x[i]:=R; )
-    ( x[i-1]!=R && x[i]!=S && x[i+1]==R --> x[i]:=S; )
-    ( x[i-1]==R && x[i]!=L && x[i+1]!=L --> x[i]:=L; )
+    ( m[i-1]!=R && m[i]!=R && m[i+1]!=R --> m[i]:=R; )
+    ( m[i-1]!=R && m[i]!=S && m[i+1]==R --> m[i]:=S; )
+    ( m[i-1]==R && m[i]!=L && m[i+1]!=L --> m[i]:=L; )
 
     // Last two action can be rewritten as:
-    //( x[i-1]==R && x[i]==S              --> x[i]:=L; )
-    //( x[i-1]==R && x[i]==R && x[i+1]!=L --> x[i]:=L; )
+    //( m[i-1]==R && m[i]==S              --> m[i]:=L; )
+    //( m[i-1]==R && m[i]==R && m[i+1]!=L --> m[i]:=L; )
     ;
 }
 

@@ -10,16 +10,20 @@ html/ html/example/ pubhtml/ pubhtml/example/ pubhtml/examplespec/ pubhtml/examp
 	mkdir -p $@
 	chmod a+rx $@
 
+SPACE :=
+SPACE +=
+
 define webtex_rule
 Targets += html/$(1).html
 PubTargets += pubhtml/$(1).html
 
 html/$(1).html: webtex/$(1).tex $(2)
 	$(tex2web) -x $$< -o $$@ \
-		-def examplespec ../../examplespec \
-		-def examplesynt ../../examplesynt \
-		-def examplesoln ../../examplesoln \
-		-def examplesett ../../examplesett
+		-def rel $(subst $(SPACE),/,$(strip $(patsubst %,..,$(subst /, ,$(1)))))/.. \
+		-def examplespec '\rel/examplespec' \
+		-def examplesynt '\rel/examplesynt' \
+		-def examplesoln '\rel/examplesoln' \
+		-def examplesett '\rel/examplesett'
 	chmod a+r,a-x $$@
 
 html/$(1).html: | $(dir html/$(1))
@@ -46,10 +50,10 @@ $(eval \
 	$(call webtex_rule,legit,) \
 	$(call webtex_rule,examplelist,) \
 	$(call webtex_rule,tut,) \
-	$(call webtex_rule,example/ColorRing,$(call example_deps,ColorRing)) \
-	$(call webtex_rule,example/MatchRingOneBit,$(call example_deps,MatchRingOneBit)) \
-	$(call webtex_rule,example/OrientRingOdd,$(call example_deps,OrientRingOdd)) \
-	$(call webtex_rule,example/TokenRingThreeBit,$(call example_deps,TokenRingThreeBit)) \
+	$(call webtex_rule,example/Coloring,$(call example_deps,ColorRing)) \
+	$(call webtex_rule,example/Matching,$(call example_deps,MatchRingOneBit)) \
+	$(call webtex_rule,example/Orientation,$(call example_deps,OrientRingOdd)) \
+	$(call webtex_rule,example/TokenPassing,$(call example_deps,TokenRingThreeBit)) \
 	)
 
 define prot_rule

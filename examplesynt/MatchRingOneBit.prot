@@ -1,19 +1,23 @@
 
-constant N := 4;
+constant N := 3;
 
-puppet variable x[Int % N] <- Int % 2;
-shadow variable m[Int % N] <- Int % 3;
+constant L := 0;
+constant S := 1;
+constant R := 2;
+
+puppet variable x[Nat % N] <- Nat % 2;
+direct variable m[Nat % N] <- Nat % 3;
 
 // The following cases are P[i] pointing
 // to P[i-1], itself, or P[i+1] respectively.
 ((future & silent) % puppet)
-  (forall i <- Int % N :
-      m[i-1] == 2 && m[i] == 0
-   || m[i-1] == 0 && m[i] == 1 && m[i+1] == 2
-   ||                m[i] == 2 && m[i+1] == 0
+  (forall i <- Nat % N :
+      m[i-1]==R && m[i]==L
+   || m[i-1]==L && m[i]==S && m[i+1]==R
+   ||              m[i]==R && m[i+1]==L
   );
 
-process P[i <- Int % N]
+process P[i <- Nat % N]
 {
   read: x[i-1];
   write: x[i];
@@ -21,13 +25,13 @@ process P[i <- Int % N]
   write: m[i];
 
   puppet action:
-    ( x[i-1]==1 && x[i]==1 && x[i+1]==1 --> x[i]:=0; m[i]:=0; )
-    ( x[i-1]==0 && x[i]==1 && x[i+1]==1 --> x[i]:=0; m[i]:=1; )
-    ( x[i-1]==0 && x[i]==0 && x[i+1]==0 --> x[i]:=1; m[i]:=2; )
+    ( x[i-1]==1 && x[i]==1 && x[i+1]==1 --> x[i]:=0; m[i]:=L; )
+    ( x[i-1]==0 && x[i]==1 && x[i+1]==1 --> x[i]:=0; m[i]:=S; )
+    ( x[i-1]==0 && x[i]==0 && x[i+1]==0 --> x[i]:=1; m[i]:=R; )
 
-    ( x[i-1]==1 && x[i]==0              --> m[i]:=0; )
-    ( x[i-1]==0 && x[i]==0 && x[i+1]==1 --> m[i]:=1; )
-    ( x[i-1]==0 && x[i]==1 && x[i+1]==0 --> m[i]:=2; )
+    ( x[i-1]==1 && x[i]==0              && m[i]!=L --> m[i]:=L; )
+    ( x[i-1]==0 && x[i]==0 && x[i+1]==1 && m[i]!=S --> m[i]:=S; )
+    ( x[i-1]==0 && x[i]==1 && x[i+1]==0 && m[i]!=R --> m[i]:=R; )
     ;
 }
 

@@ -5,10 +5,28 @@
 
 \begin{document}
 
+\tableofcontents
+
+\section{Ring Orientation}
+\label{sec:OrientRing}
+
+\quicksec{OrientRing}
+(\href{\examplespec/OrientRing.prot}{spec},
+\href{\examplesett/OrientRing.args}{args},
+\href{\examplesoln/OrientRing.prot}{soln})
+
+\section{Odd-Sized Ring Orientation}
+\label{sec:OrientRingOdd}
+
+\quicksec{OrientRingOdd}
+(\href{\examplespec/OrientRingOdd.prot}{spec},
+\href{\examplesett/OrientRingOdd.args}{args},
+\href{\examplesoln/OrientRingOdd.prot}{soln})
+
 The \ilfile{examplespec/OddOrientRing.prot} file specifies a bidirectional ring topology where processes wish to agree with each other on a direction around the ring.
 The topology is taken from the paper by Hoepman titled \textit{Uniform Deterministic Self-Stabilizing Ring-Orientation on Odd-Length Rings}.
 
-\section{Problem Instance}
+\subsection{Problem Instance}
 
 \codeinputlisting{../../../examplespec/OrientRingOdd.prot}
 
@@ -22,9 +40,18 @@ The \ttvbl{color} and \ttvbl{phase} variables are labeled as \ilcode{puppet} bec
 The invariant is labeled as \ilcode{((future & shadow) % puppet)} since we only require closure within a new invariant $I'$ rather than $I$.
 Also, the behavior of the protocol within the new invariant $I'$ must be the same as the underlying (i.e., shadow) protocol within $I$.
 
-\section{Stabilizing Version}
+\subsection{Stabilizing Version}
 
 \codeinputlisting{../../../examplesoln/OrientRingOdd.prot}
+
+\section{Daisy Chain Orientation}
+\label{sec:OrientDaisy}
+
+\quicksec{OrientDaisy}
+(\href{\examplespec/OrientDaisy.prot}{spec},
+\href{\examplesett/OrientDaisy.args}{args},
+\href{\examplesynt/OrientDaisy.prot}{synt},
+\href{\examplesoln/OrientDaisy.prot}{soln})
 
 \end{document}
 

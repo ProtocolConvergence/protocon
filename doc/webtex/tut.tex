@@ -18,10 +18,12 @@ Where \ilcode{YYYYMMDD} is the current version number.
 %Tip: You can copy and paste commands by highlighting the text and middle-clicking in a terminal.
 %(Though it's not always the best thing to do \href{http://thejh.net/misc/website-terminal-copy-paste}{security-wise}).
 
+\tableofcontents
+
 
 \section{Coloring}
 
-The file \url{\examplespec/ColorRing.prot} specifies a bidirectional ring topology where each process wishes to obtain a different value than its two neighbors.
+The file \href{\examplespec/ColorRing.prot}{examplespec/ColorRing.prot} specifies a bidirectional ring topology where each process wishes to obtain a different value than its two neighbors.
 Each process has $3$ colors to choose from.
 We can synthesize actions for this protocol by issuing the command:
 \begin{code}
@@ -66,7 +68,7 @@ Clicking the \ilkey{or} or \ilkey{true} radio button for the \ilkey{invariant} p
 
 \section{Maximal Matching}
 
-The file \url{\examplespec/MatchRingThreeState.prot} specifies a bidirectional ring topology where each process wishes to match with one of its neighbors.
+The file \href{\examplespec/MatchRingThreeState.prot}{examplespec/MatchRingThreeState.prot} specifies a bidirectional ring topology where each process wishes to match with one of its neighbors.
 When \ttvbl{x[i]} is $0$ or $2$, process \ttvbl{P[i]} is pointing to \ttvbl{P[i-1]} or \ttvbl{P[i+1]} respectively.
 Two processes are matched together when they point to each other.
 Sometimes a perfect matching is impossible, so any process \ttvbl{P[i]} can remain unmatched (with \ttvbl{x[i]} equaling $1$) when both of its neighboring processes are matched.
@@ -105,7 +107,7 @@ Let's do this for rings of size $3$, $4$, and $5$.
 
 \section{Sum-Not-2}
 
-The file \url{\examplespec/SumNotTwo.prot} specifies a unidirectional ring topology where we do not want the sum of any two consecutive values to equal $2$.
+The file \href{\examplespec/SumNotTwo.prot}{examplespec/SumNotTwo.prot} specifies a unidirectional ring topology where we do not want the sum of any two consecutive values to equal $2$.
 Open the file in the GUI and add the following three actions at the end of the process block:
 \begin{code}
   puppet action:
@@ -133,7 +135,7 @@ We will see how Protocon can optimize performance and also help with manual cons
 
 Try the following:
 \begin{enumerate}
-\item Specify the sum-not-odd problem using \url{\examplespec/SumNotTwo.prot} as a template.
+\item Specify the sum-not-odd problem using \href{\examplespec/SumNotTwo.prot}{examplespec/SumNotTwo.prot} as a template.
  \begin{itemize}
  \item Use the mod operator \%.
  \item Keep variable domains at size $M=3$.
@@ -175,7 +177,7 @@ We want to cast a particular shadow upon a screen by placing a well-crafted pupp
 Instead of building the puppet ourselves, we can ask a clever puppeteer to build it for us.
 In this metaphor, the clever puppeteer is Protocon, the shadow is our desired invariant and behavior, the puppet is the synthesized protocol.
 
-The \url{\examplespec/MatchRing.prot} file uses this technique to specify matching on edge variables where:
+The \href{\examplespec/MatchRing.prot}{examplespec/MatchRing.prot} file uses this technique to specify matching on edge variables where:
 \begin{enumerate}
 \item No two adjacent edges can be selected.
 \item At least one of every three consecutive edges must be selected.
@@ -183,10 +185,10 @@ The \url{\examplespec/MatchRing.prot} file uses this technique to specify matchi
 Edge variables are declared with the \ilkey{shadow} keyword since they will not exist in the implementation, therefore their values must be derived from the \ilkey{puppet} variables.
 Generally, the invariant and behavior constraints should only apply for some values of puppet variables, so these constraints are specified as \ilcode{((future & silent) % puppet)} rather than the usual \ilcode{(future & silent)}.
 
-The \url{\examplesynt/MatchRing.prot} contains a synthesized protocol for this system.
+The \href{\examplesynt/MatchRing.prot}{examplesynt/MatchRing.prot} contains a synthesized protocol for this system.
 Notice that the \ttvbl{e} values are fully derived from \ttvbl{x} values.
 Therefore, the protocol can be implemented without \ttvbl{e} values at all!
-See \url{\examplesoln/MatchRingOneBit.prot} for this transformation.
+See \href{\examplesoln/MatchRingOneBit.prot}{examplesoln/MatchRingOneBit.prot} for this transformation.
 
 
 \section{Next Steps}

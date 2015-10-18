@@ -1,23 +1,28 @@
+constant N := 3;
 
-constant N := 4;
+constant L := 0;
+constant S := 1;
+constant R := 2;
 
-puppet variable x[Int % N] <- Int % 2;
-shadow variable m[Int % N] <- Int % 3;
+// Superposed binary variables.
+puppet variable x[Nat % N] <- Nat % 2;
+
+// Underlying ternary variables.
+direct variable m[Nat % N] <- Nat % 3;
 
 // The following cases are P[i] pointing
 // to P[i-1], itself, or P[i+1] respectively.
 ((future & silent) % puppet)
-  (forall i <- Int % N :
-      m[i-1] == 2 && m[i] == 0
-   || m[i-1] == 0 && m[i] == 1 && m[i+1] == 2
-   ||                m[i] == 2 && m[i+1] == 0
+  (forall i <- Nat % N :
+      m[i-1]==R && m[i]==L
+   || m[i-1]==L && m[i]==S && m[i+1]==R
+   ||              m[i]==R && m[i+1]==L
   );
 
-process P[i <- Int % N]
+process P[i <- Nat % N]
 {
   read: x[i-1];
   write: x[i];
   read: x[i+1];
   write: m[i];
 }
-
