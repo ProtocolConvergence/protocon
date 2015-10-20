@@ -48,8 +48,9 @@ $(eval \
 	$(call webtex_rule,index,webtex/content.tex webtex/changes.tex webtex/thanks.tex) \
 	$(call webtex_rule,benchmark,) \
 	$(call webtex_rule,legit,) \
-	$(call webtex_rule,examplelist,) \
+	$(call webtex_rule,permit,) \
 	$(call webtex_rule,tut,) \
+	$(call webtex_rule,example/index,) \
 	$(call webtex_rule,example/Coloring,$(call example_deps,ColorRing)) \
 	$(call webtex_rule,example/Matching,$(call example_deps,MatchRingOneBit)) \
 	$(call webtex_rule,example/Orientation,$(call example_deps,OrientRingOdd)) \
