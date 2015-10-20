@@ -29,16 +29,16 @@ Each node in the graph is assigned a color.
 For this assignment to be called a \textit{coloring}, each node must have a different color than the nodes adjacent to it.
 In a computer network, a coloring applies to processes that communicate directly with each other rather than nodes connected by edges.
 \begin{itemize}
-\item ColorRing \href{example/Coloring.html#sec:ColorRing}{\LinkText}
+\item ColorRing \href{Coloring.html#sec:ColorRing}{\LinkText}
 - 3-coloring on a ring.
 \item ColorRingSymm (\href{\examplespec/ColorRingSymm.prot}{spec}, \href{\examplesoln/ColorRingSymm.prot}{soln})
 - Unoriented ring.
 \item ColorUniRing (\href{\examplespec/ColorUniRing.prot}{spec}, \href{\examplesoln/ColorUniRing.prot}{soln})
 - Randomized 3-coloring on a unidirectional ring.
-\item ColorRingLocal \href{example/Coloring.html#sec:ColorRingLocal}{\LinkText}
+\item ColorRingLocal \href{Coloring.html#sec:ColorRingLocal}{\LinkText}
 - Randomized distance-2 coloring on a unidirectional ring using $5$ colors.
 Neither a process or its neighbors can have the same color as another neighbor.
-\item ColorRingDistrib \href{example/Coloring.html#sec:ColorRingDistrib}{\LinkText}
+\item ColorRingDistrib \href{Coloring.html#sec:ColorRingDistrib}{\LinkText}
 - Randomized 3-coloring on a ring where processes have communication delay.
 \item ColorChain (\href{\examplespec/ColorChain.prot}{spec})
 - 2-coloring on a chain.
@@ -65,14 +65,14 @@ gives definite impossibility results at around $8$ processes.
 A matching is a set of edges which do not share any common vertices.
 For a matching to be \textit{maximal}, it must be impossible to add another edge to the set without breaking the matching property.
 \begin{itemize}
-\item MatchRing \href{example/Matching.html#sec:MatchRing}{\LinkText}
+\item MatchRing \href{Matching.html#sec:MatchRing}{\LinkText}
 - Natural specification for matching using the edges in the ring.
 This gives the 1-bit solution.
-\item MatchRingThreeState \href{example/Matching.html#sec:MatchRingThreeState}{\LinkText}
+\item MatchRingThreeState \href{Matching.html#sec:MatchRingThreeState}{\LinkText}
 - Maximal matching on a ring where processes point in certain directions.
-\item MatchRingOneBit \href{example/Matching.html#sec:MatchRingOneBit}{\LinkText}
+\item MatchRingOneBit \href{Matching.html#sec:MatchRingOneBit}{\LinkText}
 - Using the 3-state specification, find a matching using 1 bit per process.
-\item SegmentRing \href{example/Matching.html#sec:SegmentRing}{\LinkText}
+\item SegmentRing \href{Matching.html#sec:SegmentRing}{\LinkText}
 - A problem similar to matching where a ring is segmented into chains.
 \end{itemize}
 
@@ -90,13 +90,13 @@ Easy to synthesize, but solution is manually simplified.
 \section{Orientation}
 
 \begin{itemize}
-\item OrientDaisy \href{example/Orientation.html#sec:OrientDaisy}{\LinkText}
+\item OrientDaisy \href{Orientation.html#sec:OrientDaisy}{\LinkText}
 - Silent orientation for daisy chains (either ring and chain), verified for $2$ to $15$ processes.
 The version in \href{\examplesoln}{examplesoln} behaves similarly, is simpler, but is slightly less optimal.
-\item OrientRing \href{example/Orientation.html#sec:OrientRing}{\LinkText}
+\item OrientRing \href{Orientation.html#sec:OrientRing}{\LinkText}
 - Manually designed silent ring orientation, verified for $2$ to $26$ processes.
 Also works under synchronous scheduler.
-\item OrientRingOdd \href{example/Orientation.html#sec:OrientRingOdd}{\LinkText}
+\item OrientRingOdd \href{Orientation.html#sec:OrientRingOdd}{\LinkText}
 - From \href{http://dx.doi.org/10.1007/BFb0020439}{Hoepman}.
 \item OrientRingViaToken (\href{\examplespec/OrientRingViaToken.prot}{spec}, \href{\examplesoln/OrientRingViaToken.prot}{soln})
 - From \href{http://dx.doi.org/10.1006/inco.1993.1029}{Israeli and Jalfon}.
@@ -105,21 +105,21 @@ Also works under synchronous scheduler.
 \section{Token Passing}
 
 \begin{itemize}
-\item TokenRingFiveState \href{example/TokenPassing.html#sec:TokenRingFiveState}{\LinkText}
+\item TokenRingFiveState \href{TokenPassing.html#sec:TokenRingFiveState}{\LinkText}
 - 5-state token ring whose behavior is specified with shadow variables.
-\item TokenRingSixState \href{example/TokenPassing.html#sec:TokenRingSixState}{\LinkText}
+\item TokenRingSixState \href{TokenPassing.html#sec:TokenRingSixState}{\LinkText}
 - 6-state token ring specified with variable superposition.
-\item TokenRingThreeBit \href{example/TokenPassing.html#sec:TokenRingThreeBit}{\LinkText}
+\item TokenRingThreeBit \href{TokenPassing.html#sec:TokenRingThreeBit}{\LinkText}
 - 3-bit token ring from \href{http://dx.doi.org/10.1006/jpdc.1996.0066}{Gouda and Haddix}.
 \item TokenRingFourState (\href{\examplesynt/TokenRingFourState.prot}{synt})
 - 4-state token ring specified with variable superposition.
 This version is only stabilizing for $2$ to $7$ processes.
 It operates much like the 3-bit token ring.
-\item TokenRingDijkstra \href{example/TokenPassing.html#sec:TokenRingDijkstra}{\LinkText}
+\item TokenRingDijkstra \href{TokenPassing.html#sec:TokenRingDijkstra}{\LinkText}
 - Dijkstra's stabilizing token ring.
-\item TokenChainDijkstra \href{example/TokenPassing.html#sec:TokenChainDijkstra}{\LinkText}
+\item TokenChainDijkstra \href{TokenPassing.html#sec:TokenChainDijkstra}{\LinkText}
 - Dijkstra's token passing on a chain topology.
-\item TokenRingThreeState \href{example/TokenPassing.html#sec:TokenRingThreeState}{\LinkText}
+\item TokenRingThreeState \href{TokenPassing.html#sec:TokenRingThreeState}{\LinkText}
 - Bidirectional token ring with three states per process.
 One solution is from Dijkstra, the other is from \href{http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.153.6017}{Chernoy, Shalom, and Zaks}.
 \item TokenRingOdd (\href{\examplespec/TokenRingOdd.prot}{spec}, \href{\examplesoln/TokenRingOdd.prot}{soln})

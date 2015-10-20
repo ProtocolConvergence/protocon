@@ -293,14 +293,14 @@ foreach (f ${DistribSpecs})
   install (FILES ${TopPath}/examplespec/${f}.prot DESTINATION examplespec)
 endforeach ()
 
+cat_parenthesized (DistribSetts ${MetaPath}/examplesett.files)
+foreach (f ${DistribSetts})
+  install (FILES ${TopPath}/examplesett/${f}.args DESTINATION examplesett)
+endforeach ()
+
 cat_parenthesized (DistribSynts ${MetaPath}/examplesynt.files)
 foreach (f ${DistribSynts})
   install (FILES ${TopPath}/examplesynt/${f}.prot DESTINATION examplesynt)
-endforeach ()
-
-cat_parenthesized (DistribSolns ${MetaPath}/examplesoln.files)
-foreach (f ${DistribSolns})
-  install (FILES ${TopPath}/examplesoln/${f}.prot DESTINATION examplesoln)
 endforeach ()
 
 cat_parenthesized (DistribSolns ${MetaPath}/examplesoln.files)
@@ -317,7 +317,7 @@ install (DIRECTORY ${TopPath}/doc/html/ DESTINATION doc/html)
 #   cpack
 include (InstallRequiredSystemLibraries)
 string (TIMESTAMP CPACK_PACKAGE_VERSION "%Y.%m.%d")
-set (CPACK_PACKAGE_VERSION "2015.09.29")
+set (CPACK_PACKAGE_VERSION "2015.10.20")
 #set (CPACK_GENERATOR "STGZ;TGZ;ZIP")
 set (CPACK_GENERATOR "ZIP")
 set (MyName "Alex Klinkhamer")

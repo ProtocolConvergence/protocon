@@ -32,6 +32,7 @@ ShadowColorRing
 SortChain
 SortRing
 StopAndWait
+SumNotOdd
 SumNotTarget
 SumNotTwo
 TokenChainDijkstra
