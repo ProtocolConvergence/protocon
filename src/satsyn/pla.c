@@ -108,15 +108,13 @@ oput_pla_pc (OFile* of, const XnPc* pc, const XnSys* sys,
 do_pla_XnSys (const XnSys* sys, const TableT(XnRule) rules)
 {
   DeclLegit( good );
-  DecloStack1( OSPc, ospc, dflt_OSPc () );
+  OSPc ospc[] = default;
   OFile* of = stdout_OFile ();
 
 #if 0
-  FileB ofb;
-  init_FileB (&ofb);
-  seto_FileB (&ofb, true);
-  open_FileB (&ofb, 0, "legit0.esp");
-  of = &ofb.xo;
+  OFileB ofb = default;
+  open_FileB (&ofb.fb, 0, "legit0.esp");
+  of = &ofb.of;
   oput_pla_legit (of, sys);
 #endif
 

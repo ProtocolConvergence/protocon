@@ -122,6 +122,12 @@ struct XnSys
     /** Allow new transitions in the set of legitimate states.**/
     bool syn_legit;
 };
+#define DEFAULT_XnSys \
+{ DEFAULT_Table, DEFAULT_Table, DEFAULT_Table, \
+  DEFAULT_BitTable, \
+  DEFAULT_Table, \
+  0, 0, false \
+}
 
 XnVblSymm
 cons2_XnVblSymm (const char* name, XnDomSz domsz);

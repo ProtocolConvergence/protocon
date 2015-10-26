@@ -184,16 +184,8 @@ lose_XnRule (XnRule* g)
     XnSys
 dflt_XnSys ()
 {
-    XnSys sys;
-    InitTable( sys.pcsymms );
-    InitTable( sys.pcs );
-    InitTable( sys.vbls );
-    sys.legit = dflt_BitTable ();
-    InitTable( sys.legit_rules );
-    sys.nstates = 0;
-    sys.n_rule_steps = 0;
-    sys.syn_legit = false;
-    return sys;
+  XnSys sys = default;
+  return sys;
 }
 
     void

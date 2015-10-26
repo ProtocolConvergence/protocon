@@ -8,9 +8,8 @@ static
 inst_coloring_XnSys (uint npcs, uint domsz)
 {
     DeclTable( XnDomSz, vs );
-    DecloStack1( XnSys, sys, dflt_XnSys () );
-    OFile name[1];
-    init_OFile( name );
+    XnSys sys[] = default;
+    OFile name[] = default;
 
 #if 0
     const bool symmetric = true;

@@ -1,0 +1,21 @@
+#!/bin/sh
+
+pmlf=$1
+if [ ! "$pmlf" ]
+then
+  echo "Give a filename!" >&2
+  exit 1
+fi
+
+stepsarg=$2
+
+if [ "$stepsarg" ]
+then
+  echo "Replaying $stepsarg steps." >&2
+  stepsarg=-u$stepsarg
+else
+  echo "Replaying all steps." >&2
+fi
+
+exec spin -v $stepsarg -t "$pmlf"
+

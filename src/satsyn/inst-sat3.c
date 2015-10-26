@@ -144,11 +144,8 @@ inst_sat3_XnSys (const CnfFmla* fmla)
     uint x_idcs[3];
     uint y_idcs[3];
     uint sat_idx;
-    DecloStack( XnSys, sys );
-    OFile name[1];
-    init_OFile( name );
-
-    *sys = dflt_XnSys ();
+    XnSys sys[] = default;
+    OFile name[] = default;
 
     {:for (r ; 3)
         XnVbl x = dflt_XnVbl ();
@@ -240,11 +237,8 @@ inst_sat3_ring_XnSys (const CnfFmla* fmla, const bool use_sat)
     uint y_idcs[ArraySz( x_idcs )];
     uint sat_idcs[ArraySz( x_idcs )];
     const uint npcs = ArraySz( x_idcs );
-    DecloStack( XnSys, sys );
-    OFile name[1];
-    init_OFile( name );
-
-    *sys = dflt_XnSys ();
+    XnSys sys[] = default;
+    OFile name[] = default;
 
     {:for (r ; npcs)
         PushTable( sys->pcs, dflt_XnPc () );

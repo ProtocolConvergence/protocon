@@ -11,9 +11,8 @@ inst_dijkstra4state_XnSys (uint npcs)
     DeclTable( uint, x_idcs );
     DeclTable( uint, up_idcs );
     DeclTable( XnDomSz, vs );
-    DecloStack1( XnSys, sys, dflt_XnSys () );
-    OFile name[1];
-    init_OFile( name );
+    XnSys sys[] = default;
+    OFile name[] = default;
 
     /* bottom:
      * x up=true

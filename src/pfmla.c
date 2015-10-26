@@ -264,7 +264,7 @@ sat_ck_PFmla (const PFmla g)
 
   Claim( g->ctx->vt->tautology_ck_fn );
   {
-    PFmla c = dflt_PFmla ();
+    PFmla c = default;
     bool ret;
     g->ctx->vt->op2_fn (g->ctx, &c, BitOp_NOT0, g, g);
     ret = g->ctx->vt->tautology_ck_fn (g->ctx, c);
@@ -299,7 +299,7 @@ equiv_ck_PFmla (const PFmla a, const PFmla b)
 
   Claim( a->ctx->vt->tautology_ck_fn );
   {
-    PFmla c = dflt_PFmla ();
+    PFmla c = default;
     bool ret;
     a->ctx->vt->op2_fn (a->ctx, &c, BitOp_XNOR, a, b);
     ret = a->ctx->vt->tautology_ck_fn (a->ctx, c);
@@ -332,7 +332,7 @@ overlap_ck_PFmla (const PFmla a, const PFmla b)
     return a->ctx->vt->overlap_ck_fn (a->ctx, a, b);
 
   {
-    PFmla c = dflt_PFmla ();
+    PFmla c = default;
     bool ret;
     and_PFmla (&c, a, b);
     ret = sat_ck_PFmla (c);
@@ -364,7 +364,7 @@ subseteq_ck_PFmla (const PFmla a, const PFmla b)
   VTCall( a->ctx->vt, return,subseteq_ck_fn,(a->ctx, a, b) );
 
   {
-    PFmla c = dflt_PFmla ();
+    PFmla c = default;
     bool ret;
     or_PFmla (&c, a, b);
     ret = equiv_ck_PFmla (c, b);
@@ -641,9 +641,9 @@ pick_pre_PFmla (PFmla* dst, const PFmla a)
   else
   {
     PFmlaCtx* ctx = a->ctx;
-    PFmla eq = dflt_PFmla ();
+    PFmla eq = default;
     PFmla conj = dflt1_PFmla (true);
-    PFmla tmp_conj = dflt_PFmla ();
+    PFmla tmp_conj = default;
 
     for (uint i = 0; i < ctx->vbls.sz; ++i) {
       const PFmlaVbl* vbl = vbl_of_PFmlaCtx (ctx, i);
@@ -678,9 +678,9 @@ state_of_PFmla (uint* state, const PFmla a, const uint* indices, uint n)
   else
   {
     PFmlaCtx* ctx = a->ctx;
-    PFmla eq = dflt_PFmla ();
+    PFmla eq = default;
     PFmla conj = dflt1_PFmla (true);
-    PFmla tmp_conj = dflt_PFmla ();
+    PFmla tmp_conj = default;
 
     for (i ; n) {
       const PFmlaVbl* vbl = vbl_of_PFmlaCtx (ctx, indices[i]);
@@ -716,8 +716,8 @@ eq_PFmlaVbl (PFmla* dst, const PFmlaVbl* a, const PFmlaVbl* b)
   }
   else {
     const uint n = (a->domsz <= b->domsz) ? a->domsz : b->domsz;
-    PFmla tmp_a = dflt_PFmla ();
-    PFmla tmp_b = dflt_PFmla ();
+    PFmla tmp_a = default;
+    PFmla tmp_b = default;
 
     wipe1_PFmla (dst, false);
     for (uint i = 0; i < n; ++i) {
@@ -753,8 +753,8 @@ img_eq_PFmlaVbl (PFmla* dst, const PFmlaVbl* a, const PFmlaVbl* b)
   else {
     // n is the domain size of RHS since img_eqc_PFmla() does mod.
     const uint n = b->domsz;
-    PFmla tmp_a = dflt_PFmla ();
-    PFmla tmp_b = dflt_PFmla ();
+    PFmla tmp_a = default;
+    PFmla tmp_b = default;
 
     wipe1_PFmla (dst, false);
     for (uint i = 0; i < n; ++i) {

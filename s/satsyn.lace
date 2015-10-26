@@ -1,0 +1,19 @@
+#!/bin/env lace
+
+# Run in protocon/tmp/ so the relative path to protocon/s/ is ../s/.
+$(H: s_path) ../s/
+$(H: bin_path) ../bin/
+
+$(H: model_file) model.pml
+
+$(> satsyn) $(bin_path) satsyn
+$(> spinsafe) $(s_path) spinsafe
+$(> spinlive) $(s_path) spinlive
+$(> spinltl) $(s_path) spinltl
+
+|< $(satsyn)
+#|- waitdo $(spinsafe) $(model_file)
+|- waitdo $(spinlive) $(model_file)
+#|- waitdo $(spinltl) $(model_file)
+|> stdout
+

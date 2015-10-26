@@ -2,6 +2,7 @@
 /bin/
 /bld/
 /tags
+/tmp/
 
 /dep/glu-*/
 /dep/peg-*/

@@ -101,10 +101,13 @@ struct BoolLit {
     Bit  val; /**< Positive (1) or negated (0).**/
     uint vbl; /**< Index of the boolean variable.**/
 };
+
 /** Disjunction of boolean literals.**/
 struct CnfDisj {
     TableT(BoolLit) lits;
 };
+#define DEFAULT_CnfDisj { DEFAULT_Table }
+
 /** Boolean formula in Conjunctive Normal Form (CNF).
  * An example CNF is:\n
  * (a || !b || c) && (!b || d) && (b || !a) && (a)
@@ -115,6 +118,7 @@ struct CnfFmla {
     TableT(uint) vbls;  /**< Clause variables.**/
     BitTable vals;  /**< Clause values, negative (0) or positive (1).**/
 };
+#define DEFAULT_CnfFmla { 0, DEFAULT_Table, DEFAULT_Table, DEFAULT_BitTable }
 
 void
 add_XnRule (FMem_synsearch* tape, const XnRule* g);
@@ -128,43 +132,38 @@ dflt2_BoolLit (bool val, uint vbl)
     return x;
 }
 
-    CnfDisj
+  CnfDisj
 dflt_CnfDisj ()
 {
-    CnfDisj disj;
-    InitTable( disj.lits );
-    return disj;
+  CnfDisj disj = default;
+  return disj;
 }
 
     void
 lose_CnfDisj (CnfDisj* clause)
 {
-    LoseTable( clause->lits );
+  LoseTable( clause->lits );
 }
 
     void
 app_CnfDisj (CnfDisj* clause, bool b, uint vbl)
 {
-    PushTable( clause->lits, dflt2_BoolLit (b, vbl) );
+  PushTable( clause->lits, dflt2_BoolLit (b, vbl) );
 }
 
     CnfFmla
 dflt_CnfFmla ()
 {
-    CnfFmla fmla;
-    fmla.nvbls = 0;
-    InitTable( fmla.idcs );
-    InitTable( fmla.vbls );
-    fmla.vals = dflt_BitTable ();
-    return fmla;
+  CnfFmla fmla = default;
+  return fmla;
 }
 
     void
 lose_CnfFmla (CnfFmla* fmla)
 {
-    LoseTable( fmla->idcs );
-    LoseTable( fmla->vbls );
-    lose_BitTable (&fmla->vals);
+  LoseTable( fmla->idcs );
+  LoseTable( fmla->vbls );
+  lose_BitTable (&fmla->vals);
 }
 
     void
@@ -1412,9 +1411,9 @@ synsearch_sat (FMem_synsearch* tape)
     Associa pathmap[1];
 
     DeclTable( State, states );
-    DecloStack1( CnfFmla, fmla, dflt_CnfFmla () );
+    CnfFmla fmla[] = default;
     DeclTable( XnInfo, xns );
-    DecloStack1( CnfDisj, clause, dflt_CnfDisj () );
+    CnfDisj clause[] = default;
 
     const XnSys* restrict sys = tape->sys;
     XnRule* g;
@@ -1596,7 +1595,7 @@ synsearch_sat (FMem_synsearch* tape)
          assoc;
          assoc = next_Assoc (assoc))
     {
-        DecloStack1( CnfDisj, path_clause, dflt_CnfDisj () );
+      CnfDisj path_clause[] = default;
 
         XnSz2 p = *(XnSz2*) key_of_Assoc (pathmap, assoc);
         ujint p_ij = *(ujint*) val_of_Assoc (pathmap, assoc);
@@ -1723,8 +1722,8 @@ main (int argc, char** argv)
     uint n_ring_pcs = 6;  /* For rings (excluding 3-SAT rings).*/
     const uint domsz = 3;
     const bool manual_soln = true;
-    DecloStack1( XnSys, sys, dflt_XnSys () );
-    DecloStack1( CnfFmla, fmla, dflt_CnfFmla () );
+    XnSys sys[] = default;
+    CnfFmla fmla[] = default;
     BoolLit clauses[][3] = {
 #if 0
 #elif 1
@@ -1896,9 +1895,8 @@ main (int argc, char** argv)
 
         if (tape.stabilizing || (manual_soln && tape.rules.sz > 0))
         {
-            /* Promela.*/
-            OFileB pmlf[1];
-            init_OFileB (pmlf);
+            // Promela.
+            OFileB pmlf[] = default;
 
             open_FileB (&pmlf->fb, 0, "model.pml");
             oput_promela (&pmlf->of, sys, tape.rules);

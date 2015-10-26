@@ -1,0 +1,14 @@
+#!/bin/sh
+
+bin=$(dirname $(readlink -f "$0"))
+mode=safe
+spinclude="$bin/spinshare/spinclude.sh"
+. "$spinclude" "$@"
+
+generate_pan
+compile_pan
+run_pan
+exitcode=$?
+cleanup
+exit $exitcode
+

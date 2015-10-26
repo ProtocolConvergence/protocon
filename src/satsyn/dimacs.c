@@ -3,7 +3,7 @@
     void
 oput_dimacs_CnfFmla (OFile* of, const CnfFmla* fmla)
 {
-  DecloStack1( CnfDisj, clause, dflt_CnfDisj () );
+  CnfDisj clause[] = default;
   printf_OFile (of, "p cnf %u %u\n",
                 (uint) fmla->nvbls,
                 (uint) fmla->idcs.sz);
@@ -66,14 +66,11 @@ xget_dimacs_result (XFile* xf, bool* sat, BitTable evs)
 extl_solve_CnfFmla (CnfFmla* fmla, bool* sat, BitTable evs)
 {
   DeclLegit( good );
-    DecloStack1( OSPc, ospc, dflt_OSPc () );
-    OFileB ofb[1];
-    XFileB xfb[1];
+  OSPc ospc[] = default;
+  OFileB ofb[] = default;
+  XFileB xfb[] = default;
 
     *sat = false;
-
-    init_OFileB (ofb);
-    init_XFileB (xfb);
 
     open_FileB (&ofb->fb, 0, "sat.in");
     oput_dimacs_CnfFmla (&ofb->of, fmla);

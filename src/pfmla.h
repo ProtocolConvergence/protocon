@@ -161,6 +161,7 @@ add_vbl_list_PFmlaCtx (PFmlaCtx* ctx);
 void
 add_to_vbl_list_PFmlaCtx (PFmlaCtx* ctx, uint listid, uint vblid);
 
+#define DEFAULT_PFmla ((PFmla) NULL)
 qual_inline
   PFmla
 dflt_PFmla ()
@@ -172,7 +173,7 @@ qual_inline
   PFmla
 dflt1_PFmla (bool phase)
 {
-  PFmla g = dflt_PFmla ();
+  PFmla g = default;
   wipe1_PFmla (&g, phase);
   return g;
 }
