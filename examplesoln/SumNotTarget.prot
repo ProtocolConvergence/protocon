@@ -6,7 +6,7 @@
 
 // The constants' names differ from Aly's dissertation.
 
-constant N := 5;
+constant N := 3;
 constant M := 3;
 constant Target := M-1;
 

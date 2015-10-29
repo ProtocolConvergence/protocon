@@ -4,7 +4,7 @@
 // Author: Jaap-Henk Hoepman
 // Year: 1994
 
-constant N := 5;
+constant N := 3;
 
 puppet variable color[Nat % N] <- Nat % 2;
 puppet variable phase[Nat % N] <- Nat % 2;

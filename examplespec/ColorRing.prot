@@ -2,7 +2,7 @@
 // 3-coloring protocol
 // We want no two adjacent colors to be the same.
 
-constant N := 5;
+constant N := 3;
 
 variable x[Nat % N] <- Nat % 3;
 

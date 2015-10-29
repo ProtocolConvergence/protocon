@@ -1,7 +1,7 @@
 
 // Verified up to N=25
 
-constant N := 4;
+constant N := 3;
 constant M := 3;
 
 direct variable t[Nat % N] <- Nat % 2;

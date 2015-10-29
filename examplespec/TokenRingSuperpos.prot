@@ -3,7 +3,7 @@
 // variables. Rather, a non-stabilizing 1-bit token ring on the t[i]
 // variables is used to define the invariant and behavior.
 
-constant N := 4;
+constant N := 3;
 constant M := 3;
 
 direct variable t[Nat % N] <- Nat % 2;

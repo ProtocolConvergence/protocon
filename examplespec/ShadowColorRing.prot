@@ -2,7 +2,7 @@
 // 3-coloring protocol
 // We want no two adjacent colors to be the same.
 
-constant N := 5;
+constant N := 3;
 
 shadow variable c[Int % N] <- Int % 3;
 puppet variable x[Int % N] <- Int % 3;
@@ -19,8 +19,8 @@ process P[i <- Int % N]
   read:  x[i+1];
   write: c[i];
   // Uncomment below to simplify search.
-  //permit: ( 1==1 --> x[i]:=0; c[i]:=0; );
-  //permit: ( 1==1 --> x[i]:=1; c[i]:=1; );
-  //permit: ( 1==1 --> x[i]:=2; c[i]:=2; );
+  //permit: ( true --> x[i]:=0; c[i]:=0; );
+  //permit: ( true --> x[i]:=1; c[i]:=1; );
+  //permit: ( true --> x[i]:=2; c[i]:=2; );
 }
 

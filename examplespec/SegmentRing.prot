@@ -13,7 +13,7 @@ shadow variable role[Nat % N] <- Nat % 3;
 // Specify the invariant as a superset of states.
 // This is the style used in "Adaptive Programming".
 (future & future silent)
-  (forall i <- Nat % N : 0==1
+  (forall i <- Nat % N : false
    || role[i]==0 && role[i+1]!=0
    || role[i]==1 && role[i+1]!=0
    || role[i]==2 && role[i+1]==0

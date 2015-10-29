@@ -17,7 +17,7 @@ process P[i <- Nat % (N-1)]
 
   // Only permit actions which swap x[i] and x[i+1] values.
   permit:
-    ( 1==1 --> x[i]:=x[i+1]; x[i+1]:=x[i]; )
+    ( true --> x[i]:=x[i+1]; x[i+1]:=x[i]; )
     ;
 }
 

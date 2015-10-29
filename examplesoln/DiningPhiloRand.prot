@@ -48,11 +48,11 @@ process P[i <- Nat % N]
 
   // See examplespec/DiningPhiloRand.prot for explanation.
   permit:
-    ( 1==1 --> hungry[i]; )
+    ( true --> hungry[i]; )
     ( Have2 -=> hungry[i]:=0; _; )
     ;
   forbid:
-    ( 1==1 --> chopstick[L]:=1-chopstick[L]; chopstick[R]:=1-chopstick[R]; )
+    ( true --> chopstick[L]:=1-chopstick[L]; chopstick[R]:=1-chopstick[R]; )
     ;
 
 

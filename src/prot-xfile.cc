@@ -490,21 +490,54 @@ ProtoconFile::parse_action(Cx::PFmla& act_pf, Cx::Table<Cx::PFmla>& pc_xns, Sesp
 
     pc_xns[pcidx] = guard_pf & assign_pf;
 
-    if (actto_op) {
-      X::Fmla self_xn( true );
-      for (uint i = 0; i < pc.wvbls.sz(); ++i) {
-        if (!wvbl_assigned[i])
-          continue;
-        if (wvbl_randomized[i])
-          continue;
-        if (role != Xn::Vbl::Shadow && pc_symm->wvbl_symms[i]->pure_shadow_ck()) {
-          continue;
-        }
-        const Cx::PFmlaVbl& pf_vbl = topo.pfmla_vbl(*pc.wvbls[i]);
-        self_xn &= pf_vbl.img_eq(pf_vbl);
-      }
-      pc_xns[pcidx] -= self_xn;
+    // Smooth the 'random read' variables that are allowed by
+    // this action's guard to make the action nondeterministic,
+    // rather than having a unique action for every readable state.
+    for (uint i = 0; i < pc.rvbls.sz(); ++i) {
+      const Xn::Vbl& vbl = *pc.rvbls[i];
+      if (!vbl.random_ck())
+        continue;
+      const Cx::PFmlaVbl& pfmla_vbl = topo.pfmla_vbl(vbl);
+      pc_xns[pcidx] = guard_pf & pc_xns[pcidx].smooth_pre(pfmla_vbl);
     }
+
+    // Remove this action's cycles when -=> is used.
+    // This is mostly just self-loops.
+    if (actto_op) {
+      X::Fmla pc_xn = pc_xns[pcidx];
+      if (role == Xn::Vbl::Shadow)
+        pc_xn = topo.proj_shadow(pc_xn);
+      else
+        pc_xn = topo.proj_puppet(pc_xn);
+
+      Cx::Table<bool> changing(pc_symm->rvbl_symms.sz());
+      for (uint i = 0; i < pc_symm->rvbl_symms.sz(); ++i) {
+        changing[i] =
+          pc_symm->write_flags[i]
+          || pc.rvbls[i]->random_ck()
+          || (role == Xn::Vbl::Shadow && pc_symm->rvbl_symms[i]->pure_puppet_ck())
+          || (role != Xn::Vbl::Shadow && pc_symm->rvbl_symms[i]->pure_shadow_ck())
+          ;
+      }
+      for (uint i = 0; i < pc_symm->rvbl_symms.sz(); ++i) {
+        if (changing[i])  continue;
+        const Cx::PFmlaVbl& pfmla_vbl = topo.pfmla_vbl(*pc.rvbls[i]);
+        pc_xn &= pfmla_vbl.img_eq(pfmla_vbl);
+      }
+
+      P::Fmla scc;
+      if (pc_xn.cycle_ck(&scc)) {
+        X::Fmla self_xn = pc_xn & scc.cross(scc);
+        for (uint i = 0; i < pc_symm->rvbl_symms.sz(); ++i) {
+          if (changing[i])  continue;
+          const Cx::PFmlaVbl& pfmla_vbl = topo.pfmla_vbl(*pc.rvbls[i]);
+          self_xn = self_xn.smooth_img(pfmla_vbl);
+        }
+        pc_xns[pcidx] -= self_xn;
+      }
+    }
+
+    // Strictly remove self-loops when pure shadow variables exist.
     if (pc_symm->pure_shadow_ck()) {
       X::Fmla self_xn( true );
       for (uint i = 0; i < pc.wvbls.sz(); ++i) {
@@ -1544,6 +1577,14 @@ ProtoconFile::lookup_vbl(Xn::Vbl** ret, const Cx::String& name, Sesp idx_sp)
   bool
 ProtoconFile::lookup_pfmla(Cx::PFmla* ret, const Cx::String& name)
 {
+  if (name == "true") {
+    *ret = true;
+    return true;;
+  }
+  if (name == "false") {
+    *ret = false;
+    return true;;
+  }
   const Cx::PFmla* pf = sys->predicate_map.lookup(name);
   if (pf) {
     *ret = *pf;

@@ -2,7 +2,7 @@
 // Ring orientation using the state-reading model.
 // See examplesoln/OrientRingOdd.prot for the stabilizing version.
 
-constant N := 5;
+constant N := 3;
 
 puppet variable color[Nat % N] <- Nat % 2;
 puppet variable phase[Nat % N] <- Nat % 2;

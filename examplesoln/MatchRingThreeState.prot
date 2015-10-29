@@ -8,7 +8,7 @@
 // or, if both P[i-1] and P[i+1] are pointing away from P[i], then P[i] should
 // point to itself.
 
-constant N := 5;
+constant N := 3;
 
 constant L := 0;
 constant S := 1;

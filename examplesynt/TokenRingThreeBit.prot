@@ -1,7 +1,7 @@
 
 // Synthesized 3-bit token ring.
 
-constant N := 5;
+constant N := 3;
 
 direct variable t[Int % N] <- Int % 2;
 puppet variable e[Int % N] <- Int % 2;

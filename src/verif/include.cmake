@@ -114,6 +114,7 @@ add_test (NAME Verif_ByzantineGenerals
   COMMAND protocon -verify -x ${SolnPath}/ByzantineGenerals.prot)
 
 set (ExampleSynts
+  ColorRing
   LeaderRing
   MatchRing
   MatchRingOneBit

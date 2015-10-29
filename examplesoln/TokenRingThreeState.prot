@@ -6,7 +6,7 @@
 // Author: Shmuel Zaks
 // Year: 2008
 
-constant N := 4;
+constant N := 3;
 
 variable z[Int % N] <- Int % 3;
 

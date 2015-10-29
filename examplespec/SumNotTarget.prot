@@ -1,5 +1,4 @@
-
-constant N := 5;
+constant N := 3;
 constant M := 3;
 constant Target := M-1;
 
@@ -13,5 +12,3 @@ process P[i <- Nat % N]
   (future & silent)
     (x[i-1] + x[i] != Target);
 }
-
-

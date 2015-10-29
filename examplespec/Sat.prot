@@ -35,7 +35,7 @@ variable sat[Nat % 1] <- Nat % 2;
 //////////////////////////////////////////////////////////////////////////////
 // Instance-Specific Predicates
 
-predicate SatClauses := 1==1
+predicate SatClauses := true
   //       v0         v1         v2
   && (x[0]!=0 || x[1]!=1 || x[2]!=2 ||
       y[0]==1 || y[1]==1 || y[2]==1)

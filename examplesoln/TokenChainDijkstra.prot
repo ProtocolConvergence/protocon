@@ -4,14 +4,14 @@
 // Author: Edsger W. Dijkstra
 // Year: 1974
 
-constant N := 5;
+constant N := 3;
 
 variable up[Int % N] <- Int % 2;
 variable z[Int % N] <- Int % 2;
 
 // One process has a token.
 (future & shadow)
-  (unique i <- Int % N : 0==1
+  (unique i <- Int % N : false
    || i==0        && z[i]==z[i+1] && up[i+1]==0
    || (i+1)%N > 1 && z[i-1]!=z[i]
    || (i+1)%N > 1 && z[i-1]==z[i] && up[i]==1 && z[i]==z[i+1] && up[i+1]==0

@@ -15,7 +15,7 @@ variable x[Nat % N] <- Nat % M;
 // rather than the more relaxed version (x[i-1]!=x[i]).
 (future & active shadow)
   (exists j <- Int % N :
-   forall i <- Int % N : 0==1
+   forall i <- Int % N : false
    || i==0 && i==j && x[i-1]==x[i]
    || i==0 && i!=j && x[i-1]!=x[i]
    || i!=0 && i==j && x[i-1]==(x[i]+1)%M

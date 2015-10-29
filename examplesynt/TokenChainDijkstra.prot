@@ -71,6 +71,6 @@ process Top[j <- Int % 1]
     ( tok[i]==1 --> allup[0]:=0; tok[i]:=0; tok[i-1]:=1; );
 
   puppet:
-    ( 1==1 -=> z[i]:=z[i-1]; up[i]:=0; allup[0]:=0; tok[i]:=0; tok[i-1]:=1; );
+    ( true -=> z[i]:=z[i-1]; up[i]:=0; allup[0]:=0; tok[i]:=0; tok[i-1]:=1; );
 }
 
