@@ -52,7 +52,8 @@ shadow_ck(Cx::PFmla* ret_invariant,
           const Cx::PFmla& lo_xn,
           const Cx::PFmla& hi_xn,
           const X::Fmlae& lo_xfmlae,
-          const Cx::PFmla& lo_scc);
+          const Cx::PFmla& lo_scc,
+          const bool explain_failure = false);
 bool
 weak_convergence_ck(const Cx::PFmla& xn, const Cx::PFmla& invariant);
 bool

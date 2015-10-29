@@ -226,6 +226,8 @@ public:
   }
 
   PFmla smooth(const PFmlaVbl& vbl) const;
+  PFmla smooth_pre(const PFmlaVbl& vbl) const;
+  PFmla smooth_img(const PFmlaVbl& vbl) const;
 
   PFmla subst_to_img(uint list_id) const
   {
@@ -411,6 +413,24 @@ PFmla::smooth(const PFmlaVbl& vbl) const
 {
   PFmla b;
   smooth_vbl_PFmla (&b.g, g, vbl.x, 0);
+  return b;
+}
+
+inline
+  PFmla
+PFmla::smooth_pre(const PFmlaVbl& vbl) const
+{
+  PFmla b;
+  smooth_vbl_PFmla (&b.g, g, vbl.x, -1);
+  return b;
+}
+
+inline
+  PFmla
+PFmla::smooth_img(const PFmlaVbl& vbl) const
+{
+  PFmla b;
+  smooth_vbl_PFmla (&b.g, g, vbl.x, 1);
   return b;
 }
 

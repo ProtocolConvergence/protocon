@@ -57,9 +57,9 @@ shadow_ck(Cx::PFmla* ret_invariant,
           const X::Fmla& lo_xn,
           const X::Fmla& hi_xn,
           const X::Fmlae& lo_xfmlae,
-          const P::Fmla& lo_scc)
+          const P::Fmla& lo_scc,
+          const bool explain_failure)
 {
-  static const bool explain_failure = false;
   const Xn::Net& topo = sys.topology;
   const Xn::InvariantStyle invariant_style = sys.spec->invariant_style;
   const Xn::InvariantScope invariant_scope = sys.spec->invariant_scope;
@@ -383,7 +383,7 @@ stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
   }
   of << "Checking behavior within the invariant..." << of.endl();
   Cx::PFmla hi_invariant( false );
-  if (!shadow_ck(&hi_invariant, sys, lo_xn, hi_xn, lo_xfmlae, scc)) {
+  if (!shadow_ck(&hi_invariant, sys, lo_xn, hi_xn, lo_xfmlae, scc, true)) {
     of << "Invariant not valid, given the protocol and behavior.\n";
     of.flush();
     return false;
