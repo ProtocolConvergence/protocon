@@ -165,7 +165,7 @@ ExploreW::random_img_step()
   QString line( "step img " );
   line += ui->nstepsSpinBox->cleanText();
   line += '\n';
-  process->write(line.toAscii());
+  process->write(line.toLatin1());
   gobble_section = true;
   update_data();
 }
@@ -177,7 +177,7 @@ ExploreW::sync_img_step()
   QString line( "sstep " );
   line += ui->nstepsSpinBox->cleanText();
   line += '\n';
-  process->write(line.toAscii());
+  process->write(line.toLatin1());
   gobble_section = true;
   update_data();
 }
@@ -189,7 +189,7 @@ ExploreW::random_pre_step()
   QString line( "step pre " );
   line += ui->nstepsSpinBox->cleanText();
   line += '\n';
-  process->write(line.toAscii());
+  process->write(line.toLatin1());
   gobble_section = true;
   update_data();
 }
@@ -198,7 +198,7 @@ ExploreW::random_pre_step()
 ExploreW::act_assign(QListWidgetItem* item)
 {
   if (updating)  return;
-  process->write(("assign " + item->text() + "\n").toAscii());
+  process->write(("assign " + item->text() + "\n").toLatin1());
   update_data();
 }
 
@@ -209,7 +209,7 @@ ExploreW::vbl_assign(QListWidgetItem* item)
   QString text = item->text();
   text.remove(QRegExp(".*=="));
   int row = ui->valueList->row(item);
-  process->write(("assign " + vbl_names[row] + ":=" + text + "\n").toAscii());
+  process->write(("assign " + vbl_names[row] + ":=" + text + "\n").toLatin1());
   //std::cerr << ("assign " + vbl_names[row] + ":=" + text + "\n").toStdString();
   update_data();
 }
@@ -232,7 +232,7 @@ ExploreW::predicate_influence_changed(const char* name, int idx)
   else if (idx == 1)  line += "display";
   else if (idx == 2)  line += "false";
   line += '\n';
-  process->write(line.toAscii());
+  process->write(line.toLatin1());
   update_data();
 }
 

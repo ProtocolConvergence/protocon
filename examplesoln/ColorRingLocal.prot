@@ -1,6 +1,7 @@
 
 // Distance-2 coloring.
-// Processes that are 1 or 2 hops away must have different colors.
+// Processes that are 0 or 1 hops away
+// from each other must have different colors.
 
 constant N := 3;
 constant M := 5;
