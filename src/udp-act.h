@@ -8,6 +8,10 @@
 //#define DoFoundThreeBitTokenRing
 //#define DoDijkstraFourState
 
+/** None of these examples have assumed states.**/
+void assume_assign (PcIden pc, uint8_t* values)
+{ (void) pc; (void) values; }
+
 /****************************************************************************/
 #ifdef DoThreeColorRing
   uint
@@ -53,12 +57,9 @@ action_assign(PcIden pc, uint8_t* c)
   }
 }
   void
-action_pre_assign(PcIden pc, const uint8_t* c)
+action_assign_hook(PcIden pc, const uint8_t* c, const uint8_t* c_img)
 {
-  uint8_t c_img[Max_NVariables];
   char buf[1024];
-  memcpy(c_img, c, sizeof(c_img));
-  action_assign(pc, c_img);
   sprintf(buf, " ACT:  c[%u]==%u && c[%u]==%u && c[%u]==%u --> c[%u]:=%u;",
           process_of_channel(pc, 0), c[0],
           pc.idx, c[1],
@@ -112,12 +113,9 @@ action_assign(PcIden pc, uint8_t* x)
   if (x[i-1]==1 && x[i]!=2 && x[i+1]!=2)  x[i]=2;
 }
   void
-action_pre_assign(PcIden pc, const uint8_t* x)
+action_assign_hook(PcIden pc, const uint8_t* x, const uint8_t* x_img)
 {
-  uint8_t x_img[Max_NVariables];
   char buf[1024];
-  memcpy(x_img, x, sizeof(x_img));
-  action_assign(pc, x_img);
   sprintf(buf, " ACT:  x[%u]==%u && x[%u]==%u && x[%u]==%u --> x[%u]:=%u;",
           process_of_channel(pc, 0), x[0],
           pc.idx, x[1],
@@ -253,12 +251,9 @@ action_assign(PcIden pc, uint8_t* x)
   }
 }
   void
-action_pre_assign(PcIden pc, const uint8_t* x)
+action_assign_hook(PcIden pc, const uint8_t* x, const uint8_t* x_img)
 {
-  uint8_t x_img[Max_NVariables];
   char buf[1024];
-  memcpy(x_img, x, sizeof(x_img));
-  action_assign(pc, x_img);
   if ((pc.idx == 0 && x[2] == x[3])
       ||
       (pc.idx != 0 && x[2] != x[3]))
@@ -367,12 +362,9 @@ action_assign(PcIden pc, uint8_t* x)
   }
 }
   void
-action_pre_assign(PcIden pc, const uint8_t* x)
+action_assign_hook(PcIden pc, const uint8_t* x, const uint8_t* x_img)
 {
-  uint8_t x_img[Max_NVariables];
   char buf[1024];
-  memcpy(x_img, x, sizeof(x_img));
-  action_assign(pc, x_img);
   if (pc.idx == 0) {
     sprintf(buf, " ACT:  up[0]==%u && up[1]==%u && z[0]==%u && z[1]==%u --> up[0]:=%u; z[0]:=%u;",
             x[0], x[1], x[2], x[3], x_img[0], x_img[2]);

@@ -20,10 +20,14 @@ struct Packet
   uint8_t values[Max_NVariables];
 };
 
+#if 0
+// TODO: Will the shake steps ever be used?
+// Is there some efficiency gain?
 #define NakShakeStep 0
 #define ReqShakeStep 1
 #define SynShakeStep 2
 #define AckShakeStep 3
+#endif
 
 struct Channel
 {
@@ -31,7 +35,7 @@ struct Channel
   SeqId adj_seq;
   struct sockaddr_storage host;
   Bool adj_acknowledged;
-  uint8_t shake_step;  ///< Not used yet.
+  //uint8_t shake_step;
   Bool reply;
   uint32_t n_timeout_skips;
   /* The rest is for convenience.*/
@@ -220,7 +224,7 @@ CMD_seq(Channel* channel)
   seq->idx += 1;
   Randomize( seq->key );
   channel->adj_acknowledged = 0;
-  channel->shake_step = NakShakeStep;
+  //channel->shake_step = NakShakeStep;
   channel->reply = 1;
 }
 
@@ -655,6 +659,24 @@ recv_Packet (Packet* pkt, State* st)
 }
 
 /**
+ * If the process has values out of bounds,
+ * or values that break an assumption,
+ * then reassign them.
+ **/
+static
+  void
+fix_process_state (PcIden pc, uint8_t* values)
+{
+  for (uint i = 0; i < Max_NVariables; ++i) {
+    const uint domsz = domsz_of_variable(pc, i);
+    if (domsz == 0)  break;
+    if (values[i] >= domsz)
+      values[i] %= domsz;
+  }
+  assume_assign (pc, values);
+}
+
+/**
  * Perform an action or check to see if an action can occur.
  * If {modify} is true, then the process state will be modified.
  *
@@ -664,22 +686,15 @@ recv_Packet (Packet* pkt, State* st)
 CMD_act(State* st, Bool modify)
 {
   uint8_t values[Max_NVariables];
-
-  for (uint i = 0; i < Max_NVariables; ++i)
-  {
-    const uint domsz = domsz_of_variable(st->pc, i);
-    if (domsz == 0)  break;
-    if (st->values[i] >= domsz)
-      st->values[i] %= domsz;
-  }
+  fix_process_state (st->pc, st->values);
   memcpy(values, st->values, sizeof(values));
 
-  action_assign(st->pc, values);
+  action_assign (st->pc, values);
 
   if (0 != memcmp(values, st->values, sizeof(values))) {
     if (modify) {
 
-      action_pre_assign(st->pc, st->values);
+      action_assign_hook(st->pc, st->values, values);
 
       if (ActionLagMS > 0)
       {
@@ -828,6 +843,8 @@ handle_recv (Packet* pkt, Channel* channel, State* st)
   Bool bcast = 0;
   Bool reply = 0;
   Bool adj_acted = 0;
+
+  fix_process_state (st->pc, st->values);
 
   // If the packet doesn't know this process's sequence number,
   // then reply with the current data.
@@ -1033,6 +1050,11 @@ static void randomize_process_state()
   randomize_State(&StateOfThisProcess);
 }
 
+static void print_process_state()
+{
+  State* st = &StateOfThisProcess;
+  action_assign_hook(st->pc, st->values, st->values);
+}
 
 static int
 init_timeout(timer_t* timeout_id)
@@ -1075,6 +1097,8 @@ int main(int argc, char** argv)
   signal(SIGINT, set_term_flag);
   // The first user signal randomizes all protocol data!
   signal(SIGUSR1, randomize_process_state);
+  // The second user signal is for information.
+  signal(SIGUSR2, print_process_state);
 
   {
     uint PcIdx;

@@ -167,6 +167,8 @@ int main(int argc, char** argv) {
   Xn::Sys sys;
   sys.topology.lightweight = true;
   ProtoconFileOpt infile_opt;
+
+  // infile_opt.text = read_all_text(in_filepath)
   infile_opt.text.moveq(textfile_AlphaTab (0, in_filepath));
 
   if (!ReadProtoconFile(sys, infile_opt))

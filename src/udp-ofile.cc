@@ -121,7 +121,7 @@ void oput_udp_file(Cx::OFile& ofile, const Xn::Sys& sys, const Xn::Net& o_topolo
     << "\n#define Max_NChannels " << max_nchannels
     << "\n#define Max_NVariables " << max_nvbls
     << "\n#define NProcesses " << pcs.sz()
-
+    //////////////////////////////////////////////////////////////////////////
     << "\nuint process_of_channel(PcIden pc, uint channel_idx)"
     << "\n{"
     << "\n#define T(ret)  if (0==channel_idx)  return ret; channel_idx -= 1"
@@ -141,7 +141,7 @@ void oput_udp_file(Cx::OFile& ofile, const Xn::Sys& sys, const Xn::Net& o_topolo
     << "\n  return pc.idx;"
     << "\n#undef T"
     << "\n}"
-
+    //////////////////////////////////////////////////////////////////////////
     << "\nuint variable_of_channel(PcIden pc, uint channel_idx, uint i, Bool writing)"
     << "\n{"
     << "\n  "
@@ -184,9 +184,10 @@ void oput_udp_file(Cx::OFile& ofile, const Xn::Sys& sys, const Xn::Net& o_topolo
   ofile
     << "\n  return Max_NVariables;"
     << "\n}"
-
+    //////////////////////////////////////////////////////////////////////////
     << "\nuint domsz_of_variable(PcIden pc, uint vbl_idx)"
     << "\n{"
+    << "\n  if (0) {}"
     ;
   uint symm_cutoff = 0;
   for (uint pc_symm_idx = 0; pc_symm_idx < topo.pc_symms.sz(); ++pc_symm_idx) {
@@ -194,8 +195,7 @@ void oput_udp_file(Cx::OFile& ofile, const Xn::Sys& sys, const Xn::Net& o_topolo
     if (pc_symm.membs.sz() == 0)  continue;
 
     symm_cutoff += o_topology.pc_symms[pc_symm_idx].membs.sz();
-    ofile << "\n  " << (pc_symm_idx == 0 ? "" : "else ") << "if (pc.idx < "
-      << symm_cutoff << ") {";
+    ofile << "\n  else if (pc.idx < " << symm_cutoff << ") {";
 
     uint puppet_i = 0;
     for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
@@ -214,31 +214,109 @@ void oput_udp_file(Cx::OFile& ofile, const Xn::Sys& sys, const Xn::Net& o_topolo
   ofile
     << "\n  return 0;"
     << "\n}"
+    //////////////////////////////////////////////////////////////////////////
+    << "\nvoid assume_assign(PcIden pc, uint8_t* x)"
+    << "\n{"
+    << "\n  if (0) {"
+    ;
+
+  symm_cutoff = 0;
+  for (uint pc_symm_idx = 0; pc_symm_idx < topo.pc_symms.sz(); ++pc_symm_idx) {
+    const Xn::PcSymm& pc_symm = topo.pc_symms[pc_symm_idx];
+    if (pc_symm.membs.sz() == 0)  continue;
+
+    symm_cutoff += o_topology.pc_symms[pc_symm_idx].membs.sz();
+    ofile
+      << "\n  }"
+      << "\n  else if (pc.idx < " << symm_cutoff << ") {"
+      ;
+    uint rep_pcidx = 0;
+    pc_symm.representative(&rep_pcidx);
+    const Xn::Pc& pc = *pc_symm.membs[rep_pcidx];
+
+    if (pc.closed_assume.tautology_ck())  continue;
+
+    Cx::Table<uint> readable;
+    Cx::Table<uint> writable;
+    Cx::Table<uint> pfmla_rvbl_idcs;
+    Cx::Table<uint> pfmla_wvbl_idcs;
+
+    Cx::Table<uint> code_rvbl_idcs;
+    Cx::Table<uint> code_wvbl_idcs;
+
+    for (uint i = 0, puppet_sz = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
+      const Xn::VblSymm& vbl_symm = *pc_symm.rvbl_symms[i];
+      if (vbl_symm.pure_shadow_ck())  continue;
+      puppet_sz += 1;
+      if (pc.closed_assume.equiv_ck(pc.closed_assume.smooth_pre(topo.pfmla_vbl(*pc.rvbls[i]))))
+        continue;
+      uint puppet_i = puppet_sz - 1;
+      if (pc_symm.write_flags[i]) {
+        writable << puppet_i;
+        pfmla_wvbl_idcs << pc.rvbls[i]->pfmla_idx;
+      }
+      readable << puppet_i;
+      pfmla_rvbl_idcs << pc.rvbls[i]->pfmla_idx;
+    }
+
+    Cx::Table<uint> pre_state( pfmla_rvbl_idcs.sz() );
+    Cx::Table<uint> img_state( pfmla_wvbl_idcs.sz() );
+
+    P::Fmla bad_pf = ~pc.closed_assume;
+    bad_pf.ensure_ctx(topo.pfmla_ctx);
+    {
+      P::Fmla img_pf = bad_pf;
+      for (uint i = 0; i < pc.rvbls.sz(); ++i) {
+        if (pc_symm.write_flags[i])  continue;
+        img_pf = img_pf.smooth_pre(topo.pfmla_vbl(*pc.rvbls[i]));
+      }
+      img_pf = ~img_pf;
+      if (!img_pf.sat_ck()) {
+        failout_sysCx ("Local (assume & closed) can't fix itself!");
+      }
+      img_pf.state (+img_state, pfmla_wvbl_idcs);
+    }
+
+    const char* ifpfx = "/* */";
+    while (bad_pf.sat_ck()) {
+      ofile << "\n    " << ifpfx << "if (";
+      ifpfx = "else ";
+
+      bad_pf.state (+pre_state, pfmla_rvbl_idcs);
+      const P::Fmla pre_pf = topo.pfmla_ctx.pfmla_of_state (+pre_state, pfmla_rvbl_idcs);
+      bad_pf -= pre_pf;
+
+      for (uint i = 0; i < pre_state.sz(); ++i) {
+        if (i > 0)
+          ofile << " && ";
+        ofile << "x[" << readable[i] << "]==" << pre_state[i];
+      }
+      ofile << ") {";
+
+
+      for (uint i = 0; i < img_state.sz(); ++i) {
+        ofile << " x[" << writable[i] << "]=" << img_state[i] << ";";
+      }
+      ofile << " }";
+    }
+  }
+
+  ofile
+    << "\n  }"
+    << "\n}"
+    //////////////////////////////////////////////////////////////////////////
     << "\nvoid action_assign(PcIden pc, uint8_t* x)"
     << "\n{"
     << "\n  uint8_t tmp_x[Max_NVariables];"
     << "\n  memcpy(tmp_x, x, sizeof(tmp_x));"
+    << "\n  if (0) {}"
     ;
-  symm_cutoff = 0;
 
   Cx::Table<X::Fmla> rep_xns( topo.pc_symms.sz() );
   rep_xns.wipe (P::Fmla(false));
 
-#if 0
-  Cx::Table<uint> actions;
-  {
-    Cx::Set<uint> action_set( sys.actions );
-    for (uint i = 0; i < sys.actions.size(); ++i) {
-      for (uint j = 0; j < topo.represented_actions[sys.actions[i]].sz(); ++j) {
-        action_set << topo.represented_actions[sys.actions[i]][j];
-      }
-    }
-    action_set.fill( actions );
-  }
-#else
+  symm_cutoff = 0;
   Cx::Table<uint> actions( sys.actions );
-#endif
-
   for (uint ai = 0; ai < actions.sz(); ++ai) {
     Xn::ActSymm act;
     topo.action(act, actions[ai]);
@@ -247,7 +325,6 @@ void oput_udp_file(Cx::OFile& ofile, const Xn::Sys& sys, const Xn::Net& o_topolo
     const Xn::PcSymm& pc_symm = topo.pc_symms[pc_symm_idx];
     uint rep_pcidx = 0;
     pc_symm.representative(&rep_pcidx);
-    //rep_xns[pc_symm_idx] |= topo.xn_of_pc (act, rep_pcidx);
     rep_xns[pc_symm_idx] |= topo.represented_xns_of_pc (act, rep_pcidx);
   }
 
@@ -256,10 +333,7 @@ void oput_udp_file(Cx::OFile& ofile, const Xn::Sys& sys, const Xn::Net& o_topolo
     if (pc_symm.membs.sz() == 0)  continue;
 
     symm_cutoff += o_topology.pc_symms[pc_symm_idx].membs.sz();
-    ofile << "\n  " << (pc_symm_idx == 0 ? "" : "else ")
-      << "if (pc.idx < "
-      << symm_cutoff << ") {"
-      ;
+    ofile << "\n  else if (pc.idx < " << symm_cutoff << ") {";
 
     uint rep_pcidx = 0;
     pc_symm.representative(&rep_pcidx);
@@ -339,8 +413,10 @@ void oput_udp_file(Cx::OFile& ofile, const Xn::Sys& sys, const Xn::Net& o_topolo
   }
   ofile
     << "\n}"
-    << "\nvoid action_pre_assign(PcIden pc, const uint8_t* x)"
+    //////////////////////////////////////////////////////////////////////////
+    << "\nvoid action_assign_hook(PcIden pc, const uint8_t* x_pre, const uint8_t* x_img)"
     << "\n{"
+    // TODO: Show value changes.
     << "\n  oput_line(\"ACTING!\");"
     << "\n}"
     << "\n"
