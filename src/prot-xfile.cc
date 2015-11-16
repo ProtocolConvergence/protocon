@@ -244,6 +244,7 @@ ProtoconFile::add_access(Sesp vbl_sp, Bit write, Bit random)
       else {
         topo.add_read_access(+pc_symm, vbl_symm, indices);
         if (random) {
+          pc_symm_spec->random_read_flags.top() = 1;
           for (uint i = 0; i < pc_symm->membs.sz(); ++i) {
             uint vidx = topo.vbls.index_of(pc_symm->membs[i]->rvbls.top());
             topo.vbls[vidx].random_flag = true;

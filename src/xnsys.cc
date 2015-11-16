@@ -239,6 +239,7 @@ Net::add_read_access (PcSymm* pc_symm, const VblSymm* vbl_symm,
   pc_symm->rvbl_symms.push(vbl_symm);
   pc_symm->spec->rvbl_symms.push(+vbl_symm->spec);
   pc_symm->write_flags.push_back(false);
+  pc_symm->spec->random_read_flags.push(false);
   pc_symm->spec->random_write_flags.push(false);
   pc_symm->rindices.push(indices);
   for (uint i = 0; i < pc_symm->membs.sz(); ++i) {

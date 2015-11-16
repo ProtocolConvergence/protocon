@@ -346,9 +346,38 @@ PickActionMRV(uint& ret_actidx,
     << ") (rem-sz " << candidates.sz()
     << ")" << inst.log->endl();
 
+  vector<uint> candidates_vec;
+  candidates.fill(candidates_vec);
+
+  const Xn::Net& topo = tape.ctx->systems[0]->topology;
+  // When using randomization, always use the action with
+  // the lowest randomized values in its guard.
+  // (Actions with lower values have lower ids/indices.)
+  if (topo.probabilistic_ck())
+  {
+    Set<uint> tmp_set;
+    for (uint i=0; i < candidates_vec.size(); ++i) {
+      Xn::ActSymm act;
+      topo.action(act, candidates_vec[i]);
+      const Xn::PcSymm& pc_symm = *act.pc_symm;
+
+      for (uint j = 0; j < pc_symm.rvbl_symms.sz(); ++j) {
+        if (pc_symm.spec->random_read_flags[j] || pc_symm.spec->random_write_flags[j]) {
+          act.vals[j] = 0;
+        }
+      }
+      uint tmp_actidx = topo.action_index(act);
+      if (!tmp_set.elem_ck(tmp_actidx)) {
+        tmp_set << tmp_actidx;
+      }
+      else {
+        candidates.erase(tmp_actidx);
+      }
+    }
+  }
+  candidates.fill(candidates_vec);
+
   if (opt.randomize_pick) {
-    vector<uint> candidates_vec;
-    candidates.fill(candidates_vec);
     uint idx = inst.ctx->urandom.pick(candidates_vec.size());
     ret_actidx = candidates_vec[idx];
   }
