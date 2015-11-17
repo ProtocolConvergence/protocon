@@ -20,6 +20,7 @@ syn region	protoconComment		start="//" skip="\\$" end="$" keepend
 syn keyword	protoconFunction		min max
 syn keyword	protoconType		Nat Int
 syn match	protoconNumber		"\<[0-9]\+\>"
+syn keyword	protoconLiteral		 true false
 
 syn keyword	protoconConditional	if then else --> -=>
 
@@ -33,6 +34,7 @@ syn keyword 	protoconQuant   forall exists unique
 hi def link protoconComment		Comment
 hi def link protoconFunction		Function
 hi def link protoconNumber		Number
+hi def link protoconLiteral		Number
 hi def link protoconType		Type
 hi def link protoconQual	Define
 hi def link protoconQuant	Function

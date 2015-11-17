@@ -12,7 +12,7 @@ let b:did_indent = 1
 
 setlocal indentexpr=GetProtoconIndent()
 setlocal indentkeys=0{,0},0),0],!^F,o,O,e
-setlocal indentkeys+=od,fi,then,->,/,:,;
+setlocal indentkeys+=-->,-=>,;
 
 " Only define the function once.
 if exists("*GetProtoconIndent")
@@ -46,6 +46,7 @@ function GetProtoconIndent()
   let bline = pline
 
   let parencol = 0
+  let spacepad = 0
   let nparens = 0
 
   if line =~ '^\s*).*$'
@@ -71,6 +72,7 @@ function GetProtoconIndent()
       endif
     endif
 
+    let spacepad = 0
     let col = strlen(bline)
     for c in reverse(split(bline, '\zs'))
       if c == '('
@@ -82,6 +84,13 @@ function GetProtoconIndent()
       elseif c == ')'
         let nparens = nparens + 1
       endif
+
+      if  c == ' '
+        let spacepad = spacepad + 1
+      else
+        let spacepad = 0
+      endif
+
       let col = col - 1
     endfor
     unlet col
@@ -101,8 +110,10 @@ function GetProtoconIndent()
   if parencol > 0
     if line =~ '^\s*).*$'
       return parencol - 1
+    elseif line =~ '^\s*-[-=]>.*$'
+      return parencol
     endif
-    return parencol
+    return parencol + spacepad
   endif
 
   let ind = indent(pnum)

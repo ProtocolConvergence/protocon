@@ -55,7 +55,7 @@ coexist_ck(const Xn::ActSymm& a, const Xn::ActSymm& b,
       continue;
     if (a.guard(j) != b.guard(j)) {
       deterministic = true;
-      if (!pc.write_ck(j)) {
+      if (!pc.write_ck(j) && !pc.spec->random_read_flags[j]) {
         enabling = false;
       }
     }
@@ -337,15 +337,6 @@ PickActionMRV(uint& ret_actidx,
   }
   Claim2( candidates.sz() ,>, 0 );
 
-  const PartialSynthesis& inst = tape[mcv_inst_idx];
-  *inst.log
-    << " (lvl " << inst.bt_level
-    << ") (psys " << inst.sys_idx
-    << ") (mrv " << mcv_dlset_idx
-    << ") (mrv-sz " << inst.mcv_deadlocks[mcv_dlset_idx].candidates.sz()
-    << ") (rem-sz " << candidates.sz()
-    << ")" << inst.log->endl();
-
   vector<uint> candidates_vec;
   candidates.fill(candidates_vec);
 
@@ -357,8 +348,9 @@ PickActionMRV(uint& ret_actidx,
   {
     Set<uint> tmp_set;
     for (uint i=0; i < candidates_vec.size(); ++i) {
+      const uint actidx = candidates_vec[i];
       Xn::ActSymm act;
-      topo.action(act, candidates_vec[i]);
+      topo.action(act, actidx);
       const Xn::PcSymm& pc_symm = *act.pc_symm;
 
       for (uint j = 0; j < pc_symm.rvbl_symms.sz(); ++j) {
@@ -371,11 +363,20 @@ PickActionMRV(uint& ret_actidx,
         tmp_set << tmp_actidx;
       }
       else {
-        candidates.erase(tmp_actidx);
+        candidates.erase(actidx);
       }
     }
+    candidates.fill(candidates_vec);
   }
-  candidates.fill(candidates_vec);
+
+  const PartialSynthesis& inst = tape[mcv_inst_idx];
+  *inst.log
+    << " (lvl " << inst.bt_level
+    << ") (psys " << inst.sys_idx
+    << ") (mrv " << mcv_dlset_idx
+    << ") (mrv-sz " << inst.mcv_deadlocks[mcv_dlset_idx].candidates.sz()
+    << ") (rem-sz " << candidates.sz()
+    << ")" << inst.log->endl();
 
   if (opt.randomize_pick) {
     uint idx = inst.ctx->urandom.pick(candidates_vec.size());

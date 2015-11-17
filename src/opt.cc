@@ -9,6 +9,10 @@ extern "C" {
 #include "cx/fileb.hh"
 #include "search.hh"
 
+#ifndef _WIN32
+#include <sys/resource.h>
+#endif
+
 enum ProblemInstance {
   FromFileInstance,
   ThreeColoringRingInstance,
@@ -422,6 +426,23 @@ protocon_options_rec
     else if (eq_cstr (arg, "-sysrand")) {
       opt.system_urandom = true;
     }
+#ifndef _WIN32
+    else if (eq_cstr (arg, "-peak-MB")) {
+      // This limits virtual memory, which could be
+      // twice the amount that is actually used (i.e., resident)!
+      ujint megabytes = 0;
+      struct rlimit rlim;
+      if (!xget_ujint_cstr (&megabytes, argv[argi++])) {
+        failout_sysCx("Argument Usage: -peak-MB NUMBER");
+      }
+      rlim.rlim_max = megabytes * 1000 * 1000;
+      rlim.rlim_cur = rlim.rlim_max;
+      setrlimit(RLIMIT_AS, &rlim);
+      rlim.rlim_max = 0;
+      rlim.rlim_cur = 0;
+      setrlimit(RLIMIT_CORE, &rlim);
+    }
+#endif
     else if (eq_cstr (arg, "-disabling")) {
       opt.force_disabling = true;
     }
