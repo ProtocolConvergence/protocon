@@ -67,6 +67,7 @@ public:
 
   // For parallel algorithms.
   bool randomize_pick;
+  uint randomize_depth;
   bool system_urandom;
   bool force_disabling;
   bool pure_actions;
@@ -96,6 +97,7 @@ public:
     , log( &DBogOF )
     , verify_found( true )
     , randomize_pick( true )
+    , randomize_depth( 0 )
     , system_urandom( false )
     , force_disabling( false )
     , pure_actions( false )
@@ -283,7 +285,7 @@ RankDeadlocksMRV(vector<DeadlockConstraint>& dlsets,
                  const Cx::PFmla& deadlockPF);
 bool
 PickActionMRV(uint& ret_actId,
-              const PartialSynthesis& tape,
+              const PartialSynthesis& partial,
               const AddConvergenceOpt& opt);
 
 #endif

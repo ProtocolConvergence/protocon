@@ -423,6 +423,11 @@ protocon_options_rec
     else if (eq_cstr (arg, "-no-random")) {
       opt.randomize_pick = false;
     }
+    else if (eq_cstr (arg, "-randomize-depth")) {
+      if (!xget_uint_cstr (&opt.randomize_depth, argv[argi++])) {
+        failout_sysCx("Argument Usage: -randomize-depth N");
+      }
+    }
     else if (eq_cstr (arg, "-sysrand")) {
       opt.system_urandom = true;
     }

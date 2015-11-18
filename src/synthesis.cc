@@ -270,17 +270,17 @@ pick_action_candidates(Set<uint>& ret_candidates,
  */
   bool
 PickActionMRV(uint& ret_actidx,
-              const PartialSynthesis& tape,
+              const PartialSynthesis& partial,
               const AddConvergenceOpt& opt)
 {
   typedef AddConvergenceOpt Opt;
   const Opt::PickActionHeuristic& pick_method = opt.pick_method;
 
   if (pick_method == Opt::FullyRandomPick) {
-    for (uint inst_idx = 0; inst_idx < tape.sz(); ++inst_idx) {
-      if (tape[inst_idx].candidates.size() > 0) {
-        uint idx = tape[inst_idx].ctx->urandom.pick(tape[inst_idx].candidates.size());
-        ret_actidx = tape[inst_idx].candidates[idx];
+    for (uint inst_idx = 0; inst_idx < partial.sz(); ++inst_idx) {
+      if (partial[inst_idx].candidates.size() > 0) {
+        uint idx = partial[inst_idx].ctx->urandom.pick(partial[inst_idx].candidates.size());
+        ret_actidx = partial[inst_idx].candidates[idx];
         return true;
       }
     }
@@ -291,9 +291,9 @@ PickActionMRV(uint& ret_actidx,
   // That is, find an action which resolves a deadlock which
   // can only be resolved by some small number of actions.
   uint mcv_dlset_idx = 0;
-  for (uint inst_idx = 0; inst_idx < tape.sz(); ++inst_idx) {
-    if (tape[inst_idx].no_partial)  continue;
-    const PartialSynthesis& inst = tape[inst_idx];
+  for (uint inst_idx = 0; inst_idx < partial.sz(); ++inst_idx) {
+    if (partial[inst_idx].no_partial)  continue;
+    const PartialSynthesis& inst = partial[inst_idx];
     for (uint i = 0; i < inst.mcv_deadlocks.size(); ++i) {
       if (mcv_dlset_idx > 0 && i >= mcv_dlset_idx)
         break;
@@ -304,10 +304,10 @@ PickActionMRV(uint& ret_actidx,
   }
   Set<uint> candidates;
   uint mcv_inst_idx = 0;
-  for (uint inst_idx = 0; inst_idx < tape.sz(); ++inst_idx) {
-    if (tape[inst_idx].no_partial)
+  for (uint inst_idx = 0; inst_idx < partial.sz(); ++inst_idx) {
+    if (partial[inst_idx].no_partial)
       continue;
-    const PartialSynthesis& inst = tape[inst_idx];
+    const PartialSynthesis& inst = partial[inst_idx];
     if (mcv_dlset_idx >= inst.mcv_deadlocks.size())
       continue;
     Claim2( mcv_dlset_idx ,<, inst.mcv_deadlocks.size() );
@@ -327,9 +327,9 @@ PickActionMRV(uint& ret_actidx,
   }
 
   if (candidates.sz() == 0) {
-    for (uint inst_idx = 0; inst_idx < tape.sz(); ++inst_idx) {
-      if (tape[inst_idx].candidates.size() > 0) {
-        candidates |= Set<uint>(tape[inst_idx].candidates);
+    for (uint inst_idx = 0; inst_idx < partial.sz(); ++inst_idx) {
+      if (partial[inst_idx].candidates.size() > 0) {
+        candidates |= Set<uint>(partial[inst_idx].candidates);
         mcv_inst_idx = inst_idx;
         break;
       }
@@ -340,7 +340,7 @@ PickActionMRV(uint& ret_actidx,
   vector<uint> candidates_vec;
   candidates.fill(candidates_vec);
 
-  const Xn::Net& topo = tape.ctx->systems[0]->topology;
+  const Xn::Net& topo = partial.ctx->systems[0]->topology;
   // When using randomization, always use the action with
   // the lowest randomized values in its guard.
   // (Actions with lower values have lower ids/indices.)
@@ -369,7 +369,7 @@ PickActionMRV(uint& ret_actidx,
     candidates.fill(candidates_vec);
   }
 
-  const PartialSynthesis& inst = tape[mcv_inst_idx];
+  const PartialSynthesis& inst = partial[mcv_inst_idx];
   *inst.log
     << " (lvl " << inst.bt_level
     << ") (psys " << inst.sys_idx
@@ -378,7 +378,7 @@ PickActionMRV(uint& ret_actidx,
     << ") (rem-sz " << candidates.sz()
     << ")" << inst.log->endl();
 
-  if (opt.randomize_pick) {
+  if (opt.randomize_pick && opt.randomize_depth <= inst.bt_level) {
     uint idx = inst.ctx->urandom.pick(candidates_vec.size());
     ret_actidx = candidates_vec[idx];
   }
