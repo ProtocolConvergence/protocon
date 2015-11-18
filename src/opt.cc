@@ -478,6 +478,9 @@ protocon_options_rec
       if (eq_cstr (method, "mrv")) {
         opt.pick_method = opt.MRVLitePick;
       }
+      else if (eq_cstr (method, "mrv-poset")) {
+        opt.pick_method = opt.MRVPosetPick;
+      }
       else if (eq_cstr (method, "greedy")) {
         opt.pick_method = opt.GreedyPick;
       }

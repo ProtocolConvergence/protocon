@@ -36,6 +36,7 @@ class AddConvergenceOpt {
 public:
   enum PickActionHeuristic {
     MRVLitePick,
+    MRVPosetPick,
     GreedyPick,
     GreedySlowPick,
     LCVLitePick,

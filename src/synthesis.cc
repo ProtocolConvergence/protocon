@@ -407,9 +407,8 @@ pick_action_candidates(Set<uint>& ret_candidates,
   Set<uint>::const_iterator it;
 
   // Try to choose an action which adds a new path to the invariant.
-  const Cx::PFmla& reach_pf =
-    inst.lo_xn.pre_reach(inst.hi_invariant);
   if (opt.pick_back_reach) {
+    const P::Fmla reach_pf = inst.lo_xn.pre_reach(inst.hi_invariant);
     Set<uint> candidates_1;
     for (it = candidates.begin(); it != candidates.end(); ++it) {
       const uint actidx = *it;
@@ -453,6 +452,34 @@ pick_action_candidates(Set<uint>& ret_candidates,
 
   if (pick_method == Opt::MRVLitePick) {
     biasMap[0] = candidates;
+  }
+  else if (pick_method == Opt::MRVPosetPick) {
+    biasToMax = false;
+    biasMap[0] = Set<uint>();
+    biasMap[1] = Set<uint>();
+
+    const P::Fmla& deadlock_pf = dlsets[dlset_idx].deadlockPF;
+    for (it = candidates.begin(); it != candidates.end(); ++it) {
+      uint act_id = *it;
+      if (biasMap[1].elem_ck(act_id))  continue;
+      biasMap[0] << act_id;
+
+      const P::Fmla& act_pre = topo.action_pfmla(act_id).pre();
+
+      Set<uint>::const_iterator jt = it;
+      for (++jt; jt != candidates.end(); ++jt) {
+        const uint act2_id = *jt;
+        if (biasMap[1].elem_ck(act2_id))  continue;
+        const P::Fmla& act2_pre = topo.action_pfmla(act2_id).pre();
+        if (deadlock_pf.overlap_ck(act_pre & act2_pre)) {
+          biasMap[1] << act2_id;
+        }
+      }
+    }
+    if (biasMap[0].sz() == 1) {
+      biasMap[0] |= biasMap[1];
+      biasMap.erase(1);
+    }
   }
   else if (pick_method == Opt::GreedyPick || pick_method == Opt::GreedySlowPick) {
     biasToMax = true;
@@ -612,6 +639,7 @@ pick_action_candidates(Set<uint>& ret_candidates,
     }
   }
   else if (pick_method == Opt::QuickPick) {
+    const P::Fmla reach_pf = inst.lo_xn.pre_reach(inst.hi_invariant);
     biasToMax = false;
     for (it = candidates.begin(); it != candidates.end(); ++it) {
       uint actId = *it;
