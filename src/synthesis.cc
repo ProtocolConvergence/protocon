@@ -453,32 +453,22 @@ pick_action_candidates(Set<uint>& ret_candidates,
   if (pick_method == Opt::MRVLitePick) {
     biasMap[0] = candidates;
   }
-  else if (pick_method == Opt::MRVPosetPick) {
+  else if (pick_method == Opt::LexPick) {
+    // Use the lexicographically "first" MRV set.
     biasToMax = false;
-    biasMap[0] = Set<uint>();
-    biasMap[1] = Set<uint>();
 
-    const P::Fmla& deadlock_pf = dlsets[dlset_idx].deadlockPF;
+    P::Fmla deadlock_pf = dlsets[dlset_idx].deadlockPF;
+
     for (it = candidates.begin(); it != candidates.end(); ++it) {
-      uint act_id = *it;
-      if (biasMap[1].elem_ck(act_id))  continue;
-      biasMap[0] << act_id;
-
+      const uint act_id = *it;
       const P::Fmla& act_pre = topo.action_pfmla(act_id).pre();
-
-      Set<uint>::const_iterator jt = it;
-      for (++jt; jt != candidates.end(); ++jt) {
-        const uint act2_id = *jt;
-        if (biasMap[1].elem_ck(act2_id))  continue;
-        const P::Fmla& act2_pre = topo.action_pfmla(act2_id).pre();
-        if (deadlock_pf.overlap_ck(act_pre & act2_pre)) {
-          biasMap[1] << act2_id;
-        }
+      if (deadlock_pf.overlap_ck(act_pre)) {
+        deadlock_pf &= act_pre;
+        biasMap[0] << act_id;
       }
-    }
-    if (biasMap[0].sz() == 1) {
-      biasMap[0] |= biasMap[1];
-      biasMap.erase(1);
+      else {
+        biasMap[1] << act_id;
+      }
     }
   }
   else if (pick_method == Opt::GreedyPick || pick_method == Opt::GreedySlowPick) {
