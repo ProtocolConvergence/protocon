@@ -147,7 +147,7 @@ AddStabilization(vector<uint>& ret_actions,
     }
 
     uint next_idx;
-    if (opt.max_height == 0 || bt_stack.sz() < opt.max_height) {
+    if (opt.max_height == 0 || bt_stack.sz() <= opt.max_height) {
       next_idx = stack_idx + 1;
       if (next_idx == bt_stack.sz())
         bt_stack.push(PartialSynthesis(&synctx));
