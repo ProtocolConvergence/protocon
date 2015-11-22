@@ -1,0 +1,24 @@
+
+constant N := 3;
+constant M := 2;
+
+constant OptionalAct := 1;
+
+puppet variable x[Nat % N] <- Nat % M;
+shadow variable tok[Nat % N] <- Nat % 2;
+
+(future & future shadow)
+  (exists i <- Nat % N : tok[i]==1);
+
+process P[i <- Nat % N]
+{
+  read: x[i-1];
+  write: x[i];
+
+  write: tok[i];
+  write: tok[i+1];
+
+  shadow: ( tok[i]==1 --> tok[i]:=0; tok[i+1]:=1; );
+  shadow: ( OptionalAct==1 && tok[i]==1 && tok[i+1]==1 --> tok[i]:=0; tok[i+1]:=0; );
+}
+

@@ -132,8 +132,6 @@ shadow_ck(Cx::PFmla* ret_invariant,
   const Cx::PFmla& shadow_end =
     shadow_invariant - shadow_live.pre();
 
-  // Over-approximation of invariant.
-  Cx::PFmla hi_invariant = shadow_invariant;
   // Over-approximation of protocol which does not change shadow variables.
   Cx::PFmla hi_self = hi_xn & shadow_self;
   // Over-approximation of protocol which does change shadow variables.
@@ -141,10 +139,15 @@ shadow_ck(Cx::PFmla* ret_invariant,
 
   if (invariant_style == Xn::FutureAndSilent) {
     hi_live = false;
+    hi_self = false;
   }
   if (invariant_style == Xn::FutureAndActiveShadow) {
     hi_self = false;
   }
+
+  // Over-approximation of invariant.
+  Cx::PFmla hi_invariant =
+    shadow_invariant - (lo_xn - (hi_live | hi_self)).pre();
 
   // Trim all states which cannot be in the invariant since we cannot
   // simulate the shadow protocol in those states given the current
@@ -156,20 +159,6 @@ shadow_ck(Cx::PFmla* ret_invariant,
 
     hi_live &= hi_invariant;
     hi_live &= hi_invariant.as_img();
-
-    if (invariant_scope == Xn::FutureInvariant) {
-      // Remove shadow states where the overapproximated protocol
-      // cannot hold all transitions of the shadow protocol.
-      hi_live -= (shadow_live - topo.proj_shadow(hi_live)).pre();
-    }
-    else {
-      // Remove puppet states where the overapproximated protocol
-      // cannot hold all transitions of the shadow protocol.
-      hi_live -= (shadow_live - topo.proj_img_shadow(hi_live)).pre();
-      // TODO: This should really have a reachability component.
-    }
-
-    hi_invariant -= (lo_xn - (hi_self | hi_live)).pre();
 
     hi_self &= hi_invariant;
     hi_self &= hi_invariant.as_img();
