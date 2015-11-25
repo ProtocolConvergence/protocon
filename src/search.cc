@@ -950,7 +950,6 @@ stabilization_search(vector<uint>& ret_actions,
       if (!count_solution) {
       }
       else if (global_opt.optimize_soln) {
-        // Don't write out files when optimizing, but do keep going.
         solution_nlayers_sum = synctx.optimal_nlayers_sum;
       }
       else if (!global_opt.try_all) {
