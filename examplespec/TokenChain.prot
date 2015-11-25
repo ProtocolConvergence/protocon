@@ -1,0 +1,51 @@
+
+constant N := 3;
+
+shadow variable fwd[Nat % 1] <- Nat % 2;
+shadow variable tok[Nat % N] <- Nat % 2;
+puppet variable x[Nat % N] <- Nat % 3;
+
+((future & shadow) % puppet)
+  (unique i <- Nat % N : tok[i]==1);
+
+process Bot[i <- Nat % 1]
+{
+  write: x[i];
+  read:  x[i+1];
+
+  write: fwd[0], tok[i], tok[i+1];
+
+  shadow:
+    ( tok[i]==1 --> fwd[0]:=1; tok[i]:=0; tok[i+1]:=1; );
+}
+
+process P[j <- Nat % (N-2)]
+{
+  let i := j+1;
+
+  read: x[i-1];
+  write: x[i];
+  read: x[i+1];
+
+  read: fwd[0];
+  write: tok[i-1], tok[i], tok[i+1];
+
+  shadow:
+    ( fwd[0]==1 && tok[i]==1 --> tok[i]:=0; tok[i+1]:=1; )
+    ( fwd[0]==0 && tok[i]==1 --> tok[i]:=0; tok[i-1]:=1; )
+    ;
+}
+
+process Top[j <- Nat % 1]
+{
+  let i := N-1;
+
+  read: x[i-1];
+  write: x[i];
+
+  write: fwd[0], tok[i-1], tok[i];
+
+  shadow:
+    ( tok[i]==1 --> fwd[0]:=0; tok[i]:=0; tok[i-1]:=1; );
+}
+

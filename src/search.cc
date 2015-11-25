@@ -938,6 +938,13 @@ stabilization_search(vector<uint>& ret_actions,
         *opt.log << "SOLUTION FOUND!" << opt.log->endl();
         solution_found = true;
         ret_actions = actions;
+        if (global_opt.try_all && !!exec_opt.ofilepath) {
+          Cx::OFileB ofb;
+          ofb.open(exec_opt.ofilepath + "." + PcIdx + "." + trial_idx);
+          oput_protocon_file (ofb, sys, actions,
+                              exec_opt.use_espresso,
+                              exec_opt.argline.ccstr());
+        }
       }
 
       if (!count_solution) {
@@ -948,13 +955,6 @@ stabilization_search(vector<uint>& ret_actions,
       }
       else if (!global_opt.try_all) {
         set_done_flag (1);
-      }
-      else if (!!exec_opt.ofilepath) {
-        Cx::OFileB ofb;
-        ofb.open(exec_opt.ofilepath + "." + PcIdx + "." + trial_idx);
-        oput_protocon_file (ofb, sys, actions,
-                            exec_opt.use_espresso,
-                            exec_opt.argline.ccstr());
       }
     }
 
