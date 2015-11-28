@@ -26,11 +26,13 @@ weak_convergence_ck(const Cx::PFmla& xn, const Cx::PFmla& invariant)
 weak_convergence_ck(uint* ret_nlayers, const Cx::PFmla& xn, const Cx::PFmla& invariant, const Cx::PFmla& assumed)
 {
   uint nlayers = 1;
-  Cx::PFmla visit( invariant );
-  Cx::PFmla layer( xn.pre(invariant) - visit );
-  while (layer.sat_ck()) {
-    visit |= layer;
-    layer = (xn.pre(layer) - visit) & assumed;
+  P::Fmla span0(assumed - invariant);
+
+  while (true) {
+    const P::Fmla& span1 = span0 - xn.pre(assumed - span0);
+    if (span0.equiv_ck(span1))  break;
+    span0 = span1;
+
     if (ret_nlayers) {
       nlayers += 1;
       if (*ret_nlayers > 0 && nlayers > *ret_nlayers) {
@@ -41,7 +43,7 @@ weak_convergence_ck(uint* ret_nlayers, const Cx::PFmla& xn, const Cx::PFmla& inv
   }
   if (ret_nlayers)
     *ret_nlayers = nlayers;
-  return assumed.subseteq_ck(visit);
+  return !span0.sat_ck();
 }
 
   bool
@@ -355,9 +357,6 @@ stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
       << "." << of.endl();
     return false;
   }
-  of << "Max " << (opt.synchronous ? "sync" : "async") << " layers to "
-    << (opt.count_convergence_layers ? "converge" : "fixpoint")
-    << ": " << nlayers << "\n";
 
   if (!scc.subseteq_ck(sys.invariant)) {
     of << "Livelock found.\n";
@@ -396,16 +395,29 @@ stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
     of.flush();
     return false;
   }
+
+  uint reach_nlayers = 0;
   // Only check for weak convergence if it isn't implied.
   if (!lo_xn.equiv_ck(hi_xn)) {
     of << "Checking for weak convergence...\n";
     of.flush();
-    if (!weak_convergence_ck(0, hi_xn, hi_invariant, sys.closed_assume)) {
+    if (!weak_convergence_ck(&reach_nlayers, hi_xn, hi_invariant, sys.closed_assume)) {
       of << "Weak convergence does not hold...\n";
       of.flush();
       return false;
     }
   }
+  else if (!opt.synchronous) {
+    const P::Fmla& invariant =
+      (opt.count_convergence_layers ? hi_invariant : (~lo_xn.pre() | scc));
+    weak_convergence_ck(&reach_nlayers, lo_xn, invariant, sys.closed_assume);
+  }
+  else {
+    reach_nlayers = nlayers;
+  }
+  of << "Max strong/weak " << (opt.synchronous ? "sync" : "async") << " layers to "
+    << (opt.count_convergence_layers ? "converge" : "fixpoint")
+    << ": " << nlayers << "/" << reach_nlayers << of.endl();
 #if 0
   const Xn::Net& topo = sys.topology;
   of << "Checking for cycles using SCC_Find...\n";

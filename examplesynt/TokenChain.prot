@@ -16,8 +16,15 @@ process Bot[i <- Nat % 1]
 
   write: fwd[0], tok[i], tok[i+1];
 
+  //(assume & closed) (x[i]!=2);
+
   shadow:
     ( tok[i]==1 --> fwd[0]:=1; tok[i]:=0; tok[i+1]:=1; );
+
+  puppet:
+    ( x[i]!=1 && x[i+1]==2 --> x[i]:=1; fwd[0]:=1; tok[i]:=0; tok[i+1]:=1; )
+    ( x[i]!=0 && x[i+1]!=2 --> x[i]:=0; )
+    ;
 }
 
 process P[j <- Nat % (N-2)]
@@ -33,7 +40,13 @@ process P[j <- Nat % (N-2)]
 
   shadow:
     ( fwd[0]==1 && tok[i]==1 --> tok[i]:=0; tok[i+1]:=1; )
-    ( fwd[0]==0 && tok[i]==1 --> tok[i]:=0; tok[i-1]:=1; )
+    ( fwd[0]==0 && tok[i]==1 --> tok[i-1]:=1; tok[i]:=0; )
+    ;
+
+  puppet:
+    ( x[i-1]==1 && x[i]!=1              --> x[i]:=1; tok[i]:=0; tok[i+1]:=1; )
+    ( x[i-1]==0 && x[i]==1 && x[i+1]==1 --> x[i]:=0; )
+    ( x[i-1]==0 && x[i]==0 && x[i+1]==2 --> x[i]:=2; tok[i-1]:=1; tok[i]:=0; )
     ;
 }
 
@@ -46,7 +59,14 @@ process Top[j <- Nat % 1]
 
   write: fwd[0], tok[i-1], tok[i];
 
+  //(assume & closed) (x[i]!=0);
+
   shadow:
-    ( tok[i]==1 --> fwd[0]:=0; tok[i]:=0; tok[i-1]:=1; );
+    ( tok[i]==1 --> fwd[0]:=0; tok[i-1]:=1; tok[i]:=0; );
+
+  puppet:
+    ( x[i-1]==1 && x[i]!=1 --> x[i]:=1; )
+    ( x[i-1]!=1 && x[i]!=2 --> x[i]:=2; fwd[0]:=0; tok[i-1]:=1; tok[i]:=0; )
+    ;
 }
 

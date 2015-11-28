@@ -51,6 +51,9 @@ Net::commit_initialization()
       if (pc.spec->random_write_flags[pc.wmap[j]]) {
         domsz = 1;
       }
+      else if (pc.wvbl_symms[j]->pure_shadow_ck()) {
+        domsz += 1;
+      }
       pc.doms.push(domsz);
       pc.img_domsz *= domsz;
     }
@@ -389,35 +392,56 @@ Pc::actions(Cx::Table<uint>& ret_actions, Cx::PFmlaCtx& ctx) const
     pfmla_wvbl_idcs.push(pc.wvbls[i]->pfmla_idx);
   }
 
-  Cx::PFmla pfmla( pc.puppet_xn & pc.closed_assume );
+  Cx::PFmla xn( pc.puppet_xn & pc.closed_assume );
 
   ActSymm act;
   act.vals.grow(pc.rvbls.sz() + pc.wvbls.sz());
 
-  while (pfmla.sat_ck()) {
+  while (xn.sat_ck()) {
     uint* pre_state = &act.vals[0];
-    pfmla.state(pre_state, pfmla_rvbl_idcs);
-    Cx::PFmla pre_pf = ctx.pfmla_of_state(pre_state, pfmla_rvbl_idcs);
-    Cx::PFmla img_pf = pfmla.img(pre_pf);
+    xn.state(pre_state, pfmla_rvbl_idcs);
 
+    Cx::PFmla pre_pf = ctx.pfmla_of_state(pre_state, pfmla_rvbl_idcs);
     for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
-      if (pc_symm.rvbl_symms[i]->pure_shadow_ck()) {
-        pre_state[i] = 0;
-      }
+      const Xn::VblSymm& vbl_symm = *pc_symm.rvbl_symms[i];
+      if (!vbl_symm.pure_shadow_ck())
+        continue;
+      const Cx::PFmlaVbl& v = ctx.vbl(pc.rvbls[i]->pfmla_idx);
+      pre_pf = pre_pf.smooth(v);
+      pre_state[i] = 0;
+    }
+
+    Cx::PFmla img_pf = xn.img(pre_pf);
+    for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
       if (pc_symm.spec->random_write_flags[i]) {
         const Cx::PFmlaVbl& v = ctx.vbl(pc.rvbls[i]->pfmla_idx);
         img_pf = img_pf.smooth(v) & (v == 0);
       }
     }
+
     while (img_pf.sat_ck()) {
       uint* img_state = &act.vals[pc.rvbls.sz()];
       img_pf.state(img_state, pfmla_wvbl_idcs);
+      P::Fmla tmp_pf = ctx.pfmla_of_state(img_state, pfmla_wvbl_idcs);
+
+      for (uint i = 0; i < pc_symm.wvbl_symms.sz(); ++i) {
+        const Xn::VblSymm& vbl_symm = *pc_symm.wvbl_symms[i];
+        if (!vbl_symm.pure_shadow_ck())
+          continue;
+        const Cx::PFmlaVbl& v = ctx.vbl(pc.wvbls[i]->pfmla_idx);
+        const P::Fmla& pf = tmp_pf.smooth(v);
+        if (pf.subseteq_ck(img_pf)) {
+          tmp_pf = pf;
+          img_state[i] = vbl_symm.domsz;
+        }
+      }
+
       uint actidx = pc_symm.act_idx_offset +
         Cx::index_of_state (&act.vals[0], pc_symm.doms);
       ret_actions.push(actidx);
-      img_pf -= ctx.pfmla_of_state(img_state, pfmla_wvbl_idcs);
+      img_pf -= tmp_pf;
     }
-    pfmla -= pre_pf;
+    xn -= pre_pf;
   }
 }
 
@@ -435,7 +459,8 @@ PcSymm::actions(Cx::Table<uint>& ret_actions, Cx::PFmlaCtx& ctx) const
     for (uint i = 0; i < membs.sz(); ++i) {
       pcidcs.push(i);
     }
-    DBog0("System may not represent all actions!");
+    // TODO: Can't debug. Race condition in parallel section.
+    //DBog0("System may not represent all actions!");
   }
 
   Set<uint> action_set;
@@ -973,11 +998,12 @@ Xn::Net::xn_of_pc(const Xn::ActSymm& act, uint pcidx) const
   bool puppet_self_loop = true;
   bool probabilistic = false;
   for (uint i = 0; i < pc.wvbls.sz(); ++i) {
+    const Xn::VblSymm& vbl_symm = *pc_symm.wvbl_symms[i];
     const Cx::PFmlaVbl& vbl = pfmla_vbl(*pc.wvbls[i]);
     bool random_write =
       pc_symm.spec->random_write_flags[pc_symm.wmap[i]];
 
-    if (pc_symm.wvbl_symms[i]->puppet_ck()) {
+    if (vbl_symm.puppet_ck()) {
       if (random_write) {
         probabilistic = true;
       }
@@ -987,8 +1013,13 @@ Xn::Net::xn_of_pc(const Xn::ActSymm& act, uint pcidx) const
       xn &= (vbl == act.aguard(i));
     }
 
-    if (!random_write) {
-      xn &= (vbl.img_eq(act.assign(i)));
+    if (random_write) {
+    }
+    else if (vbl_symm.pure_shadow_ck() && act.assign(i)==vbl_symm.domsz) {
+      xn &= vbl.img_eq(vbl);
+    }
+    else {
+      xn &= vbl.img_eq(act.assign(i));
     }
   }
   if (probabilistic) {

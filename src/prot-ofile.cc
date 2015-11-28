@@ -248,7 +248,10 @@ oput_protocon_pc_act (Cx::OFile& of, const Xn::ActSymm& act)
   of << " --> ";
   bool puppet_self_loop = act.puppet_self_loop_ck();
   for (uint i = 0; i < pc_symm.wvbl_symms.sz(); ++i) {
-    if (puppet_self_loop && !pc_symm.wvbl_symms[i]->pure_shadow_ck())
+    const Xn::VblSymm& vbl_symm = *pc_symm.wvbl_symms[i];
+    if (puppet_self_loop && !vbl_symm.pure_shadow_ck())
+      continue;
+    if (vbl_symm.pure_shadow_ck() && vbl_symm.domsz == act.assign(i))
       continue;
     of << pc_symm.vbl_name(pc_symm.wmap[i]) << ":=";
     if (pc_symm.spec->random_write_flags[pc_symm.wmap[i]])

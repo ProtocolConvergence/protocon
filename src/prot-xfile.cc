@@ -479,14 +479,8 @@ ProtoconFile::parse_action(Cx::PFmla& act_pf, Cx::Table<Cx::PFmla>& pc_xns, Sesp
       if (!auto_iden || wvbl_assigned[i]) {
         continue;
       }
-      if (role != Xn::Vbl::Shadow && pc_symm->wvbl_symms[i]->pure_shadow_ck()) {
-        DBog0( "All writable shadow variables must be assigned in a puppet action!" );
-        good = false;
-      }
-      else {
-        const Cx::PFmlaVbl& pf_vbl = topo.pfmla_vbl(*pc.wvbls[i]);
-        assign_pf &= pf_vbl.img_eq(pf_vbl);
-      }
+      const Cx::PFmlaVbl& pf_vbl = topo.pfmla_vbl(*pc.wvbls[i]);
+      assign_pf &= pf_vbl.img_eq(pf_vbl);
     }
 
     pc_xns[pcidx] = guard_pf & assign_pf;
