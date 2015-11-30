@@ -35,12 +35,25 @@ int main(int argc, char** argv) {
   if (domsz == 0)
     failout_sysCx(in_filepath);
 
+  // (Debugging) Output all the legitimate readable states.
+  printf("Legitimate states for P[i]:\n");
+  for (uint i = 0; i < legits.size(); ++i) {
+    printf("x[i-1]==%u && x[i]==%u\n", legits[i][0], legits[i][1]);
+  }
+
   vector< Tuple<PcState,3> > actions;
   // ... build this up ...
   // Here's a hard-coded protocol for Sum-Not-Two:
   actions.push_back(mk_Tuple<PcState>(0,2,1));
   actions.push_back(mk_Tuple<PcState>(1,1,2));
   actions.push_back(mk_Tuple<PcState>(2,0,1));
+
+  // (Debugging) Output all the synthesized acctions.
+  printf("Synthesized actions for P[i]:\n");
+  for (uint i = 0; i < actions.size(); ++i) {
+    printf("x[i-1]==%u && x[i]==%u --> x[i]:=%u\n", actions[i][0], actions[i][1], actions[i][2]);
+  }
+
 
   const char* out_filepath = argv[argi];
   if (out_filepath) {
