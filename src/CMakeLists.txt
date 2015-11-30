@@ -218,6 +218,12 @@ set_target_properties (deadfree PROPERTIES
 addbinexe (unisyn unisyn.cc ${ProtoconSources})
 set_property (TARGET unisyn
   APPEND PROPERTY INCLUDE_DIRECTORIES ${GluIncludePath})
+set_property (TARGET unisyn
+  PROPERTY COMPILE_FLAGS "-Wextra -std=c++11")
+set_property (TARGET unisyn
+  PROPERTY LINK_FLAGS "-Wextra -std=c++11")
+#set_source_files_properties (${BldPath}/unisyn.cc
+#  PROPERTIES COMPILE_FLAGS "-Wextra -std=c++11")
 target_link_libraries (unisyn cu glu cal ${M_LIB})
 set_target_properties (unisyn PROPERTIES
   OUTPUT_NAME unisyn
