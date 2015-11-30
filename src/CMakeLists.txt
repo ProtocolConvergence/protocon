@@ -55,6 +55,7 @@ list (APPEND CCFiles
   prot-xfile.cc prot-ofile.cc
   biring.cc
   deadfree.cc
+  unisyn.cc
   msat.cc
   main-all.cc
   )
@@ -210,6 +211,16 @@ set_property (TARGET deadfree
 target_link_libraries (deadfree cu glu cal ${M_LIB})
 set_target_properties (deadfree PROPERTIES
   OUTPUT_NAME deadfree
+  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+
+
+#### Unidirectional Ring Synthesis ####
+addbinexe (unisyn unisyn.cc ${ProtoconSources})
+set_property (TARGET unisyn
+  APPEND PROPERTY INCLUDE_DIRECTORIES ${GluIncludePath})
+target_link_libraries (unisyn cu glu cal ${M_LIB})
+set_target_properties (unisyn PROPERTIES
+  OUTPUT_NAME unisyn
   RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
 

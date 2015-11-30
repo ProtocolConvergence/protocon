@@ -33,7 +33,7 @@ process P[j <- Nat % (N-2)]
 
   shadow:
     ( fwd[0]==1 && tok[i]==1 --> tok[i]:=0; tok[i+1]:=1; )
-    ( fwd[0]==0 && tok[i]==1 --> tok[i]:=0; tok[i-1]:=1; )
+    ( fwd[0]==0 && tok[i]==1 --> tok[i-1]:=1; tok[i]:=0; )
     ;
 }
 
@@ -47,6 +47,6 @@ process Top[j <- Nat % 1]
   write: fwd[0], tok[i-1], tok[i];
 
   shadow:
-    ( tok[i]==1 --> fwd[0]:=0; tok[i]:=0; tok[i-1]:=1; );
+    ( tok[i]==1 --> fwd[0]:=0; tok[i-1]:=1; tok[i]:=0; );
 }
 
