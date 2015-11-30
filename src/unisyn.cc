@@ -20,28 +20,6 @@ ReadUniRing(const char* filepath, Xn::Sys& sys, vector< array<PcState,2> >& legi
 bool
 WriteUniRing(const char* filepath, const Xn::Sys& sys, const vector< array<PcState,3> >& actions);
 
-template<class T>
-  array<T,2>
-mk_array(const T& a, const T& b)
-{
-  array<T,2> ret;
-  ret[0] = a;
-  ret[1] = b;
-  return ret;
-}
-
-template<class T>
-  array<T,3>
-mk_array(const T& a, const T& b, const T& c)
-{
-  array<T,3> ret;
-  ret[0] = a;
-  ret[1] = b;
-  ret[2] = c;
-  return ret;
-}
-
-
 /** Execute me now!**/
 int main(int argc, char** argv) {
   int argi = init_sysCx(&argc, &argv);
@@ -65,9 +43,9 @@ int main(int argc, char** argv) {
   vector< array<PcState,3> > actions;
   // ... build this up ...
   // Here's a hard-coded protocol for Sum-Not-Two:
-  actions.push_back(mk_array<PcState>(0,2,1));
-  actions.push_back(mk_array<PcState>(1,1,2));
-  actions.push_back(mk_array<PcState>(2,0,1));
+  actions.push_back(array<PcState,3>{0,2,1});
+  actions.push_back(array<PcState,3>{1,1,2});
+  actions.push_back(array<PcState,3>{2,0,1});
 
   // (Debugging) Output all the synthesized acctions.
   printf("Synthesized actions for P[i]:\n");
@@ -145,7 +123,7 @@ ReadUniRing(const char* filepath, Xn::Sys& sys, vector< array<PcState,2> >& legi
     // Remove the corresponding predicate formula from {legit_pf}.
     legit_pf -= topo.pfmla_ctx.pfmla_of_state(&state[0], rvbl_indices);
 
-    legits.push_back(mk_array<PcState>(state[0], state[1]));
+    legits.push_back(array<PcState,2>{state[0], state[1]});
   }
 
   return topo.vbl_symms[0].domsz;
