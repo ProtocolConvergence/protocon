@@ -824,7 +824,10 @@ OPut(Cx::OFile& of, const Xn::ActSymm& act)
   }
   of << " -->";
   for (uint i = 0; i < pc.wvbl_symms.sz(); ++i) {
-    of << ' ' << pc.wvbl_symms[i]->spec->name
+    const Xn::VblSymm& vbl_symm = *pc.wvbl_symms[i];
+    if (vbl_symm.pure_shadow_ck() && act.assign(i)==vbl_symm.domsz)
+      continue;
+    of << ' ' << vbl_symm.spec->name
       << "[" << pc.windices[i].expression << "]"
       << ":=";
     if (pc.spec->random_write_flags[pc.wmap[i]])
@@ -1148,6 +1151,13 @@ candidate_actions(std::vector<uint>& candidates,
     return false;
   }
 
+  const Cx::PFmla& hi_invariant = (sys.invariant & sys.closed_assume);
+
+  if (!hi_invariant.sat_ck()) {
+    DBog0( "Invariant is empty with (assume & closed) predicate!" );
+    return false;
+  }
+
   if (sys.invariant.tautology_ck()) {
     DBog0( "All states are invariant!" );
     if (!sys.shadow_puppet_synthesis_ck()) {
@@ -1172,7 +1182,7 @@ candidate_actions(std::vector<uint>& candidates,
 
     uint rep_pcidx = 0;
     pc_symm.representative(&rep_pcidx);
-    const Xn::Pc& rep_pc = *pc_symm.membs[rep_pcidx];
+    const Xn::Pc& pc = *pc_symm.membs[rep_pcidx];
     const X::Fmla& pc_xn = topo.represented_xns_of_pc(act, rep_pcidx);
 
     const X::Fmla& act_xn = topo.action_pfmla(actidx);
@@ -1180,14 +1190,14 @@ candidate_actions(std::vector<uint>& candidates,
       add = false;
     }
     if (add) {
-      add = !pc_xn.overlap_ck(rep_pc.forbid_xn);
+      add = !pc_xn.overlap_ck(pc.forbid_xn);
       if (!add) {
         rejs << actidx;
       }
     }
     if (add) {
-      if (rep_pc.permit_xn.sat_ck()) {
-        if (!pc_xn.subseteq_ck(rep_pc.permit_xn)) {
+      if (pc.permit_xn.sat_ck()) {
+        if (!pc_xn.subseteq_ck(pc.permit_xn)) {
           add = false;
           rejs << actidx;
         }
@@ -1195,34 +1205,53 @@ candidate_actions(std::vector<uint>& candidates,
     }
 
     // Check for self-loops.
+    bool puppet_selfloop = true;
+    bool shadow_selfloop = true;
+    bool shadow_full_img = true;
+    bool shadow_exists = false;
+    //X::Fmla shadow_xn = topo.smooth_puppet_vbls(pc.shadow_xn.img());
+    X::Fmla shadow_xn = topo.smooth_puppet_vbls(pc.shadow_xn);
     if (add) {
-      bool selfloop = true;
-      bool shadow_exists = false;
-      for (uint j = 0; j < pc_symm.wvbl_symms.sz(); ++j) {
-        if (pc_symm.wvbl_symms[j]->pure_shadow_ck()) {
+      for (uint i = 0; i < pc_symm.wvbl_symms.sz(); ++i) {
+        const Xn::VblSymm& vbl_symm = *pc_symm.wvbl_symms[i];
+        const Xn::Vbl& vbl = *pc.wvbls[i];
+        const Cx::PFmlaVbl& pf_vbl = topo.pfmla_vbl(vbl);
+        if (vbl_symm.pure_shadow_ck()) {
           shadow_exists = true;
-        }
-        else if (pc_symm.spec->random_write_flags[pc_symm.wmap[j]]) {
-          selfloop = false;
-        }
-        else {
-          if (act.assign(j) != act.aguard(j)) {
-            selfloop = false;
+          if (act.assign(i) == vbl_symm.domsz) {
+            shadow_xn &= pf_vbl.img_eq(pf_vbl);
+            shadow_full_img = false;
+          }
+          else {
+            shadow_selfloop = false;
+            shadow_xn &= pf_vbl.img_eq(act.assign(i));
+            shadow_xn = shadow_xn.smooth_pre(pf_vbl);
           }
         }
-      }
-      add = !selfloop;
-      if (selfloop) {
-        if (shadow_exists) {
-          add = true;
+        else if (pc_symm.spec->random_write_flags[pc_symm.wmap[i]]) {
+          puppet_selfloop = false;
         }
-        else {
-          rejs << actidx;
+        else if (act.assign(i) != act.aguard(i)) {
+          puppet_selfloop = false;
         }
       }
-      if (explain_rej && selfloop) {
-        OPut((DBogOF << "Action " << actidx << " is a self-loop: "), act) << '\n';
+      for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
+        if (pc_symm.write_flags[i])  continue;
+        const Xn::VblSymm& vbl_symm = *pc_symm.rvbl_symms[i];
+        if (vbl_symm.puppet_ck())  continue;
+        const Cx::PFmlaVbl& pf_vbl = topo.pfmla_vbl(*pc.rvbls[i]);
+        shadow_xn = shadow_xn.smooth(pf_vbl);
       }
+
+      if (puppet_selfloop && shadow_selfloop) {
+        add = false;
+        rejs << actidx;
+        if (explain_rej) {
+          OPut((DBogOF << "Action " << actidx << " is a self-loop: "), act) << '\n';
+        }
+      }
+      if (!shadow_exists)
+        shadow_selfloop = false;
     }
 
     if (add && !act_xn.img(sys.closed_assume).subseteq_ck(sys.closed_assume)) {
@@ -1238,20 +1267,44 @@ candidate_actions(std::vector<uint>& candidates,
     }
     // Optimization. Shadow variables can just be changed as if the invariant
     // is reached or will be reached by this action.
-    if (add && !topo.smooth_puppet_vbls(act_xn.img()).overlap_ck(sys.invariant)) {
+    if (add && !topo.smooth_puppet_vbls(act_xn.img()).overlap_ck(hi_invariant)) {
       add = false;
       dels << actidx;
     }
-    // Optimization. When (future & active shadow) is specified, shadow
-    // variables should only change as they do in the shadow protocol.
-    if (add && sys.spec->invariant_style == Xn::FutureAndActiveShadow) {
-      if (!pc_xn.overlap_ck(topo.smooth_puppet_vbls(rep_pc.shadow_xn))) {
+
+    if (!add) {
+    }
+    else if (!pc.shadow_xn.sat_ck()) {
+      // When the shadow protocol is silent, at least for this process,
+      // then we enforce every action to assign the pure shadow variables.
+      if (!shadow_full_img) {
+        add = false;
+        rejs << actidx;
+      }
+    }
+    else if (hi_invariant.subseteq_ck(sys.shadow_pfmla.pre()) && puppet_selfloop) {
+      add = false;
+      rejs << actidx;
+    }
+    else if (shadow_selfloop || puppet_selfloop) {
+      if (sys.spec->active_shadow_ck()) {
+        add = false;
+        rejs << actidx;
+      }
+    }
+    else if (hi_invariant.subseteq_ck(sys.shadow_pfmla.pre())
+             || sys.spec->active_shadow_ck())
+    {
+      // Optimization. When the shadow protocol is never silent in the invariant,
+      // pure shadow variables should only change as they do in the shadow protocol.
+      if (!topo.smooth_puppet_vbls(pc_xn).equiv_ck(shadow_xn)) {
         add = false;
         dels << actidx;
       }
     }
+
     if (add && sys.spec->invariant_scope == Xn::DirectInvariant) {
-      if (!act_xn.img(sys.invariant & sys.closed_assume).subseteq_ck(sys.invariant)) {
+      if (!act_xn.img(hi_invariant).subseteq_ck(sys.invariant)) {
         add = false;
         rejs << actidx;
         if (explain_rej) {
@@ -1259,7 +1312,7 @@ candidate_actions(std::vector<uint>& candidates,
         }
       }
       else if (sys.spec->invariant_style != Xn::FutureAndClosed &&
-               !(act_xn & sys.invariant & sys.closed_assume)
+               !(act_xn & hi_invariant)
                .subseteq_ck(sys.shadow_pfmla | sys.shadow_self))
       {
         add = false;

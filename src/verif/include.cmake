@@ -60,6 +60,7 @@ set (ExampleSpecs
   SortChain
   SumNotTarget
   TokenRingOdd
+  TokenRingRand
   TokenRingThreeBit
   )
 
@@ -99,6 +100,7 @@ list (APPEND ExampleSolns
   DiningPhilo
   OrientRing
   OrientRingViaToken
+  TokenChain
   TokenChainDijkstra
   TokenRingFiveState
   TokenRingSixState
@@ -121,6 +123,7 @@ set (ExampleSynts
   OrientDaisy
   SegmentRing
   ShadowColorRing
+  TokenChain
   TokenChainDijkstra
   TokenRing
   TokenRingSuperpos

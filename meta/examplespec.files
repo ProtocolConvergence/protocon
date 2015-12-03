@@ -35,10 +35,12 @@ StopAndWait
 SumNotOdd
 SumNotTarget
 SumNotTwo
+TokenChain
 TokenChainDijkstra
 TokenRing
 TokenRingDijkstra
 TokenRingOdd
+TokenRingRand
 TokenRingSuperpos
 TokenRingThreeBit
 TokenRingThreeState

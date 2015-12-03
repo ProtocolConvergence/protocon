@@ -21,10 +21,12 @@ SortRing
 StopAndWait
 SumNotOdd
 SumNotTarget
+TokenChain
 TokenChainDijkstra
 TokenRingDijkstra
 TokenRingFiveState
 TokenRingOdd
+TokenRingRand
 TokenRingSixState
 TokenRingThreeBit
 TokenRingThreeState

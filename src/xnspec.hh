@@ -217,6 +217,12 @@ public:
     , invariant_scope( Xn::DirectInvariant )
     , invariant_behav( Xn::NInvariantBehavs )
   {}
+
+  bool active_shadow_ck() const {
+    return (invariant_style == Xn::FutureAndActiveShadow
+            ||
+            invariant_behav == Xn::FutureActiveShadow);
+  }
 };
 }
 
