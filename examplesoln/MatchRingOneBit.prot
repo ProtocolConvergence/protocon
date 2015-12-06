@@ -1,3 +1,7 @@
+
+// Maximal Matching on a ring
+// 1-bit per process
+
 constant N := 3;
 
 variable x[Nat % N] <- Nat % 2;

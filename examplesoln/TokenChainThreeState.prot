@@ -1,4 +1,7 @@
 
+// Token-passing on a chain
+// using 3 states per process
+
 constant N := 3;
 
 variable x[Nat % N] <- Nat % 3;

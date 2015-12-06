@@ -22,27 +22,15 @@ In the context of self-stabilization, the system may be in a state with multiple
 \section{5-State Token Ring}
 \label{sec:TokenRingFiveState}
 
-\quicksec{TokenRingFiveState}
+\quicksec{TokenRing}
 (\href{\examplespec/TokenRing.prot}{spec},
 \href{\examplesett/TokenRingFiveState.args}{args},
-\href{\examplesoln/TokenRingFiveState.prot}{soln})
+\href{\examplesynt/TokenRingFiveState.prot}{synt},
+\href{\examplesoln/TokenRingFiveState.prot}{soln} )
 
-\section{3-State Token Ring (Dijkstra)}
-\label{sec:TokenRingThreeState}
-
-\quicksec{TokenRingThreeState}
-(\href{\examplespec/TokenRingThreeState.prot}{spec},
-\href{\examplesett/TokenRingThreeState.args}{args},
-\href{\examplesynt/TokenRingThreeState.prot}{synt},
-\href{\examplesoln/TokenRingThreeState.prot}{soln})
-
-\section{4-State Token Chain (Dijkstra)}
-\label{sec:TokenChainDijkstra}
-
-\quicksec{TokenChainDijkstra}
-(\href{\examplespec/TokenChainDijkstra.prot}{spec},
-\href{\examplesynt/TokenChainDijkstra.prot}{synt},
-\href{\examplesoln/TokenChainDijkstra.prot}{soln})
+This is a unidirectional token ring that has 5 states per process.
+Without using randomization, no smaller token ring exists.
+Interestingly, we can still pass a token with every action in the invariant.
 
 \section{6-State Token Ring}
 \label{sec:TokenRingSixState}
@@ -50,7 +38,7 @@ In the context of self-stabilization, the system may be in a state with multiple
 \quicksec{TokenRingSixState}
 (\href{\examplespec/TokenRingSuperpos.prot}{spec},
 \href{\examplesett/TokenRingSixState.args}{args},
-\href{\examplesynt/TokenRingSixSuperpos.prot}{synt},
+\href{\examplesynt/TokenRingSuperpos.prot}{synt},
 \href{\examplesoln/TokenRingSixState.prot}{soln})
 
 \section{3-Bit Token Ring}
@@ -64,6 +52,8 @@ In the context of self-stabilization, the system may be in a state with multiple
 
 This section shows how to synthesize a self-stabilizing token ring using the same topology given by
 Gouda and Haddix in \textit{The Stabilizing Token Ring in Three Bits}.
+It uses 8 states per process.
+Not every action in the invariant passes a token, which causes a noticeable lag for larger rings.
 
 \subsection{Problem Instance}
 
@@ -110,6 +100,45 @@ protocon -x examplespec/TokenRingThreeBit.prot -o tmp/3bit.prot -def N 5 -param 
 \subsection{Stabilizing Version}
 
 \codeinputlisting{../../../examplesoln/TokenRingThreeBit.prot}
+
+\section{3-State Token Ring (Dijkstra)}
+\label{sec:TokenRingThreeState}
+
+\quicksec{TokenRingThreeState}
+(\href{\examplespec/TokenRingThreeState.prot}{spec},
+\href{\examplesett/TokenRingThreeState.args}{args},
+\href{\examplesynt/TokenRingThreeState.prot}{synt},
+\href{\examplesoln/TokenRingThreeState.prot}{soln})
+
+This ring is bidirectional, and passes the token back-and-forth.
+Every action in the invariant passes a token.
+
+\section{3-State Token Chain}
+\label{sec:TokenChainThreeState}
+
+\quicksec{TokenChainThreeState}
+(\href{\examplespec/TokenChain.prot}{spec},
+\href{\examplesett/TokenChainThreeState.args}{args},
+\href{\examplesynt/TokenChain.prot}{synt},
+\href{\examplesoln/TokenChainThreeState.prot}{soln})
+
+This is a bidirectional chain that passes the token back-and-forth.
+It uses 3 states per process.
+Not every action in the invariant passes a token, but the actions that do not pass the token can be run in parallel with the token-passing ones, so the performance hit is small.
+
+
+\section{4-State Token Chain (Dijkstra)}
+\label{sec:TokenChainDijkstra}
+
+\quicksec{TokenChainDijkstra}
+(\href{\examplespec/TokenChainDijkstra.prot}{spec},
+\href{\examplesynt/TokenChainDijkstra.prot}{synt},
+\href{\examplesoln/TokenChainDijkstra.prot}{soln})
+
+This is a bidirectional chain that passes the token back-and-forth.
+It uses 4 states per process.
+It converges quickly and every action in the invariant passes the token.
+
 
 \end{document}
 

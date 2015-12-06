@@ -1,4 +1,7 @@
 
+// Token-passing around a unidirectional ring
+// using 5 states per process
+
 constant N := 3;
 
 variable x[Nat % N] <- Nat % 5;

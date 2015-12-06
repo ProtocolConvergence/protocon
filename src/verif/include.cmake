@@ -64,7 +64,16 @@ set (ExampleSpecs
   TokenRingThreeBit
   )
 
-foreach (f ${ExampleSpecs})
+# Specifications that have solutions
+# with different names.
+set (GenericSpecs
+  MatchRing
+  TokenChain
+  TokenRing
+  TokenRingSuperpos
+  )
+
+foreach (f ${ExampleSpecs} ${GenericSpecs})
   add_test (NAME Synth3_${f}
     COMMAND protocon -x ${SpecPath}/${f}.prot -def N 3)
 endforeach ()

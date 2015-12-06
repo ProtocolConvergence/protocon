@@ -1,4 +1,7 @@
 
+// Token-passing around a ring
+// using 6 states per process.
+// (Proof-of-concept, not pretty!!)
 // Verified up to N=25
 
 constant N := 3;

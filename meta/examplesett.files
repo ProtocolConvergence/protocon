@@ -16,7 +16,7 @@ OrientRingOdd
 SegmentRing
 StopAndWait
 SumNotTwo
-TokenChain
+TokenChainThreeState
 TokenChainDijkstra
 TokenRingFiveState
 TokenRingOdd
