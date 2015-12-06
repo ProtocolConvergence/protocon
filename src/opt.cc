@@ -391,6 +391,18 @@ protocon_options_rec
             skiplined_XFile (&olay, "\n");
           }
         }
+        else if (pfxeq_cstr("'", xarg)) {
+          putlast_char_XFile (&olay, matched_delim);
+          offto_XFile (&olay, xarg);
+          xarg = nextok_XFile (&olay, 0, "'");
+          xargs.push(xarg);
+        }
+        else if (pfxeq_cstr("\"", xarg)) {
+          putlast_char_XFile (&olay, matched_delim);
+          offto_XFile (&olay, xarg);
+          xarg = nextok_XFile (&olay, 0, "\"");
+          xargs.push(xarg);
+        }
         else {
           xargs.push(xarg);
         }

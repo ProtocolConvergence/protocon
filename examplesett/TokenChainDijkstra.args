@@ -4,3 +4,4 @@
 -def N 2
 -param N 3
 -param N 4
+-prep-conflicts
