@@ -14,8 +14,14 @@ class ProtoconFileOpt
 public:
   Cx::String text;
   Map< Cx::String, Xn::NatMap > constant_map;
+  Xn::InvariantStyle invariant_style;
+  Xn::InvariantScope invariant_scope;
+  Xn::InvariantBehav invariant_behav;
 
   ProtoconFileOpt()
+    : invariant_style( Xn::NInvariantStyles )
+    , invariant_scope( Xn::NInvariantScopes )
+    , invariant_behav( Xn::NInvariantBehavs )
   {}
 };
 

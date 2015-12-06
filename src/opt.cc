@@ -45,6 +45,92 @@ ReadFileText (Cx::String& ret_text, const char* filename)
 
 static
   bool
+eqck_skipws (const char* a, const char* b)
+{
+  uint i = 0;
+  uint j = 0;
+  if (!a)  a = "";
+  if (!b)  b = "";
+  while (true) {
+    if (a[i]==' ') {
+      ++i;
+    }
+    else if (b[j]==' ') {
+      ++j;
+    }
+    else if (a[i]!=b[j]) {
+      return false;
+    }
+    else if (a[i]=='\0') {
+      return true;
+    }
+    else {
+      ++i;
+      ++j;
+    }
+  }
+  return false;
+}
+
+static
+  bool
+parse_style (ProtoconFileOpt& opt, const char* arg)
+{
+#define M(str)  (eqck_skipws(arg, str))
+  /* */if M("(future & closed)") {
+    opt.invariant_style = Xn::FutureAndClosed;
+    opt.invariant_scope = Xn::DirectInvariant;
+  }
+  else if M("(future & silent)") {
+    opt.invariant_style = Xn::FutureAndSilent;
+    opt.invariant_scope = Xn::DirectInvariant;
+  }
+  else if M("(future & shadow)") {
+    opt.invariant_style = Xn::FutureAndShadow;
+    opt.invariant_scope = Xn::DirectInvariant;
+  }
+  else if M("(future & active shadow)") {
+    opt.invariant_style = Xn::FutureAndActiveShadow;
+    opt.invariant_scope = Xn::DirectInvariant;
+  }
+  else if M("((future & closed) % puppet)") {
+    opt.invariant_style = Xn::FutureAndClosed;
+    opt.invariant_scope = Xn::ShadowInvariant;
+  }
+  else if M("((future & silent) % puppet)") {
+    opt.invariant_style = Xn::FutureAndSilent;
+    opt.invariant_scope = Xn::ShadowInvariant;
+  }
+  else if M("((future & shadow) % puppet)") {
+    opt.invariant_style = Xn::FutureAndShadow;
+    opt.invariant_scope = Xn::ShadowInvariant;
+  }
+  else if M("(future & silent)") {
+    opt.invariant_style = Xn::FutureAndShadow;
+    opt.invariant_scope = Xn::FutureInvariant;
+  }
+  else if M("(future & future shadow)") {
+    opt.invariant_style = Xn::FutureAndShadow;
+    opt.invariant_scope = Xn::FutureInvariant;
+  }
+  else if M("future silent") {
+    opt.invariant_behav = Xn::FutureSilent;
+  }
+  else if M("future shadow") {
+    opt.invariant_behav = Xn::FutureShadow;
+  }
+  else if M("future active shadow") {
+    opt.invariant_behav = Xn::FutureActiveShadow;
+  }
+  else {
+    return false;
+  }
+  return true;
+#undef M
+}
+
+static
+  bool
 handle_param_arg(ProtoconParamOpt& psys_opt, const char* arg, int& argi, int argc, char** argv)
 {
   if (eq_cstr (arg, "-no-conflict")) {
@@ -498,6 +584,12 @@ protocon_options_rec
       }
       else {
         failout_sysCx("Argument Usage: -pick [mrv|greedy|lcv|quick]");
+      }
+    }
+    else if (eq_cstr (arg, "-style")) {
+      arg = argv[argi++];
+      if (!parse_style (infile_opt, arg)) {
+        failout_sysCx("Bad -style");
       }
     }
     else {

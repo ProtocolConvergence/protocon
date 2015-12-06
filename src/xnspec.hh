@@ -39,6 +39,7 @@ enum InvariantBehav {
   // SilentBehav
   // ActiveBehav
   FutureSilent,
+  FutureShadow,
   FutureActiveShadow,
   //FutureActive,
   NInvariantBehavs
@@ -215,7 +216,7 @@ public:
   Spec()
     : invariant_style( Xn::FutureAndShadow )
     , invariant_scope( Xn::DirectInvariant )
-    , invariant_behav( Xn::NInvariantBehavs )
+    , invariant_behav( Xn::FutureShadow )
   {}
 
   bool active_shadow_ck() const {

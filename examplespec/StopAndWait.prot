@@ -48,7 +48,7 @@ process A[id <- Nat % 1]
   // Value of {msg} should represent {y}.
   (assume & closed)  (y[0]==msg[i]);
 
-  shadow: ( y[0]==y[1] --> y[0]:=y[1]+d[0]+1; );
+  shadow: ( y[0]==y[1] --> y[0]:=y[0]+d[0]+1; );
 }
 
 

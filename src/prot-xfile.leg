@@ -717,6 +717,14 @@ ReadProtoconFile(Xn::Sys& sys, const ProtoconFileOpt& opt)
   lose_AlphaTab (&text);
   delete yyctx.st;
   yyrelease(&yyctx);
+
+  if (opt.invariant_style != Xn::NInvariantStyles)
+    sys.spec->invariant_style = opt.invariant_style;
+  if (opt.invariant_scope != Xn::NInvariantScopes)
+    sys.spec->invariant_scope = opt.invariant_scope;
+  if (opt.invariant_behav != Xn::NInvariantBehavs)
+    sys.spec->invariant_behav = opt.invariant_behav;
+
   sys.commit_initialization();
   return good;
 }

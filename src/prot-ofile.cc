@@ -428,6 +428,8 @@ string_of_invariant_behav (Xn::InvariantBehav behav)
   {
     case Xn::FutureSilent:
       return "future silent";
+    case Xn::FutureShadow:
+      return 0;
     case Xn::FutureActiveShadow:
       return "future active shadow";
     case Xn::NInvariantBehavs:
