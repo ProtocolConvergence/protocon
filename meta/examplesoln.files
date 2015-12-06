@@ -21,8 +21,8 @@ SortRing
 StopAndWait
 SumNotOdd
 SumNotTarget
-TokenChain
 TokenChainDijkstra
+TokenChainThreeState
 TokenRingDijkstra
 TokenRingFiveState
 TokenRingOdd

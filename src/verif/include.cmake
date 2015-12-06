@@ -100,8 +100,8 @@ list (APPEND ExampleSolns
   DiningPhilo
   OrientRing
   OrientRingViaToken
-  TokenChain
   TokenChainDijkstra
+  TokenChainThreeState
   TokenRingFiveState
   TokenRingSixState
   TokenRingThreeState
