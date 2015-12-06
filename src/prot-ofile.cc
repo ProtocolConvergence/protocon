@@ -428,10 +428,9 @@ string_of_invariant_behav (Xn::InvariantBehav behav)
   {
     case Xn::FutureSilent:
       return "future silent";
-    case Xn::FutureShadow:
-      return 0;
     case Xn::FutureActiveShadow:
       return "future active shadow";
+    case Xn::FutureShadow:
     case Xn::NInvariantBehavs:
       return 0;
   }
@@ -511,7 +510,8 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys,
     of << "\n" << style_str << "\n  (" << legit_str << ")\n  ;";
   }
 
-  if (sys.spec->invariant_behav != Xn::NInvariantBehavs) {
+  if (sys.spec->invariant_behav != Xn::FutureShadow &&
+      sys.spec->invariant_behav != Xn::NInvariantBehavs) {
     of << "\n" << string_of_invariant_behav (sys.spec->invariant_behav) << ";";
   }
 

@@ -216,7 +216,7 @@ public:
   Spec()
     : invariant_style( Xn::FutureAndShadow )
     , invariant_scope( Xn::DirectInvariant )
-    , invariant_behav( Xn::FutureShadow )
+    , invariant_behav( Xn::NInvariantBehavs )
   {}
 
   bool active_shadow_ck() const {
