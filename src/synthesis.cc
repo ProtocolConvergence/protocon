@@ -37,8 +37,11 @@ coexist_ck(const Xn::ActSymm& a, const Xn::ActSymm& b,
         puppet_img_eql = false;
     }
     else {
-      if (a.assign(i) != b.assign(i))
+      if (pc.wvbl_symms[i]->domsz != a.assign(i) &&
+          pc.wvbl_symms[i]->domsz != b.assign(i) &&
+          a.assign(i) != b.assign(i)) {
         pure_shadow_img_eql = false;
+      }
     }
   }
 

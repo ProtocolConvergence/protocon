@@ -588,7 +588,7 @@ Net::safe_ck(const Xn::ActSymm& act) const
       return false;
   }
   if (pc.forbid_xn.sat_ck()) {
-    if (xn.overlap_ck(pc.forbid_xn))
+    if (xn.subseteq_ck(pc.forbid_xn))
       return false;
   }
   return true;
@@ -1032,6 +1032,7 @@ Xn::Net::xn_of_pc(const Xn::ActSymm& act, uint pcidx) const
 
     P::Fmla okay_xn( pc.closed_assume );
     okay_xn &= pc.closed_assume.subst_to_img(wvbl_list_id);
+    // TODO: Next line is bad.
     okay_xn &= ~pc.forbid_xn;
     if (pc.permit_xn.sat_ck()) {
       okay_xn &= pc.permit_xn;
@@ -1190,7 +1191,7 @@ candidate_actions(std::vector<uint>& candidates,
       add = false;
     }
     if (add) {
-      add = !pc_xn.overlap_ck(pc.forbid_xn);
+      add = !pc_xn.subseteq_ck(pc.forbid_xn);
       if (!add) {
         rejs << actidx;
       }

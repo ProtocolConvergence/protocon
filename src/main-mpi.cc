@@ -130,7 +130,7 @@ stabilization_search(vector<uint>& ret_actions,
 
   Cx::Table< Cx::Table<uint> > act_layers;
 
-  DoLegitLine( 0 )
+  DoLegitLine( "Could not initialize." )
     stabilization_search_init
     (synctx, sys, systems, log_ofile, opt, infile_opt, exec_opt, act_layers);
 
