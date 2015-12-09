@@ -1467,6 +1467,22 @@ SynthesisCtx::add(const Xn::Sys& sys, const StabilizationOpt& stabilization_opt)
     synctx.conflicts.add_impossible(rejs[i]);
   }
 
+  for (uint pcidx = 0; pcidx < topo.pc_symms.sz(); ++pcidx) {
+    const Cx::Table< FlatSet<Xn::ActSymm> >& conflicts =
+      topo.pc_symms[pcidx].conflicts;
+    for (uint i = 0; i < conflicts.sz(); ++i) {
+
+      const FlatSet<Xn::ActSymm>& conflict = conflicts[i];
+
+      Cx::Table<uint> conflict_ints(conflict.sz());
+      for (uint j = 0; j < conflict.sz(); ++j) {
+        Claim( conflict[j].vals.sz() > 0 );
+        conflict_ints[j] = topo.action_index(conflict[j]);
+      }
+      synctx.conflicts.add_conflict(conflict_ints);
+    }
+  }
+
   if (!good) {
     return false;
   }

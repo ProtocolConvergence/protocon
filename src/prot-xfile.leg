@@ -139,6 +139,15 @@ ForbidActionDef =
   END_STMT
   ;
 
+ConflictActionDef =
+  'conflict:'
+  (WS? act:ActionExpr {yy->st->conflict_action (act.sp);}
+   (WS? (',' WS?)? act2:ActionExpr {yy->st->conflict_action (act2.sp);} )*
+   {yy->st->push_conflict_action();}
+  )?
+  END_STMT
+  ;
+
 ProcNamedPredicate =
   'predicate' WS name:ID DEFEQ a:Expr END_STMT
   {yy->st->add_pc_predicate(name.sp, a.sp);}
@@ -176,7 +185,7 @@ ProcDecl =
      )+
    | < [^;]+ >  {yy->st->bad_parse(yytext, "Bad variable declaration.");} END_STMT? WS?
   )
-
+  { yy->st->pc_symm->init_representative(); }
   ((  ProcNamedPredicate
     | ProcAssume
     | ProcLegit
@@ -185,6 +194,7 @@ ProcDecl =
     | PuppetActionDef
     | PermitActionDef
     | ForbidActionDef
+    | ConflictActionDef
     | < [^};]+ >  {yy->st->bad_parse(yytext);} END_STMT?
    )
    WS?

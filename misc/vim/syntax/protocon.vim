@@ -25,7 +25,8 @@ syn keyword	protoconLiteral		 true false
 syn keyword	protoconConditional	if then else --> -=>
 
 " Statements
-syn keyword 	protoconStatement  constant variable predicate process let read write action permit forbid random symmetric
+syn keyword 	protoconStatement  constant variable predicate process let read write
+syn keyword 	protoconStatement  action permit forbid conflict random symmetric
 syn keyword 	protoconQual	shadow puppet direct
 syn keyword 	protoconQual    future assume closed silent active
 syn keyword 	protoconQuant   forall exists unique

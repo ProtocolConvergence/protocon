@@ -70,6 +70,7 @@ public:
   Cx::Mem<Xn::PcSymm> pc_symm;
   Cx::Mem<Xn::PcSymmSpec> pc_symm_spec;
   Cx::PFmla permit_xn;
+  Cx::Table<Xn::ActSymm> conflict;
   bool legit_mode_assigned;
 
   ProtoconFile(Xn::Sys* sys, XFile* xf)
@@ -120,6 +121,8 @@ public:
   bool add_symmetric_access(Sesp let_names_sp, Sesp let_vals_list_sp, Sesp vbls_sp,
                             Bit write, Bit random);
 
+  bool parse_action(X::Fmla& act_xn, uint pcidx, Sesp act_sp,
+                    bool auto_iden, Xn::Vbl::ShadowPuppetRole role);
   bool parse_action(Cx::PFmla& act_pf, Cx::Table<Cx::PFmla>& pc_xns, Sesp act_sp,
                     bool auto_iden, Xn::Vbl::ShadowPuppetRole role);
 
@@ -127,6 +130,8 @@ public:
 
   bool forbid_action(Sesp act_sp);
   bool permit_action(Sesp act_sp);
+  bool conflict_action(Sesp act_sp);
+  bool push_conflict_action();
 
   bool add_pc_predicate(Sesp name_sp, Sesp val_sp);
 

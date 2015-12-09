@@ -361,191 +361,202 @@ ProtoconFile::add_symmetric_access(Sesp let_names_sp, Sesp let_vals_list_sp,
 }
 
   bool
-ProtoconFile::parse_action(Cx::PFmla& act_pf, Cx::Table<Cx::PFmla>& pc_xns, Sesp act_sp,
+ProtoconFile::parse_action(X::Fmla& act_xn, uint pcidx, Sesp act_sp,
                            bool auto_iden, Xn::Vbl::ShadowPuppetRole role)
 {
-  if (!allgood)  return false;
   DeclLegit( good );
-  Claim( pc_symm );
   const Xn::Net& topo = sys->topology;
-  act_pf = false;
-  pc_xns.resize(pc_symm->membs.sz());
-  for (uint i = 0; good && i < pc_symm->membs.sz(); ++i) {
-    pc_xns[i] = false;
-  }
+  const Xn::Pc& pc = *pc_symm->membs[pcidx];
 
   const bool actto_op =
     eq_cstr ("-=>", ccstr_of_Sesp (car_of_Sesp (act_sp)));
 
   const Cx::String& idx_name = pc_symm_spec->idx_name;
-  for (uint pcidx = 0; good && pcidx < pc_symm->membs.sz(); ++pcidx) {
-    const Xn::Pc& pc = *pc_symm->membs[pcidx];
-    index_map[idx_name] = pcidx;
-    Cx::PFmla guard_pf;
-    DoLegitLine( "eval guard" )
-      eval(guard_pf, cadr_of_Sesp (act_sp));
-    if (!good)  continue;
 
-    Cx::PFmla assign_pf( true );
+  act_xn = false;
+  index_map[idx_name] = pcidx;
+  Cx::PFmla guard_pf;
+  DoLegitLine( "eval guard" )
+    eval(guard_pf, cadr_of_Sesp (act_sp));
+  if (!good)  return false;
 
-    Cx::BitTable wvbl_assigned( pc.wvbls.sz(), 0 );
-    Cx::BitTable wvbl_randomized( pc.wvbls.sz(), 0 );
+  Cx::PFmla assign_pf( true );
 
-    bool all_wild = false;
-    for (Sesp assign_sp = cddr_of_Sesp (act_sp);
-         !nil_ck_Sesp (assign_sp);
-         assign_sp = cdr_of_Sesp (assign_sp))
-    {
-      Sesp sp = car_of_Sesp (assign_sp);
-      Claim( list_ck_Sesp (sp) );
+  Cx::BitTable wvbl_assigned( pc.wvbls.sz(), 0 );
+  Cx::BitTable wvbl_randomized( pc.wvbls.sz(), 0 );
 
-      if (eq_cstr ("wild", ccstr_of_Sesp (car_of_Sesp (sp)))) {
-        auto_iden = true;
-        continue;
-      }
-      Claim( eq_cstr (":=", ccstr_of_Sesp (car_of_Sesp (sp))) );
+  bool all_wild = false;
+  for (Sesp assign_sp = cddr_of_Sesp (act_sp);
+       !nil_ck_Sesp (assign_sp);
+       assign_sp = cdr_of_Sesp (assign_sp))
+  {
+    Sesp sp = car_of_Sesp (assign_sp);
+    Claim( list_ck_Sesp (sp) );
 
-      Sesp vbl_sp = cadr_of_Sesp (sp);
-      Sesp val_sp = caddr_of_Sesp (sp);
+    if (eq_cstr ("wild", ccstr_of_Sesp (car_of_Sesp (sp)))) {
+      auto_iden = true;
+      continue;
+    }
+    Claim( eq_cstr (":=", ccstr_of_Sesp (car_of_Sesp (sp))) );
 
-      if (eq_cstr ("wild", ccstr_of_Sesp (car_of_Sesp (vbl_sp)))) {
-        Claim( eq_cstr ("wild", ccstr_of_Sesp (car_of_Sesp (val_sp))) );
-        all_wild = true;
-        continue;
-      }
+    Sesp vbl_sp = cadr_of_Sesp (sp);
+    Sesp val_sp = caddr_of_Sesp (sp);
 
-      Xn::Vbl* vbl = 0;
-      Cx::IntPFmla val;
-
-      DoLegit( "lookup variable" ) {
-        Claim( eq_cstr ("aref", ccstr_of_Sesp (car_of_Sesp (vbl_sp))) );
-        const char* name = ccstr_of_Sesp (cadr_of_Sesp (vbl_sp));
-        good = lookup_vbl(&vbl, name, caddr_of_Sesp (vbl_sp));
-      }
-
-      bool wild = false;
-      DoLegit( "eval value" )
-      {
-        if (list_ck_Sesp(val_sp) && eq_cstr ("wild", ccstr_of_Sesp (car_of_Sesp (val_sp)))) {
-          wild = true;
-        }
-        else {
-          good = eval(val, val_sp);
-        }
-      }
-
-      DoLegit( "non-writable variable in assignment" )
-      {
-        bool found = false;
-        for (uint i = 0; i < pc.wvbls.sz(); ++i) {
-          if (pc.wvbls[i] == vbl) {
-            found = true;
-            wvbl_assigned[i] = 1;
-            if (wild) {
-              wvbl_randomized[i] = 1;
-            }
-            break;
-          }
-        }
-        good = found;
-      }
-      if (!good)  break;
-
-      if (all_wild) {
-        assign_pf = true;
-      }
-      else if (!wild) {
-        const Cx::PFmlaVbl& pf_vbl = topo.pfmla_vbl(*vbl);
-        val %= vbl->symm->domsz;
-        assign_pf &= pf_vbl.img_eq(val);
-      }
-
+    if (eq_cstr ("wild", ccstr_of_Sesp (car_of_Sesp (vbl_sp)))) {
+      Claim( eq_cstr ("wild", ccstr_of_Sesp (car_of_Sesp (val_sp))) );
+      all_wild = true;
+      continue;
     }
 
-    for (uint i = 0; i < pc.wvbls.sz(); ++i) {
-      if (all_wild) {
-        wvbl_assigned[i] = 1;
-        wvbl_randomized[i] = 1;
+    Xn::Vbl* vbl = 0;
+    Cx::IntPFmla val;
+
+    DoLegit( "lookup variable" ) {
+      Claim( eq_cstr ("aref", ccstr_of_Sesp (car_of_Sesp (vbl_sp))) );
+      const char* name = ccstr_of_Sesp (cadr_of_Sesp (vbl_sp));
+      good = lookup_vbl(&vbl, name, caddr_of_Sesp (vbl_sp));
+    }
+
+    bool wild = false;
+    DoLegit( "eval value" )
+    {
+      if (list_ck_Sesp(val_sp) && eq_cstr ("wild", ccstr_of_Sesp (car_of_Sesp (val_sp)))) {
+        wild = true;
       }
-      else if (actto_op) {
-        // The {-=>} operator automatically randomizes values.
-        if (pc_symm_spec->random_write_flags[pc_symm->wmap[i]]) {
-          if (!wvbl_assigned[i]) {
-            wvbl_assigned[i] = 1;
+      else {
+        good = eval(val, val_sp);
+      }
+    }
+
+    DoLegit( "non-writable variable in assignment" )
+    {
+      bool found = false;
+      for (uint i = 0; i < pc.wvbls.sz(); ++i) {
+        if (pc.wvbls[i] == vbl) {
+          found = true;
+          wvbl_assigned[i] = 1;
+          if (wild) {
             wvbl_randomized[i] = 1;
           }
+          break;
         }
       }
-      if (!auto_iden || wvbl_assigned[i]) {
-        continue;
-      }
-      const Cx::PFmlaVbl& pf_vbl = topo.pfmla_vbl(*pc.wvbls[i]);
-      assign_pf &= pf_vbl.img_eq(pf_vbl);
+      good = found;
+    }
+    if (!good)  break;
+
+    if (all_wild) {
+      assign_pf = true;
+    }
+    else if (!wild) {
+      const Cx::PFmlaVbl& pf_vbl = topo.pfmla_vbl(*vbl);
+      val %= vbl->symm->domsz;
+      assign_pf &= pf_vbl.img_eq(val);
     }
 
-    pc_xns[pcidx] = guard_pf & assign_pf;
+  }
 
-    // Smooth the 'random read' variables that are allowed by
-    // this action's guard to make the action nondeterministic,
-    // rather than having a unique action for every readable state.
-    for (uint i = 0; i < pc.rvbls.sz(); ++i) {
-      const Xn::Vbl& vbl = *pc.rvbls[i];
-      if (!vbl.random_ck())
-        continue;
-      const Cx::PFmlaVbl& pfmla_vbl = topo.pfmla_vbl(vbl);
-      pc_xns[pcidx] = guard_pf & pc_xns[pcidx].smooth_pre(pfmla_vbl);
+  for (uint i = 0; i < pc.wvbls.sz(); ++i) {
+    if (all_wild) {
+      wvbl_assigned[i] = 1;
+      wvbl_randomized[i] = 1;
+    }
+    else if (actto_op) {
+      // The {-=>} operator automatically randomizes values.
+      if (pc_symm_spec->random_write_flags[pc_symm->wmap[i]]) {
+        if (!wvbl_assigned[i]) {
+          wvbl_assigned[i] = 1;
+          wvbl_randomized[i] = 1;
+        }
+      }
+    }
+    if (!auto_iden || wvbl_assigned[i]) {
+      continue;
+    }
+    const Cx::PFmlaVbl& pf_vbl = topo.pfmla_vbl(*pc.wvbls[i]);
+    assign_pf &= pf_vbl.img_eq(pf_vbl);
+  }
+
+  act_xn = guard_pf & assign_pf;
+
+  // Smooth the 'random read' variables that are allowed by
+  // this action's guard to make the action nondeterministic,
+  // rather than having a unique action for every readable state.
+  for (uint i = 0; i < pc.rvbls.sz(); ++i) {
+    const Xn::Vbl& vbl = *pc.rvbls[i];
+    if (!vbl.random_ck())
+      continue;
+    const Cx::PFmlaVbl& pfmla_vbl = topo.pfmla_vbl(vbl);
+    act_xn = guard_pf & act_xn.smooth_pre(pfmla_vbl);
+  }
+
+  // Remove this action's cycles when -=> is used.
+  // This is mostly just self-loops.
+  if (actto_op) {
+    X::Fmla pc_xn = act_xn;
+    if (role == Xn::Vbl::Shadow)
+      pc_xn = topo.proj_shadow(pc_xn);
+    else
+      pc_xn = topo.proj_puppet(pc_xn);
+
+    Cx::Table<bool> changing(pc_symm->rvbl_symms.sz());
+    for (uint i = 0; i < pc_symm->rvbl_symms.sz(); ++i) {
+      changing[i] =
+        pc_symm->write_flags[i]
+        || pc.rvbls[i]->random_ck()
+        || (role == Xn::Vbl::Shadow && pc_symm->rvbl_symms[i]->pure_puppet_ck())
+        || (role != Xn::Vbl::Shadow && pc_symm->rvbl_symms[i]->pure_shadow_ck())
+        ;
+    }
+    for (uint i = 0; i < pc_symm->rvbl_symms.sz(); ++i) {
+      if (changing[i])  continue;
+      const Cx::PFmlaVbl& pfmla_vbl = topo.pfmla_vbl(*pc.rvbls[i]);
+      pc_xn &= pfmla_vbl.img_eq(pfmla_vbl);
     }
 
-    // Remove this action's cycles when -=> is used.
-    // This is mostly just self-loops.
-    if (actto_op) {
-      X::Fmla pc_xn = pc_xns[pcidx];
-      if (role == Xn::Vbl::Shadow)
-        pc_xn = topo.proj_shadow(pc_xn);
-      else
-        pc_xn = topo.proj_puppet(pc_xn);
-
-      Cx::Table<bool> changing(pc_symm->rvbl_symms.sz());
-      for (uint i = 0; i < pc_symm->rvbl_symms.sz(); ++i) {
-        changing[i] =
-          pc_symm->write_flags[i]
-          || pc.rvbls[i]->random_ck()
-          || (role == Xn::Vbl::Shadow && pc_symm->rvbl_symms[i]->pure_puppet_ck())
-          || (role != Xn::Vbl::Shadow && pc_symm->rvbl_symms[i]->pure_shadow_ck())
-          ;
-      }
+    P::Fmla scc;
+    if (pc_xn.cycle_ck(&scc)) {
+      X::Fmla self_xn = pc_xn & scc.cross(scc);
       for (uint i = 0; i < pc_symm->rvbl_symms.sz(); ++i) {
         if (changing[i])  continue;
         const Cx::PFmlaVbl& pfmla_vbl = topo.pfmla_vbl(*pc.rvbls[i]);
-        pc_xn &= pfmla_vbl.img_eq(pfmla_vbl);
+        self_xn = self_xn.smooth_img(pfmla_vbl);
       }
-
-      P::Fmla scc;
-      if (pc_xn.cycle_ck(&scc)) {
-        X::Fmla self_xn = pc_xn & scc.cross(scc);
-        for (uint i = 0; i < pc_symm->rvbl_symms.sz(); ++i) {
-          if (changing[i])  continue;
-          const Cx::PFmlaVbl& pfmla_vbl = topo.pfmla_vbl(*pc.rvbls[i]);
-          self_xn = self_xn.smooth_img(pfmla_vbl);
-        }
-        pc_xns[pcidx] -= self_xn;
-      }
+      act_xn -= self_xn;
     }
-
-    // Strictly remove self-loops when pure shadow variables exist.
-    if (pc_symm->pure_shadow_ck()) {
-      X::Fmla self_xn( true );
-      for (uint i = 0; i < pc.wvbls.sz(); ++i) {
-        const Cx::PFmlaVbl& pf_vbl = topo.pfmla_vbl(*pc.wvbls[i]);
-        self_xn &= pf_vbl.img_eq(pf_vbl);
-      }
-      pc_xns[pcidx] -= self_xn;
-    }
-
-    act_pf |= pc_xns[pcidx] & pc.act_unchanged_pfmla;
   }
+
+  // Strictly remove self-loops when pure shadow variables exist.
+  if (pc_symm->pure_shadow_ck()) {
+    X::Fmla self_xn( true );
+    for (uint i = 0; i < pc.wvbls.sz(); ++i) {
+      const Cx::PFmlaVbl& pf_vbl = topo.pfmla_vbl(*pc.wvbls[i]);
+      self_xn &= pf_vbl.img_eq(pf_vbl);
+    }
+    act_xn -= self_xn;
+  }
+
   if (good)
     index_map.erase(idx_name);
+  return update_allgood (good);
+}
+
+  bool
+ProtoconFile::parse_action(X::Fmla& act_pf, Cx::Table<Cx::PFmla>& pc_xns, Sesp act_sp,
+                           bool auto_iden, Xn::Vbl::ShadowPuppetRole role)
+{
+  if (!allgood)  return false;
+  DeclLegit( good );
+  Claim( pc_symm );
+  act_pf = false;
+  pc_xns.resize(pc_symm->membs.sz());
+
+  for (uint pcidx = 0; good && pcidx < pc_symm->membs.sz(); ++pcidx) {
+    DoLegitLine( "parse action" )
+      parse_action(pc_xns[pcidx], pcidx, act_sp, auto_iden, role);
+    if (good)
+      act_pf |= pc_xns[pcidx] & pc_symm->membs[pcidx]->act_unchanged_pfmla;
+  }
   return update_allgood (good);
 }
 
@@ -681,6 +692,79 @@ ProtoconFile::permit_action(Sesp act_sp)
 }
 
   bool
+ProtoconFile::conflict_action(Sesp act_sp)
+{
+  if (!allgood)  return false;
+  Xn::Net& topo = sys->topology;
+
+  uint rep_pcidx = 0;
+  if (!pc_symm->representative(&rep_pcidx))
+    return true;
+
+  DeclLegit( good );
+
+  X::Fmla xn;
+  DoLegitLine( "parse action" )
+    parse_action(xn, rep_pcidx, act_sp, true, Xn::Vbl::Puppet);
+
+  const Xn::Pc& pc = *pc_symm->membs[rep_pcidx];
+  Xn::ActSymm act;
+  act.pc_symm = +pc_symm;
+  act.vals.affysz(pc.rvbls.sz() + pc.wvbls.sz());
+
+  for (uint i = 0; good && i < pc.rvbls.sz(); ++i) {
+    if (pc_symm->rvbl_symms[i]->pure_shadow_ck()) {
+      act.vals[i] = 0;
+      continue;
+    }
+
+    Cx::Table<uint> rvbl_indices(1);
+    rvbl_indices[0] = pc.rvbls[i]->pfmla_idx;
+    uint val;
+    xn.state(&val, rvbl_indices);
+    act.vals[i] = val;
+
+    const Cx::PFmlaVbl& pf_vbl = topo.pfmla_vbl(*pc.rvbls[i]);
+    DoLegitLine( "Conflict action not unique." )
+      xn.subseteq_ck(pf_vbl == val);
+  }
+
+  for (uint i = 0; good && i < pc.wvbls.sz(); ++i) {
+    const Cx::PFmlaVbl& pf_vbl = topo.pfmla_vbl(*pc.wvbls[i]);
+    if (pc_symm->wvbl_symms[i]->pure_shadow_ck()) {
+      if (xn.subseteq_ck(pf_vbl.img_eq(pf_vbl))) {
+        act.vals[pc.rvbls.sz() + i] = pc_symm->wvbl_symms[i]->domsz;
+        continue;
+      }
+    }
+
+    Cx::Table<uint> wvbl_indices(1);
+    wvbl_indices[0] = pc.wvbls[i]->pfmla_idx;
+    uint val;
+    xn.img().state(&val, wvbl_indices);
+    act.vals[pc.rvbls.sz() + i] = val;
+
+    DoLegitLine( "Conflict action not unique." )
+      xn.subseteq_ck(pf_vbl.img_eq(val));
+  }
+  if (good) {
+    conflict << act;
+  }
+
+  return update_allgood (good);
+}
+
+  bool
+ProtoconFile::push_conflict_action()
+{
+  if (!allgood)  return false;
+  if (conflict.size() == 0)  return true;
+  pc_symm->conflicts << FlatSet<Xn::ActSymm>(conflict);
+  conflict.clear();
+  return update_allgood (true);
+}
+
+  bool
 ProtoconFile::add_pc_predicate(Sesp name_sp, Sesp val_sp)
 {
   if (!allgood)  return false;
@@ -787,10 +871,9 @@ ProtoconFile::add_pc_legit(Sesp legit_sp)
   bool
 ProtoconFile::finish_pc_def()
 {
-  bool good = true;
   this->pc_symm = 0;
   this->pc_symm_spec = 0;
-  return update_allgood (good);
+  return update_allgood (true);
 }
 
   bool
@@ -1061,7 +1144,9 @@ ProtoconFile::parend_string_expression(Cx::String& ss, Sesp a)
   bool wrap = (!eq_cstr (key, "(bool)") &&
                !eq_cstr (key, "(int)"));
   if (wrap)  ss << '(';
-  bool good = string_expression(ss, a);
+  DeclLegit( good );
+  DoLegitLine( "" )
+    good = string_expression(ss, a);
   if (wrap)  ss << ')';
   return good;
 }

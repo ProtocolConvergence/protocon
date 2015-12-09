@@ -271,23 +271,32 @@ oput_protocon_pc_acts (Cx::OFile& of, const Xn::PcSymm& pc_symm,
   DeclLegit( good );
   const Xn::PcSymmSpec& pc_symm_spec = *pc_symm.spec;
   if (pc_symm_spec.shadow_act_strings.sz() > 0) {
-    of << "\n  shadow action:";
+    of << "\n  shadow:";
     for (uint i = 0; i < pc_symm_spec.shadow_act_strings.sz(); ++i) {
       of << "\n    ( " << pc_symm_spec.shadow_act_strings[i] << " )";
     }
     of << "\n    ;";
   }
   if (pc_symm_spec.permit_act_strings.sz() > 0) {
-    of << "\n  permit action:";
+    of << "\n  permit:";
     for (uint i = 0; i < pc_symm_spec.permit_act_strings.sz(); ++i) {
       of << "\n    ( " << pc_symm_spec.permit_act_strings[i] << " )";
     }
     of << "\n    ;";
   }
   if (pc_symm_spec.forbid_act_strings.sz() > 0) {
-    of << "\n  forbid action:";
+    of << "\n  forbid:";
     for (uint i = 0; i < pc_symm_spec.forbid_act_strings.sz(); ++i) {
       of << "\n    ( " << pc_symm_spec.forbid_act_strings[i] << " )";
+    }
+    of << "\n    ;";
+  }
+
+  for (uint i = 0; i < pc_symm.conflicts.sz(); ++i) {
+    of << "\n  conflict:";
+    const FlatSet<Xn::ActSymm>& conflict = pc_symm.conflicts[i];
+    for (uint j = 0; j < conflict.sz(); ++j) {
+      oput_protocon_pc_act (of, acts[i]);
     }
     of << "\n    ;";
   }
@@ -317,7 +326,7 @@ oput_protocon_pc_acts (Cx::OFile& of, const Xn::PcSymm& pc_symm,
     assign_vbls[i] = pc_symm.vbl_name(pc_symm.wmap[i]);
   }
 
-  of << "\n  puppet action:";
+  of << "\n  puppet:";
   if (!use_espresso) {
     for (uint i = 0; i < acts.sz(); ++i) {
       if (acts[i].pc_symm == &pc_symm) {

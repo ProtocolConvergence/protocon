@@ -203,6 +203,7 @@ public:
   Cx::Table< NatMap > windices;
   /// Domains of readable variables.
   Cx::Table< uint > doms;
+  Cx::Table< FlatSet< Xn::ActSymm > > conflicts;
 
   Cx::PFmla shadow_pfmla;
   Cx::PFmla direct_pfmla;
