@@ -15,6 +15,117 @@ using std::vector;
 
 typedef uint PcState;
 
+vector< array<PcState,3> > unidirectionalRingProtocolGenerator(vector< array<PcState,2> > legits){
+  size_t M = legits.size();
+	size_t gamma;
+	bool gammaExists = false;
+  int **L = NULL;
+  int **G = NULL;
+  vector<int> validToLinkTo;
+  vector<int> invalidToLinkTo;
+	vector< array<PcState,3> > actions;
+  
+  L = (int**) malloc(M * sizeof(int*));
+  for(size_t i = 0; i < M; i++)  L[i] = (int*) calloc(M, sizeof(int));
+  //first diamention is the source vertex, second is destination
+  
+  for(size_t i = 0; i < legits.size(); i++){
+    L[legits[i][0]][legits[i][1]] = 1;
+  }
+	
+	for(size_t i = 0; i < M; i++)
+		if(L[i][i]){
+			gamma = i;
+			gammaExists = true;
+			break;
+		}
+  
+	if(!gammaExists) return actions;
+	
+  //~ Lprime = (int**) malloc(M * sizeof(*Lprime));
+  //~ for(int i = 0; i < M; i++){
+    //~ Lprime[i] = (int*) malloc(M * sizeof(int));
+    //~ memcpy(Lprime[i], L[i], M * sizeof(int));
+  //~ }
+  
+  //~ //determine the cycles in the graph to turn Lprime into the actual
+  //~ //representation of Lprime
+  //~ //To do this, we can just establish which vertidies have no out edges
+  //~ vector<int> cyclicElements;
+  //~ //this is just a easy hack to calculate Lprime correctly, but its 
+  //~ //runtime is far from optimal.
+  //~ for(int cLoop = 0; cLoop < M; cLoop++){//consistancy loop
+    //~ bool modifiedMatrix = false;
+    //~ for(int i = 0; i < M; i++){
+      //~ bool outVerticies = false;
+      //~ for(int j = 0; j < M && !outVerticies; j++) if(Lprime[i][j]) outVerticies = true;
+      //~ if(!outVerticies){
+        //~ for(int j = 0; j < M; j++) Lprime[j][i] = 0;
+        //~ modifiedMatrix = true;
+      //~ }
+    //~ }
+    //~ if(modifiedMatrix) break;
+  //~ }
+  //Lprime is now calculated.
+  
+  // --> maybe just figure out the different cycles?
+  //search over each node from a start node, and each time the original
+  //node is reached, the algorithm backtracks, marking each touched node
+  //with a value unique to the original node.
+
+  //Start initializing G
+  G = (int**) malloc(M * sizeof(*G));
+  for(size_t i = 0; i < M; i++){
+    G[i] = (int*) malloc(M * sizeof(**G));
+    memcpy(G[i], L[i], sizeof(**G) * M);
+  }
+  
+	
+  //Seperate out values in the tree and those not in the tree
+  
+  validToLinkTo.push_back(gamma);
+  for(size_t i = 0; i < gamma; i++) invalidToLinkTo.push_back(i);
+  for(size_t i = gamma+1; i < M; i++) invalidToLinkTo.push_back(i);
+  
+  //start pruning the graph to make it into a tree
+  bool treeChanged = true;
+  while(invalidToLinkTo.size() && treeChanged){
+    treeChanged = false;
+    for(size_t i = 0; i < invalidToLinkTo.size(); i++){
+      for(size_t j = 0; j < validToLinkTo.size(); j++){
+        if(G[i][j]){
+          for(size_t k = 0; k < j; k++) G[i][k] = 0;
+          for(size_t k = j+1; k < M; k++) G[i][k] = 0;
+          validToLinkTo.push_back(invalidToLinkTo[i]);
+          invalidToLinkTo.erase(invalidToLinkTo.begin() + i);
+          i--;
+          treeChanged = true;
+        }
+      }
+    }
+  }
+  
+  //If there are verticies which cannot link to the tree, just directly
+  //connect them to root.
+  for(size_t i = 0; i < invalidToLinkTo.size(); i++){
+    memset(G[invalidToLinkTo[i]], 0, sizeof(**G) * M);
+    G[invalidToLinkTo[i]][gamma] = 1;
+  }
+  
+  //Now we have the tree, but not the values x-1 contains that are valid
+  //for something to change.  The values are the inverse of the out 
+  //edges of the respective vertex in L.
+  
+  for(uint i = 0; i < M; i++)
+    for(uint j = 0; j < M; j++)
+      if(G[i][j])
+        for(uint k = 0; k < M; k++)
+          if(!L[i][k])
+            actions.push_back(array<PcState, 3>{k, i, j});
+  
+  return actions;
+}
+
 uint
 ReadUniRing(const char* filepath, Xn::Sys& sys, vector< array<PcState,2> >& legits);
 bool
@@ -41,11 +152,9 @@ int main(int argc, char** argv) {
   }
 
   vector< array<PcState,3> > actions;
-  // ... build this up ...
-  // Here's a hard-coded protocol for Sum-Not-Two:
-  actions.push_back(array<PcState,3>{0,2,1});
-  actions.push_back(array<PcState,3>{1,1,2});
-  actions.push_back(array<PcState,3>{2,0,1});
+////////////////////////////////////////////////////////////////////////
+	actions = unidirectionalRingProtocolGenerator(legits);
+////////////////////////////////////////////////////////////////////////
 
   // (Debugging) Output all the synthesized acctions.
   printf("Synthesized actions for P[i]:\n");
