@@ -84,7 +84,9 @@ int main(int argc, char** argv)
 
   if (found || exec_opt.task == ProtoconOpt::NoTask) {
     Xn::Sys osys;
-    osys.topology.featherweight = true;
+    // Can't use featherweight with conflicts.
+    //osys.topology.featherweight = true;
+    osys.topology.lightweight = true;
     const Xn::Net* o_topology = &sys.topology;
     if (exec_opt.task == ProtoconOpt::NoTask) {
       ProtoconFileOpt file_opt = infile_opt;

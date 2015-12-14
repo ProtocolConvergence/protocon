@@ -296,7 +296,7 @@ oput_protocon_pc_acts (Cx::OFile& of, const Xn::PcSymm& pc_symm,
     of << "\n  conflict:";
     const FlatSet<Xn::ActSymm>& conflict = pc_symm.conflicts[i];
     for (uint j = 0; j < conflict.sz(); ++j) {
-      oput_protocon_pc_act (of, acts[i]);
+      oput_protocon_pc_act (of, conflict[j]);
     }
     of << "\n    ;";
   }
