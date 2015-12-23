@@ -9,119 +9,159 @@ extern "C" {
 #include "xnsys.hh"
 #include <array>
 #include <vector>
+#include <queue>
+#include <stdio.h>
 
+using std::queue;
 using std::array;
 using std::vector;
 
 typedef uint PcState;
 
-vector< array<PcState,3> > unidirectionalRingProtocolGenerator(vector< array<PcState,2> > legits){
-  size_t M = legits.size();
-	size_t gamma;
-	bool gammaExists = false;
-  int **L = NULL;
-  int **G = NULL;
-  vector<int> validToLinkTo;
-  vector<int> invalidToLinkTo;
-	vector< array<PcState,3> > actions;
-  
-  L = (int**) malloc(M * sizeof(int*));
-  for(size_t i = 0; i < M; i++)  L[i] = (int*) calloc(M, sizeof(int));
-  //first diamention is the source vertex, second is destination
-  
-  for(size_t i = 0; i < legits.size(); i++){
-    L[legits[i][0]][legits[i][1]] = 1;
+#ifdef DEBUG
+void printSquareMatrix(int** matrix, int length){
+  for(int i = 0; i < length; i++){
+    for(int j = 0; j < length; j++){
+      printf("%d\t", matrix[i][j]);
+    }
+    printf("\n");
   }
-	
-	for(size_t i = 0; i < M; i++)
-		if(L[i][i]){
-			gamma = i;
-			gammaExists = true;
-			break;
-		}
-  
-	if(!gammaExists) return actions;
-	
-  //~ Lprime = (int**) malloc(M * sizeof(*Lprime));
-  //~ for(int i = 0; i < M; i++){
-    //~ Lprime[i] = (int*) malloc(M * sizeof(int));
-    //~ memcpy(Lprime[i], L[i], M * sizeof(int));
-  //~ }
-  
-  //~ //determine the cycles in the graph to turn Lprime into the actual
-  //~ //representation of Lprime
-  //~ //To do this, we can just establish which vertidies have no out edges
-  //~ vector<int> cyclicElements;
-  //~ //this is just a easy hack to calculate Lprime correctly, but its 
-  //~ //runtime is far from optimal.
-  //~ for(int cLoop = 0; cLoop < M; cLoop++){//consistancy loop
-    //~ bool modifiedMatrix = false;
-    //~ for(int i = 0; i < M; i++){
-      //~ bool outVerticies = false;
-      //~ for(int j = 0; j < M && !outVerticies; j++) if(Lprime[i][j]) outVerticies = true;
-      //~ if(!outVerticies){
-        //~ for(int j = 0; j < M; j++) Lprime[j][i] = 0;
-        //~ modifiedMatrix = true;
-      //~ }
-    //~ }
-    //~ if(modifiedMatrix) break;
-  //~ }
-  //Lprime is now calculated.
-  
-  // --> maybe just figure out the different cycles?
-  //search over each node from a start node, and each time the original
-  //node is reached, the algorithm backtracks, marking each touched node
-  //with a value unique to the original node.
+  printf("\n");
+}
+#endif
 
-  //Start initializing G
-  G = (int**) malloc(M * sizeof(*G));
-  for(size_t i = 0; i < M; i++){
-    G[i] = (int*) malloc(M * sizeof(**G));
-    memcpy(G[i], L[i], sizeof(**G) * M);
-  }
+
+size_t** allocSquareMatrix(size_t M){
+  size_t **toReturn = (size_t**) malloc(M * sizeof(*toReturn));
+  for(size_t i = 0; i < M; i++)
+    toReturn[i] = (size_t*) calloc(M, sizeof(**toReturn));
+  return toReturn;
+}
+
+
+size_t** copySquareMatrix(size_t **toCopy, size_t M){
+  size_t **toReturn = allocSquareMatrix(M);
+  for(size_t i = 0; i < M; i++)
+    memcpy(toReturn[i], toCopy[i], M * sizeof(**toReturn));
+  return toReturn;
+}
+
+
+void freeSquareMatrix(size_t **toFree, size_t M){
+  for(size_t i = 0; i < M; i++) free(toFree[i]);
+  free(toFree);
+}
+
+
+vector< array<PcState,3> > unidirectionalRingProtocolGenerator(vector< array<PcState,2> > legits, size_t M){
+  size_t gamma = 0;
+  bool gammaExists = false;
+  size_t **L = NULL;
+  size_t **Lprime = NULL;
+  size_t **G = NULL;
+  queue<size_t> treeProcess;
+  vector< array<PcState,3> > actions;
   
-	
-  //Seperate out values in the tree and those not in the tree
+  L = allocSquareMatrix(M);
+  //first diamention is the x-1 vertex value, second is x vertex valid value
   
-  validToLinkTo.push_back(gamma);
-  for(size_t i = 0; i < gamma; i++) invalidToLinkTo.push_back(i);
-  for(size_t i = gamma+1; i < M; i++) invalidToLinkTo.push_back(i);
+  for(size_t i = 0; i < legits.size(); i++) 
+    L[legits[i][0]][legits[i][1]] = 1;
   
-  //start pruning the graph to make it into a tree
-  bool treeChanged = true;
-  while(invalidToLinkTo.size() && treeChanged){
-    treeChanged = false;
-    for(size_t i = 0; i < invalidToLinkTo.size(); i++){
-      for(size_t j = 0; j < validToLinkTo.size(); j++){
-        if(G[i][j]){
-          for(size_t k = 0; k < j; k++) G[i][k] = 0;
-          for(size_t k = j+1; k < M; k++) G[i][k] = 0;
-          validToLinkTo.push_back(invalidToLinkTo[i]);
-          invalidToLinkTo.erase(invalidToLinkTo.begin() + i);
-          i--;
-          treeChanged = true;
+#ifdef DEBUG
+  printSquareMatrix(L, M);
+#endif
+  
+  for(size_t i = 0; i < M; i++)
+    if(L[i][i]){
+      gamma = i;
+      gammaExists = true;
+      //break;
+      //Valid with and without this line.  This may save time on 
+      //stupidly large rules.
+    }
+  
+  if(!gammaExists) return actions;
+  
+  
+  //determine the cycles in the graph to turn L into the representation 
+  //of Lprime
+  //To do this, we can just establish which verticies have no out edges
+  //this is just a easy hack to calculate Lprime correctly, but its 
+  //runtime is far from optimal.
+  Lprime = copySquareMatrix(L, M);
+  
+  bool modifiedMatrix = true;
+  while(modifiedMatrix){//consistancy loop
+    modifiedMatrix = false;
+    for(size_t i = 0; i < M; i++){
+      bool outVerticies = false;
+      for(size_t j = 0; j < M; j++) if(Lprime[i][j]) outVerticies = true;
+      if(outVerticies == false){
+        for(size_t j = 0; j < M; j++){
+          if(Lprime[j][i]){
+            Lprime[j][i] = 0;
+            modifiedMatrix = true;
+          }
         }
       }
     }
   }
+#ifdef DEBUG
+  printSquareMatrix(Lprime, M);
+#endif
+
+  //Lprime is now calculated.
+  //Now, we're going to tweak Lprime so that the a rule for going to 
+  //gamma is added.
   
-  //If there are verticies which cannot link to the tree, just directly
-  //connect them to root.
-  for(size_t i = 0; i < invalidToLinkTo.size(); i++){
-    memset(G[invalidToLinkTo[i]], 0, sizeof(**G) * M);
-    G[invalidToLinkTo[i]][gamma] = 1;
+  for(size_t i = 0; i < M; i++){
+    bool isEmpty = true;
+    for(size_t j = 0; j < M; j++){
+      if(Lprime[i][j]) isEmpty = false;
+    }
+    if(isEmpty) Lprime[i][gamma] = 1;
   }
+  
+
+  //Start initializing G
+  G = copySquareMatrix(Lprime, M);  
+  //Seperate out values in the tree and those not in the tree
+  
+  treeProcess.push(gamma);
+  memset(G[gamma], 0, M * sizeof(**G));
+  G[gamma][gamma] = 1;
+  
+  //start pruning the graph to make it into a tree
+  while(!treeProcess.empty()){
+    for(size_t i = 0; i < M; i++){
+      if(G[i][treeProcess.front()] && i != treeProcess.front()){
+        memset(G[i], 0, M * sizeof(**G));
+        G[i][treeProcess.front()] = 1;
+        treeProcess.push(i);
+      }
+    }
+    treeProcess.pop();
+  }
+  
+#ifdef DEBUG
+  printSquareMatrix(G, M);
+#endif
   
   //Now we have the tree, but not the values x-1 contains that are valid
   //for something to change.  The values are the inverse of the out 
-  //edges of the respective vertex in L.
+  //edges of the respective vertex in Lprime.
   
   for(uint i = 0; i < M; i++)
     for(uint j = 0; j < M; j++)
       if(G[i][j])
         for(uint k = 0; k < M; k++)
-          if(!L[i][k])
-            actions.push_back(array<PcState, 3>{k, i, j});
+          if(!Lprime[i][k])
+            actions.push_back(array<PcState, 3>{i, k, j});
+  
+  freeSquareMatrix(L, M); L = NULL;
+  freeSquareMatrix(Lprime, M); Lprime = NULL;
+  freeSquareMatrix(G, M); G = NULL;
   
   return actions;
 }
@@ -153,7 +193,7 @@ int main(int argc, char** argv) {
 
   vector< array<PcState,3> > actions;
 ////////////////////////////////////////////////////////////////////////
-	actions = unidirectionalRingProtocolGenerator(legits);
+  actions = unidirectionalRingProtocolGenerator(legits, domsz);
 ////////////////////////////////////////////////////////////////////////
 
   // (Debugging) Output all the synthesized acctions.

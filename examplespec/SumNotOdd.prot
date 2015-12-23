@@ -1,5 +1,5 @@
 
-constant N := 5;
+constant N := 3;
 constant M := 4;
 
 variable x[Nat % N] <- Nat % M;
