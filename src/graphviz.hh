@@ -4,12 +4,11 @@
 
 #include "cx/ofile.hh"
 
-namespace Xn {
-  class Net;
-}
+#include "namespace.hh"
 
 void
 oput_graphviz_file(Cx::OFile& of, const Xn::Net& topo);
 
+END_NAMESPACE
 #endif
 

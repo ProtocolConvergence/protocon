@@ -5,6 +5,8 @@
 #include <errno.h>
 #include "cx/mpidissem.hh"
 
+#include "namespace.hh"
+
 using Cx::MpiDissem;
 
 #define MpiTag_MpiDissem 1
@@ -27,7 +29,7 @@ set_term_flag (int sig)
 static
   void
 handle_dissem_msg(MpiDissem::Tag tag,
-                  const Cx::Table<uint>& msg,
+                  const Table<uint>& msg,
                   SynthesisCtx& synctx)
 {
   if (tag == DissemTag_Conflict) {
@@ -51,7 +53,7 @@ static
   Bool
 done_ck (void* dat)
 {
-  Cx::Table<uint> msg;
+  Table<uint> msg;
   SynthesisCtx& synctx = *(SynthesisCtx*) dat;
 
   if (0 == remove("kill-protocon")) {
@@ -82,12 +84,12 @@ bool
 stabilization_search_init
   (SynthesisCtx& synctx,
    Xn::Sys& sys,
-   Cx::LgTable<Xn::Sys>& systems,
+   LgTable<Xn::Sys>& systems,
    Cx::OFileB& log_ofile,
    AddConvergenceOpt& opt,
    const ProtoconFileOpt& infile_opt,
    const ProtoconOpt& exec_opt,
-   Cx::Table< Cx::Table<uint> >& act_layers
+   Table< Table<uint> >& act_layers
    );
 
 static
@@ -102,7 +104,7 @@ stabilization_search(vector<uint>& ret_actions,
   bool solution_found = false;
   uint solution_nlayers_sum = 0;
   ConflictFamily conflicts;
-  Cx::Table< FlatSet<uint> > flat_conflicts;
+  Table< FlatSet<uint> > flat_conflicts;
 
   mpi_dissem = new MpiDissem(MpiTag_MpiDissem, MPI_COMM_WORLD);
 
@@ -124,11 +126,11 @@ stabilization_search(vector<uint>& ret_actions,
   opt.sys_npcs = NPcs;
 
   Xn::Sys sys;
-  Cx::LgTable<Xn::Sys> systems;
+  LgTable<Xn::Sys> systems;
   SynthesisCtx synctx( PcIdx, NPcs );
   synctx.conflicts = conflicts;
 
-  Cx::Table< Cx::Table<uint> > act_layers;
+  Table< Table<uint> > act_layers;
 
   DoLegitLine( "Could not initialize." )
     stabilization_search_init
@@ -243,7 +245,7 @@ stabilization_search(vector<uint>& ret_actions,
       if (!count_solution) {
       }
       else if (synctx.opt.optimize_soln) {
-        Cx::Table<uint> msg;
+        Table<uint> msg;
         msg.push(synctx.optimal_nlayers_sum);
         mpi_dissem->push(DissemTag_NLayers, msg);
       }
@@ -258,7 +260,7 @@ stabilization_search(vector<uint>& ret_actions,
 
     synctx.conflicts.oput_conflict_sizes(*opt.log);
 
-    for (Cx::OFile* ofile = &DBogOF;
+    for (OFile* ofile = &DBogOF;
          true;  // See end of loop.
          ofile = opt.log)
     {
@@ -298,7 +300,7 @@ stabilization_search(vector<uint>& ret_actions,
   mpi_dissem->finish();
 
   if (!!exec_opt.conflicts_ofilepath) {
-    Cx::Table<uint> flattest_conflicts;
+    Table<uint> flattest_conflicts;
     synctx.conflicts.oput_conflict_sizes(*opt.log);
     opt.log->flush();
     if (PcIdx == 0) {
@@ -365,7 +367,6 @@ stabilization_search(vector<uint>& ret_actions,
 
 int main(int argc, char** argv)
 {
-  MPI_Init (&argc, &argv);
   int argi = init_sysCx (&argc, &argv);
   DeclLegit( good );
   struct timespec begtime, endtime;
@@ -427,5 +428,13 @@ int main(int argc, char** argv)
 
   lose_sysCx ();
   return good ? 0 : 1;
+}
+
+END_NAMESPACE
+
+int main(int argc, char** argv)
+{
+  MPI_Init (&argc, &argv);
+  return PROJECT_NAMESPACE::main(argc, argv);
 }
 

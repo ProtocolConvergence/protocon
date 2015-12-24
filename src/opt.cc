@@ -13,6 +13,8 @@ extern "C" {
 #include <sys/resource.h>
 #endif
 
+#include "namespace.hh"
+
 enum ProblemInstance {
   FromFileInstance,
   ThreeColoringRingInstance,
@@ -25,7 +27,7 @@ enum ProblemInstance {
 
 static
   void
-ReadFileText (Cx::String& ret_text, const char* filename)
+ReadFileText (String& ret_text, const char* filename)
 {
   const bool use_stdin = eq_cstr ("-", filename);
   AlphaTab text = textfile_AlphaTab (0, use_stdin ? 0 : filename);
@@ -34,7 +36,7 @@ ReadFileText (Cx::String& ret_text, const char* filename)
       failout_sysCx ("Could not read standard input.");
     }
     else {
-      Cx::String msg( "Could not read file: " );
+      String msg( "Could not read file: " );
       msg += filename;
       failout_sysCx (msg.cstr());
     }
@@ -166,7 +168,7 @@ static
 parse_NatMap (Xn::NatMap& tup, const char* line)
 {
   tup = Xn::NatMap();
-  Cx::C::XFile xf[1];
+  ::XFile xf[1];
   init_XFile_olay_cstr (xf, (char*)line);
   skipds_XFile (xf, "(");
   int x = 0;
@@ -253,9 +255,9 @@ protocon_options_rec
    ProtoconOpt& exec_opt,
    ProblemInstance& problem)
 {
-  Cx::OFile of( stderr_OFile() );
+  OFile of( stderr_OFile() );
   while (pfxeq_cstr ("-", argv[argi])) {
-    Cx::C::AlphaTab tmpf = dflt_AlphaTab ();
+    ::AlphaTab tmpf = dflt_AlphaTab ();
     const int prev_argi = argi;
     bool copy_to_argline = true;
 
@@ -352,7 +354,7 @@ protocon_options_rec
             break;
           }
           pathname2_AlphaTab (&tmpf, relpath, arg);
-          exec_opt.xfilepaths.push(Cx::String(tmpf));
+          exec_opt.xfilepaths.push(String(tmpf));
           if (!exec_opt.xfilepath) {
             exec_opt.xfilepath = tmpf;
           }
@@ -366,12 +368,12 @@ protocon_options_rec
     }
     else if (eq_cstr (arg, "-x-args")) {
       copy_to_argline = false;
-      Cx::String args_xfilepath( argv[argi++] );
+      String args_xfilepath( argv[argi++] );
       if (!args_xfilepath) {
         of << "-x-args requires an argument!" << of.endl();
         return false;
       }
-      Cx::C::XFileB args_xf;
+      ::XFileB args_xf;
       init_XFileB (&args_xf);
       if (!open_FileB (&args_xf.fb, relpath, args_xfilepath.cstr())) {
         of << "Could not open -x-args file: " << args_xfilepath.cstr() << of.endl();
@@ -379,9 +381,9 @@ protocon_options_rec
       }
       xget_XFileB (&args_xf);
 
-      XFile olay;
+      ::XFile olay;
       olay_txt_XFile (&olay, &args_xf.xf, 0);
-      Cx::Table<char*> xargs;
+      Table<char*> xargs;
       char* xarg;
       do {
         char matched_delim = '\0';
@@ -715,4 +717,6 @@ protocon_options
   }
   return true;
 }
+
+END_NAMESPACE
 

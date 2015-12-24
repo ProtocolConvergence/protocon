@@ -5,9 +5,12 @@
 #include "udp-ofile.hh"
 #include "interactive.hh"
 
+#include "namespace.hh"
+
 /** Execute me now!*/
 int main(int argc, char** argv)
 {
+  using namespace PROJECT_NAMESPACE;
   int argi = init_sysCx (&argc, &argv);
   DeclLegit( good );
   struct timespec begtime, endtime;
@@ -97,7 +100,7 @@ int main(int argc, char** argv)
 
     if (!exec_opt.model_ofilepath.empty_ck()) {
       Cx::OFileB ofb;
-      Cx::OFile ofile;
+      OFile ofile;
       DoLegitLineP( ofile, "Open Promela file" )
         ofb.uopen(exec_opt.model_ofilepath);
       DoLegit( 0 )
@@ -105,7 +108,7 @@ int main(int argc, char** argv)
     }
     if (!exec_opt.graphviz_ofilepath.empty_ck()) {
       Cx::OFileB ofb;
-      Cx::OFile ofile;
+      OFile ofile;
       DoLegitLineP( ofile, "Open GraphViz file" )
         ofb.uopen(exec_opt.graphviz_ofilepath);
       DoLegit( 0 )
@@ -114,7 +117,7 @@ int main(int argc, char** argv)
     if (!exec_opt.udp_ofilepath.empty_ck()) {
       Claim2( exec_opt.task ,==, ProtoconOpt::NoTask );
       Cx::OFileB ofb;
-      Cx::OFile ofile;
+      OFile ofile;
       DoLegitLineP( ofile, "Open UDP file" )
         ofb.uopen(exec_opt.udp_ofilepath);
       DoLegit( 0 )
@@ -147,4 +150,12 @@ int main(int argc, char** argv)
     return 0;
   return found ? 0 : 2;
 }
+
+END_NAMESPACE
+
+int main(int argc, char** argv)
+{
+  return PROJECT_NAMESPACE::main(argc, argv);
+}
+
 

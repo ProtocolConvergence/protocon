@@ -3,19 +3,13 @@
 #define INST_HH_
 #include "cx/synhax.hh"
 
-namespace Cx {
-  class PFmla;
-}
-namespace Xn {
-class Net;
-class Sys;
-}
+#include "namespace.hh"
 
 void
 UnidirectionalRing(Xn::Net& topo, uint npcs, uint domsz,
                    const char* basename, bool symmetric, bool distinguished);
-Cx::PFmla
-SingleTokenPFmla(const vector<Cx::PFmla>& tokenPFs);
+P::Fmla
+SingleTokenPFmla(const vector<P::Fmla>& tokenPFs);
 void
 InstThreeColoringRing(Xn::Sys& sys, uint npcs);
 void
@@ -28,5 +22,6 @@ InstSumNot(Xn::Sys& sys, uint npcs, uint domsz, uint target,
 void
 InstAgreementRing(Xn::Sys& sys, uint npcs, const char* vbl_name = "x");
 
+END_NAMESPACE
 #endif
 

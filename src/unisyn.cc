@@ -12,6 +12,8 @@ extern "C" {
 #include <queue>
 #include <stdio.h>
 
+#include "namespace.hh"
+
 using std::queue;
 using std::array;
 using std::vector;
@@ -61,36 +63,36 @@ vector< array<PcState,3> > unidirectionalRingProtocolGenerator(vector< array<PcS
   size_t **G = NULL;
   queue<size_t> treeProcess;
   vector< array<PcState,3> > actions;
-  
+
   L = allocSquareMatrix(M);
   //first diamention is the x-1 vertex value, second is x vertex valid value
-  
-  for(size_t i = 0; i < legits.size(); i++) 
+
+  for(size_t i = 0; i < legits.size(); i++)
     L[legits[i][0]][legits[i][1]] = 1;
-  
+
 #ifdef DEBUG
   printSquareMatrix(L, M);
 #endif
-  
+
   for(size_t i = 0; i < M; i++)
     if(L[i][i]){
       gamma = i;
       gammaExists = true;
       //break;
-      //Valid with and without this line.  This may save time on 
+      //Valid with and without this line.  This may save time on
       //stupidly large rules.
     }
-  
+
   if(!gammaExists) return actions;
-  
-  
-  //determine the cycles in the graph to turn L into the representation 
+
+
+  //determine the cycles in the graph to turn L into the representation
   //of Lprime
   //To do this, we can just establish which verticies have no out edges
-  //this is just a easy hack to calculate Lprime correctly, but its 
+  //this is just a easy hack to calculate Lprime correctly, but its
   //runtime is far from optimal.
   Lprime = copySquareMatrix(L, M);
-  
+
   bool modifiedMatrix = true;
   while(modifiedMatrix){//consistancy loop
     modifiedMatrix = false;
@@ -112,9 +114,9 @@ vector< array<PcState,3> > unidirectionalRingProtocolGenerator(vector< array<PcS
 #endif
 
   //Lprime is now calculated.
-  //Now, we're going to tweak Lprime so that the a rule for going to 
+  //Now, we're going to tweak Lprime so that the a rule for going to
   //gamma is added.
-  
+
   for(size_t i = 0; i < M; i++){
     bool isEmpty = true;
     for(size_t j = 0; j < M; j++){
@@ -122,16 +124,16 @@ vector< array<PcState,3> > unidirectionalRingProtocolGenerator(vector< array<PcS
     }
     if(isEmpty) Lprime[i][gamma] = 1;
   }
-  
+
 
   //Start initializing G
-  G = copySquareMatrix(Lprime, M);  
+  G = copySquareMatrix(Lprime, M);
   //Seperate out values in the tree and those not in the tree
-  
+
   treeProcess.push(gamma);
   memset(G[gamma], 0, M * sizeof(**G));
   G[gamma][gamma] = 1;
-  
+
   //start pruning the graph to make it into a tree
   while(!treeProcess.empty()){
     for(size_t i = 0; i < M; i++){
@@ -143,26 +145,26 @@ vector< array<PcState,3> > unidirectionalRingProtocolGenerator(vector< array<PcS
     }
     treeProcess.pop();
   }
-  
+
 #ifdef DEBUG
   printSquareMatrix(G, M);
 #endif
-  
+
   //Now we have the tree, but not the values x-1 contains that are valid
-  //for something to change.  The values are the inverse of the out 
+  //for something to change.  The values are the inverse of the out
   //edges of the respective vertex in Lprime.
-  
+
   for(uint i = 0; i < M; i++)
     for(uint j = 0; j < M; j++)
       if(G[i][j])
         for(uint k = 0; k < M; k++)
           if(!Lprime[i][k])
             actions.push_back(array<PcState, 3>{i, k, j});
-  
+
   freeSquareMatrix(L, M); L = NULL;
   freeSquareMatrix(Lprime, M); Lprime = NULL;
   freeSquareMatrix(G, M); G = NULL;
-  
+
   return actions;
 }
 
@@ -255,7 +257,7 @@ ReadUniRing(const char* filepath, Xn::Sys& sys, vector< array<PcState,2> >& legi
 
   // Get references to this process's variables that can be
   // used in the context of the predicate formulas.
-  Cx::Table<uint> rvbl_indices(2);
+  Table<uint> rvbl_indices(2);
   rvbl_indices[0] = pc.rvbls[0]->pfmla_idx;
   rvbl_indices[1] = pc.rvbls[1]->pfmla_idx;
   if (pc_symm.wmap[0]==0)
@@ -264,7 +266,7 @@ ReadUniRing(const char* filepath, Xn::Sys& sys, vector< array<PcState,2> >& legi
   // Get all legitimate states.
   P::Fmla legit_pf = pc.invariant;
   while (legit_pf.sat_ck()) {
-    Cx::Table<uint> state(2);
+    Table<uint> state(2);
 
     // Find a readable state of this process that fits the legitimate states.
     legit_pf.state(&state[0], rvbl_indices);
@@ -298,3 +300,8 @@ WriteUniRing(const char* filepath, const Xn::Sys& sys, const vector< array<PcSta
   return oput_protocon_file (filepath, sys, topo, enum_actions, false, 0);
 }
 
+END_NAMESPACE
+
+int main(int argc, char** argv) {
+  return PROJECT_NAMESPACE::main(argc, argv);
+}

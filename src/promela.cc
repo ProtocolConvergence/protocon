@@ -2,9 +2,11 @@
 #include "promela.hh"
 #include "xnsys.hh"
 
+#include "namespace.hh"
+
 static
   void
-OPutPromelaVblRef(Cx::OFile& of, const Xn::VblSymm& vbl_symm, const Xn::NatMap& index_map)
+OPutPromelaVblRef(OFile& of, const Xn::VblSymm& vbl_symm, const Xn::NatMap& index_map)
 {
   uint mod_val = 0;
   uint add_val = 0;
@@ -35,7 +37,7 @@ OPutPromelaVblRef(Cx::OFile& of, const Xn::VblSymm& vbl_symm, const Xn::NatMap& 
 
 static
   void
-OPutPromelaAction(Cx::OFile& of, const Xn::ActSymm& act)
+OPutPromelaAction(OFile& of, const Xn::ActSymm& act)
 {
   const Xn::PcSymm& pc_symm = *act.pc_symm;
   for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
@@ -53,7 +55,7 @@ OPutPromelaAction(Cx::OFile& of, const Xn::ActSymm& act)
 
 static
   void
-OPutPromelaSelect(Cx::OFile& ofile, const Xn::Vbl& x)
+OPutPromelaSelect(OFile& ofile, const Xn::Vbl& x)
 {
   ofile << "\n  if";
   for (uint i = 0; i < x.symm->domsz; ++i) {
@@ -66,7 +68,7 @@ OPutPromelaSelect(Cx::OFile& ofile, const Xn::Vbl& x)
 
 static
   void
-OPutPromelaPc(Cx::OFile& ofile, const Xn::PcSymm& pc_symm, const Cx::Table<Xn::ActSymm>& acts,
+OPutPromelaPc(OFile& ofile, const Xn::PcSymm& pc_symm, const Table<Xn::ActSymm>& acts,
               const Xn::PcSymm& o_pc_symm, uint pcidx_offset)
 {
   const Xn::PcSymmSpec& pc_symm_spec = *pc_symm.spec;
@@ -125,7 +127,7 @@ OPutPromelaPc(Cx::OFile& ofile, const Xn::PcSymm& pc_symm, const Cx::Table<Xn::A
  * system is self-stabilizing.
  **/
   void
-OPutPromelaModel(Cx::OFile& ofile, const Xn::Sys& sys, const Xn::Net& otopology)
+OPutPromelaModel(OFile& ofile, const Xn::Sys& sys, const Xn::Net& otopology)
 {
   const Xn::Net& topo = sys.topology;
   const Xn::Spec& spec = *otopology.spec;
@@ -179,7 +181,7 @@ OPutPromelaModel(Cx::OFile& ofile, const Xn::Sys& sys, const Xn::Net& otopology)
     << "\n#define else :"
     ;
 
-  Cx::Table<Xn::ActSymm> acts;
+  Table<Xn::ActSymm> acts;
   const vector<uint>& actions = sys.actions;
   for (uint i = 0; i < actions.size(); ++i) {
     for (uint j = 0; j < topo.represented_actions[actions[i]].sz(); ++j) {
@@ -218,4 +220,6 @@ OPutPromelaModel(Cx::OFile& ofile, const Xn::Sys& sys, const Xn::Net& otopology)
 
   ofile << "\n\n";
 }
+
+END_NAMESPACE
 

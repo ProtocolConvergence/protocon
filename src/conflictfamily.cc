@@ -5,10 +5,11 @@
 #include "cx/xfile.hh"
 
 #define FOR_EACH(it,conflict_sets) \
-  for (Cx::Set< Cx:: FlatSet<uint> >::const_iterator it = conflict_sets.begin(); \
+  for (Set<  FlatSet<uint> >::const_iterator it = conflict_sets.begin(); \
        it != conflict_sets.end(); \
        ++it)
 
+#include "namespace.hh"
 
   ConflictFamily
 ConflictFamily::operator-(const ConflictFamily& fam) const
@@ -51,8 +52,8 @@ ConflictFamily::exact_conflict_ck(const FlatSet<uint>& test_set) const
   void
 ConflictFamily::add_conflict(const FlatSet<uint>& b)
 {
-  //Set< Cx::FlatSet<uint> > dels;
-  for (Cx::Set< Cx::FlatSet<uint> >::const_iterator it = conflict_sets.begin(); it != conflict_sets.end();)
+  //Set< FlatSet<uint> > dels;
+  for (Set< FlatSet<uint> >::const_iterator it = conflict_sets.begin(); it != conflict_sets.end();)
     //FOR_EACH( it, conflict_sets )
   {
     const FlatSet<uint>& a = *it;
@@ -61,7 +62,7 @@ ConflictFamily::add_conflict(const FlatSet<uint>& b)
     }
     if (b.subseteq_ck(a)) {
       //dels << *it;
-      Cx::Set< Cx::FlatSet<uint> >::iterator tmp = it;
+      Set< FlatSet<uint> >::iterator tmp = it;
       ++it;
       conflict_sets.erase(tmp);
     }
@@ -80,16 +81,16 @@ ConflictFamily::add_conflict(const FlatSet<uint>& b)
 }
 
   void
-ConflictFamily::add_conflict(const Cx::Table<uint>& b)
+ConflictFamily::add_conflict(const Table<uint>& b)
 {
-  Cx::FlatSet<uint> tmp( b );
+  FlatSet<uint> tmp( b );
   this->add_conflict(tmp);
 }
 
   void
-ConflictFamily::add_conflict(const Cx::Set<uint>& b)
+ConflictFamily::add_conflict(const Set<uint>& b)
 {
-  Cx::FlatSet<uint> tmp( b );
+  FlatSet<uint> tmp( b );
   this->add_conflict(tmp);
 }
 
@@ -102,7 +103,7 @@ ConflictFamily::add_impossible(uint e)
   void
 ConflictFamily::add_conflicts(const ConflictFamily& fam)
 {
-  Cx::Set< Cx::FlatSet<uint> > diff_set =
+  Set< FlatSet<uint> > diff_set =
     fam.conflict_sets - conflict_sets;
 
   FOR_EACH( it, diff_set )
@@ -110,7 +111,7 @@ ConflictFamily::add_conflicts(const ConflictFamily& fam)
 }
 
   void
-ConflictFamily::add_conflicts(const Cx::Table<uint>& flat_conflicts)
+ConflictFamily::add_conflicts(const Table<uint>& flat_conflicts)
 {
   uint i = 0;
   while (i < flat_conflicts.sz()) {
@@ -124,7 +125,7 @@ ConflictFamily::add_conflicts(const Cx::Table<uint>& flat_conflicts)
 ConflictFamily::trim(uint max_sz)
 {
   if (max_sz == 0)  return;
-  Set< Cx::FlatSet<uint> > dels;
+  Set< FlatSet<uint> > dels;
   FOR_EACH( it, conflict_sets )
   {
     uint sz = (*it).sz();
@@ -136,7 +137,7 @@ ConflictFamily::trim(uint max_sz)
 }
 
   void
-ConflictFamily::conflict_sizes(Cx::Table<uint>& a) const {
+ConflictFamily::conflict_sizes(Table<uint>& a) const {
   a.clear();
   FOR_EACH( it, conflict_sets )
   {
@@ -182,7 +183,7 @@ ConflictFamily::conflict_membs(Set<uint>* ret_membs,
                                const FlatSet<uint>& test_set,
                                const FlatSet<uint>& count_set) const
 {
-  Cx::Table<uint> diff;
+  Table<uint> diff;
   FOR_EACH( it, conflict_sets )
   {
     if ((*it).subseteq_fuzz_ck(&diff, test_set, 1)) {
@@ -196,7 +197,7 @@ ConflictFamily::conflict_membs(Set<uint>* ret_membs,
 }
 
   void
-ConflictFamily::all_conflicts(Cx::Table< FlatSet<uint> >& ret) const
+ConflictFamily::all_conflicts(Table< FlatSet<uint> >& ret) const
 {
   ret.clear();
   FOR_EACH( it, conflict_sets )
@@ -206,7 +207,7 @@ ConflictFamily::all_conflicts(Cx::Table< FlatSet<uint> >& ret) const
 }
 
   void
-ConflictFamily::all_conflicts(Cx::Table<uint>& ret) const
+ConflictFamily::all_conflicts(Table<uint>& ret) const
 {
   ret.clear();
   FOR_EACH( it, conflict_sets )
@@ -220,7 +221,7 @@ ConflictFamily::all_conflicts(Cx::Table<uint>& ret) const
 }
 
   void
-ConflictFamily::flush_new_conflicts(Cx::Table< FlatSet<uint> >& ret)
+ConflictFamily::flush_new_conflicts(Table< FlatSet<uint> >& ret)
 {
   if (!this->record_new_conflict_sets) {
     this->all_conflicts(ret);
@@ -237,7 +238,7 @@ ConflictFamily::flush_new_conflicts(Cx::Table< FlatSet<uint> >& ret)
 }
 
   void
-ConflictFamily::flush_new_conflicts(Cx::Table<uint>& ret)
+ConflictFamily::flush_new_conflicts(Table<uint>& ret)
 {
   if (!this->record_new_conflict_sets) {
     this->all_conflicts(ret);
@@ -278,14 +279,14 @@ ConflictFamily::sat_ck() const
   if (conflict_sets.sz() != 1) {
     return true;
   }
-  const Cx::FlatSet<uint>& e = conflict_sets.elem();
+  const FlatSet<uint>& e = conflict_sets.elem();
   return (e.sz() > 0);
 }
 
   void
-ConflictFamily::oput_conflict_sizes(Cx::OFile& of) const
+ConflictFamily::oput_conflict_sizes(OFile& of) const
 {
-  Cx::Table<uint> t;
+  Table<uint> t;
   this->conflict_sizes(t);
   for (uint i = 0; i < t.sz(); ++i) {
     of << ' ' << i << ':' << t[i];
@@ -294,13 +295,13 @@ ConflictFamily::oput_conflict_sizes(Cx::OFile& of) const
 }
 
   void
-ConflictFamily::oput(Cx::OFile& of) const
+ConflictFamily::oput(OFile& of) const
 {
   of << conflict_sets.sz() << '\n';
   FOR_EACH( it, conflict_sets )
   {
     of << (*it).sz() << ' ';
-    const Cx::FlatSet<uint>& conflict_set = *it;
+    const FlatSet<uint>& conflict_set = *it;
     for (uint i = 0; i < conflict_set.sz(); ++i)
       of << ' ' << conflict_set[i];
     of << '\n';
@@ -308,7 +309,7 @@ ConflictFamily::oput(Cx::OFile& of) const
 }
 
   void
-ConflictFamily::xget(Cx::XFile& xf)
+ConflictFamily::xget(XFile& xf)
 {
   conflict_sets.clear();
   impossible_set.clear();
@@ -316,7 +317,7 @@ ConflictFamily::xget(Cx::XFile& xf)
   ujint n = 0;
   xf >> n;
 
-  Cx::Table<uint> conflict_set;
+  Table<uint> conflict_set;
   for (ujint i = 0; i < n; ++i)
   {
     uint sz = 0;
@@ -329,7 +330,9 @@ ConflictFamily::xget(Cx::XFile& xf)
     }
     if (conflict_set.sz() == 1)
       impossible_set << conflict_set[0];
-    conflict_sets << Cx::FlatSet<uint>(conflict_set);
+    conflict_sets << FlatSet<uint>(conflict_set);
   }
 }
+
+END_NAMESPACE
 

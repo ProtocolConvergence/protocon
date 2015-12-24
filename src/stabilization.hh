@@ -4,16 +4,7 @@
 #include "cx/synhax.hh"
 #include "cx/table.hh"
 
-namespace Cx {
-  class PFmla;
-  class OFile;
-}
-namespace Xn {
-  class Sys;
-}
-namespace X {
-  class Fmlae;
-}
+#include "namespace.hh"
 
 class StabilizationOpt
 {
@@ -32,9 +23,9 @@ public:
 class StabilizationCkInfo
 {
 public:
-  Cx::Table<uint> actions;
+  Table<uint> actions;
   bool livelock_exists;
-  Cx::Table<uint> livelock_actions;
+  Table<uint> livelock_actions;
   uint nlayers;
 
   bool find_livelock_actions;
@@ -47,44 +38,46 @@ public:
 };
 
 bool
-shadow_ck(Cx::PFmla* ret_invariant,
+shadow_ck(P::Fmla* ret_invariant,
           const Xn::Sys& sys,
-          const Cx::PFmla& lo_xn,
-          const Cx::PFmla& hi_xn,
+          const X::Fmla& lo_xn,
+          const X::Fmla& hi_xn,
           const X::Fmlae& lo_xfmlae,
-          const Cx::PFmla& lo_scc,
+          const P::Fmla& lo_scc,
           const bool explain_failure = false);
 bool
-weak_convergence_ck(const Cx::PFmla& xn, const Cx::PFmla& invariant);
+weak_convergence_ck(const X::Fmla& xn, const P::Fmla& invariant);
 bool
-weak_convergence_ck(uint* ret_nlayers, const Cx::PFmla& xn,
-                    const Cx::PFmla& invariant,
-                    const Cx::PFmla& assumed);
+weak_convergence_ck(uint* ret_nlayers, const X::Fmla& xn,
+                    const P::Fmla& invariant,
+                    const P::Fmla& assumed);
 bool
-weak_convergence_ck(uint* ret_nlayers, const Cx::PFmla& xn,
-                    const Cx::PFmla& invariant);
+weak_convergence_ck(uint* ret_nlayers, const X::Fmla& xn,
+                    const P::Fmla& invariant);
 
 bool
-stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
+stabilization_ck(OFile& of, const Xn::Sys& sys,
                  const StabilizationOpt& opt,
-                 const Cx::PFmla& lo_xn,
-                 const Cx::PFmla& hi_xn,
+                 const X::Fmla& lo_xn,
+                 const X::Fmla& hi_xn,
                  const X::Fmlae& lo_xfmlae,
                  StabilizationCkInfo* info = 0);
 bool
-stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
+stabilization_ck(OFile& of, const Xn::Sys& sys,
                  const StabilizationOpt& opt,
                  const vector<uint>& actions,
                  const vector<uint>& candidates,
                  StabilizationCkInfo* info = 0);
 bool
-stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
+stabilization_ck(OFile& of, const Xn::Sys& sys,
                  const StabilizationOpt& opt,
                  const vector<uint>& actions,
                  StabilizationCkInfo* info = 0);
 bool
-stabilization_ck(Cx::OFile& of, const Xn::Sys& sys,
+stabilization_ck(OFile& of, const Xn::Sys& sys,
                  const StabilizationOpt& opt,
                  StabilizationCkInfo* info = 0);
+
+END_NAMESPACE
 #endif
 

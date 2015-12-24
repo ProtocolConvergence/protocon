@@ -6,6 +6,8 @@
 Cx::OFile DBogOF( stderr_OFile () );
 
 
+#include "namespace.hh"
+
 namespace Xn {
 
 /**
@@ -74,7 +76,7 @@ Net::commit_initialization()
       continue;
     this->random_write_exists = true;
 
-    const Cx::PFmlaVbl& pfmla_vbl = this->pfmla_vbl(vbl);
+    const PFmlaVbl& pfmla_vbl = this->pfmla_vbl(vbl);
     this->identity_xn = this->identity_xn.smooth(pfmla_vbl);
     this->xfmlae_ctx.identity_xn = this->xfmlae_ctx.identity_xn.smooth(pfmla_vbl);
 
@@ -161,7 +163,7 @@ Net::commit_variable(VblSymm& symm, uint i)
   vbl->pfmla_idx = pfmla_ctx.add_vbl(name_of (*vbl), symm.domsz);
   pfmla_ctx.add_to_vbl_list(symm.pfmla_list_id, vbl->pfmla_idx);
 
-  const Cx::PFmlaVbl& pf_vbl = this->pfmla_vbl(*vbl);
+  const PFmlaVbl& pf_vbl = this->pfmla_vbl(*vbl);
   this->identity_xn &= pf_vbl.img_eq(pf_vbl);
   this->xfmlae_ctx.identity_xn &= pf_vbl.img_eq(pf_vbl);
 
@@ -184,7 +186,7 @@ Net::commit_variable(VblSymm& symm, uint i)
   void
 Net::commit_variables()
 {
-  Cx::Table< Cx::Tuple<uint,2> > sizes(vbl_symms.sz());
+  Table< Tuple<uint,2> > sizes(vbl_symms.sz());
   uint refsz = 1;
   uint maxsz = 0;
   for (uint i = 0; i < vbl_symms.sz(); ++i) {
@@ -378,21 +380,21 @@ PcSymm::action(ActSymm& act, uint actidx) const
 }
 
   void
-Pc::actions(Cx::Table<uint>& ret_actions, Cx::PFmlaCtx& ctx) const
+Pc::actions(Table<uint>& ret_actions, PFmlaCtx& ctx) const
 {
   const Pc& pc = *this;
   const PcSymm& pc_symm = *pc.symm;
 
-  Cx::Table<uint> pfmla_rvbl_idcs;
+  Table<uint> pfmla_rvbl_idcs;
   for (uint i = 0; i < pc.rvbls.sz(); ++i) {
     pfmla_rvbl_idcs.push(pc.rvbls[i]->pfmla_idx);
   }
-  Cx::Table<uint> pfmla_wvbl_idcs;
+  Table<uint> pfmla_wvbl_idcs;
   for (uint i = 0; i < pc.wvbls.sz(); ++i) {
     pfmla_wvbl_idcs.push(pc.wvbls[i]->pfmla_idx);
   }
 
-  Cx::PFmla xn( pc.puppet_xn & pc.closed_assume );
+  X::Fmla xn( pc.puppet_xn & pc.closed_assume );
 
   ActSymm act;
   act.vals.grow(pc.rvbls.sz() + pc.wvbls.sz());
@@ -401,20 +403,20 @@ Pc::actions(Cx::Table<uint>& ret_actions, Cx::PFmlaCtx& ctx) const
     uint* pre_state = &act.vals[0];
     xn.state(pre_state, pfmla_rvbl_idcs);
 
-    Cx::PFmla pre_pf = ctx.pfmla_of_state(pre_state, pfmla_rvbl_idcs);
+    P::Fmla pre_pf = ctx.pfmla_of_state(pre_state, pfmla_rvbl_idcs);
     for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
       const Xn::VblSymm& vbl_symm = *pc_symm.rvbl_symms[i];
       if (!vbl_symm.pure_shadow_ck())
         continue;
-      const Cx::PFmlaVbl& v = ctx.vbl(pc.rvbls[i]->pfmla_idx);
+      const PFmlaVbl& v = ctx.vbl(pc.rvbls[i]->pfmla_idx);
       pre_pf = pre_pf.smooth(v);
       pre_state[i] = 0;
     }
 
-    Cx::PFmla img_pf = xn.img(pre_pf);
+    P::Fmla img_pf = xn.img(pre_pf);
     for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
       if (pc_symm.spec->random_write_flags[i]) {
-        const Cx::PFmlaVbl& v = ctx.vbl(pc.rvbls[i]->pfmla_idx);
+        const PFmlaVbl& v = ctx.vbl(pc.rvbls[i]->pfmla_idx);
         img_pf = img_pf.smooth(v) & (v == 0);
       }
     }
@@ -428,7 +430,7 @@ Pc::actions(Cx::Table<uint>& ret_actions, Cx::PFmlaCtx& ctx) const
         const Xn::VblSymm& vbl_symm = *pc_symm.wvbl_symms[i];
         if (!vbl_symm.pure_shadow_ck())
           continue;
-        const Cx::PFmlaVbl& v = ctx.vbl(pc.wvbls[i]->pfmla_idx);
+        const PFmlaVbl& v = ctx.vbl(pc.wvbls[i]->pfmla_idx);
         const P::Fmla& pf = tmp_pf.smooth(v);
         if (pf.subseteq_ck(img_pf)) {
           tmp_pf = pf;
@@ -446,12 +448,12 @@ Pc::actions(Cx::Table<uint>& ret_actions, Cx::PFmlaCtx& ctx) const
 }
 
   void
-PcSymm::actions(Cx::Table<uint>& ret_actions, Cx::PFmlaCtx& ctx) const
+PcSymm::actions(Table<uint>& ret_actions, PFmlaCtx& ctx) const
 {
   uint pcidx = 0;
 
 #if 1
-  Cx::Table<uint> pcidcs;
+  Table<uint> pcidcs;
   if (this->representative(&pcidx)) {
     pcidcs.push(pcidx);
   }
@@ -465,7 +467,7 @@ PcSymm::actions(Cx::Table<uint>& ret_actions, Cx::PFmlaCtx& ctx) const
 
   Set<uint> action_set;
   for (uint i = 0; i < pcidcs.sz(); ++i) {
-    Cx::Table<uint> actions;
+    Table<uint> actions;
     membs[pcidcs[i]]->actions(actions, ctx);
     for (uint j = 0; j < actions.sz(); ++j) {
       action_set << actions[j];
@@ -478,12 +480,12 @@ PcSymm::actions(Cx::Table<uint>& ret_actions, Cx::PFmlaCtx& ctx) const
     DBog0("System may not represent all actions!");
   }
   const Xn::Pc& pc = *this->membs[pcidx];
-  Cx::PFmla xn = pc.direct_pfmla;
+  X::Fmla xn = pc.direct_pfmla;
   while (xn.sat_ck()) {
     uint* pre_state = &act.vals[0];
     xn.state(pre_state, pfmla_rvbl_idcs);
-    Cx::PFmla pre_pf = ctx.pfmla_of_state(pre_state, pfmla_rvbl_idcs);
-    Cx::PFmla img_pf = pfmla.img(pre_pf);
+    P::Fmla pre_pf = ctx.pfmla_of_state(pre_state, pfmla_rvbl_idcs);
+    P::Fmla img_pf = pfmla.img(pre_pf);
 
     while (img_pf.sat_ck()) {
       uint* img_state = &act.vals[pc.rvbls.sz()];
@@ -596,7 +598,7 @@ Net::safe_ck(const Xn::ActSymm& act) const
 
   ostream&
 Net::oput(ostream& of,
-          const Cx::PFmla& pf,
+          const P::Fmla& pf,
           const String& pfx,
           const String& sfx) const
 {
@@ -609,8 +611,8 @@ Net::oput(ostream& of,
   return of;
 }
 
-  Cx::OFile&
-Net::oput_vbl_names(Cx::OFile& of) const
+  OFile&
+Net::oput_vbl_names(OFile& of) const
 {
   for (uint i = 0; i < this->vbls.sz(); ++i) {
     if (i > 0)
@@ -621,16 +623,16 @@ Net::oput_vbl_names(Cx::OFile& of) const
   return of;
 }
 
-  Cx::OFile&
-Net::oput_pfmla(Cx::OFile& of, Cx::PFmla pf,
+  OFile&
+Net::oput_pfmla(OFile& of, Cx::PFmla pf,
                 Sign pre_or_img, bool just_one) const
 {
-  Cx::Table<uint> state_pre(this->vbls.sz(), 0);
-  Cx::Table<uint> state_img(this->vbls.sz(), 0);
+  Table<uint> state_pre(this->vbls.sz(), 0);
+  Table<uint> state_img(this->vbls.sz(), 0);
   while (pf.sat_ck())
   {
-    Cx::PFmla pf_pre = pf.pick_pre();
-    Cx::PFmla pf_img = pf.img(pf_pre).pick_pre();
+    P::Fmla pf_pre = pf.pick_pre();
+    P::Fmla pf_img = pf.img(pf_pre).pick_pre();
 
     for (uint i = 0; i < this->vbls.sz(); ++i) {
       state_pre[i] = this->vbls[i].pfmla_idx;
@@ -667,26 +669,26 @@ Net::oput_pfmla(Cx::OFile& of, Cx::PFmla pf,
 }
 
 
-  Cx::OFile&
-Net::oput_one_xn(Cx::OFile& of, const Cx::PFmla& pf) const
+  OFile&
+Net::oput_one_xn(OFile& of, const X::Fmla& pf) const
 {
   return this->oput_pfmla(of, pf, 0, true);
 }
 
-  Cx::OFile&
-Net::oput_all_xn(Cx::OFile& of, const Cx::PFmla& pf) const
+  OFile&
+Net::oput_all_xn(OFile& of, const X::Fmla& pf) const
 {
   return this->oput_pfmla(of, pf, 0, false);
 }
 
-  Cx::OFile&
-Net::oput_one_pf(Cx::OFile& of, const Cx::PFmla& pf) const
+  OFile&
+Net::oput_one_pf(OFile& of, const P::Fmla& pf) const
 {
   return this->oput_pfmla(of, pf, -1, true);
 }
 
-  Cx::OFile&
-Net::oput_all_pf(Cx::OFile& of, const Cx::PFmla& pf) const
+  OFile&
+Net::oput_all_pf(OFile& of, const P::Fmla& pf) const
 {
   return this->oput_pfmla(of, pf, -1, false);
 }
@@ -711,7 +713,7 @@ Sys::commit_initialization()
       shadow_puppet_synthesis = true;
     }
     if (vbl.symm->shadow_ck()) {
-      const Cx::PFmlaVbl& x = topo.pfmla_ctx.vbl(vbl.pfmla_idx);
+      const PFmlaVbl& x = topo.pfmla_ctx.vbl(vbl.pfmla_idx);
       shadow_self &= (x.img_eq(x));
     }
   }
@@ -731,10 +733,10 @@ Sys::commit_initialization()
   }
 
 #if 1
-  Cx::Set<uint> tmp_action_set;
+  Set<uint> tmp_action_set;
   for (uint i = 0; i < topo.pc_symms.sz(); ++i) {
     const PcSymm& pc_symm = topo.pc_symms[i];
-    Cx::Table<uint> tmp_actions;
+    Table<uint> tmp_actions;
     pc_symm.actions(tmp_actions, topo.pfmla_ctx);
     for (uint j = 0; j < tmp_actions.sz(); ++j) {
       tmp_action_set << topo.representative_action_index(tmp_actions[j]);
@@ -743,7 +745,7 @@ Sys::commit_initialization()
   this->actions.assign(tmp_action_set.begin(), tmp_action_set.end());
 #else
   for (uint act_idx = 0; act_idx < topo.n_possible_acts; ++act_idx) {
-    const Cx::PFmla& act_pfmla = topo.action_pfmla(act_idx);
+    const X::Fmla& act_pfmla = topo.action_pfmla(act_idx);
     if (act_pfmla.subseteq_ck(this->direct_pfmla) && act_pfmla.sat_ck()) {
       this->actions.push_back(act_idx);
     }
@@ -796,8 +798,8 @@ Sys::integrityCk() const
     DBog0( "Error: Protocol is not closed in the invariant!" );
     good = false;
 
-    Cx::PFmla bad_xn = this->shadow_pfmla & this->invariant & (~this->invariant).as_img();
-    Cx::OFile of( stderr_OFile () );
+    X::Fmla bad_xn = this->shadow_pfmla & this->invariant & (~this->invariant).as_img();
+    OFile of( stderr_OFile () );
     topo.oput_one_xn(of, bad_xn);
   }
 
@@ -806,8 +808,8 @@ Sys::integrityCk() const
 
 }
 
-  Cx::OFile&
-OPut(Cx::OFile& of, const Xn::ActSymm& act)
+  OFile&
+OPut(OFile& of, const Xn::ActSymm& act)
 {
   const Xn::PcSymm& pc = *act.pc_symm;
   of << "/*" << pc.spec->name << "[" << pc.spec->idx_name << "]" << "*/ ";
@@ -840,15 +842,15 @@ OPut(Cx::OFile& of, const Xn::ActSymm& act)
 }
 
   void
-find_one_cycle(Cx::Table<Cx::PFmla>& states, const Cx::PFmla& xn, const Cx::PFmla& scc, const Cx::PFmla& initial)
+find_one_cycle(Table<P::Fmla>& states, const X::Fmla& xn, const P::Fmla& scc, const P::Fmla& initial)
 {
   states.clear();
   states.push( initial.pick_pre() );
-  Cx::PFmla visit( false );
+  P::Fmla visit( false );
 
   while (true) {
     visit |= states.top();
-    const Cx::PFmla& next = scc & xn.img(states.top());
+    const P::Fmla& next = scc & xn.img(states.top());
     Claim( next.sat_ck() );
     if (next.overlap_ck(visit)) {
       states.push( (next & visit).pick_pre() );
@@ -872,19 +874,19 @@ find_one_cycle(Cx::Table<Cx::PFmla>& states, const Cx::PFmla& xn, const Cx::PFml
 }
 
   void
-find_one_cycle(Cx::Table<Cx::PFmla>& states, const Cx::PFmla& xn, const Cx::PFmla& scc)
+find_one_cycle(Table<P::Fmla>& states, const X::Fmla& xn, const P::Fmla& scc)
 {
   find_one_cycle(states, xn, scc, scc);
 }
 
   void
-find_livelock_actions(Cx::Table<uint>& ret_actions, const Cx::PFmla& xn,
-                      const Cx::PFmla& scc, const Cx::PFmla& invariant,
+find_livelock_actions(Table<uint>& ret_actions, const X::Fmla& xn,
+                      const P::Fmla& scc, const P::Fmla& invariant,
                       const Xn::Net& topo)
 {
-  Cx::Table<uint> actions(ret_actions);
+  Table<uint> actions(ret_actions);
   ret_actions.clear();
-  Cx::Table<Cx::PFmla> states;
+  Table<P::Fmla> states;
   find_one_cycle(states, xn, scc, scc - invariant);
   bool livelock_found = false;
   for (uint i = 0; i < states.sz()-1 && !livelock_found; ++i) {
@@ -902,7 +904,7 @@ find_livelock_actions(Cx::Table<uint>& ret_actions, const Cx::PFmla& xn,
   for (uint i = 0; i < states.sz()-1; ++i) {
     for (uint j = 0; j < actions.size(); ++j) {
       uint actidx = actions[j];
-      const Cx::PFmla& act_pfmla = topo.action_pfmla(actidx);
+      const X::Fmla& act_pfmla = topo.action_pfmla(actidx);
       if (states[i].overlap_ck(act_pfmla) &&
           states[i+1].as_img().overlap_ck(act_pfmla))
       {
@@ -914,11 +916,11 @@ find_livelock_actions(Cx::Table<uint>& ret_actions, const Cx::PFmla& xn,
 }
 
   void
-oput_one_cycle(Cx::OFile& of, const X::Fmla& xn,
+oput_one_cycle(OFile& of, const X::Fmla& xn,
                const P::Fmla& scc, const P::Fmla& initial,
                const Xn::Net& topo)
 {
-  Cx::Table<Cx::PFmla> states;
+  Table<P::Fmla> states;
   find_one_cycle(states, xn, scc, initial);
   of << "Cycle is:\n";
   for (uint i = 0; i < states.sz(); ++i) {
@@ -928,19 +930,19 @@ oput_one_cycle(Cx::OFile& of, const X::Fmla& xn,
 }
 
   X::Fmla
-Xn::Net::sync_xn(const Cx::Table<uint>& actidcs) const
+Xn::Net::sync_xn(const Table<uint>& actidcs) const
 {
   X::Fmlae xfmlae(&this->xfmlae_ctx);
-  Cx::Set<uint> all_actidcs_set;
+  Set<uint> all_actidcs_set;
   for (uint i = 0; i < actidcs.sz(); ++i) {
-    const Cx::Table<uint>& all_acts =
+    const Table<uint>& all_acts =
       represented_actions[actidcs[i]];
     for (uint j = 0; j < all_acts.sz(); ++j) {
       all_actidcs_set << all_acts[j];
     }
   }
 
-  Cx::FlatSet<uint> all_actidcs( all_actidcs_set );
+  FlatSet<uint> all_actidcs( all_actidcs_set );
 
   for (uint i = 0; i < all_actidcs.sz(); ++i) {
     ActSymm act;
@@ -952,14 +954,14 @@ Xn::Net::sync_xn(const Cx::Table<uint>& actidcs) const
     }
   }
 
-  Cx::BitTable written_vbls( vbls.sz(), 0 );
+  BitTable written_vbls( vbls.sz(), 0 );
 
   X::Fmla xn(true);
   for (uint pcidx = 0; pcidx < this->pcs.sz(); ++pcidx) {
     const Xn::Pc& pc = this->pcs[pcidx];
     P::Fmla self_loop( true );
     for (uint i = 0; i < pc.wvbls.sz(); ++i) {
-      const Cx::PFmlaVbl& vbl = this->pfmla_vbl(*pc.wvbls[i]);
+      const PFmlaVbl& vbl = this->pfmla_vbl(*pc.wvbls[i]);
       self_loop &= vbl.img_eq(vbl);
 
       const uint xnvbl_idx = vbls.index_of(pc.wvbls[i]);
@@ -978,7 +980,7 @@ Xn::Net::sync_xn(const Cx::Table<uint>& actidcs) const
   for (uint i = 0; i < written_vbls.sz(); ++i) {
     if (1 == written_vbls[i])
       continue;
-    const Cx::PFmlaVbl& vbl = pfmla_vbl(vbls[i]);
+    const PFmlaVbl& vbl = pfmla_vbl(vbls[i]);
     read_only_identity_xn &= vbl.img_eq(vbl);
   }
   xn &= read_only_identity_xn;
@@ -1002,7 +1004,7 @@ Xn::Net::xn_of_pc(const Xn::ActSymm& act, uint pcidx) const
   bool probabilistic = false;
   for (uint i = 0; i < pc.wvbls.sz(); ++i) {
     const Xn::VblSymm& vbl_symm = *pc_symm.wvbl_symms[i];
-    const Cx::PFmlaVbl& vbl = pfmla_vbl(*pc.wvbls[i]);
+    const PFmlaVbl& vbl = pfmla_vbl(*pc.wvbls[i]);
     bool random_write =
       pc_symm.spec->random_write_flags[pc_symm.wmap[i]];
 
@@ -1045,7 +1047,7 @@ Xn::Net::xn_of_pc(const Xn::ActSymm& act, uint pcidx) const
   if (puppet_self_loop) {
     P::Fmla shadow_guard( false );
     for (uint i = 0; i < pc.wvbls.sz(); ++i) {
-      const Cx::PFmlaVbl& vbl = pfmla_vbl(*pc.wvbls[i]);
+      const PFmlaVbl& vbl = pfmla_vbl(*pc.wvbls[i]);
       if (!pc_symm.wvbl_symms[i]->puppet_ck()) {
         shadow_guard |= (vbl != act.assign(i));
       }
@@ -1054,7 +1056,7 @@ Xn::Net::xn_of_pc(const Xn::ActSymm& act, uint pcidx) const
   }
 
   for (uint i = 0; i < pc.rvbls.sz(); ++i) {
-    const Cx::PFmlaVbl& vbl = pfmla_vbl(*pc.rvbls[i]);
+    const PFmlaVbl& vbl = pfmla_vbl(*pc.rvbls[i]);
     if (!pc_symm.write_flags[i] && pc_symm.rvbl_symms[i]->puppet_ck()) {
       xn &= (vbl == act.guard(i));
     }
@@ -1075,7 +1077,7 @@ Xn::Net::represented_xns_of_pc(const Xn::ActSymm& act, uint relative_pcidx) cons
     uint real_pcidx = this->pcs.index_of(pc);
     return act_xfmlaes[actidx][real_pcidx];
   }
-  const Cx::Table<uint>& reps =
+  const Table<uint>& reps =
     this->represented_actions[actidx];
   X::Fmla xn( false );
   for (uint i = 0; i < reps.sz(); ++i) {
@@ -1141,8 +1143,8 @@ Xn::Net::cache_action_xfmla(uint actidx)
 
   bool
 candidate_actions(std::vector<uint>& candidates,
-                  Cx::Table<uint>& dels,
-                  Cx::Table<uint>& rejs,
+                  Table<uint>& dels,
+                  Table<uint>& rejs,
                   const Xn::Sys& sys)
 {
   const Xn::Net& topo = sys.topology;
@@ -1152,7 +1154,7 @@ candidate_actions(std::vector<uint>& candidates,
     return false;
   }
 
-  const Cx::PFmla& hi_invariant = (sys.invariant & sys.closed_assume);
+  const P::Fmla& hi_invariant = (sys.invariant & sys.closed_assume);
 
   if (!hi_invariant.sat_ck()) {
     DBog0( "Invariant is empty with (assume & closed) predicate!" );
@@ -1216,7 +1218,7 @@ candidate_actions(std::vector<uint>& candidates,
       for (uint i = 0; i < pc_symm.wvbl_symms.sz(); ++i) {
         const Xn::VblSymm& vbl_symm = *pc_symm.wvbl_symms[i];
         const Xn::Vbl& vbl = *pc.wvbls[i];
-        const Cx::PFmlaVbl& pf_vbl = topo.pfmla_vbl(vbl);
+        const PFmlaVbl& pf_vbl = topo.pfmla_vbl(vbl);
         if (vbl_symm.pure_shadow_ck()) {
           shadow_exists = true;
           if (act.assign(i) == vbl_symm.domsz) {
@@ -1240,7 +1242,7 @@ candidate_actions(std::vector<uint>& candidates,
         if (pc_symm.write_flags[i])  continue;
         const Xn::VblSymm& vbl_symm = *pc_symm.rvbl_symms[i];
         if (vbl_symm.puppet_ck())  continue;
-        const Cx::PFmlaVbl& pf_vbl = topo.pfmla_vbl(*pc.rvbls[i]);
+        const PFmlaVbl& pf_vbl = topo.pfmla_vbl(*pc.rvbls[i]);
         shadow_xn = shadow_xn.smooth(pf_vbl);
       }
 
@@ -1338,4 +1340,5 @@ candidate_actions(std::vector<uint>& candidates,
 
   return true;
 }
+END_NAMESPACE
 

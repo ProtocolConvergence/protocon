@@ -9,15 +9,17 @@ extern "C" {
 #include "cx/ospc.h"
 }
 
+#include "namespace.hh"
+
   void
-oput_pla_val (Cx::OFile& of, uint j, uint n)
+oput_pla_val (OFile& of, uint j, uint n)
 {
   for (uint i = 0; i < n; ++i)
     of << (i == j ? 1 : 0);
 }
 
   void
-oput_pla_act (Cx::OFile& of, const Xn::ActSymm& act)
+oput_pla_act (OFile& of, const Xn::ActSymm& act)
 {
   const Xn::PcSymm& pc_symm = *act.pc_symm;
   for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
@@ -35,8 +37,8 @@ oput_pla_act (Cx::OFile& of, const Xn::ActSymm& act)
 }
 
   void
-oput_pla_pc_acts (Cx::OFile& of, const Xn::PcSymm& pc_symm,
-                  const Cx::Table<Xn::ActSymm>& acts)
+oput_pla_pc_acts (OFile& of, const Xn::PcSymm& pc_symm,
+                  const Table<Xn::ActSymm>& acts)
 {
   Claim2( pc_symm.wvbl_symms.sz() ,==, pc_symm.wmap.sz() );
 
@@ -82,7 +84,7 @@ oput_pla_pc_acts (Cx::OFile& of, const Xn::PcSymm& pc_symm,
 
 static
   void
-oput_protocon_constants (Cx::OFile& of, const Xn::Spec& spec)
+oput_protocon_constants (OFile& of, const Xn::Spec& spec)
 {
   for (uint i = 0; i < spec.constant_map.keys.sz(); ++i) {
     of << "\nconstant " << spec.constant_map.keys[i];
@@ -93,7 +95,7 @@ oput_protocon_constants (Cx::OFile& of, const Xn::Spec& spec)
 
 static
   void
-oput_protocon_pc_lets (Cx::OFile& of, const Xn::PcSymm& pc_symm)
+oput_protocon_pc_lets (OFile& of, const Xn::PcSymm& pc_symm)
 {
   for (uint i = 0; i < pc_symm.spec->let_map.keys.sz(); ++i) {
     of << "\n  let " << pc_symm.spec->let_map.keys[i];
@@ -104,7 +106,7 @@ oput_protocon_pc_lets (Cx::OFile& of, const Xn::PcSymm& pc_symm)
 
 static
   void
-oput_protocon_pc_predicates (Cx::OFile& ofile, const Xn::PcSymm& pc_symm)
+oput_protocon_pc_predicates (OFile& ofile, const Xn::PcSymm& pc_symm)
 {
   for (uint i = 0; i < pc_symm.predicate_map.keys.sz(); ++i) {
     ofile << "\n  predicate "
@@ -117,8 +119,8 @@ oput_protocon_pc_predicates (Cx::OFile& ofile, const Xn::PcSymm& pc_symm)
 
 static
   void
-oput_protocon_pc_vbl (Cx::OFile& ofile, const Xn::PcSymm& pc_symm,
-                       uint vidx, const Cx::String& idxname)
+oput_protocon_pc_vbl (OFile& ofile, const Xn::PcSymm& pc_symm,
+                       uint vidx, const String& idxname)
 {
   if (pc_symm.write_flags[vidx]) {
     if (pc_symm.spec->random_write_flags[vidx])
@@ -137,7 +139,7 @@ oput_protocon_pc_vbl (Cx::OFile& ofile, const Xn::PcSymm& pc_symm,
 
 static
   void
-oput_protocon_pc_vbls (Cx::OFile& ofile, const Xn::PcSymm& pc_symm)
+oput_protocon_pc_vbls (OFile& ofile, const Xn::PcSymm& pc_symm)
 {
   for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
     bool symmetric_link_case = false;
@@ -167,9 +169,9 @@ oput_protocon_pc_vbls (Cx::OFile& ofile, const Xn::PcSymm& pc_symm)
 }
 
   bool
-oput_protocon_pc_act (Cx::OFile& of, XFile* xf,
-                      const Cx::Table<Cx::String>& guard_vbls,
-                      const Cx::Table<Cx::String>& assign_vbls)
+oput_protocon_pc_act (OFile& of, ::XFile* xf,
+                      const Table<String>& guard_vbls,
+                      const Table<String>& assign_vbls)
 {
   DeclLegit( good );
   bool clause = false;
@@ -183,7 +185,7 @@ oput_protocon_pc_act (Cx::OFile& of, XFile* xf,
       nextok_XFile (xf, 0, 0);
 
     uint m = 0;
-    Cx::Table<uint> vals;
+    Table<uint> vals;
     while (good && tok[m])
     {
       Claim( tok[m] == '0' || tok[m] == '1' );
@@ -229,7 +231,7 @@ oput_protocon_pc_act (Cx::OFile& of, XFile* xf,
 }
 
   void
-oput_protocon_pc_act (Cx::OFile& of, const Xn::ActSymm& act)
+oput_protocon_pc_act (OFile& of, const Xn::ActSymm& act)
 {
   of << "\n    ( ";
   const Xn::PcSymm& pc_symm = *act.pc_symm;
@@ -263,8 +265,8 @@ oput_protocon_pc_act (Cx::OFile& of, const Xn::ActSymm& act)
 }
 
   bool
-oput_protocon_pc_acts (Cx::OFile& of, const Xn::PcSymm& pc_symm,
-                       const Cx::Table<Xn::ActSymm>& acts,
+oput_protocon_pc_acts (OFile& of, const Xn::PcSymm& pc_symm,
+                       const Table<Xn::ActSymm>& acts,
                        OSPc* ospc,
                        bool use_espresso)
 {
@@ -315,8 +317,8 @@ oput_protocon_pc_acts (Cx::OFile& of, const Xn::PcSymm& pc_symm,
   }
 
   // Names for variables.
-  Cx::Table<Cx::String> guard_vbls;
-  Cx::Table<Cx::String> assign_vbls( pc_symm.wmap.sz() );
+  Table<String> guard_vbls;
+  Table<String> assign_vbls( pc_symm.wmap.sz() );
   for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
     if (pc_symm.rvbl_symms[i]->pure_shadow_ck())
       continue;
@@ -341,7 +343,7 @@ oput_protocon_pc_acts (Cx::OFile& of, const Xn::PcSymm& pc_symm,
     spawn_OSPc (ospc);
 
   if (good) {
-    Cx::OFile espresso_xf(ospc->of);
+    OFile espresso_xf(ospc->of);
     oput_pla_pc_acts (espresso_xf, pc_symm, acts);
     close_OFile (ospc->of);
   }
@@ -359,7 +361,7 @@ oput_protocon_pc_acts (Cx::OFile& of, const Xn::PcSymm& pc_symm,
   getline_XFile (ospc->xf);
 
   for (uint i = 0; good && i < n; ++i) {
-    XFile olay[1];
+    ::XFile olay[1];
 
     DoLegitLine("get line from espresso")
       getlined_olay_XFile (olay, ospc->xf, "\n");
@@ -375,9 +377,9 @@ oput_protocon_pc_acts (Cx::OFile& of, const Xn::PcSymm& pc_symm,
 
 static
   bool
-oput_protocon_pc_assume (Cx::OFile& of, const Xn::PcSymm& pc_symm)
+oput_protocon_pc_assume (OFile& of, const Xn::PcSymm& pc_symm)
 {
-  const Cx::String& assume_expression = pc_symm.spec->closed_assume_expression;
+  const String& assume_expression = pc_symm.spec->closed_assume_expression;
   if (assume_expression.empty_ck())
     return true;
   of << "\n  (assume & closed)\n    (" << assume_expression << ");";
@@ -385,10 +387,10 @@ oput_protocon_pc_assume (Cx::OFile& of, const Xn::PcSymm& pc_symm)
 }
 
 static
-  Cx::String
+  String
 string_of_invariant_style (Xn::InvariantStyle style, Xn::InvariantScope scope)
 {
-  Cx::String s = "";
+  String s = "";
   const char* pfx = "";
   const char* sfx = "";
 
@@ -448,10 +450,10 @@ string_of_invariant_behav (Xn::InvariantBehav behav)
 
 static
   bool
-oput_protocon_pc_invariant (Cx::OFile& of, const Xn::PcSymm& pc_symm,
-                            const Cx::String& style_str)
+oput_protocon_pc_invariant (OFile& of, const Xn::PcSymm& pc_symm,
+                            const String& style_str)
 {
-  const Cx::String& invariant_expression = pc_symm.spec->invariant_expression;
+  const String& invariant_expression = pc_symm.spec->invariant_expression;
   if (invariant_expression.empty_ck())
     return true;
 
@@ -461,7 +463,7 @@ oput_protocon_pc_invariant (Cx::OFile& of, const Xn::PcSymm& pc_symm,
 }
 
   bool
-oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys,
+oput_protocon_file (OFile& of, const Xn::Sys& sys,
                     const Xn::Net& o_topology,
                     const vector<uint>& actions,
                     bool use_espresso,
@@ -511,11 +513,11 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys,
     of << "\n(assume & closed)\n  (" << sys.spec->closed_assume_expression << ")\n  ;";
   }
 
-  Cx::String style_str =
+  String style_str =
     string_of_invariant_style (sys.spec->invariant_style,
                                sys.spec->invariant_scope);
   if (!sys.spec->invariant_expression.empty_ck()) {
-    Cx::String legit_str = sys.spec->invariant_expression;
+    String legit_str = sys.spec->invariant_expression;
     of << "\n" << style_str << "\n  (" << legit_str << ")\n  ;";
   }
 
@@ -525,7 +527,7 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys,
   }
 
 
-  Cx::Table<Xn::ActSymm> acts;
+  Table<Xn::ActSymm> acts;
   for (uint i = 0; i < actions.size(); ++i) {
     for (uint j = 0; j < sys.topology.represented_actions[actions[i]].sz(); ++j) {
       sys.topology.action(acts.grow1(), sys.topology.represented_actions[actions[i]][j]);
@@ -558,21 +560,21 @@ oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys,
 }
 
   bool
-oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys, const vector<uint>& actions,
+oput_protocon_file (OFile& of, const Xn::Sys& sys, const vector<uint>& actions,
                     bool use_espresso, const char* comment)
 {
   return oput_protocon_file (of, sys, sys.topology, actions, use_espresso, comment);
 }
 
   bool
-oput_protocon_file (Cx::OFile& of, const Xn::Sys& sys,
+oput_protocon_file (OFile& of, const Xn::Sys& sys,
                     bool use_espresso, const char* comment)
 {
   return oput_protocon_file (of, sys, sys.actions, use_espresso, comment);
 }
 
   bool
-oput_protocon_file (const Cx::String& ofilename,
+oput_protocon_file (const String& ofilename,
                     const Xn::Sys& sys,
                     const Xn::Net& o_topology,
                     const vector<uint>& actions,
@@ -580,16 +582,18 @@ oput_protocon_file (const Cx::String& ofilename,
                     const char* comment)
 {
   Cx::OFileB ofb;
-  Cx::OFile ofile = ofb.uopen(ofilename);
+  OFile ofile = ofb.uopen(ofilename);
   if (!ofile)  return false;
   return oput_protocon_file (ofile, sys, o_topology, actions, use_espresso, comment);
 }
 
   bool
-oput_protocon_file (const Cx::String& ofilename, const Xn::Sys& sys,
+oput_protocon_file (const String& ofilename, const Xn::Sys& sys,
                     bool use_espresso,
                     const char* comment)
 {
   return oput_protocon_file (ofilename, sys, sys.topology, sys.actions, use_espresso, comment);
 }
+
+END_NAMESPACE
 

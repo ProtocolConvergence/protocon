@@ -11,9 +11,9 @@
 
 extern Cx::OFile DBogOF;
 
-namespace Xn {
-using Cx::String;
+#include "namespace.hh"
 
+namespace Xn {
 class NatMap;
 class LetVblMap;
 class PcSymmSpec;
@@ -47,7 +47,7 @@ enum InvariantBehav {
 
 class NatMap {
 public:
-  Cx::Table< int > membs;
+  Table< int > membs;
   String expression;
 
   NatMap() {}
@@ -85,9 +85,9 @@ public:
 
 class LetVblMap {
 public:
-  Cx::Table<String> keys;
-  Cx::Table<NatMap> vals;
-  Cx::Map<String,uint> map;
+  Table<String> keys;
+  Table<NatMap> vals;
+  Map<String,uint> map;
 
   void add(const String& key, const NatMap& val) {
     keys.push(key);
@@ -115,14 +115,14 @@ public:
 
 class LinkSymmetry {
 private:
-  Cx::Table<uint> t;
+  Table<uint> t;
 public:
   uint nlinks;
   uint nvbls;
 
-  Cx::String let_expression;
-  Cx::String multiset_expression;
-  Cx::Table<Cx::String> index_expressions;
+  String let_expression;
+  String multiset_expression;
+  Table<String> index_expressions;
 
 public:
   explicit LinkSymmetry(uint _nlinks)
@@ -131,7 +131,7 @@ public:
   {
   }
 
-  void add_link_symmetry(const Cx::Table<uint>& ob, const Cx::String& index_expression) {
+  void add_link_symmetry(const Table<uint>& ob, const String& index_expression) {
     Claim2( ob.sz() ,==, nlinks );
     ++nvbls;
     index_expressions.push(index_expression);
@@ -158,7 +158,7 @@ public:
       return false;
     for (uint row_off = 0; row_off < nrows-1; ++row_off)
     {
-      Cx::Table<uint> min_row(ncols);
+      Table<uint> min_row(ncols);
       uint min_row_idx = row_off;
       for (uint j = 0; j < ncols; ++j) {
         min_row[j] = a[(*this)(row_off,j)];
@@ -185,33 +185,33 @@ public:
 
 class PcSymmSpec {
 public:
-  Cx::String name;
-  Cx::String idx_name;
-  Cx::String closed_assume_expression;
-  Cx::String invariant_expression;
+  String name;
+  String idx_name;
+  String closed_assume_expression;
+  String invariant_expression;
   LetVblMap let_map;
-  Cx::Table<const VblSymmSpec*> rvbl_symms;
-  Cx::Table<const VblSymmSpec*> wvbl_symms;
-  Cx::Table<bool> random_read_flags;
-  Cx::Table<bool> random_write_flags;
-  Cx::Table<LinkSymmetry> link_symmetries;
-  Cx::String nmembs_expression;
-  Cx::Table<Cx::String> shadow_act_strings;
-  Cx::Table<Cx::String> forbid_act_strings;
-  Cx::Table<Cx::String> permit_act_strings;
+  Table<const VblSymmSpec*> rvbl_symms;
+  Table<const VblSymmSpec*> wvbl_symms;
+  Table<bool> random_read_flags;
+  Table<bool> random_write_flags;
+  Table<LinkSymmetry> link_symmetries;
+  String nmembs_expression;
+  Table<String> shadow_act_strings;
+  Table<String> forbid_act_strings;
+  Table<String> permit_act_strings;
 };
 
 class Spec {
 public:
-  Cx::LgTable<PcSymmSpec> pc_symms;
-  Cx::LgTable<VblSymmSpec> vbl_symms;
+  LgTable<PcSymmSpec> pc_symms;
+  LgTable<VblSymmSpec> vbl_symms;
 
   LetVblMap constant_map;
   InvariantStyle invariant_style;
   InvariantScope invariant_scope;
   InvariantBehav invariant_behav;
-  Cx::String closed_assume_expression;
-  Cx::String invariant_expression;
+  String closed_assume_expression;
+  String invariant_expression;
 
   Spec()
     : invariant_style( Xn::FutureAndShadow )
@@ -227,5 +227,6 @@ public:
 };
 }
 
+END_NAMESPACE
 #endif
 

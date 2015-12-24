@@ -9,11 +9,13 @@ extern "C" {
 }
 #include "xnsys.hh"
 
+#include "namespace.hh"
+
 class ProtoconFileOpt
 {
 public:
-  Cx::String text;
-  Map< Cx::String, Xn::NatMap > constant_map;
+  String text;
+  Map< String, Xn::NatMap > constant_map;
   Xn::InvariantStyle invariant_style;
   Xn::InvariantScope invariant_scope;
   Xn::InvariantBehav invariant_behav;
@@ -40,9 +42,9 @@ struct FinMeta
 
 
 struct ProtoconFilePcSymm {
-  Cx::Table<Sesp> shadow_sps;
-  Cx::Table<Sesp> puppet_sps;
-  Cx::Table<Sesp> direct_sps;
+  Table<Sesp> shadow_sps;
+  Table<Sesp> puppet_sps;
+  Table<Sesp> direct_sps;
   Sesp invariant_sp;
   ProtoconFilePcSymm()
     : invariant_sp( 0 )
@@ -57,23 +59,23 @@ private:
 public:
   bool allgood;
   uint text_nlines;
-  XFile xf;
+  ::XFile xf;
   // TODO:
-  //Cx::Table<ProtoconFilePcSymm> pcsymm_fmlas;
+  //Table<ProtoconFilePcSymm> pcsymm_fmlas;
 
-  Map< Cx::String, int > index_map;
-  Map< Cx::String, const Xn::VblSymm* > vbl_map;
-  Map< Cx::String, Sesp > scope_let_map;
+  Map< String, int > index_map;
+  Map< String, const Xn::VblSymm* > vbl_map;
+  Map< String, Sesp > scope_let_map;
   Xn::Sys* sys;
   Xn::Spec* spec;
   SespCtx* spctx;
-  Cx::Mem<Xn::PcSymm> pc_symm;
-  Cx::Mem<Xn::PcSymmSpec> pc_symm_spec;
-  Cx::PFmla permit_xn;
-  Cx::Table<Xn::ActSymm> conflict;
+  Mem<Xn::PcSymm> pc_symm;
+  Mem<Xn::PcSymmSpec> pc_symm_spec;
+  X::Fmla permit_xn;
+  Table<Xn::ActSymm> conflict;
   bool legit_mode_assigned;
 
-  ProtoconFile(Xn::Sys* sys, XFile* xf)
+  ProtoconFile(Xn::Sys* sys, ::XFile* xf)
     : allgood( true )
     , text_nlines(0)
     , pc_symm(0)
@@ -123,7 +125,7 @@ public:
 
   bool parse_action(X::Fmla& act_xn, uint pcidx, Sesp act_sp,
                     bool auto_iden, Xn::Vbl::ShadowPuppetRole role);
-  bool parse_action(Cx::PFmla& act_pf, Cx::Table<Cx::PFmla>& pc_xns, Sesp act_sp,
+  bool parse_action(X::Fmla& act_pf, Table<X::Fmla>& pc_xns, Sesp act_sp,
                     bool auto_iden, Xn::Vbl::ShadowPuppetRole role);
 
   bool add_action(Sesp act_sp, Xn::Vbl::ShadowPuppetRole role);
@@ -148,12 +150,12 @@ public:
                          Xn::InvariantScope scope = Xn::DirectInvariant);
   bool add_legit(Sesp legit_sp);
 
-  bool string_expression(Cx::String& ss, Sesp a);
-  bool parend_string_expression(Cx::String& ss, Sesp a);
+  bool string_expression(String& ss, Sesp a);
+  bool parend_string_expression(String& ss, Sesp a);
 
-  bool eval(Cx::PFmla& pf, Sesp a);
+  bool eval(P::Fmla& pf, Sesp a);
 
-  bool eval(Cx::IntPFmla& ipf, Sesp a);
+  bool eval(IntPFmla& ipf, Sesp a);
 
   bool eval_int(int* ret, Sesp sp);
 
@@ -161,12 +163,13 @@ public:
 
   bool eval_gtz(uint* ret, Sesp sp);
 
-  bool eval_vbl(Cx::IntPFmla* ret, const Cx::String& name, Sesp idx_sp);
+  bool eval_vbl(IntPFmla* ret, const String& name, Sesp idx_sp);
 
-  bool lookup_vbl(Xn::Vbl** ret, const Cx::String& name, Sesp c);
-  bool lookup_pfmla(Cx::PFmla* ret, const Cx::String& name);
-  bool lookup_int(int* ret, const Cx::String& name);
+  bool lookup_vbl(Xn::Vbl** ret, const String& name, Sesp c);
+  bool lookup_pfmla(P::Fmla* ret, const String& name);
+  bool lookup_int(int* ret, const String& name);
 };
 
+END_NAMESPACE
 #endif
 

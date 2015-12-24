@@ -16,6 +16,8 @@ extern "C" {
 { \
   result = xget_char_XFile (&yy->st->xf, buf) ? 1 : 0; \
 }
+
+namespace PROJECT_NAMESPACE {
 %}
 
 ProtoconFile =
@@ -706,12 +708,12 @@ ReadProtoconFile(Xn::Sys& sys, const ProtoconFileOpt& opt)
   bool good = true;
   yycontext yyctx;
   memset (&yyctx, 0, sizeof (yyctx));
-  AlphaTab text = dflt_AlphaTab ();
+  ::AlphaTab text = dflt_AlphaTab ();
   text << opt.text;
-  XFile xfile[1];
+  ::XFile xfile[1];
   init_XFile_olay_AlphaTab (xfile, &text);
   yyctx.st = new ProtoconFile(&sys, xfile);
-  for (Cx::Map<Cx::String,Xn::NatMap>::const_iterator itr = opt.constant_map.begin();
+  for (Map<String,Xn::NatMap>::const_iterator itr = opt.constant_map.begin();
        itr != opt.constant_map.end();
        ++itr)
   {
@@ -738,4 +740,6 @@ ReadProtoconFile(Xn::Sys& sys, const ProtoconFileOpt& opt)
   sys.commit_initialization();
   return good;
 }
+
+} // PROJECT_NAMESPACE
 

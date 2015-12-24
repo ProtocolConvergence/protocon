@@ -8,9 +8,8 @@
 #include "stabilization.hh"
 #include "xnspec.hh"
 
-namespace Xn {
-  class Sys;
-}
+#include "namespace.hh"
+
 class AddConvergenceOpt;
 class ProtoconFileOpt;
 class ProtoconOpt;
@@ -35,19 +34,19 @@ public:
 
   ExecTask task;
   uint nparallel;
-  Cx::Table< ProtoconParamOpt > params;
-  Cx::String log_ofilename;
-  Cx::String xfilepath;
-  Cx::String ofilepath;
+  Table< ProtoconParamOpt > params;
+  String log_ofilename;
+  String xfilepath;
+  String ofilepath;
   bool use_espresso;
-  Cx::Table< Cx::String > xfilepaths;
-  Cx::String model_ofilepath;
-  Cx::String graphviz_ofilepath;
-  Cx::String udp_ofilepath;
-  Cx::String conflicts_xfilepath;
-  Cx::String conflicts_ofilepath;
-  Cx::String stats_ofilepath;
-  Cx::String argline;
+  Table< String > xfilepaths;
+  String model_ofilepath;
+  String graphviz_ofilepath;
+  String udp_ofilepath;
+  String conflicts_xfilepath;
+  String conflicts_ofilepath;
+  String stats_ofilepath;
+  String argline;
 
   MinimizeConflictsOrder conflict_order;
 
@@ -62,7 +61,7 @@ public:
 
 class ProtoconParamOpt {
 public:
-  Cx::Map<Cx::String, Xn::NatMap> constant_map;
+  Map<String, Xn::NatMap> constant_map;
   bool conflict;
   bool partial;
   StabilizationOpt stabilization_opt;
@@ -90,5 +89,6 @@ protocon_options
    ProtoconFileOpt& infile_opt,
    ProtoconOpt& exec_opt);
 
+END_NAMESPACE
 #endif
 

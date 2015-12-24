@@ -13,6 +13,8 @@
 #include "conflictfamily.hh"
 #include "stabilization.hh"
 
+#include "namespace.hh"
+
 class SynthesisCtx;
 class PartialSynthesis;
 
@@ -20,14 +22,14 @@ static const bool DBog_RankDeadlocksMRV = false;
 
 class DeadlockConstraint {
 public:
-  Cx::PFmla deadlockPF;
+  P::Fmla deadlockPF;
   Set<uint> candidates;
 public:
   DeadlockConstraint() :
     deadlockPF(false)
   {}
 
-  explicit DeadlockConstraint(const Cx::PFmla& _deadlockPF) :
+  explicit DeadlockConstraint(const P::Fmla& _deadlockPF) :
     deadlockPF(_deadlockPF)
   {}
 };
@@ -63,7 +65,7 @@ public:
   SearchMethod search_method;
   NicePolicy nicePolicy;
   bool pick_back_reach;
-  Cx::OFile* log;
+  OFile* log;
   bool verify_found;
 
   // For parallel algorithms.
@@ -85,9 +87,9 @@ public:
   bool snapshot_conflicts;
   bool solution_as_conflict;
   vector<uint> known_solution;
-  Cx::Table< vector<uint> > solution_guesses;
-  Cx::Set< uint > subset_solution_guesses;
-  Cx::String livelock_ofilepath;
+  Table< vector<uint> > solution_guesses;
+  Set< uint > subset_solution_guesses;
+  String livelock_ofilepath;
   uint n_livelock_ofiles;
 
   AddConvergenceOpt() :
@@ -124,7 +126,7 @@ public:
   SynthesisCtx* ctx;
   uint sys_idx;
 
-  Cx::OFile* log;
+  OFile* log;
   uint bt_level;
   uint failed_bt_level;
   bool directly_add_conflicts;
@@ -132,25 +134,25 @@ public:
   bool no_partial;
 
   vector<uint> actions; ///< Chosen actions.
-  Cx::Table<uint> picks; ///< Chosen actions, no inferred ones.
+  Table<uint> picks; ///< Chosen actions, no inferred ones.
   vector<uint> candidates; ///< Candidate actions.
-  Cx::PFmla deadlockPF; ///< Current deadlocks.
-  Cx::PFmla lo_xn; ///< Under-approximation of the transition function.
-  Cx::PFmla hi_xn; ///< Over-approximation of the transition function.
+  P::Fmla deadlockPF; ///< Current deadlocks.
+  X::Fmla lo_xn; ///< Under-approximation of the transition function.
+  X::Fmla hi_xn; ///< Over-approximation of the transition function.
   X::Fmlae lo_xfmlae; ///< Under-approximation of the transition function.
   X::Fmlae hi_xfmlae; ///< Over-approximation of the transition function.
-  Cx::PFmla hi_invariant;
+  P::Fmla hi_invariant;
   uint lo_nlayers;
 
-  Cx::PFmla csp_pfmla;
+  P::Fmla csp_pfmla;
 
-  Cx::Table<PartialSynthesis> instances;  // Other instances of the parameterized system.
+  Table<PartialSynthesis> instances;  // Other instances of the parameterized system.
 
 public:
   explicit PartialSynthesis(SynthesisCtx* _ctx, uint idx=0)
     : ctx( _ctx )
     , sys_idx( idx )
-    , log( &Cx::OFile::null() )
+    , log( &OFile::null() )
     , bt_level( 0 )
     , failed_bt_level( 0 )
     , directly_add_conflicts( false )
@@ -224,7 +226,7 @@ public:
     return false;
   }
 
-  uint add_small_conflict_set(const Cx::Table<uint>& delpicks);
+  uint add_small_conflict_set(const Table<uint>& delpicks);
   bool check_forward(Set<uint>& adds, Set<uint>& dels, Set<uint>& rejs);
   bool revise_actions_alone(Set<uint>& adds, Set<uint>& dels, Set<uint>& rejs, uint* ret_nlayers = 0);
   bool revise_actions(const Set<uint>& adds, const Set<uint>& dels, uint* ret_nlayers = 0);
@@ -237,13 +239,13 @@ public:
 class SynthesisCtx {
 public:
   PartialSynthesis base_partial;
-  Cx::Table<const Xn::Sys*> systems;
-  Cx::OFile* log;
-  Cx::PFmlaCtx csp_pfmla_ctx;
-  Cx::PFmla csp_base_pfmla;
-  Cx::URandom urandom;
+  Table<const Xn::Sys*> systems;
+  OFile* log;
+  PFmlaCtx csp_pfmla_ctx;
+  P::Fmla csp_base_pfmla;
+  URandom urandom;
   AddConvergenceOpt opt;
-  Cx::Table<StabilizationOpt> stabilization_opts;
+  Table<StabilizationOpt> stabilization_opts;
   uint optimal_nlayers_sum;
   Bool (*done_ck_fn) (void*);
   void* done_ck_mem;
@@ -251,7 +253,7 @@ public:
 
   SynthesisCtx()
     : base_partial( this )
-    , log( &Cx::OFile::null() )
+    , log( &OFile::null() )
     , csp_base_pfmla(true)
     , optimal_nlayers_sum(0)
     , done_ck_fn(0)
@@ -259,7 +261,7 @@ public:
   {}
   SynthesisCtx(uint pcidx, uint npcs)
     : base_partial( this )
-    , log( &Cx::OFile::null() )
+    , log( &OFile::null() )
     , csp_base_pfmla(true)
     , urandom(pcidx, npcs)
     , optimal_nlayers_sum(0)
@@ -283,11 +285,12 @@ void
 RankDeadlocksMRV(vector<DeadlockConstraint>& dlsets,
                  const Xn::Net& topo,
                  const vector<uint>& actions,
-                 const Cx::PFmla& deadlockPF);
+                 const P::Fmla& deadlockPF);
 bool
 PickActionMRV(uint& ret_actId,
               const PartialSynthesis& partial,
               const AddConvergenceOpt& opt);
 
+END_NAMESPACE
 #endif
 

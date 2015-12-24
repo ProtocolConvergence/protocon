@@ -14,6 +14,8 @@ extern "C" {
 #include "stabilization.hh"
 #include "synthesis.hh"
 
+#include "namespace.hh"
+
   void
 oput_stats(const ProtoconOpt& exec_opt,
            struct timespec begtime,
@@ -58,4 +60,6 @@ oput_stats(const ProtoconOpt& exec_opt,
       << ofile.endl();
   }
 }
+
+END_NAMESPACE
 

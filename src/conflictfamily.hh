@@ -5,22 +5,17 @@
 #include "cx/synhax.hh"
 #include "cx/set.hh"
 
-namespace Cx {
-  class XFile;
-  class OFile;
-}
-
-class ConflictFamily;
+#include "namespace.hh"
 
 class ConflictFamily
 {
 private:
-  Cx::Set< Cx::FlatSet<uint> > conflict_sets;
-  Cx::Table< Cx::FlatSet<uint> > new_conflict_sets;
+  Set< FlatSet<uint> > conflict_sets;
+  Table< FlatSet<uint> > new_conflict_sets;
   bool record_new_conflict_sets;
 
 public:
-  Cx::Set<uint> impossible_set;
+  Set<uint> impossible_set;
 
   ConflictFamily operator-(const ConflictFamily& fam) const;
 
@@ -31,39 +26,40 @@ public:
   bool conflict_ck(const FlatSet<uint>& test_set) const;
   bool exact_conflict_ck(const FlatSet<uint>& test_set) const;
   void add_conflict(const FlatSet<uint>& b);
-  void add_conflict(const Cx::Table<uint>& b);
-  void add_conflict(const Cx::Set<uint>& b);
+  void add_conflict(const Table<uint>& b);
+  void add_conflict(const Set<uint>& b);
   void add_impossible(uint e);
   void add_conflicts(const ConflictFamily& fam);
-  void add_conflicts(const Cx::Table<uint>& flat_conflicts);
+  void add_conflicts(const Table<uint>& flat_conflicts);
   void trim(uint max_sz);
-  void conflict_sizes(Cx::Table<uint>& a) const;
+  void conflict_sizes(Table<uint>& a) const;
   void superset_membs(FlatSet<uint>& ret_membs,
                       const FlatSet<uint>& test_set,
                       const FlatSet<uint>& count_set) const;
   bool conflict_membs(Set<uint>* ret_membs,
                       const FlatSet<uint>& test_set,
                       const FlatSet<uint>& count_set) const;
-  void all_conflicts(Cx::Table< FlatSet<uint> >& ret) const;
-  void all_conflicts(Cx::Table<uint>& ret) const;
-  void flush_new_conflicts(Cx::Table< FlatSet<uint> >& ret);
-  void flush_new_conflicts(Cx::Table<uint>& ret);
+  void all_conflicts(Table< FlatSet<uint> >& ret) const;
+  void all_conflicts(Table<uint>& ret) const;
+  void flush_new_conflicts(Table< FlatSet<uint> >& ret);
+  void flush_new_conflicts(Table<uint>& ret);
   void flush_new_conflicts();
   void clear();
   bool sat_ck() const;
 
-  void oput_conflict_sizes(Cx::OFile& of) const;
-  void oput(Cx::OFile& of) const;
-  void xget(Cx::XFile& xf);
+  void oput_conflict_sizes(OFile& of) const;
+  void oput(OFile& of) const;
+  void xget(XFile& xf);
 };
 
-inline Cx::OFile&
-operator<<(Cx::OFile& of, const ConflictFamily& conflicts)
+inline OFile&
+operator<<(OFile& of, const ConflictFamily& conflicts)
 { conflicts.oput(of); return of; }
 
-inline Cx::XFile&
-operator>>(Cx::XFile& xf, ConflictFamily& conflicts)
+inline XFile&
+operator>>(XFile& xf, ConflictFamily& conflicts)
 { conflicts.xget(xf); return xf; }
 
+END_NAMESPACE
 #endif
 

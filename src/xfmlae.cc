@@ -12,7 +12,7 @@ X::Fmlae::transitive_closure(const P::Fmla* initial) const
   X::Fmla reach( false );
   X::Fmla next( false );
 
-  Cx::Table<X::Fmla> xns = ctx->act_unchanged_xfmlas;
+  Table<X::Fmla> xns = ctx->act_unchanged_xfmlas;
   for (bool first = true; first || !reach.equiv_ck(next); first = false)
   {
     reach = next;

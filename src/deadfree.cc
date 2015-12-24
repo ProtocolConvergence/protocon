@@ -8,6 +8,9 @@ extern "C" {
 #include "xnsys.hh"
 #include <queue>
 #include <stack>
+
+#include "namespace.hh"
+
 struct LCNode {
   bool legit;
   uint x_pd;
@@ -16,7 +19,7 @@ struct LCNode {
 };
 
 struct LCGraph {
-  Cx::LgTable<LCNode> nodes;
+  LgTable<LCNode> nodes;
   std::map<std::pair<uint, uint>, std::vector<uint> > edges;
 };
 
@@ -26,7 +29,7 @@ static
 deadlock_freedom_ck(const Xn::Sys& sys)
 {
   DeclLegit( good );
-  Cx::Table<uint> actions;
+  Table<uint> actions;
   const Xn::Net& topo = sys.topology;
   const Xn::PcSymm& pc_symm = topo.pc_symms[0];
   uint pcidx = 0;
@@ -36,11 +39,11 @@ deadlock_freedom_ck(const Xn::Sys& sys)
   if (!good)  return false;
 
   const Xn::Pc& pc = topo.pcs[pcidx];
-  Cx::PFmla silent_pfmla = ~pc.puppet_xn.pre();
+  P::Fmla silent_pfmla = ~pc.puppet_xn.pre();
   silent_pfmla.ensure_ctx(topo.pfmla_ctx);
 
-  Cx::Table<uint> pfmla_vbl_idcs;
-  Cx::Table<uint> state;
+  Table<uint> pfmla_vbl_idcs;
+  Table<uint> state;
   for (uint ridx = 0; ridx < pc.rvbls.sz(); ++ridx) {
     pfmla_vbl_idcs.push(pc.rvbls[ridx]->pfmla_idx);
     state.push(0);
@@ -48,7 +51,7 @@ deadlock_freedom_ck(const Xn::Sys& sys)
 
   LCGraph lcgraph;
   while (silent_pfmla.sat_ck()) {
-    Cx::PFmla silent1 = silent_pfmla.pick_pre();
+    P::Fmla silent1 = silent_pfmla.pick_pre();
     LCNode node;
     node.legit = pc.invariant.overlap_ck(silent1);
     silent1.state(&state[0], pfmla_vbl_idcs);
@@ -177,5 +180,11 @@ int main(int argc, char** argv) {
   bool exit_good = deadlock_freedom_ck(sys);
   lose_sysCx();
   return exit_good ? 0 : 2;
+}
+
+END_NAMESPACE
+
+int main(int argc, char** argv) {
+  return PROJECT_NAMESPACE::main(argc, argv);
 }
 

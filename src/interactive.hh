@@ -2,11 +2,12 @@
 #ifndef INTERACTIVE_HH_
 #define INTERACTIVE_HH_
 
-namespace Xn {
-  class Sys;
-}
+#include "cx/synhax.hh"
+
+#include "namespace.hh"
 
 void interactive(const Xn::Sys& sys);
 
+END_NAMESPACE
 #endif
 

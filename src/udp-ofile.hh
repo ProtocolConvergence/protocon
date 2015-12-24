@@ -4,13 +4,11 @@
 
 #include "cx/ofile.hh"
 
-namespace Xn {
-  class Net;
-  class Sys;
-}
+#include "namespace.hh"
 
 void
-oput_udp_file(Cx::OFile& ofile, const Xn::Sys& xsys, const Xn::Net& o_topology);
+oput_udp_file(OFile& ofile, const Xn::Sys& xsys, const Xn::Net& o_topology);
 
+END_NAMESPACE
 #endif
 

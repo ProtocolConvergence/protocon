@@ -4,7 +4,7 @@
 #include "cx/fileb.hh"
 #include "prot-ofile.hh"
 
-typedef Cx::PFmla PF;
+#include "namespace.hh"
 
 /**
  * Check if two actions can coexist in a
@@ -120,7 +120,7 @@ coexist_ck(const Xn::ActSymm& a, const Xn::ActSymm& b,
 RankDeadlocksMRV(vector<DeadlockConstraint>& dlsets,
                  const Xn::Net& topo,
                  const vector<uint>& candidates,
-                 const PF& deadlockPF)
+                 const P::Fmla& deadlockPF)
 {
   dlsets.clear();
   if (!deadlockPF.sat_ck())  return;
@@ -164,8 +164,8 @@ ReviseDeadlocksMRV(vector<DeadlockConstraint>& dlsets,
                    const Set<uint>& adds,
                    const Set<uint>& dels)
 {
-  PF addGuardPF(false);
-  PF delGuardPF(false);
+  P::Fmla addGuardPF(false);
+  P::Fmla delGuardPF(false);
   for (Set<uint>::const_iterator it = adds.begin(); it != adds.end(); ++it) {
     addGuardPF |= topo.action_pfmla(*it).pre();
   }
@@ -175,7 +175,7 @@ ReviseDeadlocksMRV(vector<DeadlockConstraint>& dlsets,
 
   for (uint i = 1; i < dlsets.size(); ++i) {
     Set<uint>& candidates1 = dlsets[i].candidates;
-    PF& deadlockPF1 = dlsets[i].deadlockPF;
+    P::Fmla& deadlockPF1 = dlsets[i].deadlockPF;
 
     Set<uint> addCandidates( candidates1 & adds );
     Set<uint> delCandidates( candidates1 & dels );
@@ -191,7 +191,7 @@ ReviseDeadlocksMRV(vector<DeadlockConstraint>& dlsets,
       Set<uint>::iterator it;
       for (it = candidates1.begin(); it != candidates1.end(); ++it) {
         uint actId = *it;
-        const PF& candidateGuardPF = topo.action_pfmla(actId);
+        const P::Fmla& candidateGuardPF = topo.action_pfmla(actId);
         if (!deadlockPF1.overlap_ck(candidateGuardPF)) {
           // Action no longer resolves any deadlocks in this rank.
           diffCandidates1 << actId;
@@ -202,11 +202,11 @@ ReviseDeadlocksMRV(vector<DeadlockConstraint>& dlsets,
 
     diffCandidates1 = (candidates1 & delCandidates);
     if (!diffCandidates1.empty()) {
-      const PF& diffDeadlockPF1 = (deadlockPF1 & delGuardPF);
+      const P::Fmla& diffDeadlockPF1 = (deadlockPF1 & delGuardPF);
       deadlockPF1 -= diffDeadlockPF1;
 
       vector<DeadlockConstraint>
-        diffDeadlockSets( i+1, DeadlockConstraint(PF(false)) );
+        diffDeadlockSets( i+1, DeadlockConstraint(P::Fmla(false)) );
       diffDeadlockSets[i].deadlockPF = diffDeadlockPF1;
 
       Set<uint>::iterator it;
@@ -214,10 +214,10 @@ ReviseDeadlocksMRV(vector<DeadlockConstraint>& dlsets,
       uint minidx = i;
       for (it = diffCandidates1.begin(); it != diffCandidates1.end(); ++it) {
         const uint actId = *it;
-        const PF& candidateGuardPF = topo.action_pfmla(actId).pre();
+        const P::Fmla& candidateGuardPF = topo.action_pfmla(actId).pre();
         Claim( minidx > 0 && "BUG! Try again with -force-rank-deadlocks flag." );
         for (uint j = minidx; j < diffDeadlockSets.size(); ++j) {
-          const PF& diffPF =
+          const P::Fmla& diffPF =
             (candidateGuardPF & diffDeadlockSets[j].deadlockPF);
           if (diffPF.sat_ck()) {
             diffDeadlockSets[j-1].deadlockPF |= diffPF;
@@ -235,7 +235,7 @@ ReviseDeadlocksMRV(vector<DeadlockConstraint>& dlsets,
 
       for (it = candidates1.begin(); it != candidates1.end(); ++it) {
         const uint actId = *it;
-        const PF& candidateGuardPF = topo.action_pfmla(actId).pre();
+        const P::Fmla& candidateGuardPF = topo.action_pfmla(actId).pre();
         if (!candidateGuardPF.overlap_ck(diffDeadlockPF1)) {
           // This candidate is not affected.
           diffDeadlockSets[i].candidates << actId;
@@ -415,7 +415,7 @@ pick_action_candidates(Set<uint>& ret_candidates,
     Set<uint> candidates_1;
     for (it = candidates.begin(); it != candidates.end(); ++it) {
       const uint actidx = *it;
-      const PF& resolve_img =
+      const P::Fmla& resolve_img =
         topo.action_pfmla(actidx).img(dlsets[dlset_idx].deadlockPF);
       if (reach_pf.overlap_ck(resolve_img)) {
         candidates_1 << actidx;
@@ -489,7 +489,7 @@ pick_action_candidates(Set<uint>& ret_candidates,
         }
         else {
           Set<uint>::const_iterator jt;
-          const PF& actPF = topo.action_pfmla(*it);
+          const X::Fmla& actPF = topo.action_pfmla(*it);
           for (jt = dlsets[j].candidates.begin();
                jt != dlsets[j].candidates.end();
                ++jt) {
@@ -497,7 +497,7 @@ pick_action_candidates(Set<uint>& ret_candidates,
             if (actId == actId2) {
               continue;
             }
-            const PF& preAct2 = topo.action_pfmla(actId2).pre();
+            const P::Fmla& preAct2 = topo.action_pfmla(actId2).pre();
             if (dlsets[j].deadlockPF.overlap_ck(actPF & preAct2)) {
               ++ w;
             }
@@ -541,7 +541,7 @@ pick_action_candidates(Set<uint>& ret_candidates,
     for (it = candidates.begin(); it != candidates.end(); ++it) {
       const uint actId = *it;
       PartialSynthesis next( inst );
-      next.log = &Cx::OFile::null();
+      next.log = &OFile::null();
       uint n = inst.candidates.size();
       if (next.revise_actions(Set<uint>(actId), Set<uint>()))
       {
@@ -565,18 +565,18 @@ pick_action_candidates(Set<uint>& ret_candidates,
       overlapSets[*it] = Set<uint>(*it);
     }
 
-    const PF& deadlockPF = dlsets[dlset_idx].deadlockPF;
+    const P::Fmla& deadlockPF = dlsets[dlset_idx].deadlockPF;
     for (it = candidates.begin(); it != candidates.end(); ++it) {
       uint actId = *it;
-      const PF& actPF = topo.action_pfmla(actId);
-      const PF actPrePF = actPF.pre();
+      const X::Fmla& actPF = topo.action_pfmla(actId);
+      const P::Fmla actPrePF = actPF.pre();
 
       Set<uint>& overlapSet = *overlapSets.lookup(actId);
 
       Set<uint>::const_iterator jt = it;
       for (++jt; jt != candidates.end(); ++jt) {
         const uint actId2 = *jt;
-        const PF& actPF2 = topo.action_pfmla(actId2);
+        const X::Fmla& actPF2 = topo.action_pfmla(actId2);
         if (deadlockPF.overlap_ck(actPrePF & actPF2.pre())) {
           overlapSet << actId2;
           *overlapSets.lookup(actId2) << actId;
@@ -601,7 +601,7 @@ pick_action_candidates(Set<uint>& ret_candidates,
     for (it = minOverlapSet.begin(); it != minOverlapSet.end(); ++it) {
       const uint actId = *it;
       PartialSynthesis next( inst );
-      next.log = &Cx::OFile::null();
+      next.log = &OFile::null();
       uint n = 0;
       if (next.revise_actions(Set<uint>(actId), Set<uint>()))
         n = next.candidates.size();
@@ -636,7 +636,7 @@ pick_action_candidates(Set<uint>& ret_candidates,
     biasToMax = false;
     for (it = candidates.begin(); it != candidates.end(); ++it) {
       uint actId = *it;
-      const PF& act_pf = topo.action_pfmla(actId);
+      const X::Fmla& act_pf = topo.action_pfmla(actId);
       if (sys.shadow_puppet_synthesis_ck()) {
         if (!act_pf.overlap_ck(inst.hi_invariant)) {
           biasMap[0] << actId;
@@ -706,7 +706,7 @@ QuickTrim(Set<uint>& delSet,
           bool force_disabling,
           bool pure_actions)
 {
-  const Cx::Table<uint>& represented = topo.represented_actions[actidx];
+  const Table<uint>& represented = topo.represented_actions[actidx];
 
   Xn::ActSymm act0;
   Xn::ActSymm act1;
@@ -728,21 +728,21 @@ QuickTrim(Set<uint>& delSet,
 
 static
   void
-small_cycle_conflict (Cx::Table<uint>& conflict_set,
-                      const Cx::PFmla& scc,
+small_cycle_conflict (Table<uint>& conflict_set,
+                      const P::Fmla& scc,
                       const vector<uint>& actions,
                       const Xn::Net& topo,
-                      const Cx::PFmla& invariant,
+                      const P::Fmla& invariant,
                       const SynthesisCtx& synctx)
 {
   conflict_set.clear();
 
-  Cx::PFmla edg( false );
-  Cx::Table<uint> scc_actidcs;
-  Cx::Table<Cx::PFmla> xn_pfmlas(1, Cx::PFmla(false));
+  X::Fmla edg( false );
+  Table<uint> scc_actidcs;
+  Table<X::Fmla> xn_pfmlas(1, X::Fmla(false));
   for (uint i = 0; i < actions.size(); ++i) {
     uint actidx = actions[i];
-    const Cx::PFmla& act_pfmla = topo.action_pfmla(actidx);
+    const X::Fmla& act_pfmla = topo.action_pfmla(actidx);
     if (scc.overlap_ck(act_pfmla)) {
       if (scc.overlap_ck(act_pfmla.img())) {
         scc_actidcs.push(actidx);
@@ -758,7 +758,7 @@ small_cycle_conflict (Cx::Table<uint>& conflict_set,
   // to be used in conflict set.
   for (uint i = scc_actidcs.sz(); i > 0;) {
     i -= 1;
-    Cx::PFmla next_scc(false);
+    P::Fmla next_scc(false);
     if (synctx.done_ck()) {
       while (i > 0) {
         conflict_set.push(scc_actidcs[i]);
@@ -774,7 +774,7 @@ small_cycle_conflict (Cx::Table<uint>& conflict_set,
     else
     {
       uint actidx = scc_actidcs[i];
-      const Cx::PFmla& act_pfmla = topo.action_pfmla(actidx);
+      const X::Fmla& act_pfmla = topo.action_pfmla(actidx);
       conflict_set.push(actidx);
       edg |= act_pfmla;
     }
@@ -783,13 +783,13 @@ small_cycle_conflict (Cx::Table<uint>& conflict_set,
 }
 
   uint
-count_actions_in_cycle (const Cx::PFmla& scc, Cx::PFmla edg,
+count_actions_in_cycle (const P::Fmla& scc, X::Fmla edg,
                         const vector<uint>& actions, const Xn::Net& topo)
 {
   uint n = 1;
-  Cx::Table<uint> scc_actidcs;
+  Table<uint> scc_actidcs;
   for (uint i = 0; i < actions.size(); ++i) {
-    const Cx::PFmla& act_pfmla = topo.action_pfmla(actions[i]);
+    const X::Fmla& act_pfmla = topo.action_pfmla(actions[i]);
     if (scc.overlap_ck(act_pfmla)) {
       if (scc.overlap_ck(act_pfmla.img())) {
         edg |= act_pfmla;
@@ -800,9 +800,9 @@ count_actions_in_cycle (const Cx::PFmla& scc, Cx::PFmla edg,
   }
   uint nneed = 1;
   uint nmin = 1;
-  Cx::PFmla min_edg = edg;
+  X::Fmla min_edg = edg;
   for (uint i = 0; i < scc_actidcs.size(); ++i) {
-    const Cx::PFmla& act_pfmla = topo.action_pfmla(scc_actidcs[i]);
+    const X::Fmla& act_pfmla = topo.action_pfmla(scc_actidcs[i]);
     if (!(edg - act_pfmla).cycle_ck(scc)) {
       ++ nneed;
       ++ nmin;
@@ -828,7 +828,7 @@ PartialSynthesis::stabilization_opt() const
 }
 
   uint
-PartialSynthesis::add_small_conflict_set(const Cx::Table<uint>& delpicks)
+PartialSynthesis::add_small_conflict_set(const Table<uint>& delpicks)
 {
   if (this->ctx->done_ck())
     return delpicks.sz();
@@ -841,8 +841,8 @@ PartialSynthesis::add_small_conflict_set(const Cx::Table<uint>& delpicks)
   }
   if (!doit)  return 0;
   ConflictFamily& conflicts = this->ctx->conflicts;
-  if (conflicts.conflict_ck(Cx::FlatSet<uint>(delpicks))) {
-    if (!conflicts.exact_conflict_ck(Cx::FlatSet<uint>(delpicks))) {
+  if (conflicts.conflict_ck(FlatSet<uint>(delpicks))) {
+    if (!conflicts.exact_conflict_ck(FlatSet<uint>(delpicks))) {
       *this->log << "Conflict subsumed by existing one." << this->log->endl();
       return delpicks.sz();
     }
@@ -855,7 +855,7 @@ PartialSynthesis::add_small_conflict_set(const Cx::Table<uint>& delpicks)
   for (uint i = 0; i < delpicks.sz(); ++i) {
     PartialSynthesis partial( this->ctx->base_partial );
     for (uint j = 0; j < partial.sz(); ++j) {
-      partial[j].log = &Cx::OFile::null();
+      partial[j].log = &OFile::null();
       partial[j].directly_add_conflicts = true;
       if (partial[j].no_conflict) {
         partial[j].no_partial = true;
@@ -885,12 +885,12 @@ PartialSynthesis::add_small_conflict_set(const Cx::Table<uint>& delpicks)
  */
 static
   bool
-reach_cycle_ck (const Cx::PFmla& reach, const Cx::PFmla& act_pf, const Cx::PFmla& state_pf)
+reach_cycle_ck (const P::Fmla& reach, const X::Fmla& act_pf, const P::Fmla& state_pf)
 {
-  const Cx::PFmla& trim_reach = act_pf.img() & act_pf.pre().as_img() & reach;
+  const P::Fmla& trim_reach = act_pf.img() & act_pf.pre().as_img() & reach;
 
-  Cx::PFmla next( state_pf & trim_reach.img() );
-  Cx::PFmla pf( false );
+  P::Fmla next( state_pf & trim_reach.img() );
+  P::Fmla pf( false );
   while (!pf.equiv_ck(next))
   {
     pf = next;
@@ -918,12 +918,12 @@ PartialSynthesis::check_forward(Set<uint>& adds, Set<uint>& dels, Set<uint>& rej
   }
   adds |= this->mcv_deadlocks[1].candidates;
 
-  const Cx::PFmla& lo_xn_pre = this->lo_xn.pre();
+  const P::Fmla& lo_xn_pre = this->lo_xn.pre();
   for (uint i = 0; i < this->candidates.size(); ++i) {
     uint actidx = this->candidates[i];
     if (dels.elem_ck(actidx))  continue;
 
-    const Cx::PFmla& act_xn = topo.action_pfmla(actidx);
+    const X::Fmla& act_xn = topo.action_pfmla(actidx);
 
     if (act_xn.subseteq_ck(lo_xn_pre))
     {
@@ -1080,7 +1080,7 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
   }
 
   if (this->stabilization_opt().synchronous) {
-    this->lo_xn = topo.sync_xn(Cx::Table<uint>(this->actions));
+    this->lo_xn = topo.sync_xn(Table<uint>(this->actions));
     if (!this->lo_xn.img(sys.closed_assume).subseteq_ck(sys.closed_assume)) {
       *this->log << "SYNC_BREAKS_ASSUME" << this->log->endl();
       return false;
@@ -1108,7 +1108,7 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
   }
 
   X::Fmla del_act_xn( false );
-  Cx::Table<P::Fmla> del_xns;
+  Table<P::Fmla> del_xns;
   for (it = dels.begin(); it != dels.end(); ++it) {
     uint actidx = *it;
     if (use_csp) {
@@ -1141,7 +1141,7 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
     max_nlayers = *ret_nlayers;
   }
   uint nlayers = max_nlayers;
-  Cx::PFmla scc(false);
+  P::Fmla scc(false);
   if (topo.probabilistic_ck()) {
     nlayers = 1;
     P::Fmla tmp_invariant = lo_xn.closure_within(sys.invariant);
@@ -1165,7 +1165,7 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
     //DBog1("scc actions: %u", n);
     *this->log << "CYCLE" << this->log->endl();
     if (true || !this->no_conflict) {
-      Cx::Table<uint> conflict_set;
+      Table<uint> conflict_set;
       if (!topo.probabilistic_ck() && !this->stabilization_opt().synchronous) {
 #if 0
         small_cycle_conflict (conflict_set, scc, this->actions, topo, sys.invariant,
@@ -1181,7 +1181,7 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
     if (!!this->ctx->opt.livelock_ofilepath && &sys == this->ctx->systems.top()) {
       bool big_livelock = true;
       for (uint i = 0; i < this->ctx->systems.sz()-1; ++i) {
-        if (!stabilization_ck(Cx::OFile::null(), *this->ctx->systems[i],
+        if (!stabilization_ck(OFile::null(), *this->ctx->systems[i],
                               this->ctx->stabilization_opts[i], actions))
         {
           *this->log << "still issues in system " << i << this->log->endl();
@@ -1208,7 +1208,7 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
     Claim(this->hi_invariant.subseteq_ck(old_hi_invariant));
   }
 
-  const Cx::PFmla old_deadlock_pfmla( this->deadlockPF );
+  const P::Fmla old_deadlock_pfmla( this->deadlockPF );
 
   // This grows sometimes when {hi_invariant} shrinks.
   this->deadlockPF =
@@ -1229,7 +1229,7 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
   if (!weak_convergence_ck(&nlayers, this->hi_xn, this->hi_invariant, sys.closed_assume)) {
     *this->log << "REACH" << this->log->endl();
 #if 0
-    Cx::PFmla pf( ~this->hi_xn.pre_reach(this->hi_invariant) );
+    P::Fmla pf( ~this->hi_xn.pre_reach(this->hi_invariant) );
     pf = pf.pick_pre();
     pf = this->hi_xn.img_reach(pf);
     topo.oput_all_pf(*this->log, pf);
@@ -1271,8 +1271,8 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
 PartialSynthesis::revise_actions(const Set<uint>& adds, const Set<uint>& dels,
                                  uint* ret_nlayers_sum)
 {
-  Cx::Table< Set<uint> > all_adds( this->sz(), adds );
-  Cx::Table< Set<uint> > all_dels( this->sz(), dels );
+  Table< Set<uint> > all_adds( this->sz(), adds );
+  Table< Set<uint> > all_dels( this->sz(), dels );
   const uint max_nlayers_sum = this->ctx->optimal_nlayers_sum;
 
   // If both sets are empty, we should force a check anyway.
@@ -1419,7 +1419,7 @@ SynthesisCtx::init(const AddConvergenceOpt& opt)
     const Xn::PcSymm& pc_symm = topo.pc_symms[pcidx];
     for (uint i = 0; i < pc_symm.pre_domsz; ++i)
     {
-      Cx::String name = pc_symm.spec->name + "@pre_enum[" + i + "]";
+      String name = pc_symm.spec->name + "@pre_enum[" + i + "]";
       uint vbl_idx =
         synctx.csp_pfmla_ctx.add_vbl(name, pc_symm.img_domsz);
       Claim2( vbl_idx ,==, pc_symm.pre_dom_offset + i );
@@ -1459,8 +1459,8 @@ SynthesisCtx::add(const Xn::Sys& sys, const StabilizationOpt& stabilization_opt)
   if (topo.lightweight)
     return true;
 
-  Cx::Table<uint> dels;
-  Cx::Table<uint> rejs;
+  Table<uint> dels;
+  Table<uint> rejs;
   bool good =
     candidate_actions(partial.candidates, dels, rejs, sys);
   for (uint i = 0; i < rejs.sz(); ++i) {
@@ -1468,13 +1468,13 @@ SynthesisCtx::add(const Xn::Sys& sys, const StabilizationOpt& stabilization_opt)
   }
 
   for (uint pcidx = 0; pcidx < topo.pc_symms.sz(); ++pcidx) {
-    const Cx::Table< FlatSet<Xn::ActSymm> >& conflicts =
+    const Table< FlatSet<Xn::ActSymm> >& conflicts =
       topo.pc_symms[pcidx].conflicts;
     for (uint i = 0; i < conflicts.sz(); ++i) {
 
       const FlatSet<Xn::ActSymm>& conflict = conflicts[i];
 
-      Cx::Table<uint> conflict_ints(conflict.sz());
+      Table<uint> conflict_ints(conflict.sz());
       for (uint j = 0; j < conflict.sz(); ++j) {
         Claim( conflict[j].vals.sz() > 0 );
         conflict_ints[j] = topo.action_index(conflict[j]);
@@ -1494,7 +1494,7 @@ SynthesisCtx::add(const Xn::Sys& sys, const StabilizationOpt& stabilization_opt)
                 synctx.systems[0]->topology,
                 synctx.opt.force_disabling,
                 synctx.opt.pure_actions);
-      Cx::Table<uint> dels;
+      Table<uint> dels;
       tmp_dels.fill(dels);
       for (uint j = 0; j < dels.sz(); ++j) {
         uint conflict[2];
@@ -1525,4 +1525,6 @@ SynthesisCtx::add(const Xn::Sys& sys, const StabilizationOpt& stabilization_opt)
 
   return good;
 }
+
+END_NAMESPACE
 

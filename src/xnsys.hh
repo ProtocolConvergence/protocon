@@ -15,9 +15,9 @@
 
 extern Cx::OFile DBogOF;
 
-namespace Xn {
-using Cx::String;
+#include "namespace.hh"
 
+namespace Xn {
 class Vbl;
 class VblSymm;
 class Pc;
@@ -27,16 +27,16 @@ class Net;
 
 class NatPredicateMap {
 public:
-  Cx::Table< Cx::PFmla > membs;
+  Table< P::Fmla > membs;
   String expression;
 
   NatPredicateMap(uint nmembs) {
     for (uint i = 0; i < nmembs; ++i) {
-      membs.push(Cx::PFmla(false));
+      membs.push(P::Fmla(false));
     }
   }
 
-  Cx::PFmla eval(uint i) const {
+  P::Fmla eval(uint i) const {
     Claim2( i ,<, membs.sz() );
     return membs[i];
   }
@@ -52,9 +52,9 @@ public:
 
 class LetPredicateMap {
 public:
-  Cx::Table<String> keys;
-  Cx::Table<NatPredicateMap> vals;
-  Cx::Map<String,uint> map;
+  Table<String> keys;
+  Table<NatPredicateMap> vals;
+  Map<String,uint> map;
 
   void add(const String& key, const NatPredicateMap& val) {
     keys.push(key);
@@ -75,19 +75,19 @@ public:
 
 class PredicateMap {
 public:
-  Cx::Table<String> keys;
-  Cx::Table<Cx::PFmla> pfmlas;
-  Cx::Table<String> expressions;
-  Cx::Map<String,uint> map;
+  Table<String> keys;
+  Table<P::Fmla> pfmlas;
+  Table<String> expressions;
+  Map<String,uint> map;
 
-  void add(const String& key, const Cx::PFmla& pf, const String& expression) {
+  void add(const String& key, const P::Fmla& pf, const String& expression) {
     keys.push(key);
     pfmlas.push(pf);
     expressions.push(expression);
     map[key] = keys.sz()-1;
   }
 
-  Cx::PFmla* lookup(const String& key) {
+  P::Fmla* lookup(const String& key) {
     uint* idx = map.lookup(key);
     if (!idx)  return 0;
     return &pfmlas[*idx];
@@ -121,9 +121,9 @@ public:
 
 class VblSymm {
 public:
-  Cx::Mem<VblSymmSpec> spec;
+  Mem<VblSymmSpec> spec;
   uint domsz;
-  Cx::Table< Vbl* > membs;
+  Table< Vbl* > membs;
   uint pfmla_list_id;
   Vbl::ShadowPuppetRole shadow_puppet_role;
 
@@ -148,13 +148,13 @@ public:
   const PcSymm* symm;
   uint symm_idx;
   /// The rvbls should include wvbls.
-  Cx::Table< const Vbl* > rvbls;
-  Cx::Table< const Vbl* > wvbls;
-  Cx::PFmla act_unchanged_pfmla;
+  Table< const Vbl* > rvbls;
+  Table< const Vbl* > wvbls;
+  P::Fmla act_unchanged_pfmla;
   P::Fmla closed_assume;
-  Cx::PFmla invariant;
-  Cx::PFmla puppet_xn;
-  Cx::PFmla shadow_xn;
+  P::Fmla invariant;
+  P::Fmla puppet_xn;
+  P::Fmla shadow_xn;
   X::Fmla permit_xn;
   X::Fmla forbid_xn;
 
@@ -168,13 +168,13 @@ public:
     , permit_xn(false)
     , forbid_xn(false)
   {}
-  void actions(Cx::Table<uint>& ret_actions, Cx::PFmlaCtx& ctx) const;
+  void actions(Table<uint>& ret_actions, PFmlaCtx& ctx) const;
 };
 
 class ActSymm {
 public:
   const PcSymm* pc_symm;
-  Cx::Table< uint > vals;
+  Table< uint > vals;
   uint pre_idx;
   uint img_idx;
   uint pre_idx_of_img;
@@ -192,21 +192,21 @@ public:
 
 class PcSymm {
 public:
-  Cx::Mem<PcSymmSpec> spec;
-  Cx::Table< Pc* > membs;
+  Mem<PcSymmSpec> spec;
+  Table< Pc* > membs;
   /// The rvbls should include wvbls.
-  Cx::Table< const VblSymm* > rvbl_symms;
-  Cx::Table< const VblSymm* > wvbl_symms;
-  Cx::Table< uint > wmap;
+  Table< const VblSymm* > rvbl_symms;
+  Table< const VblSymm* > wvbl_symms;
+  Table< uint > wmap;
   std::vector< bool > write_flags;
-  Cx::Table< NatMap > rindices;
-  Cx::Table< NatMap > windices;
+  Table< NatMap > rindices;
+  Table< NatMap > windices;
   /// Domains of readable variables.
-  Cx::Table< uint > doms;
-  Cx::Table< FlatSet< Xn::ActSymm > > conflicts;
+  Table< uint > doms;
+  Table< FlatSet< Xn::ActSymm > > conflicts;
 
-  Cx::PFmla shadow_pfmla;
-  Cx::PFmla direct_pfmla;
+  X::Fmla shadow_pfmla;
+  X::Fmla direct_pfmla;
   LetPredicateMap predicate_map;
 
   uint act_idx_offset;
@@ -239,7 +239,7 @@ public:
   bool init_representative();
   bool representative(uint* ret_pcidx) const;
   void action(ActSymm& act, uint actidx) const;
-  void actions(Cx::Table<uint>& ret_actions, Cx::PFmlaCtx& ctx) const;
+  void actions(Table<uint>& ret_actions, PFmlaCtx& ctx) const;
 
   bool pure_shadow_ck() const {
     for (uint i = 0; i < rvbl_symms.sz(); ++i) {
@@ -300,23 +300,23 @@ inline bool ActSymm::puppet_self_loop_ck() const
 
 class Net {
 public:
-  Cx::Mem<Spec> spec;
-  Cx::PFmlaCtx pfmla_ctx;
+  Mem<Spec> spec;
+  PFmlaCtx pfmla_ctx;
   X::FmlaeCtx xfmlae_ctx;
-  Cx::LgTable< Vbl > vbls;
-  Cx::LgTable< VblSymm > vbl_symms;
-  Cx::LgTable< Pc > pcs;
-  Cx::LgTable< PcSymm > pc_symms;
+  LgTable< Vbl > vbls;
+  LgTable< VblSymm > vbl_symms;
+  LgTable< Pc > pcs;
+  LgTable< PcSymm > pc_symms;
 
 private:
-  Cx::Table< X::Fmlae > act_xfmlaes;
+  Table< X::Fmlae > act_xfmlaes;
 public:
-  Cx::Table< Cx::Table<uint> > represented_actions;
+  Table< Table<uint> > represented_actions;
   uint n_possible_acts;
   uint total_pre_domsz;
   bool lightweight;
   bool featherweight;
-  Cx::PFmla identity_xn;
+  X::Fmla identity_xn;
 
   bool random_write_exists;
   bool pure_shadow_vbl_exists;
@@ -381,7 +381,7 @@ public:
       return act_xfmlaes[actidx].xfmla();
     }
     X::Fmla xn(false);
-    const Cx::Table<uint>& actions = represented_actions[actidx];
+    const Table<uint>& actions = represented_actions[actidx];
     for (uint i = 0; i < actions.sz(); ++i) {
       X::Fmla tmp_xn;
       this->make_action_pfmla(&tmp_xn, actions[i]);
@@ -395,7 +395,7 @@ public:
       return act_xfmlaes[actidx];
     }
     X::Fmlae xn(&this->xfmlae_ctx);
-    const Cx::Table<uint>& actions = represented_actions[actidx];
+    const Table<uint>& actions = represented_actions[actidx];
     for (uint i = 0; i < actions.sz(); ++i) {
       X::Fmlae tmp_xn;
       this->make_action_xfmlae(&tmp_xn, actions[i]);
@@ -404,10 +404,10 @@ public:
     return xn;
   }
 
-  Cx::PFmlaVbl pfmla_vbl(uint i) const {
+  PFmlaVbl pfmla_vbl(uint i) const {
     return this->pfmla_ctx.vbl(this->vbls[i].pfmla_idx);
   }
-  Cx::PFmlaVbl pfmla_vbl(const Vbl& x) const {
+  PFmlaVbl pfmla_vbl(const Vbl& x) const {
     return this->pfmla_ctx.vbl(x.pfmla_idx);
   }
 
@@ -462,16 +462,16 @@ public:
                 const String& pfx,
                 const String& sfx) const;
 
-  Cx::OFile& oput_vbl_names(Cx::OFile& of) const;
-  Cx::OFile& oput_pfmla(Cx::OFile& of, Cx::PFmla pf,
-                        Sign pre_or_img, bool just_one) const;
-  Cx::OFile& oput_one_xn(Cx::OFile& of, const Cx::PFmla& pf) const;
-  Cx::OFile& oput_all_xn(Cx::OFile& of, const Cx::PFmla& pf) const;
-  Cx::OFile& oput_one_pf(Cx::OFile& of, const Cx::PFmla& pf) const;
-  Cx::OFile& oput_all_pf(Cx::OFile& of, const Cx::PFmla& pf) const;
+  OFile& oput_vbl_names(OFile& ofile) const;
+  OFile& oput_pfmla(OFile& ofile, Cx::PFmla pf,
+                    Sign pre_or_img, bool just_one) const;
+  OFile& oput_one_xn(OFile& ofile, const X::Fmla& pf) const;
+  OFile& oput_all_xn(OFile& ofile, const X::Fmla& pf) const;
+  OFile& oput_one_pf(OFile& ofile, const P::Fmla& pf) const;
+  OFile& oput_all_pf(OFile& ofile, const P::Fmla& pf) const;
 
 
-  X::Fmla sync_xn(const Cx::Table<uint>& actidcs) const;
+  X::Fmla sync_xn(const Table<uint>& actidcs) const;
   X::Fmla xn_of_pc(const Xn::ActSymm& act, uint pcidx) const;
   X::Fmla represented_xns_of_pc(const Xn::ActSymm& act, uint relative_pcidx) const;
   void make_action_pfmla(X::Fmla* ret_xn, uint actid) const;
@@ -490,15 +490,15 @@ public:
   PredicateMap predicate_map;
 
   /// Assumed state predicate which must remain closed.
-  Cx::PFmla closed_assume;
+  P::Fmla closed_assume;
   /// Invariant to which we should converge.
-  Cx::PFmla invariant;
+  P::Fmla invariant;
   bool shadow_puppet_synthesis;
-  Cx::PFmla shadow_pfmla;
+  X::Fmla shadow_pfmla;
   /// Transition relation within the invariant.
-  Cx::PFmla direct_pfmla;
+  X::Fmla direct_pfmla;
   /// Self-loops in the invariant.
-  Cx::PFmla shadow_self;
+  X::Fmla shadow_self;
 
 private:
   Map<uint,uint> niceIdcs; ///< Niceness for process symmetries, used in search.
@@ -535,35 +535,36 @@ public:
   }
 };
 
-class ManySys : public Cx::LgTable<Sys>
+class ManySys : public LgTable<Sys>
 {
 public:
   ManySys() {}
 };
 }
 
-Cx::OFile&
-OPut(Cx::OFile& of, const Xn::ActSymm& act);
+OFile&
+OPut(OFile& of, const Xn::ActSymm& act);
 void
-find_one_cycle(Cx::Table<Cx::PFmla>& states,
-               const Cx::PFmla& xn, const Cx::PFmla& scc,
-               const Cx::PFmla& initial);
+find_one_cycle(Table<P::Fmla>& states,
+               const X::Fmla& xn, const P::Fmla& scc,
+               const P::Fmla& initial);
 void
-find_one_cycle(Cx::Table<Cx::PFmla>& states,
-               const Cx::PFmla& xn, const Cx::PFmla& scc);
+find_one_cycle(Table<P::Fmla>& states,
+               const X::Fmla& xn, const P::Fmla& scc);
 void
-find_livelock_actions(Cx::Table<uint>& actions, const Cx::PFmla& xn,
-                      const Cx::PFmla& scc, const Cx::PFmla& invariant,
+find_livelock_actions(Table<uint>& actions, const X::Fmla& xn,
+                      const P::Fmla& scc, const P::Fmla& invariant,
                       const Xn::Net& topo);
 void
-oput_one_cycle(Cx::OFile& of, const X::Fmla& xn,
+oput_one_cycle(OFile& of, const X::Fmla& xn,
                const P::Fmla& scc, const P::Fmla& initial,
                const Xn::Net& topo);
 bool
 candidate_actions(std::vector<uint>& candidates,
-                  Cx::Table<uint>& dels,
-                  Cx::Table<uint>& rejs,
+                  Table<uint>& dels,
+                  Table<uint>& rejs,
                   const Xn::Sys& sys);
 
+END_NAMESPACE
 #endif
 

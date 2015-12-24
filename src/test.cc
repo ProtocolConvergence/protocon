@@ -25,23 +25,25 @@ extern "C" {
 #include "synthesis.hh"
 #include <stdio.h>
 
+#include "namespace.hh"
+
 static void
 TestPFmla()
 {
-  Cx::PFmlaCtx ctx;
+  PFmlaCtx ctx;
 
-  const Cx::PFmlaVbl& w = ctx.vbl( ctx.add_vbl("w", 4) );
-  const Cx::PFmlaVbl& x = ctx.vbl( ctx.add_vbl("x", 4) );
-  const Cx::PFmlaVbl& y = ctx.vbl( ctx.add_vbl("y", 7) );
+  const PFmlaVbl& w = ctx.vbl( ctx.add_vbl("w", 4) );
+  const PFmlaVbl& x = ctx.vbl( ctx.add_vbl("x", 4) );
+  const PFmlaVbl& y = ctx.vbl( ctx.add_vbl("y", 7) );
 
   uint w_list_id = ctx.add_vbl_list();
   uint x_list_id = ctx.add_vbl_list();
   ctx.add_to_vbl_list(w_list_id, id_of(w));
   ctx.add_to_vbl_list(x_list_id, id_of(x));
 
-  Cx::PFmla pf( x == y );
+  P::Fmla pf( x == y );
 
-  Claim( Cx::PFmla(true).tautology_ck() );
+  Claim( P::Fmla(true).tautology_ck() );
   Claim( (x == x).tautology_ck() );
   Claim( (x == y).equiv_ck((x == 0 && y == 0) ||
                            (x == 1 && y == 1) ||
@@ -52,13 +54,13 @@ TestPFmla()
   Claim( x.equiv_ck(ctx.vbl("x")) );
 
   // Add another variable, ensure it doesn't screw up the existing PFmla.
-  const Cx::PFmlaVbl& z = ctx.vbl( ctx.add_vbl("z", 5) );
+  const PFmlaVbl& z = ctx.vbl( ctx.add_vbl("z", 5) );
   Claim( pf.equiv_ck(x == y) );
   Claim( pf.overlap_ck(x == z) );
 
   // Ensure substitution smooths the source variables.
-  Cx::PFmla pf_a = (w == 2);
-  Cx::PFmla pf_b = (x == 2);
+  P::Fmla pf_a = (w == 2);
+  P::Fmla pf_b = (x == 2);
 
   Claim( !pf_a.equiv_ck(pf_b) );
   pf = pf_b.substitute_new_old(w_list_id, x_list_id);
@@ -75,14 +77,14 @@ TestPFmla()
 static void
 TestIntPFmla()
 {
-  Cx::PFmlaCtx ctx;
+  PFmlaCtx ctx;
   const uint n = 5;
-  const Cx::PFmlaVbl& x = ctx.vbl( ctx.add_vbl("x", n) );
-  const Cx::PFmlaVbl& y = ctx.vbl( ctx.add_vbl("y", n) );
-  const Cx::PFmlaVbl& z = ctx.vbl( ctx.add_vbl("z", n) );
+  const PFmlaVbl& x = ctx.vbl( ctx.add_vbl("x", n) );
+  const PFmlaVbl& y = ctx.vbl( ctx.add_vbl("y", n) );
+  const PFmlaVbl& z = ctx.vbl( ctx.add_vbl("z", n) );
 
   // Invariant for (game of cards) agreement protocol.
-  Cx::PFmla pf( false );
+  P::Fmla pf( false );
   for (uint a = 0; a < n; ++a) {
     for (uint b = 0; b < n; ++b) {
       // Yeah, this last loop definitely isn't needed.
@@ -114,7 +116,7 @@ TestIntPFmla()
   // Ensure the action (x < y --> x:=y; y:=x;)
   // can be specified using img_eq(IntPFmla).
   pf = (x < y);
-  Cx::IntPFmla ipf;
+  IntPFmla ipf;
   ipf = y;  pf &= x.img_eq(ipf);
   ipf = x;  pf &= y.img_eq(ipf);
   for (uint a = 0; a < n; ++a) {
@@ -133,7 +135,7 @@ static void
 TestConflictFamily()
 {
   ConflictFamily conflicts;
-  Cx::LgTable< Set<uint> > delsets;
+  LgTable< Set<uint> > delsets;
 
   delsets.grow1() <<  0 <<  1 <<  3;
   delsets.grow1() <<  5 <<  1 <<  3;
@@ -207,7 +209,7 @@ TestXnSys()
     Claim2_uint( act.vals[3] ,==, action.vals[3] );
   }
 
-  Cx::PFmla actPF =
+  X::Fmla actPF =
     topo.pcs[1].act_unchanged_pfmla &
     ((topo.pfmla_vbl(0) == 1) &
      (topo.pfmla_vbl(1) == 2) &
@@ -217,11 +219,11 @@ TestXnSys()
   Claim( !topo.action_pfmla(actidx).tautology_ck(false) );
   Claim( actPF.equiv_ck(topo.action_pfmla(actidx)) );
 
-  Cx::PFmla srcPF =
+  P::Fmla srcPF =
     ((topo.pfmla_vbl(0) == 1) &
      (topo.pfmla_vbl(1) == 2) &
      (topo.pfmla_vbl(2) == 2));
-  Cx::PFmla dstPF =
+  P::Fmla dstPF =
     ((topo.pfmla_vbl(0) == 1) &
      (topo.pfmla_vbl(1) == 0) &
      (topo.pfmla_vbl(2) == 2));
@@ -288,7 +290,7 @@ TestTokenRingClosure()
   const uint npcs = 4;
   UnidirectionalRing(topo, npcs, 2, "b", true, true);
 
-  vector<Cx::PFmla> token_pfmlas(npcs);
+  vector<P::Fmla> token_pfmlas(npcs);
 
   for (uint me = 0; me < npcs; ++me) {
     uint pd = (me + npcs - 1) % npcs;
@@ -298,14 +300,14 @@ TestTokenRingClosure()
       topo.pc_symms[1].shadow_pfmla |=
         pc.act_unchanged_pfmla &&
         topo.pfmla_vbl(pd) == topo.pfmla_vbl(me) &&
-        topo.pfmla_vbl(me).img_eq(Cx::IntPFmla(1) - topo.pfmla_vbl(me));
+        topo.pfmla_vbl(me).img_eq(IntPFmla(1) - topo.pfmla_vbl(me));
       token_pfmlas[me] = (topo.pfmla_vbl(pd) == topo.pfmla_vbl(me));
     }
     else {
       topo.pc_symms[0].shadow_pfmla |=
         pc.act_unchanged_pfmla &&
         topo.pfmla_vbl(pd) != topo.pfmla_vbl(me) &&
-        topo.pfmla_vbl(me).img_eq(Cx::IntPFmla(1) - topo.pfmla_vbl(me));
+        topo.pfmla_vbl(me).img_eq(IntPFmla(1) - topo.pfmla_vbl(me));
       token_pfmlas[me] = (topo.pfmla_vbl(pd) != topo.pfmla_vbl(me));
     }
   }
@@ -330,7 +332,7 @@ TestProtoconFile(bool agreement)
 
   topo_c.pfmla_ctx.use_context_of(topo_f.pfmla_ctx);
 
-  Cx::PFmla pf;
+  P::Fmla pf;
 
   const char* filename;
   if (agreement)
@@ -417,7 +419,7 @@ SetupSilentShadowRing(Xn::Sys& sys, const uint npcs,
 static void
 TestShadowColorRing()
 {
-  Cx::OFile& of = DBogOF;
+  OFile& of = DBogOF;
   Xn::Sys sys;
   Xn::Net& topo = sys.topology;
   const uint npcs = 3;
@@ -487,18 +489,18 @@ TestShadowColorRing()
 static void
 TestShadowMatchRing()
 {
-  Cx::OFile& ofile = DBogOF;
+  OFile& ofile = DBogOF;
   Xn::Sys sys;
   Xn::Net& topo = sys.topology;
   const uint npcs = 3;
   SetupSilentShadowRing(sys, npcs, "x", 2, "m", 3);
 
-  const Cx::PFmlaVbl& x0 = topo.pfmla_vbl(*topo.vbl_symms[0].membs[0]);
-  const Cx::PFmlaVbl& x1 = topo.pfmla_vbl(*topo.vbl_symms[0].membs[1]);
-  const Cx::PFmlaVbl& x2 = topo.pfmla_vbl(*topo.vbl_symms[0].membs[2]);
-  const Cx::PFmlaVbl& m0 = topo.pfmla_vbl(*topo.vbl_symms[1].membs[0]);
-  const Cx::PFmlaVbl& m1 = topo.pfmla_vbl(*topo.vbl_symms[1].membs[1]);
-  const Cx::PFmlaVbl& m2 = topo.pfmla_vbl(*topo.vbl_symms[1].membs[2]);
+  const PFmlaVbl& x0 = topo.pfmla_vbl(*topo.vbl_symms[0].membs[0]);
+  const PFmlaVbl& x1 = topo.pfmla_vbl(*topo.vbl_symms[0].membs[1]);
+  const PFmlaVbl& x2 = topo.pfmla_vbl(*topo.vbl_symms[0].membs[2]);
+  const PFmlaVbl& m0 = topo.pfmla_vbl(*topo.vbl_symms[1].membs[0]);
+  const PFmlaVbl& m1 = topo.pfmla_vbl(*topo.vbl_symms[1].membs[1]);
+  const PFmlaVbl& m2 = topo.pfmla_vbl(*topo.vbl_symms[1].membs[2]);
 
   sys.invariant
     =  (m0==2 && m1==0 && m2==1)
@@ -630,7 +632,7 @@ static void TestProbabilisticLivelock()
 static void
 TestOPutKautz()
 {
-  Cx::OFile ofile( stdout_OFile () );
+  OFile ofile( stdout_OFile () );
   oput_graphviz_kautz(ofile, 4, 25);
 }
 
@@ -661,9 +663,11 @@ Test(const char testname[])
   }
 }
 
+END_NAMESPACE
 
 int main(int argc, char** argv)
 {
+  using namespace PROJECT_NAMESPACE;
   int argi = init_sysCx (&argc, &argv);
 
   if (argi == argc) {

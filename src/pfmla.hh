@@ -296,9 +296,9 @@ public:
   PFmla img_reach(const PFmla& pf) const;
   PFmla closure_within(const PFmla& pf) const;
   bool cycle_ck(PFmla* scc, uint* ret_nlayers = 0,
-                const Cx::PFmla* invariant = 0,
-                const Cx::PFmla* assumed = 0) const;
-  bool cycle_ck(Cx::PFmla* scc, const Cx::PFmla& pf, const Cx::PFmla& assumed) const;
+                const PFmla* invariant = 0,
+                const PFmla* assumed = 0) const;
+  bool cycle_ck(PFmla* scc, const PFmla& pf, const PFmla& assumed) const;
   bool cycle_ck(PFmla* scc, const PFmla& pf) const;
   bool cycle_ck(const PFmla& pf) const;
 
@@ -338,13 +338,13 @@ public:
     return dst;
   }
 
-  void state (uint* state, const Cx::Table<uint>& vbls) const
+  void state (uint* state, const Table<uint>& vbls) const
   {
     state_of_PFmla (state, this->g, &vbls[0], vbls.sz());
   }
 
-  static PFmla of_state(const uint* state, const Cx::Table<uint>& vbls, C::PFmlaCtx* ctx);
-  static PFmla of_img_state(const uint* state, const Cx::Table<uint>& vbls, C::PFmlaCtx* ctx);
+  static PFmla of_state(const uint* state, const Table<uint>& vbls, C::PFmlaCtx* ctx);
+  static PFmla of_img_state(const uint* state, const Table<uint>& vbls, C::PFmlaCtx* ctx);
 };
 
 inline
@@ -447,9 +447,9 @@ private:
   };
 public:
   C::PFmlaCtx* ctx;
-  Cx::Table<uint> vbls; ///< Variable IDs.
-  Cx::Table<uint> doms; ///< Domain sizes.
-  Cx::Table<int> state_map;
+  Table<uint> vbls; ///< Variable IDs.
+  Table<uint> doms; ///< Domain sizes.
+  Table<int> state_map;
 
   IntPFmla() : ctx(0) {}
 
@@ -588,8 +588,8 @@ public:
     return PFmlaVbl( vbl_lookup_PFmlaCtx (ctx, s.cstr()) );
   }
 
-  PFmla pfmla_of_state(const uint* state, const Cx::Table<uint>& vbls) const;
-  PFmla pfmla_of_img_state(const uint* state, const Cx::Table<uint>& vbls) const;
+  PFmla pfmla_of_state(const uint* state, const Table<uint>& vbls) const;
+  PFmla pfmla_of_img_state(const uint* state, const Table<uint>& vbls) const;
 
   ostream& oput(ostream& of,
                 const PFmla& a,
@@ -608,13 +608,6 @@ PFmla::ensure_ctx (const PFmlaCtx& ctx)
 
 }
 
-Cx::PFmla
-UndirectedReachability(const Cx::PFmla& xn, const Cx::PFmla& pf);
-Cx::PFmla
-transitive_closure(const Cx::PFmla& xn);
-bool
-SCC_Find(Cx::PFmla* ret_cycles, const Cx::PFmla& E, const Cx::PFmla& pf);
-
 namespace P
 {
   typedef Cx::PFmla Fmla;
@@ -624,6 +617,13 @@ namespace X
 {
   typedef Cx::PFmla Fmla;
 }
+
+P::Fmla
+UndirectedReachability(const X::Fmla& xn, const P::Fmla& pf);
+P::Fmla
+transitive_closure(const X::Fmla& xn);
+bool
+SCC_Find(P::Fmla* ret_cycles, const X::Fmla& E, const P::Fmla& pf);
 
 #endif
 

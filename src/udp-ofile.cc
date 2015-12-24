@@ -5,6 +5,8 @@
 #include "cx/map.hh"
 #include "xnsys.hh"
 
+#include "namespace.hh"
+
 namespace {
 struct Variable {
   uint vbl_idx;
@@ -13,17 +15,17 @@ struct Variable {
 };
 struct Channel {
   uint pcidx;
-  Cx::Table<uint> vbls;
+  Table<uint> vbls;
 };
 struct Process {
-  Cx::Table<Variable> vbls;
-  Cx::Map<uint,uint> local_idcs;
-  Cx::Map<uint,uint> chan_map;
-  Cx::Table<Channel> chans;
+  Table<Variable> vbls;
+  Map<uint,uint> local_idcs;
+  Map<uint,uint> chan_map;
+  Table<Channel> chans;
 };
 }
 
-void oput_udp_file(Cx::OFile& ofile, const Xn::Sys& sys, const Xn::Net& o_topology)
+void oput_udp_file(OFile& ofile, const Xn::Sys& sys, const Xn::Net& o_topology)
 {
 #include "udp-dep/embed.h"
   const Xn::Net& topo = sys.topology;
@@ -32,8 +34,8 @@ void oput_udp_file(Cx::OFile& ofile, const Xn::Sys& sys, const Xn::Net& o_topolo
     ofile.write((char*) files_bytes[i], files_nbytes[i]);
   }
 
-  Cx::Table<uint> owning(o_topology.vbls.sz());
-  Cx::Table<Process> pcs(o_topology.pcs.sz());
+  Table<uint> owning(o_topology.vbls.sz());
+  Table<Process> pcs(o_topology.pcs.sz());
 
   for (uint i = 0; i < owning.sz(); ++i) {
     owning[i] = pcs.sz();
@@ -146,10 +148,10 @@ void oput_udp_file(Cx::OFile& ofile, const Xn::Sys& sys, const Xn::Net& o_topolo
     << "\n{"
     << "\n  "
     ;
-  Cx::String prev_str = "";
+  String prev_str = "";
   for (uint pcidx = 0; pcidx < pcs.sz(); ++pcidx) {
     Process& process = pcs[pcidx];
-    Cx::String str = "";
+    String str = "";
     str << "\n    if (writing) {";
     for (uint chanidx = 0; chanidx < process.chans.sz(); ++chanidx) {
       const Channel& o_channel = process.chans[chanidx];
@@ -236,13 +238,13 @@ void oput_udp_file(Cx::OFile& ofile, const Xn::Sys& sys, const Xn::Net& o_topolo
 
     if (pc.closed_assume.tautology_ck())  continue;
 
-    Cx::Table<uint> readable;
-    Cx::Table<uint> writable;
-    Cx::Table<uint> pfmla_rvbl_idcs;
-    Cx::Table<uint> pfmla_wvbl_idcs;
+    Table<uint> readable;
+    Table<uint> writable;
+    Table<uint> pfmla_rvbl_idcs;
+    Table<uint> pfmla_wvbl_idcs;
 
-    Cx::Table<uint> code_rvbl_idcs;
-    Cx::Table<uint> code_wvbl_idcs;
+    Table<uint> code_rvbl_idcs;
+    Table<uint> code_wvbl_idcs;
 
     for (uint i = 0, puppet_sz = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
       const Xn::VblSymm& vbl_symm = *pc_symm.rvbl_symms[i];
@@ -259,8 +261,8 @@ void oput_udp_file(Cx::OFile& ofile, const Xn::Sys& sys, const Xn::Net& o_topolo
       pfmla_rvbl_idcs << pc.rvbls[i]->pfmla_idx;
     }
 
-    Cx::Table<uint> pre_state( pfmla_rvbl_idcs.sz() );
-    Cx::Table<uint> img_state( pfmla_wvbl_idcs.sz() );
+    Table<uint> pre_state( pfmla_rvbl_idcs.sz() );
+    Table<uint> img_state( pfmla_wvbl_idcs.sz() );
 
     P::Fmla bad_pf = ~pc.closed_assume;
     bad_pf.ensure_ctx(topo.pfmla_ctx);
@@ -312,11 +314,11 @@ void oput_udp_file(Cx::OFile& ofile, const Xn::Sys& sys, const Xn::Net& o_topolo
     << "\n  if (0) {}"
     ;
 
-  Cx::Table<X::Fmla> rep_xns( topo.pc_symms.sz() );
+  Table<X::Fmla> rep_xns( topo.pc_symms.sz() );
   rep_xns.wipe (P::Fmla(false));
 
   symm_cutoff = 0;
-  Cx::Table<uint> actions( sys.actions );
+  Table<uint> actions( sys.actions );
   for (uint ai = 0; ai < actions.sz(); ++ai) {
     Xn::ActSymm act;
     topo.action(act, actions[ai]);
@@ -339,9 +341,9 @@ void oput_udp_file(Cx::OFile& ofile, const Xn::Sys& sys, const Xn::Net& o_topolo
     pc_symm.representative(&rep_pcidx);
     const Xn::Pc& pc = *pc_symm.membs[rep_pcidx];
 
-    Cx::Table<uint> writable;
-    Cx::Table<uint> pfmla_rvbl_idcs;
-    Cx::Table<uint> pfmla_wvbl_idcs;
+    Table<uint> writable;
+    Table<uint> pfmla_rvbl_idcs;
+    Table<uint> pfmla_wvbl_idcs;
 
     for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
       const Xn::VblSymm& vbl_symm = *pc_symm.rvbl_symms[i];
@@ -361,8 +363,8 @@ void oput_udp_file(Cx::OFile& ofile, const Xn::Sys& sys, const Xn::Net& o_topolo
     X::Fmla& xn = rep_xns[pc_symm_idx];
     xn.ensure_ctx(topo.pfmla_ctx);
 
-    Cx::Table<uint> pre_state( pfmla_rvbl_idcs.sz() );
-    Cx::Table<uint> img_state( pfmla_wvbl_idcs.sz() );
+    Table<uint> pre_state( pfmla_rvbl_idcs.sz() );
+    Table<uint> img_state( pfmla_wvbl_idcs.sz() );
 
     ofile << "\n    /* */";
     while (xn.sat_ck()) {
@@ -379,7 +381,7 @@ void oput_udp_file(Cx::OFile& ofile, const Xn::Sys& sys, const Xn::Net& o_topolo
       }
       ofile << ")";
 
-      Cx::Table<Cx::String> choice_statements;
+      Table<String> choice_statements;
       while (img_pf.sat_ck()) {
         img_pf.state (+img_state, pfmla_wvbl_idcs);
         P::Fmla tmp_pf = topo.pfmla_ctx.pfmla_of_state (+img_state, pfmla_wvbl_idcs);
@@ -424,4 +426,6 @@ void oput_udp_file(Cx::OFile& ofile, const Xn::Sys& sys, const Xn::Net& o_topolo
 
   ofile.write((char*) files_bytes[nfiles-1], files_nbytes[nfiles-1]);
 }
+
+END_NAMESPACE
 

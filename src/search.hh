@@ -5,14 +5,8 @@
 #include "cx/alphatab.hh"
 #include "cx/table.hh"
 
-namespace Cx {
-  class PFmla;
-  template <class T> class FlatSet;
-}
-namespace Xn {
-  class Net;
-  class Sys;
-}
+#include "namespace.hh"
+
 class AddConvergenceOpt;
 class ConflictFamily;
 class PartialSynthesis;
@@ -30,18 +24,18 @@ bool
 try_order_synthesis(vector<uint>& ret_actions,
                     PartialSynthesis& tape);
 bool
-rank_actions (Cx::Table< Cx::Table<uint> >& act_layers,
+rank_actions (Table< Table<uint> >& act_layers,
               const Xn::Net& topo,
               const vector<uint>& candidates,
-              const Cx::PFmla& xn,
-              const Cx::PFmla& legit);
+              const X::Fmla& xn,
+              const P::Fmla& legit);
 void
-oput_conflicts (const ConflictFamily& conflicts, const Cx::String& ofilename);
+oput_conflicts (const ConflictFamily& conflicts, const String& ofilename);
 void
-oput_conflicts (const ConflictFamily& conflicts, Cx::String ofilename, uint pcidx);
+oput_conflicts (const ConflictFamily& conflicts, String ofilename, uint pcidx);
 bool
 initialize_conflicts(ConflictFamily& conflicts,
-                     Cx::Table< Cx::FlatSet<uint> >& flat_conflicts,
+                     Table< FlatSet<uint> >& flat_conflicts,
                      const ProtoconOpt& exec_opt,
                      const AddConvergenceOpt& global_opt,
                      bool do_output);
@@ -60,5 +54,6 @@ stabilization_search(vector<uint>& ret_actions,
                      const ProtoconOpt& exec_opt,
                      const AddConvergenceOpt& global_opt);
 
+END_NAMESPACE
 #endif
 

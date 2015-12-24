@@ -4,19 +4,23 @@
 #include "pfmla.hh"
 
 namespace X {
+using Cx::PFmlaCtx;
+using Cx::Mem;
+using Cx::Table;
+
 class FmlaeCtx;
 class Fmlae;
 
 class FmlaeCtx
 {
   friend class X::Fmlae;
-  Cx::Mem<Cx::PFmlaCtx> ctx;
+  Mem<PFmlaCtx> ctx;
 public:
-  Cx::Table<uint> wvbl_list_ids;
+  Table<uint> wvbl_list_ids;
   X::Fmla identity_xn;
-  Cx::Table<X::Fmla> act_unchanged_xfmlas;
+  Table<X::Fmla> act_unchanged_xfmlas;
 
-  FmlaeCtx(Cx::PFmlaCtx& _ctx)
+  FmlaeCtx(PFmlaCtx& _ctx)
     : ctx(&_ctx)
     , identity_xn(true)
   {}
@@ -27,7 +31,7 @@ class Fmlae
 {
 private:
   const X::FmlaeCtx* ctx;
-  Cx::Table<X::Fmla> fmlas;
+  Table<X::Fmla> fmlas;
 
 public:
   Fmlae()

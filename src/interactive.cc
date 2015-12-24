@@ -6,16 +6,18 @@
 #include "cx/urandom.hh"
 #include <algorithm>
 
+#include "namespace.hh"
+
 class Interactive
 {
 public:
-  Cx::URandom urandom;
-  Cx::Table<uint> all_vbls;
-  Cx::Table<uint> state;
+  URandom urandom;
+  Table<uint> all_vbls;
+  Table<uint> state;
   const Xn::Sys& sys;
   const Xn::Net& topo;
-  Cx::PFmla xn;
-  Cx::PFmla mask_pfmla;
+  X::Fmla xn;
+  P::Fmla mask_pfmla;
 
   enum PredicateInfluence { WithinPredicate, DisplayPredicate, NotInPredicate, IgnorePredicate };
 
@@ -26,9 +28,9 @@ public:
   bool conj_invariant;
   bool conj_deadlock;
   bool conj_scc;
-  Cx::PFmla* invariant_pfmla;
-  Cx::PFmla* silent_pfmla;
-  Cx::PFmla* cycle_pfmla;
+  P::Fmla* invariant_pfmla;
+  P::Fmla* silent_pfmla;
+  P::Fmla* cycle_pfmla;
 
   Interactive(const Xn::Sys& system)
     : sys(system)
@@ -48,18 +50,18 @@ public:
     delete cycle_pfmla;
   }
 
-  void assign(XFile* line_xf);
-  void next_options(Cx::Table<Cx::String>& ret_lines, bool fwd) const;
-  void img_options(Cx::Table<Cx::String>& ret_lines) const;
-  void pre_options(Cx::Table<Cx::String>& ret_lines) const;
+  void assign(::XFile* line_xf);
+  void next_options(Table<String>& ret_lines, bool fwd) const;
+  void img_options(Table<String>& ret_lines) const;
+  void pre_options(Table<String>& ret_lines) const;
   void reset_mask_pfmla();
-  Cx::PFmla state_pfmla() const;
+  P::Fmla state_pfmla() const;
   void randomize_state();
 };
 
 static
   const Xn::Vbl*
-parse_variable(XFile* xf, const Xn::Net& topo)
+parse_variable(::XFile* xf, const Xn::Net& topo)
 {
   static const char other_delims[] = ":=";
   char delims[sizeof(other_delims) - 1 + sizeof(WhiteSpaceChars)];
@@ -79,7 +81,7 @@ parse_variable(XFile* xf, const Xn::Net& topo)
 }
 
   void
-Interactive::assign(XFile* line_xf)
+Interactive::assign(::XFile* line_xf)
 {
   for (const Xn::Vbl* vbl = parse_variable(line_xf, topo);
        vbl;
@@ -99,19 +101,19 @@ Interactive::assign(XFile* line_xf)
 }
 
   void
-Interactive::next_options(Cx::Table<Cx::String>& ret_lines, bool fwd) const
+Interactive::next_options(Table<String>& ret_lines, bool fwd) const
 {
-  Cx::PFmla pf( topo.pfmla_ctx.pfmla_of_state(&state[0], all_vbls) );
-  Cx::Table<uint> img_state(state);
-  Cx::PFmla next( fwd ? xn.img(pf) : xn.pre(pf) );
+  P::Fmla pf( topo.pfmla_ctx.pfmla_of_state(&state[0], all_vbls) );
+  Table<uint> img_state(state);
+  P::Fmla next( fwd ? xn.img(pf) : xn.pre(pf) );
   next &= this->mask_pfmla;
   ret_lines.clear();
   for (uint vbl_idx = 0; vbl_idx < topo.vbls.sz(); ++vbl_idx) {
-    Cx::PFmla local_pf( next & (topo.pfmla_vbl(vbl_idx) != state[vbl_idx]) );
+    P::Fmla local_pf( next & (topo.pfmla_vbl(vbl_idx) != state[vbl_idx]) );
     while (local_pf.sat_ck()) {
       local_pf.state(&img_state[0], all_vbls);
       const char* delim = "";
-      Cx::String line;
+      String line;
       for (uint i = 0; i < img_state.sz(); ++i) {
         if (img_state[i] != state[i]) {
           line << delim << name_of(topo.vbls[i]) << ":=" << img_state[i] << ";";
@@ -126,12 +128,12 @@ Interactive::next_options(Cx::Table<Cx::String>& ret_lines, bool fwd) const
 }
 
   void
-Interactive::img_options(Cx::Table<Cx::String>& ret_lines) const
+Interactive::img_options(Table<String>& ret_lines) const
 {
   next_options(ret_lines, true);
 }
   void
-Interactive::pre_options(Cx::Table<Cx::String>& ret_lines) const
+Interactive::pre_options(Table<String>& ret_lines) const
 {
   next_options(ret_lines, false);
 }
@@ -142,7 +144,7 @@ Interactive::reset_mask_pfmla()
   mask_pfmla = sys.closed_assume;
   if (invariant_influence != IgnorePredicate) {
     if (!invariant_pfmla) {
-      invariant_pfmla = new Cx::PFmla(sys.invariant);
+      invariant_pfmla = new P::Fmla(sys.invariant);
     }
     if (invariant_influence == WithinPredicate) {
       mask_pfmla &= *invariant_pfmla;
@@ -153,7 +155,7 @@ Interactive::reset_mask_pfmla()
   }
   if (silent_influence != IgnorePredicate) {
     if (!silent_pfmla) {
-      silent_pfmla = new Cx::PFmla(sys.closed_assume & ~xn.pre());
+      silent_pfmla = new P::Fmla(sys.closed_assume & ~xn.pre());
     }
     if (silent_influence == WithinPredicate) {
       mask_pfmla &= *silent_pfmla;
@@ -164,7 +166,7 @@ Interactive::reset_mask_pfmla()
   }
   if (cycle_influence != IgnorePredicate) {
     if (!cycle_pfmla) {
-      cycle_pfmla = new Cx::PFmla(false);
+      cycle_pfmla = new P::Fmla(false);
       xn.cycle_ck(cycle_pfmla, sys.closed_assume);
     }
     if (cycle_influence == WithinPredicate) {
@@ -176,10 +178,10 @@ Interactive::reset_mask_pfmla()
   }
 }
 
-  Cx::PFmla
+  P::Fmla
 Interactive::state_pfmla() const
 {
-  Cx::PFmla pf( true );
+  P::Fmla pf( true );
   for (uint i = 0; i < this->state.sz(); ++i) {
     pf &= (topo.pfmla_vbl(i) == this->state[i]);
   }
@@ -189,17 +191,17 @@ Interactive::state_pfmla() const
   void
 Interactive::randomize_state()
 {
-  Cx::PFmla pf( this->mask_pfmla );
+  P::Fmla pf( this->mask_pfmla );
   if (!pf.sat_ck())  return;
-  Cx::Table<uint> idcs( topo.vbls.sz() );
+  Table<uint> idcs( topo.vbls.sz() );
   for (uint i = 0; i < idcs.sz(); ++i) {
     idcs[i] = i;
   }
   this->urandom.shuffle(&idcs[0], idcs.sz());
   for (uint i = 0; i < idcs.sz(); ++i) {
     const Xn::Vbl& vbl = topo.vbls[idcs[i]];
-    const Cx::PFmlaVbl& pfmla_vbl = topo.pfmla_vbl(idcs[i]);
-    Cx::Table<uint> vals;
+    const PFmlaVbl& pfmla_vbl = topo.pfmla_vbl(idcs[i]);
+    Table<uint> vals;
     for (uint j = 0; j < vbl.symm->domsz; ++j) {
       if (pf.overlap_ck(pfmla_vbl == j)) {
         vals.push(j);
@@ -224,9 +226,9 @@ interactive(const Xn::Sys& sys)
     usim.all_vbls[i] = topo.vbls[i].pfmla_idx;
   }
 
-  Cx::OFile of( stdout_OFile() );
-  XFile* xf = stdin_XFile();
-  XFile line_xf[1];
+  OFile of( stdout_OFile() );
+  ::XFile* xf = stdin_XFile();
+  ::XFile line_xf[1];
 
   while (getlined_olay_XFile (line_xf, xf, "\n"))
   {
@@ -254,7 +256,7 @@ interactive(const Xn::Sys& sys)
     }
     else if (skip_cstr_XFile(line_xf, "show-img"))
     {
-      Cx::Table<Cx::String> lines;
+      Table<String> lines;
       usim.img_options(lines);
       //std::sort (lines.begin(), lines.end());
       for (uint i = 0; i < lines.sz(); ++i) {
@@ -264,7 +266,7 @@ interactive(const Xn::Sys& sys)
     }
     else if (skip_cstr_XFile(line_xf, "show-pre"))
     {
-      Cx::Table<Cx::String> lines;
+      Table<String> lines;
       usim.pre_options(lines);
       //std::sort (lines.begin(), lines.end());
       for (uint i = 0; i < lines.sz(); ++i) {
@@ -274,7 +276,7 @@ interactive(const Xn::Sys& sys)
     }
     else if (skip_cstr_XFile(line_xf, "show-sat"))
     {
-      Cx::PFmla pf = usim.state_pfmla();
+      P::Fmla pf = usim.state_pfmla();
       if (usim.invariant_influence != usim.IgnorePredicate) {
         of << "invariant "
           << (usim.invariant_pfmla->overlap_ck(pf) ? 1 : 0)
@@ -307,7 +309,7 @@ interactive(const Xn::Sys& sys)
       }
       while (n > 0) {
         n -= 1;
-        Cx::Table<Cx::String> lines;
+        Table<String> lines;
         if (forward) {
           usim.img_options(lines);
         }
@@ -316,7 +318,7 @@ interactive(const Xn::Sys& sys)
         }
         if (lines.sz()==0)
           break;
-        Cx::String line = lines[usim.urandom.pick(lines.sz())];
+        String line = lines[usim.urandom.pick(lines.sz())];
         of << line << of.endl();
         init_XFile_olay_cstr(line_xf, line.cstr());
         usim.assign(line_xf);
@@ -332,14 +334,14 @@ interactive(const Xn::Sys& sys)
       }
       while (n > 0) {
         n -= 1;
-        Cx::Table<Cx::String> lines;
+        Table<String> lines;
         if (forward) {
           usim.img_options(lines);
         }
         if (lines.sz()==0)
           break;
         for (uint i = 0; i < lines.sz(); ++i) {
-          Cx::String line = lines[i];
+          String line = lines[i];
           of << line << of.endl();
           init_XFile_olay_cstr(line_xf, line.cstr());
           usim.assign(line_xf);
@@ -397,4 +399,6 @@ interactive(const Xn::Sys& sys)
     }
   }
 }
+
+END_NAMESPACE
 

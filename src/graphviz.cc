@@ -2,6 +2,8 @@
 #include "graphviz.hh"
 #include "xnsys.hh"
 
+#include "namespace.hh"
+
   void
 oput_graphviz_file(Cx::OFile& of, const Xn::Net& topo)
 {
@@ -49,4 +51,6 @@ oput_graphviz_file(Cx::OFile& of, const Xn::Net& topo)
   }
   of << "}\n";
 }
+
+END_NAMESPACE
 

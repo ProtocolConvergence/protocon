@@ -17,6 +17,8 @@
 #include <omp.h>
 #endif
 
+#include "namespace.hh"
+
 static bool
 verify_solutions(const PartialSynthesis& inst, StabilizationCkInfo* info, uint* ret_nlayers_sum = 0)
 {
@@ -73,7 +75,7 @@ AddStabilization(vector<uint>& ret_actions,
                  PartialSynthesis& base_partial,
                  const AddConvergenceOpt& opt)
 {
-  Cx::LgTable<PartialSynthesis> bt_stack;
+  LgTable<PartialSynthesis> bt_stack;
   SynthesisCtx& synctx = *base_partial.ctx;
 
   base_partial.bt_level = 0;
@@ -82,8 +84,8 @@ AddStabilization(vector<uint>& ret_actions,
   uint stack_idx = 0;
   uint nlayers_sum = 0;
 
-  if (synctx.conflicts.conflict_ck(Cx::FlatSet<uint>(base_partial.actions))) {
-    synctx.conflicts.add_conflict(Cx::FlatSet<uint>());
+  if (synctx.conflicts.conflict_ck(FlatSet<uint>(base_partial.actions))) {
+    synctx.conflicts.add_conflict(FlatSet<uint>());
     return false;
   }
 
@@ -226,7 +228,7 @@ AddStabilization(Xn::Sys& sys, const AddConvergenceOpt& opt)
 
   PartialSynthesis& partial = synctx.base_partial;
 
-  if (!partial.revise_actions(Cx::Set<uint>(sys.actions), synctx.conflicts.impossible_set))
+  if (!partial.revise_actions(Set<uint>(sys.actions), synctx.conflicts.impossible_set))
     return false;
 
   vector<uint> ret_actions;
@@ -239,7 +241,7 @@ AddStabilization(Xn::Sys& sys, const AddConvergenceOpt& opt)
 
 
   void
-check_conflict_sets(const Cx::LgTable< Set<uint> >& conflict_sets)
+check_conflict_sets(const LgTable< Set<uint> >& conflict_sets)
 {
   for (ujint i = conflict_sets.begidx();
        i != Max_ujint;
@@ -310,14 +312,14 @@ try_order_synthesis(vector<uint>& ret_actions,
 
 static
   bool
-rank_states (Cx::Table<Cx::PFmla>& state_layers,
-             const Cx::PFmla& xn, const Cx::PFmla& legit)
+rank_states (Table<P::Fmla>& state_layers,
+             const X::Fmla& xn, const P::Fmla& legit)
 {
   state_layers.resize(0);
   state_layers.push(legit);
 
-  Cx::PFmla visit_pf( legit );
-  Cx::PFmla layer_pf( xn.pre(legit) - visit_pf );
+  P::Fmla visit_pf( legit );
+  P::Fmla layer_pf( xn.pre(legit) - visit_pf );
   while (layer_pf.sat_ck()) {
     state_layers.push(layer_pf);
     visit_pf |= layer_pf;
@@ -327,20 +329,20 @@ rank_states (Cx::Table<Cx::PFmla>& state_layers,
 }
 
   bool
-rank_actions (Cx::Table< Cx::Table<uint> >& act_layers,
+rank_actions (Table< Table<uint> >& act_layers,
               const Xn::Net& topo,
               const vector<uint>& candidates,
-              const Cx::PFmla& xn,
-              const Cx::PFmla& legit)
+              const X::Fmla& xn,
+              const P::Fmla& legit)
 {
-  Cx::Table<Cx::PFmla> state_layers;
+  Table<P::Fmla> state_layers;
   if (!rank_states (state_layers, xn, legit))
     return false;
 
   act_layers.resize(state_layers.sz()+1);
   for (uint i = 0; i < candidates.size(); ++i) {
     const uint actidx = candidates[i];
-    const Cx::PFmla& act_pf = topo.action_pfmla(actidx);
+    const X::Fmla& act_pf = topo.action_pfmla(actidx);
     bool found = false;
     for (uint j = 1; !found && j < state_layers.sz(); ++j) {
       if (act_pf.img(state_layers[j]).overlap_ck(state_layers[j-1])) {
@@ -356,7 +358,7 @@ rank_actions (Cx::Table< Cx::Table<uint> >& act_layers,
 }
 
   void
-oput_conflicts (const ConflictFamily& conflicts, const Cx::String& ofilename)
+oput_conflicts (const ConflictFamily& conflicts, const String& ofilename)
 {
   Cx::OFileB conflicts_of;
   conflicts_of.open(ofilename.cstr());
@@ -364,7 +366,7 @@ oput_conflicts (const ConflictFamily& conflicts, const Cx::String& ofilename)
 }
 
   void
-oput_conflicts (const ConflictFamily& conflicts, Cx::String ofilename, uint pcidx)
+oput_conflicts (const ConflictFamily& conflicts, String ofilename, uint pcidx)
 {
   ofilename += ".";
   ofilename += pcidx;
@@ -442,11 +444,11 @@ try_known_solution(const ConflictFamily& conflicts,
       *synctx.log << "I SKIPPED SOME\n";
 
     Cx::OFileB working_of;
-    working_of.open(Cx::String("working_conflicts.out.") + synctx.opt.sys_pcidx);
+    working_of.open(String("working_conflicts.out.") + synctx.opt.sys_pcidx);
     working_of << conflicts;
 
     Cx::OFileB broken_of;
-    broken_of.open(Cx::String("broken_conflicts.out.") + synctx.opt.sys_pcidx);
+    broken_of.open(String("broken_conflicts.out.") + synctx.opt.sys_pcidx);
     broken_of << synctx.conflicts;
   }
   return good;
@@ -454,7 +456,7 @@ try_known_solution(const ConflictFamily& conflicts,
 
   bool
 initialize_conflicts(ConflictFamily& conflicts,
-                     Cx::Table< Cx::FlatSet<uint> >& flat_conflicts,
+                     Table< FlatSet<uint> >& flat_conflicts,
                      const ProtoconOpt& exec_opt,
                      const AddConvergenceOpt& global_opt,
                      bool do_output)
@@ -479,14 +481,14 @@ initialize_conflicts(ConflictFamily& conflicts,
   else if (exec_opt.conflict_order == ProtoconOpt::RandomOrder)
   {
     conflicts.all_conflicts(flat_conflicts);
-    Cx::URandom urandom;
+    URandom urandom;
     urandom.use_system_urandom(global_opt.system_urandom);
     urandom.shuffle(&flat_conflicts[0], flat_conflicts.sz());
   }
   else
   {
     conflicts.all_conflicts(flat_conflicts);
-    Cx::Table< Cx::Table< FlatSet<uint> > > sized_conflicts;
+    Table< Table< FlatSet<uint> > > sized_conflicts;
     for (uint i = 0; i < flat_conflicts.sz(); ++i) {
       uint sz = flat_conflicts[i].sz();
       while (sz >= sized_conflicts.sz()) {
@@ -518,25 +520,25 @@ initialize_conflicts(ConflictFamily& conflicts,
 stabilization_search_init
   (SynthesisCtx& synctx,
    Xn::Sys& sys,
-   Cx::LgTable<Xn::Sys>& systems,
+   LgTable<Xn::Sys>& systems,
    Cx::OFileB& log_ofile,
    AddConvergenceOpt& opt,
    const ProtoconFileOpt& infile_opt,
    const ProtoconOpt& exec_opt,
-   Cx::Table< Cx::Table<uint> >& act_layers
+   Table< Table<uint> >& act_layers
    )
 {
   DeclLegit( good );
 
   if (!!exec_opt.log_ofilename) {
-    Cx::String ofilename( exec_opt.log_ofilename );
+    String ofilename( exec_opt.log_ofilename );
     ofilename += ".";
     ofilename += opt.sys_pcidx;
     log_ofile.open(ofilename);
     opt.log = &log_ofile;
   }
   else if (opt.sys_npcs > 1) {
-    opt.log = &Cx::OFile::null();
+    opt.log = &OFile::null();
   }
 
 
@@ -552,7 +554,7 @@ stabilization_search_init
       const Xn::PcSymm& pc_symm = sys.topology.pc_symms[i];
       uint pcidx = 0;
       if (pc_symm.membs.sz() > 0 && !pc_symm.representative(&pcidx)) {
-        Cx::String msg;
+        String msg;
         msg << "Every process "
           << pc_symm.spec->name << "[" << pc_symm.spec->idx_name << "]"
           << " has repeated variable references!";
@@ -659,7 +661,7 @@ void
   Xn::Sys sys;
   ProtoconFileOpt verif_infile_opt( infile_opt );
   verif_infile_opt.constant_map = exec_opt.params[0].constant_map;
-  const Cx::String& xfilepath = exec_opt.xfilepaths[i];
+  const String& xfilepath = exec_opt.xfilepaths[i];
   if (xfilepath != exec_opt.xfilepath) {
     verif_infile_opt.text.moveq
       (textfile_AlphaTab (0, xfilepath.cstr()));
@@ -676,7 +678,7 @@ void
       *opt.log << "System is stabilizing." << opt.log->endl();
 
       if (!!exec_opt.ofilepath) {
-        Cx::String filepath( exec_opt.ofilepath + "." + i );
+        String filepath( exec_opt.ofilepath + "." + i );
         *opt.log << "Writing system to: " << filepath  << opt.log->endl();
         Cx::OFileB ofb;
         ofb.open(filepath);
@@ -709,7 +711,7 @@ stabilization_search(vector<uint>& ret_actions,
   uint solution_nlayers_sum = 0;
   uint NPcs = 0;
   ConflictFamily conflicts;
-  Cx::Table< FlatSet<uint> > flat_conflicts;
+  Table< FlatSet<uint> > flat_conflicts;
   const bool try_known_solution_ck = !global_opt.known_solution.empty();
 
   signal(SIGINT, set_done_flag);
@@ -748,11 +750,11 @@ stabilization_search(vector<uint>& ret_actions,
   opt.sys_npcs = NPcs;
 
   Xn::Sys sys;
-  Cx::LgTable<Xn::Sys> systems;
+  LgTable<Xn::Sys> systems;
   SynthesisCtx synctx( PcIdx, NPcs );
   synctx.conflicts = conflicts;
 
-  Cx::Table< Cx::Table<uint> > act_layers;
+  Table< Table<uint> > act_layers;
 
   DoLegitLine( "init call failed" )
     stabilization_search_init
@@ -1034,7 +1036,7 @@ stabilization_search(vector<uint>& ret_actions,
   if (global_opt.snapshot_conflicts && !!exec_opt.conflicts_ofilepath)
   {
     for (uint i = 0; i < NPcs; ++i) {
-      Cx::String ofilename( exec_opt.conflicts_ofilepath );
+      String ofilename( exec_opt.conflicts_ofilepath );
       ofilename += ".";
       ofilename += i;
       remove(ofilename.cstr());
@@ -1045,4 +1047,6 @@ stabilization_search(vector<uint>& ret_actions,
   signal(SIGTERM, SIG_DFL);
   return solution_found;
 }
+
+END_NAMESPACE
 

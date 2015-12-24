@@ -13,10 +13,10 @@ namespace Cx {
  * \param pf  Initial states.
  */
   PFmla
-PFmla::pre_reach(const Cx::PFmla& pf) const
+PFmla::pre_reach(const P::Fmla& pf) const
 {
-  Cx::PFmla visit( pf );
-  Cx::PFmla layer( this->pre(pf) - visit );
+  P::Fmla visit( pf );
+  P::Fmla layer( this->pre(pf) - visit );
   while (layer.sat_ck()) {
     visit |= layer;
     layer = this->pre(layer) - visit;
@@ -31,8 +31,8 @@ PFmla::pre_reach(const Cx::PFmla& pf) const
   PFmla
 PFmla::img_reach(const PFmla& pf) const
 {
-  Cx::PFmla visit( pf );
-  Cx::PFmla layer( this->img(pf) - visit );
+  P::Fmla visit( pf );
+  P::Fmla layer( this->img(pf) - visit );
   while (layer.sat_ck()) {
     visit |= layer;
     layer = this->img(layer) - visit;
@@ -44,7 +44,7 @@ PFmla::img_reach(const PFmla& pf) const
  * Compute a closed subset of some set of states.
  **/
   PFmla
-PFmla::closure_within(const Cx::PFmla& pf) const
+PFmla::closure_within(const P::Fmla& pf) const
 {
   return pf - this->pre_reach(~pf);
 }
@@ -57,7 +57,7 @@ PFmla::closure_within(const Cx::PFmla& pf) const
  * iteratively computing the image until it does not change.
  */
   bool
-PFmla::cycle_ck(Cx::PFmla* scc, uint* ret_nlayers, const Cx::PFmla* invariant, const Cx::PFmla* assumed) const
+PFmla::cycle_ck(P::Fmla* scc, uint* ret_nlayers, const P::Fmla* invariant, const P::Fmla* assumed) const
 {
   const X::Fmla& xn = *this;
   P::Fmla span0( true, xn );
@@ -108,7 +108,7 @@ PFmla::cycle_ck(Cx::PFmla* scc, uint* ret_nlayers, const Cx::PFmla* invariant, c
  * iteratively computing the image until it does not change.
  */
   bool
-PFmla::cycle_ck(Cx::PFmla* scc, const Cx::PFmla& pf) const
+PFmla::cycle_ck(P::Fmla* scc, const P::Fmla& pf) const
 {
   return this->cycle_ck(scc, 0, 0, &pf);
 }
@@ -167,7 +167,7 @@ PFmlaCtx::oput(ostream& of, const PFmla& a, uint setIdx,
 
 
   PFmla
-PFmla::of_state(const uint* state, const Cx::Table<uint>& vbls, C::PFmlaCtx* ctx)
+PFmla::of_state(const uint* state, const Table<uint>& vbls, C::PFmlaCtx* ctx)
 {
   PFmla conj( true );
   PFmla pf;
@@ -179,7 +179,7 @@ PFmla::of_state(const uint* state, const Cx::Table<uint>& vbls, C::PFmlaCtx* ctx
 }
 
   PFmla
-PFmla::of_img_state(const uint* state, const Cx::Table<uint>& vbls, C::PFmlaCtx* ctx)
+PFmla::of_img_state(const uint* state, const Table<uint>& vbls, C::PFmlaCtx* ctx)
 {
   PFmla conj( true );
   PFmla pf;
@@ -191,20 +191,20 @@ PFmla::of_img_state(const uint* state, const Cx::Table<uint>& vbls, C::PFmlaCtx*
 }
 
   PFmla
-PFmlaCtx::pfmla_of_state(const uint* state, const Cx::Table<uint>& vbls) const
+PFmlaCtx::pfmla_of_state(const uint* state, const Table<uint>& vbls) const
 {
   return PFmla::of_state(state, vbls, this->ctx);
 }
 
   PFmla
-PFmlaCtx::pfmla_of_img_state(const uint* state, const Cx::Table<uint>& vbls) const
+PFmlaCtx::pfmla_of_img_state(const uint* state, const Table<uint>& vbls) const
 {
   return PFmla::of_img_state(state, vbls, this->ctx);
 }
 
 static inline
   void
-intmap_init_op (Cx::Table<uint>& vbl_map, IntPFmla& a, const IntPFmla& b)
+intmap_init_op (Table<uint>& vbl_map, IntPFmla& a, const IntPFmla& b)
 {
   Claim2( a.state_map.sz() ,>, 0 );
   Claim2( b.state_map.sz() ,>, 0 );
@@ -254,7 +254,7 @@ static inline
 intmap_coerce_lookup(const IntPFmla& a,
                      const IntPFmla& b,
                      ujint idx_a,
-                     const Cx::Table<uint>& vbl_map,
+                     const Table<uint>& vbl_map,
                      uint* state_a,
                      uint* state_b)
 {
@@ -286,10 +286,10 @@ IntPFmla::defeq_binop(const IntPFmla& b, IntPFmla::BinIntOp op)
 {
   IntPFmla& a = *this;
 
-  Cx::Table< uint > vbl_map( b.vbls.sz() );
+  Table< uint > vbl_map( b.vbls.sz() );
   intmap_init_op (vbl_map, a, b);
-  Cx::Table< uint > state_a( a.vbls.sz() );
-  Cx::Table< uint > state_b( b.vbls.sz() );
+  Table< uint > state_a( a.vbls.sz() );
+  Table< uint > state_b( b.vbls.sz() );
   const ujint n = a.state_map.sz();
 
 #define foreach_a for (ujint idx_a = 0; idx_a < n; ++idx_a)
@@ -378,10 +378,10 @@ IntPFmla::cmp(const IntPFmla& b, Bit c_lt, Bit c_eq, Bit c_gt) const
     Claim2( b.state_map.sz() ,==, 1 );
   }
 
-  Cx::Table< uint > vbl_map( b.vbls.sz() );
+  Table< uint > vbl_map( b.vbls.sz() );
   intmap_init_op (vbl_map, a, b);
-  Cx::Table< uint > state_a( a.vbls.sz() );
-  Cx::Table< uint > state_b( b.vbls.sz() );
+  Table< uint > state_a( a.vbls.sz() );
+  Table< uint > state_b( b.vbls.sz() );
   const ujint n = a.state_map.sz();
 
   PFmla disj( false );
@@ -408,8 +408,8 @@ IntPFmla::img_eq(const IntPFmla& b) const
     return (a == b);
   }
 
-  Cx::Map< int, Cx::Table<ujint> > inverse_a;
-  Cx::Map< int, Cx::Table<ujint> > inverse_b;
+  Map< int, Table<ujint> > inverse_a;
+  Map< int, Table<ujint> > inverse_b;
   for (ujint idx_a = 0; idx_a < a.state_map.sz(); ++idx_a) {
     inverse_a[a.state_map[idx_a]].push(idx_a);
   }
@@ -419,11 +419,11 @@ IntPFmla::img_eq(const IntPFmla& b) const
 
   PFmla disj( false );
 
-  Cx::Table< uint > state_a( a.vbls.sz() );
-  Cx::Table< uint > state_b( b.vbls.sz() );
-  Cx::Map< int, Cx::Table<ujint> >::const_iterator itb = inverse_b.begin();
-  Cx::Map< int, Cx::Table<ujint> >::iterator ita = inverse_a.lower_bound(itb->first);
-  Cx::Map< int, Cx::Table<ujint> >::key_compare compfun = inverse_a.key_comp();
+  Table< uint > state_a( a.vbls.sz() );
+  Table< uint > state_b( b.vbls.sz() );
+  Map< int, Table<ujint> >::const_iterator itb = inverse_b.begin();
+  Map< int, Table<ujint> >::iterator ita = inverse_a.lower_bound(itb->first);
+  Map< int, Table<ujint> >::key_compare compfun = inverse_a.key_comp();
   while (ita != inverse_a.end() && itb != inverse_b.end()) {
     if (compfun(ita->first,itb->first)) {
       ita = inverse_a.lower_bound(itb->first);
@@ -432,8 +432,8 @@ IntPFmla::img_eq(const IntPFmla& b) const
       itb = inverse_b.lower_bound(ita->first);
     }
     else {
-      const Cx::Table<ujint>& idcs_a = ita->second;
-      const Cx::Table<ujint>& idcs_b = itb->second;
+      const Table<ujint>& idcs_a = ita->second;
+      const Table<ujint>& idcs_b = itb->second;
 
       PFmla disj_a( false );
       PFmla disj_b( false );
@@ -462,11 +462,11 @@ IntPFmla::img_eq(const IntPFmla& b) const
  * \param xn  Transition function.
  * \param pf  Initial states.
  */
-  Cx::PFmla
-UndirectedReachability(const Cx::PFmla& xn, const Cx::PFmla& pf)
+  P::Fmla
+UndirectedReachability(const X::Fmla& xn, const P::Fmla& pf)
 {
-  Cx::PFmla visit( pf );
-  Cx::PFmla layer( (xn.pre(pf) | xn.img(pf)) - visit );
+  P::Fmla visit( pf );
+  P::Fmla layer( (xn.pre(pf) | xn.img(pf)) - visit );
   while (layer.sat_ck()) {
     visit |= layer;
     layer = (xn.pre(layer) | xn.img(layer)) - visit;
@@ -474,11 +474,11 @@ UndirectedReachability(const Cx::PFmla& xn, const Cx::PFmla& pf)
   return visit;
 }
 
-  Cx::PFmla
-transitive_closure(const Cx::PFmla& xn)
+  P::Fmla
+transitive_closure(const X::Fmla& xn)
 {
-  Cx::PFmla reach( false );
-  Cx::PFmla next( xn );
+  P::Fmla reach( false );
+  P::Fmla next( xn );
   while (!reach.equiv_ck (next))
   {
     reach = next;
@@ -490,12 +490,13 @@ transitive_closure(const Cx::PFmla& xn)
 ////// Linear SCC detection
 static
   void
-Skel_Forward(const Cx::PFmla& V, const Cx::PFmla& E, const Cx::PFmla& NODE,
-             Cx::PFmla& FW, Cx::PFmla& S1, Cx::PFmla& NODE1)
+Skel_Forward(const P::Fmla& V, const X::Fmla& E, const P::Fmla& NODE,
+             P::Fmla& FW, P::Fmla& S1, P::Fmla& NODE1)
 {
   using Cx::PFmla;
+  using Cx::Table;
 
-  Cx::Table< PFmla > stack;
+  Table< PFmla > stack;
 
   PFmla level( NODE );
   FW = false;
@@ -522,9 +523,9 @@ Skel_Forward(const Cx::PFmla& V, const Cx::PFmla& E, const Cx::PFmla& NODE,
 
 static
   bool
-SCC_Find(Cx::PFmla* ret_cycles,
-         const Cx::PFmla& V, const Cx::PFmla& E,
-         const Cx::PFmla& S, const Cx::PFmla& NODE)
+SCC_Find(P::Fmla* ret_cycles,
+         const P::Fmla& V, const X::Fmla& E,
+         const P::Fmla& S, const P::Fmla& NODE)
 {
   const bool only_one_cycle = false;
   using Cx::PFmla;
@@ -608,13 +609,13 @@ SCC_Find(Cx::PFmla* ret_cycles,
  * \sa CycleCk()
  */
   bool
-SCC_Find(Cx::PFmla* ret_cycles, const Cx::PFmla& E, const Cx::PFmla& pf)
+SCC_Find(P::Fmla* ret_cycles, const X::Fmla& E, const P::Fmla& pf)
 {
-  Cx::PFmla tmp_E = E;
-  Cx::PFmla tmp_pf = pf;
+  X::Fmla tmp_E = E;
+  P::Fmla tmp_pf = pf;
   fill_ctx (tmp_E, tmp_pf);
-  Cx::PFmla tmp_S( false, tmp_E );
-  Cx::PFmla tmp_NODE( false, tmp_E );
+  P::Fmla tmp_S( false, tmp_E );
+  P::Fmla tmp_NODE( false, tmp_E );
   return SCC_Find(ret_cycles, tmp_pf, tmp_E, tmp_S, tmp_NODE);
 }
 

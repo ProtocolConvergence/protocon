@@ -8,6 +8,8 @@
 #include "xnsys.hh"
 #include <stdio.h>
 
+#include "namespace.hh"
+
 /** Create a unidirectional ring topology.**/
   void
 UnidirectionalRing(Xn::Net& topo, uint npcs, uint domsz,
@@ -44,7 +46,7 @@ UnidirectionalRing(Xn::Net& topo, uint npcs, uint domsz,
   else {
     // Create a new symmetry for each process.
     for (uint i = 0; i < npcs; ++i) {
-      Xn::PcSymm* pc_symm = topo.add_processes(Xn::String("P") + i, "i", 1);
+      Xn::PcSymm* pc_symm = topo.add_processes(String("P") + i, "i", 1);
 
       // Make this f(j) = i-1
       Xn::NatMap indices(1);
@@ -130,9 +132,9 @@ InstThreeColoringRing(Xn::Sys& sys, uint npcs)
 
   for (uint pcidx = 0; pcidx < npcs; ++pcidx) {
     const Xn::Pc& pc = topo.pcs[pcidx];
-    const Cx::PFmlaVbl m_p = topo.pfmla_vbl (*pc.rvbls[0]);
-    const Cx::PFmlaVbl m_r = topo.pfmla_vbl (*pc.rvbls[1]);
-    const Cx::PFmlaVbl m_s = topo.pfmla_vbl (*pc.rvbls[2]);
+    const PFmlaVbl m_p = topo.pfmla_vbl (*pc.rvbls[0]);
+    const PFmlaVbl m_r = topo.pfmla_vbl (*pc.rvbls[1]);
+    const PFmlaVbl m_s = topo.pfmla_vbl (*pc.rvbls[2]);
 
     sys.invariant &= (m_p != m_r) && (m_r != m_s);
   }
@@ -143,11 +145,11 @@ InstThreeColoringRing(Xn::Sys& sys, uint npcs)
  * Return the states for which only one process has a token.
  * \param tokenPFs  Formulas for each process having a token.
  */
-  Cx::PFmla
-SingleTokenPFmla(const vector<Cx::PFmla>& tokenPFs)
+  P::Fmla
+SingleTokenPFmla(const vector<P::Fmla>& tokenPFs)
 {
   const uint n = tokenPFs.size();
-  vector<Cx::PFmla> singleToken(n, Cx::PFmla(true));
+  vector<P::Fmla> singleToken(n, P::Fmla(true));
   for (uint i = 0; i < n; ++i) {
     for (uint j = 0; j < n; ++j) {
       if (j == i) {
@@ -163,7 +165,7 @@ SingleTokenPFmla(const vector<Cx::PFmla>& tokenPFs)
     }
   }
 
-  Cx::PFmla pf( false );
+  P::Fmla pf( false );
   for (uint i = 0; i < n; ++i) {
     pf |= singleToken[i];
   }
@@ -190,8 +192,8 @@ InstTwoColoringRing(Xn::Sys& sys, uint npcs)
 
   // For each process P[i],
   for (uint i = 0; i < npcs; ++i) {
-    const Cx::PFmlaVbl c_p = topo.pfmla_vbl(decmod(i, 1, npcs));
-    const Cx::PFmlaVbl c_r = topo.pfmla_vbl(i);
+    const PFmlaVbl c_p = topo.pfmla_vbl(decmod(i, 1, npcs));
+    const PFmlaVbl c_r = topo.pfmla_vbl(i);
     sys.invariant &= (c_p != c_r);
   }
 }
@@ -219,9 +221,9 @@ InstMatching(Xn::Sys& sys, uint npcs, bool symmetric)
 
   for (uint pcidx = 0; pcidx < npcs; ++pcidx) {
     const Xn::Pc& pc = topo.pcs[pcidx];
-    const Cx::PFmlaVbl x_p = topo.pfmla_vbl (*pc.rvbls[0]);
-    const Cx::PFmlaVbl x_r = topo.pfmla_vbl (*pc.rvbls[1]);
-    const Cx::PFmlaVbl x_s = topo.pfmla_vbl (*pc.rvbls[2]);
+    const PFmlaVbl x_p = topo.pfmla_vbl (*pc.rvbls[0]);
+    const PFmlaVbl x_r = topo.pfmla_vbl (*pc.rvbls[1]);
+    const PFmlaVbl x_s = topo.pfmla_vbl (*pc.rvbls[2]);
 
     // 0 = Self, 1 = Left, 2 = Right
     sys.invariant &=
@@ -248,8 +250,8 @@ InstSumNot(Xn::Sys& sys, uint npcs, uint domsz, uint target, const char* vbl_nam
 
   for (uint pcidx = 0; pcidx < npcs; ++pcidx) {
     const Xn::Pc& pc = topo.pcs[pcidx];
-    const Cx::PFmlaVbl x_p = topo.pfmla_vbl (*pc.rvbls[0]);
-    const Cx::PFmlaVbl x_r = topo.pfmla_vbl (*pc.rvbls[1]);
+    const PFmlaVbl x_p = topo.pfmla_vbl (*pc.rvbls[0]);
+    const PFmlaVbl x_r = topo.pfmla_vbl (*pc.rvbls[1]);
 
     sys.invariant &= (x_p + x_r != (int) target);
   }
@@ -277,11 +279,13 @@ InstAgreementRing(Xn::Sys& sys, uint npcs, const char* vbl_name)
 
   for (uint pcidx = 0; pcidx < npcs; ++pcidx) {
     const Xn::Pc& pc = topo.pcs[pcidx];
-    const Cx::PFmlaVbl x_p = topo.pfmla_vbl (*pc.rvbls[0]);
-    const Cx::PFmlaVbl x_r = topo.pfmla_vbl (*pc.rvbls[1]);
-    const Cx::PFmlaVbl x_s = topo.pfmla_vbl (*pc.rvbls[2]);
+    const PFmlaVbl x_p = topo.pfmla_vbl (*pc.rvbls[0]);
+    const PFmlaVbl x_r = topo.pfmla_vbl (*pc.rvbls[1]);
+    const PFmlaVbl x_s = topo.pfmla_vbl (*pc.rvbls[2]);
 
     sys.invariant &= (((x_r - x_p) % npcs) == ((x_s - x_r) % npcs));
   }
 }
+
+END_NAMESPACE
 
