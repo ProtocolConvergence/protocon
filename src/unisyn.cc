@@ -60,8 +60,6 @@ vector< array<PcState,3> > unidirectionalRingProtocolGenerator(vector< array<PcS
   bool gammaExists = false;
   size_t **L = NULL;
   size_t **Lprime = NULL;
-  size_t **G = NULL;
-  queue<size_t> treeProcess;
   vector< array<PcState,3> > actions;
 
   L = allocSquareMatrix(M);
@@ -85,6 +83,7 @@ vector< array<PcState,3> > unidirectionalRingProtocolGenerator(vector< array<PcS
 
   if(!gammaExists) return actions;
 
+  std::cerr << "gamma is " << gamma << std::endl;
 
   //determine the cycles in the graph to turn L into the representation
   //of Lprime
@@ -114,56 +113,41 @@ vector< array<PcState,3> > unidirectionalRingProtocolGenerator(vector< array<PcS
 #endif
 
   //Lprime is now calculated.
-  //Now, we're going to tweak Lprime so that the a rule for going to
-  //gamma is added.
 
-  for(size_t i = 0; i < M; i++){
-    bool isEmpty = true;
-    for(size_t j = 0; j < M; j++){
-      if(Lprime[i][j]) isEmpty = false;
-    }
-    if(isEmpty) Lprime[i][gamma] = 1;
+  vector<uint> tau(M);
+  for (uint i = 0; i < M; ++i) {
+    tau[i] = i;
   }
 
+  queue<uint> tree_q;
+  tree_q.push(gamma);
 
-  //Start initializing G
-  G = copySquareMatrix(Lprime, M);
-  //Seperate out values in the tree and those not in the tree
-
-  treeProcess.push(gamma);
-  memset(G[gamma], 0, M * sizeof(**G));
-  G[gamma][gamma] = 1;
-
-  //start pruning the graph to make it into a tree
-  while(!treeProcess.empty()){
-    for(size_t i = 0; i < M; i++){
-      if(G[i][treeProcess.front()] && i != treeProcess.front()){
-        memset(G[i], 0, M * sizeof(**G));
-        G[i][treeProcess.front()] = 1;
-        treeProcess.push(i);
+  while (!tree_q.empty()) {
+    uint j = tree_q.front();
+    tree_q.pop();
+    for (uint i = 0; i < M; ++i) {
+      if (i != gamma && tau[i] == i && Lprime[i][j]) {
+        tau[i] = j;
+        tree_q.push(i);
       }
     }
-    treeProcess.pop();
   }
 
-#ifdef DEBUG
-  printSquareMatrix(G, M);
-#endif
+  for (uint i = 0; i < M; ++i) {
+    if (tau[i] == i) {
+      tau[i] = gamma;
+    }
+  }
 
-  //Now we have the tree, but not the values x-1 contains that are valid
-  //for something to change.  The values are the inverse of the out
-  //edges of the respective vertex in Lprime.
+  // Now we have the tree tau.
 
-  for(uint i = 0; i < M; i++)
-    for(uint j = 0; j < M; j++)
-      if(G[i][j])
-        for(uint k = 0; k < M; k++)
-          if(!Lprime[i][k])
-            actions.push_back(array<PcState, 3>{i, k, j});
+  for (uint i = 0; i < M; i++)
+    for (uint k = 0; k < M; k++)
+      if (!Lprime[i][k] && tau[i] != k)
+        actions.push_back(array<PcState, 3>{i, k, tau[i]});
 
   freeSquareMatrix(L, M); L = NULL;
   freeSquareMatrix(Lprime, M); Lprime = NULL;
-  freeSquareMatrix(G, M); G = NULL;
 
   return actions;
 }
