@@ -76,9 +76,7 @@ vector< array<PcState,3> > unidirectionalRingProtocolGenerator(vector< array<PcS
     if(L[i][i]){
       gamma = i;
       gammaExists = true;
-      //break;
-      //Valid with and without this line.  This may save time on
-      //stupidly large rules.
+      break;
     }
 
   if(!gammaExists) return actions;
