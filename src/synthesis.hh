@@ -228,6 +228,9 @@ public:
 
   uint add_small_conflict_set(const Table<uint>& delpicks);
   bool check_forward(Set<uint>& adds, Set<uint>& dels, Set<uint>& rejs);
+private:
+  void useless_picks(Map<uint,uint>& changes, Set<uint>& allowed) const;
+public:
   bool revise_actions_alone(Set<uint>& adds, Set<uint>& dels, Set<uint>& rejs, uint* ret_nlayers = 0);
   bool revise_actions(const Set<uint>& adds, const Set<uint>& dels, uint* ret_nlayers = 0);
   bool pick_action(uint act_idx);

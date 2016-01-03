@@ -188,6 +188,12 @@ public:
   bool operator<(const Xn::ActSymm& b) const {
     return (this->vals < b.vals);
   }
+  bool operator==(const Xn::ActSymm& b) const {
+    return (this->vals == b.vals);
+  }
+  bool operator!=(const Xn::ActSymm& b) const {
+    return !(*this == b);
+  }
 };
 
 class PcSymm {

@@ -21,6 +21,8 @@ namespace Cx {
   template <class T, uint N> class Tuple;
   class URandom;
   class XFile;
+
+  template <class T> const Tuple<T,2> mk_Tuple(const T& e0, const T& e1);
 }
 
 namespace X {
@@ -58,4 +60,6 @@ namespace PROJECT_NAMESPACE {
     class Net;
     class Sys;
   }
+
+  using Cx::mk_Tuple;
 

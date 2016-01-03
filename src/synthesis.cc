@@ -2,7 +2,10 @@
 #include "synthesis.hh"
 
 #include "cx/fileb.hh"
+#include "cx/tuple.hh"
 #include "prot-ofile.hh"
+
+#include <algorithm>
 
 #include "namespace.hh"
 
@@ -900,6 +903,41 @@ reach_cycle_ck (const P::Fmla& reach, const X::Fmla& act_pf, const P::Fmla& stat
 }
 #endif
 
+  void
+PartialSynthesis::useless_picks(Map<uint,uint>& changes, Set<uint>& allowed) const
+{
+  const Xn::Sys& sys = *this->ctx->systems[this->sys_idx];
+  const Xn::Net& topo = sys.topology;
+  Set<uint> dels;
+  for (Set<uint>::const_iterator it = allowed.begin(); it != allowed.end(); ++it) {
+    uint actidx = *it;
+    if (!allowed.elem_ck(actidx))  continue;
+    Xn::ActSymm act;
+    topo.action(act, actidx);
+    const Xn::PcSymm& pc_symm = *act.pc_symm;
+    const X::Fmla& act_xn = topo.action_pfmla(actidx);
+    if (pc_symm.shadow_pfmla.sat_ck() && !act_xn.pre().overlap_ck(this->hi_invariant)) {
+      bool changed = false;
+      for (uint vidx = 0; vidx < pc_symm.wvbl_symms.sz(); ++vidx) {
+        const Xn::VblSymm& vbl_symm = *pc_symm.wvbl_symms[vidx];
+        if (!vbl_symm.pure_shadow_ck())
+          continue;
+        if (act.assign(vidx) != vbl_symm.domsz) {
+          changed = true;
+          act.vals[pc_symm.rvbl_symms.sz() + vidx] = vbl_symm.domsz;
+        }
+      }
+      if (changed) {
+        changes[actidx] = topo.action_index(act);
+      }
+      else {
+        dels << actidx;
+      }
+    }
+  }
+  allowed -= dels;
+}
+
 /** Infer and prune actions from candidate list.**/
   bool
 PartialSynthesis::check_forward(Set<uint>& adds, Set<uint>& dels, Set<uint>& rejs)
@@ -923,22 +961,43 @@ PartialSynthesis::check_forward(Set<uint>& adds, Set<uint>& dels, Set<uint>& rej
     uint actidx = this->candidates[i];
     if (dels.elem_ck(actidx))  continue;
 
+    bool keep = true;
+
+    Xn::ActSymm act;
+    topo.action(act, actidx);
+    const Xn::PcSymm& pc_symm = *act.pc_symm;
+
     const X::Fmla& act_xn = topo.action_pfmla(actidx);
 
-    if (act_xn.subseteq_ck(lo_xn_pre))
-    {
-      if (false) {
-        Xn::ActSymm act;
-        *this->log
-          << "DEL (lvl " << this->bt_level
-          << ") (sz " << this->actions.size()
-          << ") (rem " << this->candidates.size()
-          << ")  ";
-        topo.action(act, actidx);
-        OPut(*this->log, act) << this->log->endl();
+    if (keep && act_xn.subseteq_ck(lo_xn_pre)) {
+      keep = false;
+    }
+    if (keep && pc_symm.shadow_pfmla.sat_ck() &&
+        !sys.spec->active_shadow_ck() &&
+        !act_xn.pre().overlap_ck(this->hi_invariant)) {
+      // If the protocol is not silent, actions used only for convergence
+      // do not need to change shadow variables.
+      for (uint vidx = 0; vidx < pc_symm.wvbl_symms.sz(); ++vidx) {
+        const Xn::VblSymm& vbl_symm = *pc_symm.wvbl_symms[vidx];
+        if (!vbl_symm.pure_shadow_ck())
+          continue;
+        if (act.assign(vidx) != vbl_symm.domsz) {
+          keep = false;
+          break;
+        }
       }
+    }
+
+    if (!keep) {
       dels << actidx;
-      continue;
+    }
+    if (!keep && false) {
+      *this->log
+        << "DEL (lvl " << this->bt_level
+        << ") (sz " << this->actions.size()
+        << ") (rem " << this->candidates.size()
+        << ")  ";
+      OPut(*this->log, act) << this->log->endl();
     }
   }
 
@@ -1327,6 +1386,92 @@ PartialSynthesis::revise_actions(const Set<uint>& adds, const Set<uint>& dels,
       }
     }
   }
+
+  const Xn::Sys& sys = *this->ctx->systems[this->sys_idx];
+  const Xn::Net& topo = sys.topology;
+  Map<uint,uint> changes;
+  Set<uint> allowed_changes(this->picks);
+  if (true &&
+      !sys.spec->active_shadow_ck() &&
+      sys.shadow_puppet_synthesis_ck()) {
+    for (uint i = 0; i < this->sz(); ++i) {
+      (*this)[i].useless_picks(changes, allowed_changes);
+    }
+  }
+
+  if (changes.sz() > 0) {
+    this->ctx->conflicts.add_conflict(this->picks);
+    // Just use the first pick.
+    for (uint i = 0; true && i < this->picks.size(); ++i) {
+      Map<uint,uint>::const_iterator it = changes.find(this->picks[i]);
+      if (it == changes.end())
+        continue;
+      uint actidx = it->first;
+      uint newactidx = it->second;
+      changes.clear();
+      changes[actidx] = newactidx;
+    }
+
+    const Set<uint> old_actset( this->actions );
+    const Table<uint> old_picks = this->picks;
+
+    vector<uint> newpicks(this->picks.size());
+    for (uint i = 0; i < this->picks.size(); ++i) {
+      uint actidx = this->picks[i];
+      Map<uint,uint>::const_iterator it = changes.find(actidx);
+      if (it != changes.end()) {
+        actidx = it->second;
+      }
+      newpicks[i] = actidx;
+    }
+
+    Set<uint> newadds(newpicks);
+    for (uint i = 0; i < this->actions.size(); ++i) {
+      uint actidx = this->actions[i];
+      if (changes.find(actidx) == changes.end())
+        newadds << actidx;
+    }
+
+    OFile* tmp_log = this->log;
+    const vector<uint> old_actions = this->actions;
+    for (uint i = 0; i < this->sz(); ++i) {
+      PartialSynthesis& partial = (*this)[i];
+      const PartialSynthesis& base_partial = this->ctx->base_partial[i];
+
+      partial.picks = newpicks;
+
+      partial.actions = base_partial.actions;
+      partial.candidates = base_partial.candidates;
+      partial.deadlockPF = base_partial.deadlockPF;
+      partial.lo_xn = base_partial.lo_xn;
+      partial.hi_xn = base_partial.hi_xn;
+      partial.lo_xfmlae = base_partial.lo_xfmlae;
+      partial.hi_xfmlae = base_partial.hi_xfmlae;
+      partial.hi_invariant = base_partial.hi_invariant;
+      partial.log = &OFile::null();
+    }
+
+    bool consistent =
+      revise_actions(newadds, Set<uint>(), ret_nlayers_sum);
+
+    for (uint i = 0; i < this->sz(); ++i)
+      (*this)[i].log = tmp_log;
+
+    if (consistent) {
+      for (uint i = 0; i < this->picks.sz(); ++i) {
+        if (this->picks[i] != old_picks[i]) {
+          Xn::ActSymm act;
+          topo.action(act, this->picks[i]);
+          OPut(*this->log << "SWAPIN ", act) << this->log->endl();
+        }
+      }
+    }
+    else {
+      *this->log << "USELESS" << this->log->endl();
+    }
+    return consistent;
+  }
+
   for (uint i = 0; i < this->sz()-1; ++i) {
     Claim2( (*this)[i].actions.size() ,==, (*this)[i+1].actions.size() );
   }
