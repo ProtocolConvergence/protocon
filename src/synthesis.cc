@@ -1402,7 +1402,7 @@ PartialSynthesis::revise_actions(const Set<uint>& adds, const Set<uint>& dels,
   if (changes.sz() > 0) {
     this->ctx->conflicts.add_conflict(this->picks);
     // Just use the first pick.
-    for (uint i = 0; true && i < this->picks.size(); ++i) {
+    for (uint i = 0; i < this->picks.size(); ++i) {
       Map<uint,uint>::const_iterator it = changes.find(this->picks[i]);
       if (it == changes.end())
         continue;
@@ -1425,13 +1425,6 @@ PartialSynthesis::revise_actions(const Set<uint>& adds, const Set<uint>& dels,
       newpicks[i] = actidx;
     }
 
-    Set<uint> newadds(newpicks);
-    for (uint i = 0; i < this->actions.size(); ++i) {
-      uint actidx = this->actions[i];
-      if (changes.find(actidx) == changes.end())
-        newadds << actidx;
-    }
-
     OFile* tmp_log = this->log;
     const vector<uint> old_actions = this->actions;
     for (uint i = 0; i < this->sz(); ++i) {
@@ -1451,8 +1444,10 @@ PartialSynthesis::revise_actions(const Set<uint>& adds, const Set<uint>& dels,
       partial.log = &OFile::null();
     }
 
+    const Set<uint> newadds(newpicks);
+    const Set<uint> newdels;
     bool consistent =
-      revise_actions(newadds, Set<uint>(), ret_nlayers_sum);
+      revise_actions(newadds, newdels, ret_nlayers_sum);
 
     for (uint i = 0; i < this->sz(); ++i)
       (*this)[i].log = tmp_log;
