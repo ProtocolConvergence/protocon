@@ -896,23 +896,28 @@ find_livelock_actions(Table<uint>& ret_actions, const X::Fmla& xn,
   }
 
   if (!livelock_found) {
-    states.resize(2);
-    states[0] = scc;
-    states[1] = scc;
-  }
-
-  for (uint i = 0; i < states.sz()-1; ++i) {
     for (uint j = 0; j < actions.size(); ++j) {
       uint actidx = actions[j];
-      const X::Fmla& act_pfmla = topo.action_pfmla(actidx);
-      if (states[i].overlap_ck(act_pfmla) &&
-          states[i+1].as_img().overlap_ck(act_pfmla))
-      {
-        ret_actions.remove(actidx);
+      const X::Fmla& act_xn = topo.action_pfmla(actidx);
+      if (act_xn.img(scc).overlap_ck(scc)) {
         ret_actions.push(actidx);
       }
     }
+    return;
   }
+
+  Set<uint> livelock_set;
+  for (uint i = 0; i < states.sz()-1; ++i) {
+    for (uint j = 0; j < actions.size(); ++j) {
+      uint actidx = actions[j];
+      const X::Fmla& act_xn = topo.action_pfmla(actidx);
+      if (act_xn.img(states[i]).overlap_ck(states[i+1])) {
+        livelock_set << actidx;
+        continue;
+      }
+    }
+  }
+  livelock_set.fill(ret_actions);
 }
 
   void
