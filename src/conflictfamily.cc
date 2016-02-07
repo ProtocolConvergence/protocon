@@ -314,11 +314,11 @@ ConflictFamily::xget(XFile& xf)
   conflict_sets.clear();
   impossible_set.clear();
 
-  ujint n = 0;
+  zuint n = 0;
   xf >> n;
 
   Table<uint> conflict_set;
-  for (ujint i = 0; i < n; ++i)
+  for (zuint i = 0; i < n; ++i)
   {
     uint sz = 0;
     xf >> sz;

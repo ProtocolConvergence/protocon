@@ -253,7 +253,7 @@ static inline
   int
 intmap_coerce_lookup(const IntPFmla& a,
                      const IntPFmla& b,
-                     ujint idx_a,
+                     zuint idx_a,
                      const Table<uint>& vbl_map,
                      uint* state_a,
                      uint* state_b)
@@ -266,7 +266,7 @@ intmap_coerce_lookup(const IntPFmla& a,
   for (uint j = 0; j < b.doms.sz(); ++j) {
     state_b[j] = state_a[vbl_map[j]];
   }
-  ujint idx_b = index_of_state (state_b, b.doms);
+  zuint idx_b = index_of_state (state_b, b.doms);
 
   return b.state_map[idx_b];
 }
@@ -274,8 +274,8 @@ intmap_coerce_lookup(const IntPFmla& a,
   IntPFmla&
 IntPFmla::negate()
 {
-  ujint n = state_map.sz();
-  for (ujint i = 0; i < n; ++i) {
+  zuint n = state_map.sz();
+  for (zuint i = 0; i < n; ++i) {
     state_map[i] = - state_map[i];
   }
   return *this;
@@ -290,9 +290,9 @@ IntPFmla::defeq_binop(const IntPFmla& b, IntPFmla::BinIntOp op)
   intmap_init_op (vbl_map, a, b);
   Table< uint > state_a( a.vbls.sz() );
   Table< uint > state_b( b.vbls.sz() );
-  const ujint n = a.state_map.sz();
+  const zuint n = a.state_map.sz();
 
-#define foreach_a for (ujint idx_a = 0; idx_a < n; ++idx_a)
+#define foreach_a for (zuint idx_a = 0; idx_a < n; ++idx_a)
 #define val_a() a.state_map[idx_a]
 #define val_b() intmap_coerce_lookup(a, b, idx_a, vbl_map, &state_a[0], &state_b[0])
   switch (op)
@@ -382,10 +382,10 @@ IntPFmla::cmp(const IntPFmla& b, Bit c_lt, Bit c_eq, Bit c_gt) const
   intmap_init_op (vbl_map, a, b);
   Table< uint > state_a( a.vbls.sz() );
   Table< uint > state_b( b.vbls.sz() );
-  const ujint n = a.state_map.sz();
+  const zuint n = a.state_map.sz();
 
   PFmla disj( false );
-  for (ujint idx_a = 0; idx_a < n; ++idx_a) {
+  for (zuint idx_a = 0; idx_a < n; ++idx_a) {
     int x = intmap_coerce_lookup(a, b, idx_a, vbl_map, &state_a[0], &state_b[0]);
 
     if (false
@@ -408,12 +408,12 @@ IntPFmla::img_eq(const IntPFmla& b) const
     return (a == b);
   }
 
-  Map< int, Table<ujint> > inverse_a;
-  Map< int, Table<ujint> > inverse_b;
-  for (ujint idx_a = 0; idx_a < a.state_map.sz(); ++idx_a) {
+  Map< int, Table<luint> > inverse_a;
+  Map< int, Table<luint> > inverse_b;
+  for (zuint idx_a = 0; idx_a < a.state_map.sz(); ++idx_a) {
     inverse_a[a.state_map[idx_a]].push(idx_a);
   }
-  for (ujint idx_b = 0; idx_b < b.state_map.sz(); ++idx_b) {
+  for (zuint idx_b = 0; idx_b < b.state_map.sz(); ++idx_b) {
     inverse_b[b.state_map[idx_b]].push(idx_b);
   }
 
@@ -421,9 +421,9 @@ IntPFmla::img_eq(const IntPFmla& b) const
 
   Table< uint > state_a( a.vbls.sz() );
   Table< uint > state_b( b.vbls.sz() );
-  Map< int, Table<ujint> >::const_iterator itb = inverse_b.begin();
-  Map< int, Table<ujint> >::iterator ita = inverse_a.lower_bound(itb->first);
-  Map< int, Table<ujint> >::key_compare compfun = inverse_a.key_comp();
+  Map< int, Table<luint> >::const_iterator itb = inverse_b.begin();
+  Map< int, Table<luint> >::iterator ita = inverse_a.lower_bound(itb->first);
+  Map< int, Table<luint> >::key_compare compfun = inverse_a.key_comp();
   while (ita != inverse_a.end() && itb != inverse_b.end()) {
     if (compfun(ita->first,itb->first)) {
       ita = inverse_a.lower_bound(itb->first);
@@ -432,16 +432,16 @@ IntPFmla::img_eq(const IntPFmla& b) const
       itb = inverse_b.lower_bound(ita->first);
     }
     else {
-      const Table<ujint>& idcs_a = ita->second;
-      const Table<ujint>& idcs_b = itb->second;
+      const Table<luint>& idcs_a = ita->second;
+      const Table<luint>& idcs_b = itb->second;
 
       PFmla disj_a( false );
       PFmla disj_b( false );
-      for (ujint i = 0; i < idcs_a.sz(); ++i) {
+      for (zuint i = 0; i < idcs_a.sz(); ++i) {
         state_of_index (&state_a[0], idcs_a[i], a.doms);
         disj_a |= PFmla::of_img_state(&state_a[0], a.vbls, a.ctx);
       }
-      for (ujint i = 0; i < idcs_b.sz(); ++i) {
+      for (zuint i = 0; i < idcs_b.sz(); ++i) {
         state_of_index (&state_b[0], idcs_b[i], b.doms);
         disj_b |= PFmla::of_state(&state_b[0], b.vbls, b.ctx);
       }

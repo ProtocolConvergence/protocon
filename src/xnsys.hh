@@ -112,7 +112,7 @@ public:
   Vbl(VblSymm* symmetry, uint index)
     : symm(symmetry)
     , symm_idx(index)
-    , pfmla_idx(Max_uint)
+    , pfmla_idx(UINT_MAX)
     , random_flag(false)
   {}
 

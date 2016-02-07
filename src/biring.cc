@@ -54,14 +54,14 @@ struct FilterOpt
 
 Cx::OFile& operator<<(Cx::OFile& of, const BitTable& bt)
 {
-  for (ujint i = 0; i < bt.sz; ++i)
+  for (zuint i = 0; i < bt.sz; ++i)
     of << (ck_BitTable (bt, i) ? '1' : '0');
   return of;
 }
 
 Cx::OFile& operator<<(Cx::OFile& of, const Cx::BitTable& bt)
 {
-  for (ujint i = 0; i < bt.sz(); ++i)
+  for (zuint i = 0; i < bt.sz(); ++i)
     of << bt[i];
   return of;
 }
@@ -72,7 +72,7 @@ permute_pc_config (Cx::BitTable& bt, const BitTable set, const Cx::Table<uint>& 
   uint doms[3];
   doms[0] = doms[1] = doms[2] = perm_map.sz();
   bt.wipe(0);
-  for (ujint i = 0; i < set.sz; ++i) {
+  for (zuint i = 0; i < set.sz; ++i) {
     uint vals[3];
     if (ck_BitTable (set, i)) {
       state_of_index (vals, i, doms, 3);
@@ -279,7 +279,7 @@ better_biring_sat_ck (const BitTable set, const uint domsz, const uint N_0)
   Cx::BitTable reach_img( set.sz, 0 );
   Cx::Table<uint> conts;
 
-  for (ujint config_enum_idx = begidx_BitTable (set);
+  for (zuint config_enum_idx = begidx_BitTable (set);
        config_enum_idx < set.sz;
        config_enum_idx = nextidx_BitTable (set, config_enum_idx))
   {
@@ -294,15 +294,15 @@ better_biring_sat_ck (const BitTable set, const uint domsz, const uint N_0)
 
     for (uint step_idx = 0; step_idx < N_0 + nconsec; ++step_idx)
     {
-      /* DBog_ujint( step_idx ); */
+      /* DBog_luint( step_idx ); */
       reach_pre = reach_img;
       reach_img.wipe(0);
-      for (ujint idx = reach_pre.begidx(); idx < reach_pre.sz(); idx = reach_pre.nextidx(idx))
+      for (zuint idx = reach_pre.begidx(); idx < reach_pre.sz(); idx = reach_pre.nextidx(idx))
       {
-        /* DBog_ujint( idx ); */
+        /* DBog_luint( idx ); */
         biring_continuations(conts, idx, set, domsz);
         for (uint i = 0; i < conts.sz(); ++i) {
-          /* DBog_ujint( conts[i] ); */
+          /* DBog_luint( conts[i] ); */
           reach_img[conts[i]] = 1;
         }
       }
@@ -332,7 +332,7 @@ static void
 img(Cx::BitTable& img_pf, const BitTable xn, const Cx::BitTable& pre_pf, uint domsz)
 {
   img_pf.wipe(0);
-  for (ujint enum_idx = pre_pf.begidx();
+  for (zuint enum_idx = pre_pf.begidx();
        enum_idx < pre_pf.sz();
        enum_idx = pre_pf.nextidx(enum_idx))
   {
@@ -363,7 +363,7 @@ true_biring_sat_ck (const BitTable xn, const uint domsz, uint* nsteps)
   Cx::BitTable img_pf( xn.sz, 0 );
 
   Cx::Set<Cx::BitTable> visited;
-  for (ujint enum_idx = begidx_BitTable (xn);
+  for (zuint enum_idx = begidx_BitTable (xn);
        enum_idx < xn.sz;
        enum_idx = nextidx_BitTable (xn, enum_idx))
   {
@@ -408,7 +408,7 @@ biring_sat_ck (const BitTable set, const uint domsz, const uint N_0)
   Cx::BitTable img_pf( set.sz, 0 );
   Cx::BitTable sats( N+1, 0 );
 
-  for (ujint config_enum_idx = begidx_BitTable (set);
+  for (zuint config_enum_idx = begidx_BitTable (set);
        config_enum_idx < set.sz;
        config_enum_idx = nextidx_BitTable (set, config_enum_idx))
   {
@@ -479,7 +479,7 @@ local_propagation_syn(const BitTable set, const uint domsz)
 canonical_set(Cx::BitTable& min_bt, const BitTable set, const uint domsz)
 {
   Cx::Table<uint> perm_doms(domsz-1);
-  ujint nperms = 1;
+  luint nperms = 1;
   for (uint i = 0; i < perm_doms.sz(); ++i) {
     perm_doms[i] = domsz - i;
     nperms *= perm_doms[i];
@@ -489,7 +489,7 @@ canonical_set(Cx::BitTable& min_bt, const BitTable set, const uint domsz)
   min_bt = set;
   Cx::BitTable bt(set);
 
-  for (ujint perm_idx = 0; perm_idx < nperms; ++perm_idx) {
+  for (luint perm_idx = 0; perm_idx < nperms; ++perm_idx) {
     state_of_index (&perm_vals[0], perm_idx, perm_doms);
     for (uint i = 0; i < domsz; ++i) {
       perm_map[i] = i;
@@ -510,7 +510,7 @@ subgraph_isomorphism_ck(const BitTable sub_a, const Cx::BitTable& b, uint domsz)
 {
   Cx::BitTable a( sub_a );
   Cx::Table<uint> perm_doms(domsz-1);
-  ujint nperms = 1;
+  luint nperms = 1;
   for (uint i = 0; i < perm_doms.sz(); ++i) {
     perm_doms[i] = domsz - i;
     nperms *= perm_doms[i];
@@ -518,7 +518,7 @@ subgraph_isomorphism_ck(const BitTable sub_a, const Cx::BitTable& b, uint domsz)
   Cx::Table<uint> perm_vals(domsz-1);
   Cx::Table<uint> perm_map(domsz);
 
-  for (ujint perm_idx = 0; perm_idx < nperms; ++perm_idx) {
+  for (luint perm_idx = 0; perm_idx < nperms; ++perm_idx) {
     state_of_index (&perm_vals[0], perm_idx, perm_doms);
     for (uint i = 0; i < domsz; ++i) {
       perm_map[i] = i;
@@ -544,7 +544,7 @@ oput_biring_invariant (Cx::OFile& ofile, const Cx::BitTable& legit, const uint d
     delim = pfx;
 
   Cx::Set< Cx::Tuple<uint, 2> > cache;
-  for (ujint config_enum_idx = legit.begidx();
+  for (zuint config_enum_idx = legit.begidx();
        config_enum_idx < legit.sz();
        config_enum_idx = legit.nextidx(config_enum_idx))
   {
@@ -765,7 +765,7 @@ oput_graphviz(Cx::OFile& ofile, const BitTable set, uint domsz, bool pair)
     return;
   }
 
-  for (ujint config_enum_idx = begidx_BitTable (set);
+  for (zuint config_enum_idx = begidx_BitTable (set);
        config_enum_idx < set.sz;
        config_enum_idx = nextidx_BitTable (set, config_enum_idx))
   {
@@ -986,7 +986,7 @@ echo_subsets (const BitTable bt, const FilterOpt& opt, Cx::OFile& ofile)
   Cx::Set<Cx::BitTable> db;
   BitTable set = cons1_BitTable (bt.sz);
 
-  for (ujint idx = begidx_BitTable (bt);
+  for (zuint idx = begidx_BitTable (bt);
        idx < bt.sz;
        idx = nextidx_BitTable (bt, idx))
   {

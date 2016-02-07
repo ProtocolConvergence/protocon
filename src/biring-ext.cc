@@ -232,7 +232,7 @@ construct(LocalLegit& legit, const BitTable set)
   const uint domsz = domsz_of(legit);
   Claim2( domsz*domsz*domsz ,==, set.sz );
 
-  for (ujint config_enum_idx = begidx_BitTable (set);
+  for (zuint config_enum_idx = begidx_BitTable (set);
        config_enum_idx < set.sz;
        config_enum_idx = nextidx_BitTable (set, config_enum_idx))
   {
@@ -407,7 +407,7 @@ flat_canonical_hack (FlatDigraph& flat, const Cx::BitTable min_bt)
 {
   Cx::Table< Cx::Table<uint> > list1;
   Cx::Table<uint>& list = list1.grow1();
-  for (ujint i = 0; i < min_bt.sz(); ++i) {
+  for (zuint i = 0; i < min_bt.sz(); ++i) {
     if (min_bt[i]) {
       list.push(i);
     }

@@ -535,9 +535,9 @@ protocon_options_rec
     else if (eq_cstr (arg, "-peak-MB")) {
       // This limits virtual memory, which could be
       // twice the amount that is actually used (i.e., resident)!
-      ujint megabytes = 0;
+      luint megabytes = 0;
       struct rlimit rlim;
-      if (!xget_ujint_cstr (&megabytes, argv[argi++])) {
+      if (!xget_luint_cstr (&megabytes, argv[argi++])) {
         failout_sysCx("Argument Usage: -peak-MB NUMBER");
       }
       rlim.rlim_max = megabytes * 1000 * 1000;

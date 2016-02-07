@@ -186,7 +186,7 @@ oput_promela (OFile* of, const XnSys* sys, const TableT(XnRule) rules)
 
     oputl( "end:" );
     oputl( "if" );
-    for (ujint i = 0; i < sys->legit.sz; ++i)
+    for (zuint i = 0; i < sys->legit.sz; ++i)
     {
         if (!test_BitTable (sys->legit, i))
         {

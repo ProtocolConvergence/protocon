@@ -243,13 +243,13 @@ AddStabilization(Xn::Sys& sys, const AddConvergenceOpt& opt)
   void
 check_conflict_sets(const LgTable< Set<uint> >& conflict_sets)
 {
-  for (ujint i = conflict_sets.begidx();
-       i != Max_ujint;
+  for (zuint i = conflict_sets.begidx();
+       i != SIZE_MAX;
        i = conflict_sets.nextidx(i))
   {
     const Set<uint>& a = conflict_sets[i];
-    for (ujint j = conflict_sets.nextidx(i);
-         j != Max_ujint;
+    for (zuint j = conflict_sets.nextidx(i);
+         j != SIZE_MAX;
          j = conflict_sets.nextidx(j))
     {
       const Set<uint>& b = conflict_sets[j];

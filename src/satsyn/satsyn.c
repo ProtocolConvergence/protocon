@@ -114,7 +114,7 @@ struct CnfDisj {
  **/
 struct CnfFmla {
     uint nvbls;
-    TableT(ujint) idcs;  /**< Clause indices.**/
+    TableT(zuint) idcs;  /**< Clause indices.**/
     TableT(uint) vbls;  /**< Clause variables.**/
     BitTable vals;  /**< Clause values, negative (0) or positive (1).**/
 };
@@ -169,7 +169,7 @@ lose_CnfFmla (CnfFmla* fmla)
     void
 app_CnfFmla (CnfFmla* fmla, const CnfDisj* clause)
 {
-    const ujint off = fmla->vbls.sz;
+    const zuint off = fmla->vbls.sz;
     Claim2( fmla->vbls.sz ,==, fmla->vals.sz );
     PushTable( fmla->idcs, off );
     GrowTable( fmla->vbls, clause->lits.sz );
@@ -183,9 +183,9 @@ app_CnfFmla (CnfFmla* fmla, const CnfDisj* clause)
 }
 
     void
-clause_of_CnfFmla (CnfDisj* clause, const CnfFmla* fmla, ujint i)
+clause_of_CnfFmla (CnfDisj* clause, const CnfFmla* fmla, zuint i)
 {
-    const ujint bel = (i+1 < fmla->idcs.sz
+    const zuint bel = (i+1 < fmla->idcs.sz
                        ? fmla->idcs.s[i+1]
                        : fmla->vbls.sz);
     clause->lits.sz = 0;
@@ -199,7 +199,7 @@ qual_inline
     void
 oput_BitTable (OFile* f, const BitTable bt)
 {
-    for (ujint i = 0; i < bt.sz; ++i)
+    for (zuint i = 0; i < bt.sz; ++i)
         oput_char_OFile (f, test_BitTable (bt, i) ? '1' : '0');
 }
 
@@ -226,7 +226,7 @@ dec1mod (uint i, uint n)
 cons1_FMem_do_XnSys (const XnSys* sys)
 {
     FMem_do_XnSys tape;
-    const ujint n = sys->vbls.sz;
+    const zuint n = sys->vbls.sz;
 
     tape.sys = sys;
     tape.vals = AllocT( XnDomSz, n);
@@ -349,7 +349,7 @@ static
 detect_livelock (FMem_detect_livelock* tape,
                  const TableT(Xns) xns)
 {
-    ujint testidx = 0;
+    zuint testidx = 0;
     BitTable cycle = tape->cycle;
     BitTable tested = tape->tested;
     TableT(XnSz2) testing = tape->testing;
@@ -391,7 +391,7 @@ detect_livelock (FMem_detect_livelock* tape,
 
         while (j < xns.s[i].sz)
         {
-            ujint k = xns.s[i].s[j];
+            zuint k = xns.s[i].s[j];
 
             ++j;
 
@@ -533,8 +533,8 @@ detect_strong_convergence (FMem_synsearch* tape)
     void
 back1_Xn (TableT(Xns)* xns, TableT(XnSz)* stk)
 {
-    ujint n = *TopTable(*stk);
-    ujint off = stk->sz - (n + 1);
+    zuint n = *TopTable(*stk);
+    zuint off = stk->sz - (n + 1);
 
     {:for (i ; n)
         xns->s[stk->s[off + i]].sz -= 1;
@@ -980,7 +980,7 @@ synsearch_trim (FMem_synsearch* tape)
             Trit stabilizing;
             XnSz rule_step = may_rules->s[i];
             bool tolegit = false;
-            ujint nresolved = 0;
+            zuint nresolved = 0;
 
             rule_XnSys (g, sys, rule_step);
             add_XnRule (tape, g);
@@ -1403,7 +1403,7 @@ cmp_XnSz2 (const XnSz2* a, const XnSz2* b)
     void
 synsearch_sat (FMem_synsearch* tape)
 {
-    DeclTableT( XnInfo, struct { ujint idx; CnfDisj impl; } );
+    DeclTableT( XnInfo, struct { zuint idx; CnfDisj impl; } );
     DeclTableT( State, struct { TableT(XnSz) tx; TableT(XnSz) to; } );
 
     Associa lstate_map[1];
@@ -1420,9 +1420,9 @@ synsearch_sat (FMem_synsearch* tape)
     TableT(XnSz)* may_rules;
     Assoc* assoc;
 
-    InitAssocia( XnSz, TableT(ujint), *lstate_map, cmp_XnSz );
-    InitAssocia( XnSz2, ujint, *xnmap, cmp_XnSz2 );
-    InitAssocia( XnSz2, ujint, *pathmap, cmp_XnSz2 );
+    InitAssocia( XnSz, TableT(zuint), *lstate_map, cmp_XnSz );
+    InitAssocia( XnSz2, zuint, *xnmap, cmp_XnSz2 );
+    InitAssocia( XnSz2, zuint, *pathmap, cmp_XnSz2 );
 
     g = grow1_rules_synsearch (tape);
     may_rules = grow1_may_rules_synsearch (tape);
@@ -1487,7 +1487,7 @@ synsearch_sat (FMem_synsearch* tape)
             assoc = ensure1_Associa (xnmap, &t, &added);
             if (added)
             {
-                ujint idx = xns.sz;
+                zuint idx = xns.sz;
                 val_fo_Assoc (xnmap, assoc, &idx);
                 xn = Grow1Table( xns );
                 xn->idx = fmla->nvbls ++;
@@ -1498,7 +1498,7 @@ synsearch_sat (FMem_synsearch* tape)
             }
             else
             {
-                ujint idx = *(ujint*) val_of_Assoc (xnmap, assoc);
+                zuint idx = *(zuint*) val_of_Assoc (xnmap, assoc);
                 xn = &xns.s[idx];
             }
             app_CnfDisj (&xn->impl, true, i);
@@ -1518,7 +1518,7 @@ synsearch_sat (FMem_synsearch* tape)
             XnSz step = step_XnRule (g, sys);
             bool added = false;
             Assoc* assoc = ensure1_Associa (lstate_map, &step, &added);
-            TableT(ujint)* rules = (TableT(ujint)*) val_of_Assoc (lstate_map, assoc);
+            TableT(zuint)* rules = (TableT(zuint)*) val_of_Assoc (lstate_map, assoc);
             if (added)  InitTable( *rules );
             PushTable( *rules, i );
         }
@@ -1534,7 +1534,7 @@ synsearch_sat (FMem_synsearch* tape)
          assoc;
          assoc = next_Assoc (assoc))
     {
-        TableT(ujint)* rules = val_of_Assoc (lstate_map, assoc);
+        TableT(zuint)* rules = val_of_Assoc (lstate_map, assoc);
         {:for (i ; rules->sz)
             {:for (j ; i)
                 clause->lits.sz = 0;
@@ -1560,12 +1560,12 @@ synsearch_sat (FMem_synsearch* tape)
             {:for (j ; state->to.sz)
                 XnSz2 t;
                 Assoc* assoc;
-                ujint idx;
+                zuint idx;
                 t.i = i;
                 t.j = state->to.s[j];
                 assoc = lookup_Associa (xnmap, &t);
                 Claim( assoc );
-                idx = xns.s[*(ujint*) val_of_Assoc (xnmap, assoc)].idx;
+                idx = xns.s[*(zuint*) val_of_Assoc (xnmap, assoc)].idx;
                 app_CnfDisj (clause, true, idx);
             }
 
@@ -1576,7 +1576,7 @@ synsearch_sat (FMem_synsearch* tape)
             if (states.s[i].to.sz > 0 && states.s[j].tx.sz > 0)
             {
                 XnSz2 xn;
-                ujint idx = fmla->nvbls ++;
+                zuint idx = fmla->nvbls ++;
                 xn.i = i;
                 xn.j = j;
                 insert_Associa (pathmap, &xn, &idx);
@@ -1598,38 +1598,38 @@ synsearch_sat (FMem_synsearch* tape)
       CnfDisj path_clause[] = default;
 
         XnSz2 p = *(XnSz2*) key_of_Assoc (pathmap, assoc);
-        ujint p_ij = *(ujint*) val_of_Assoc (pathmap, assoc);
+        zuint p_ij = *(zuint*) val_of_Assoc (pathmap, assoc);
         TableElT(State) state = states.s[p.j];
 
         app_CnfDisj (path_clause, false, p_ij);
 
         {:for (k_idx ; state.tx.sz)
             Assoc* assoc;
-            ujint k = state.tx.s[k_idx];
-            ujint q_ikj;
+            zuint k = state.tx.s[k_idx];
+            zuint q_ikj;
             if (k == p.i)
             {
                 /* In this case, just let q_{ikj} = t_{ij}.*/
                 assoc = lookup_Associa (xnmap, &p);
                 Claim( assoc );
-                q_ikj = xns.s[*(ujint*) val_of_Assoc (xnmap, assoc)].idx;
+                q_ikj = xns.s[*(zuint*) val_of_Assoc (xnmap, assoc)].idx;
             }
             else
             {
                 XnSz2 xn;
-                ujint p_ik, t_kj;
+                zuint p_ik, t_kj;
 
                 xn.i = p.i;
                 xn.j = k;
                 assoc = lookup_Associa (pathmap, &xn);
                 if (!assoc)  continue;
-                p_ik = *(ujint*) val_of_Assoc (pathmap, assoc);
+                p_ik = *(zuint*) val_of_Assoc (pathmap, assoc);
 
                 xn.i = k;
                 xn.j = p.j;
                 assoc = lookup_Associa (xnmap, &xn);
                 Claim( assoc );
-                t_kj = xns.s[*(ujint*) val_of_Assoc (xnmap, assoc)].idx;
+                t_kj = xns.s[*(zuint*) val_of_Assoc (xnmap, assoc)].idx;
 
                 q_ikj = fmla->nvbls ++;
                 /* We wish for (q_{ikj} == p_{ik} && t_{kj}).*/

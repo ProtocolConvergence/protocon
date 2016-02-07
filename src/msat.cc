@@ -157,7 +157,7 @@ int main(int argc, char** argv)
     clause.clear();
     if (info.livelock_exists) {
       DBog0("livelock!");
-      DBog_ujint(ntries);
+      DBog_luint(ntries);
       //for (uint i = 0; i < actions.size(); ++i) {
       //  clause.push(mkLit(actions[i], MFALSE));
       //}
@@ -179,10 +179,10 @@ int main(int argc, char** argv)
     }
     solv.addClause(clause);
     ++ntries;
-    //DBog_ujint(ntries);
+    //DBog_luint(ntries);
     if (!solv.okay()) {
       DBog0("not okay");
-      DBog_ujint(ntries);
+      DBog_luint(ntries);
       break;
     }
   }

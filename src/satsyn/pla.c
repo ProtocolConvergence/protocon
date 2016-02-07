@@ -9,10 +9,10 @@ oput_pla_XnEVbl (OFile* of, const XnEVbl* x)
 }
 
     void
-oput_pla_state_XnSys (OFile* of, const XnSys* sys, const ujint sidx)
+oput_pla_state_XnSys (OFile* of, const XnSys* sys, const luint sidx)
 {
     const Bit legit = test_BitTable (sys->legit, sidx);
-    ujint idx = sidx;
+    luint idx = sidx;
     {:for (i ; sys->vbls.sz)
         XnEVbl x;
         x.vbl = &sys->vbls.s[i];

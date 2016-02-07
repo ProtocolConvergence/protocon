@@ -213,7 +213,7 @@ ReadUniRing(const char* filepath, Xn::Sys& sys, vector< array<PcState,2> >& legi
   if (sys.direct_pfmla.sat_ck())
     BailOut(0, "Should not have actions.");
   if (topo.pc_symms.sz() != 1) {
-    DBog_ujint(topo.pc_symms.sz());
+    DBog_luint(topo.pc_symms.sz());
     BailOut(0, "Should have only one kind of process.");
   }
   if (topo.pcs.sz() < 2)

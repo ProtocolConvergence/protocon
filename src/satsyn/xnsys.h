@@ -7,7 +7,7 @@
 
 #define NMaxXnPcVbls 10
 
-//typedef ujint XnSz;
+//typedef luint XnSz;
 typedef uint XnSz;
 typedef byte XnDomSz;
 typedef struct XnSz2 XnSz2;

@@ -18,8 +18,8 @@ free_PFmlaCtx (PFmlaCtx* ctx)
   if (ctx->vt->ctx_lose_fn)
     mem = ctx->vt->ctx_lose_fn (ctx);
 
-  for (ujint i = begidx_LgTable (&ctx->vbls);
-       i != Max_ujint;
+  for (zuint i = begidx_LgTable (&ctx->vbls);
+       i != SIZE_MAX;
        i = nextidx_LgTable (&ctx->vbls, i))
   {
     PFmlaVbl* x = vbl_of_PFmlaCtx (ctx, i);
