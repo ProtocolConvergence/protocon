@@ -844,8 +844,12 @@ PartialSynthesis::add_small_conflict_set(const Table<uint>& delpicks)
   }
   if (!doit)  return 0;
   ConflictFamily& conflicts = this->ctx->conflicts;
-  if (conflicts.conflict_ck(FlatSet<uint>(delpicks))) {
-    if (!conflicts.exact_conflict_ck(FlatSet<uint>(delpicks))) {
+  if (this->ctx->opt.max_conflict_sz > 0 &&
+      delpicks.sz() > this->ctx->opt.max_conflict_sz) {
+    return delpicks.sz();
+  }
+  if (conflicts.conflict_ck(Cx::FlatSet<uint>(delpicks))) {
+    if (!conflicts.exact_conflict_ck(Cx::FlatSet<uint>(delpicks))) {
       *this->log << "Conflict subsumed by existing one." << this->log->endl();
       return delpicks.sz();
     }
@@ -1095,22 +1099,25 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
       if (tmp_dels.overlap_ck(adds)) {
         tmp_dels -= adds;
       }
-      if (false) {
+      if (false && tmp_dels.size() > 0) {
         *this->log << "QuickTrim() rejects an action!!!" << this->log->endl();
-        Xn::ActSymm act;
-        topo.action(act, actId);
-        *this->log
-          << " (sys " << this->sys_idx
-          << ") (lvl " << this->bt_level
-          << ") (sz " << this->actions.size()
-          << ") (rem " << this->candidates.size()
-          << ")  ";
-        OPut(*this->log, act) << this->log->endl();
-        FlatSet<uint> tmp_adds_dels( adds & tmp_dels );
-        for (uint i = 0; i < tmp_adds_dels.sz(); ++i) {
-          *this->log << "Reject:" << this->log->endl();
-          topo.action(act, tmp_adds_dels[i]);
+        Set<uint>::const_iterator del_it;
+        for (del_it = tmp_dels.begin(); del_it != tmp_dels.end(); ++del_it) {
+          Xn::ActSymm act;
+          topo.action(act, actId);
+          *this->log
+            << " (sys " << this->sys_idx
+            << ") (lvl " << this->bt_level
+            << ") (sz " << this->actions.size()
+            << ") (rem " << this->candidates.size()
+            << ")  ";
           OPut(*this->log, act) << this->log->endl();
+          FlatSet<uint> tmp_adds_dels( adds & tmp_dels );
+          for (uint i = 0; i < tmp_adds_dels.sz(); ++i) {
+            *this->log << "Reject:" << this->log->endl();
+            topo.action(act, tmp_adds_dels[i]);
+            OPut(*this->log, act) << this->log->endl();
+          }
         }
       }
       dels |= tmp_dels;

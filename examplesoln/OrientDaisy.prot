@@ -28,7 +28,7 @@ process End[id <- Nat % (2*Chain)]
     (w[ij]!=w[ji] && b[i]==1 && b[j]==1);
 
   puppet action:
-    ( true -=> b[i]:=1; w[ij]:=w[ji]+b[j]; )
+    ( true -=> b[i]:=1; w[ij]:=w[ji]-b[j]; )
     ;
 }
 
