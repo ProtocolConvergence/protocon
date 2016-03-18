@@ -195,21 +195,21 @@
             <item row="2" column="0">
              <widget class="QLabel" name="invariantLabel">
               <property name="text">
-               <string>invariant</string>
+               <string>legitimate</string>
               </property>
              </widget>
             </item>
             <item row="3" column="0">
              <widget class="QLabel" name="silentLabel">
               <property name="text">
-               <string>silent (deadlocks)</string>
+               <string>silent (deadlock)</string>
               </property>
              </widget>
             </item>
             <item row="4" column="0">
              <widget class="QLabel" name="cycleLabel">
               <property name="text">
-               <string>cycle (livelocks)</string>
+               <string>cycle (livelock)</string>
               </property>
              </widget>
             </item>
