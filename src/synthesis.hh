@@ -75,7 +75,7 @@ public:
   bool force_disabling;
   bool pure_actions;
   bool prep_conflicts;
-  bool force_rank_deadlocks;
+  bool fast_deadlock_mrv;
   uint max_depth;
   uint max_height;
   uint sys_pcidx;
@@ -105,7 +105,7 @@ public:
     , force_disabling( false )
     , pure_actions( false )
     , prep_conflicts( false )
-    , force_rank_deadlocks( false )
+    , fast_deadlock_mrv( false )
     , max_depth( 0 )
     , max_height( 3 )
     , sys_pcidx( 0 )
@@ -190,8 +190,6 @@ public:
 
   bool candidates_ck() const {
     for (uint i = 0; i < this->sz(); ++i) {
-      if ((*this)[i].no_partial)
-        continue;
       if (!(*this)[i].candidates.empty())
         return true;
     }
@@ -218,8 +216,6 @@ public:
 
   bool deadlocks_ck() const {
     for (uint i = 0; i < this->sz(); ++i) {
-      if ((*this)[i].no_partial)
-        continue;
       if ((*this)[i].deadlockPF.sat_ck())
         return true;
     }

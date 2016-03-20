@@ -218,7 +218,7 @@ ReviseDeadlocksMRV(vector<DeadlockConstraint>& dlsets,
       for (it = diffCandidates1.begin(); it != diffCandidates1.end(); ++it) {
         const uint actId = *it;
         const P::Fmla& candidateGuardPF = topo.action_pfmla(actId).pre();
-        Claim( minidx > 0 && "BUG! Try again with -force-rank-deadlocks flag." );
+        Claim( minidx > 0 && "BUG! Don't use -fast-deadlock-mrv flag." );
         for (uint j = minidx; j < diffDeadlockSets.size(); ++j) {
           const P::Fmla& diffPF =
             (candidateGuardPF & diffDeadlockSets[j].deadlockPF);
@@ -296,16 +296,16 @@ PickActionMRV(uint& ret_actidx,
   // Do minimal remaining values heuristic (MRV).
   // That is, find an action which resolves a deadlock which
   // can only be resolved by some small number of actions.
-  uint mcv_dlset_idx = 0;
+  uint mrv_dlset_idx = 0;
   for (uint inst_idx = 0; inst_idx < partial.sz(); ++inst_idx) {
     if (partial[inst_idx].no_partial)  continue;
     const PartialSynthesis& inst = partial[inst_idx];
     for (uint i = 0; i < inst.mcv_deadlocks.size(); ++i) {
-      if (mcv_dlset_idx > 0 && i >= mcv_dlset_idx)
+      if (mrv_dlset_idx > 0 && i >= mrv_dlset_idx)
         break;
       const Set<uint>& inst_candidates = inst.mcv_deadlocks[i].candidates;
       if (!inst_candidates.empty())
-        mcv_dlset_idx = i;
+        mrv_dlset_idx = i;
     }
   }
   Set<uint> candidates;
@@ -314,15 +314,15 @@ PickActionMRV(uint& ret_actidx,
     if (partial[inst_idx].no_partial)
       continue;
     const PartialSynthesis& inst = partial[inst_idx];
-    if (mcv_dlset_idx >= inst.mcv_deadlocks.size())
+    if (mrv_dlset_idx >= inst.mcv_deadlocks.size())
       continue;
-    Claim2( mcv_dlset_idx ,<, inst.mcv_deadlocks.size() );
-    const Set<uint>& inst_candidates = inst.mcv_deadlocks[mcv_dlset_idx].candidates;
+    Claim2( mrv_dlset_idx ,<, inst.mcv_deadlocks.size() );
+    const Set<uint>& inst_candidates = inst.mcv_deadlocks[mrv_dlset_idx].candidates;
     if (inst_candidates.empty())
       continue;
 
     Set<uint> tmp_candidates;
-    pick_action_candidates(tmp_candidates, inst, opt, mcv_dlset_idx);
+    pick_action_candidates(tmp_candidates, inst, opt, mrv_dlset_idx);
     if (tmp_candidates.sz() == 0)
       return false;
 
@@ -379,8 +379,10 @@ PickActionMRV(uint& ret_actidx,
   *inst.log
     << " (lvl " << inst.bt_level
     << ") (psys " << inst.sys_idx
-    << ") (mrv " << mcv_dlset_idx
-    << ") (mrv-sz " << inst.mcv_deadlocks[mcv_dlset_idx].candidates.sz()
+    << ") (mrv " << mrv_dlset_idx
+    << ") (mrv-sz "
+    << (mrv_dlset_idx == 0 ? 0 :
+        inst.mcv_deadlocks[mrv_dlset_idx].candidates.sz())
     << ") (rem-sz " << candidates.sz()
     << ")" << inst.log->endl();
 
@@ -946,6 +948,7 @@ PartialSynthesis::useless_picks(Map<uint,uint>& changes, Set<uint>& allowed) con
   bool
 PartialSynthesis::check_forward(Set<uint>& adds, Set<uint>& dels, Set<uint>& rejs)
 {
+  Claim(!this->no_partial);
   const Xn::Sys& sys = *this->ctx->systems[this->sys_idx];
   const Xn::Net& topo = sys.topology;
 
@@ -1055,20 +1058,31 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
   }
 
   if (this->no_partial) {
+    X::Fmlae add_act_xfmlae( &topo.xfmlae_ctx );
+
     for (it = adds.begin(); it != adds.end(); ++it) {
-      Remove1(this->actions, *it);
-      Remove1(this->candidates, *it);
-      this->actions.push_back(*it);
+      uint actidx = *it;
+      Remove1(this->actions, actidx);
+      Remove1(this->candidates, actidx);
+      this->actions.push_back(actidx);
+      add_act_xfmlae |= topo.action_xfmlae(actidx);
     }
     for (it = dels.begin(); it != dels.end(); ++it) {
-      Remove1(this->candidates, *it);
+      uint actidx = *it;
+      Remove1(this->candidates, actidx);
     }
     adds.clear();
     dels.clear();
     if (ret_nlayers) {
       *ret_nlayers = 1;
     }
-    return true;
+
+    this->lo_xfmlae |= add_act_xfmlae;
+    this->deadlockPF =
+      ((~sys.invariant | sys.shadow_pfmla.pre()) & sys.closed_assume)
+      - this->lo_xfmlae.pre();
+
+    return (this->candidates.size() > 0 || !this->deadlockPF.sat_ck());
   }
 
   X::Fmlae add_act_xfmlae( &topo.xfmlae_ctx );
@@ -1309,12 +1323,12 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
   }
 
   bool revise = true;
-  if ((sys.shadow_puppet_synthesis_ck() &&
+  if (!this->ctx->opt.fast_deadlock_mrv
+      ||
+      (sys.shadow_puppet_synthesis_ck() &&
        !this->deadlockPF.subseteq_ck(old_deadlock_pfmla))
       ||
       !candidates_contain_all_adds
-      ||
-      this->ctx->opt.force_rank_deadlocks
      )
   {
     RankDeadlocksMRV(this->mcv_deadlocks,
@@ -1603,9 +1617,6 @@ SynthesisCtx::add(const Xn::Sys& sys, const StabilizationOpt& stabilization_opt)
 
   partial.csp_pfmla = synctx.csp_base_pfmla;
 
-  if (topo.lightweight)
-    return true;
-
   Table<uint> dels;
   Table<uint> rejs;
   bool good =
@@ -1613,6 +1624,8 @@ SynthesisCtx::add(const Xn::Sys& sys, const StabilizationOpt& stabilization_opt)
   for (uint i = 0; i < rejs.sz(); ++i) {
     synctx.conflicts.add_impossible(rejs[i]);
   }
+  if (topo.lightweight)
+    return good;
 
   for (uint pcidx = 0; pcidx < topo.pc_symms.sz(); ++pcidx) {
     const Table< FlatSet<Xn::ActSymm> >& conflicts =

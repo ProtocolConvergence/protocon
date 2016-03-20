@@ -198,9 +198,7 @@ AddStabilization(vector<uint>& ret_actions,
   }
   PartialSynthesis& partial = bt_stack[stack_idx];
   for (uint i = 0; i < partial.sz(); ++i) {
-    if (!partial[i].no_partial) {
-      Claim(!partial[i].deadlockPF.sat_ck());
-    }
+    Claim(!partial[i].deadlockPF.sat_ck());
   }
   ret_actions = partial.actions;
   Claim2( nlayers_sum ,>, 0 );

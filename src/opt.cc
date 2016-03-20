@@ -557,8 +557,8 @@ protocon_options_rec
     else if (eq_cstr (arg, "-prep-conflicts")) {
       opt.prep_conflicts = true;
     }
-    else if (eq_cstr (arg, "-force-rank-deadlocks")) {
-      opt.force_rank_deadlocks = true;
+    else if (eq_cstr (arg, "-fast-deadlock-mrv")) {
+      opt.fast_deadlock_mrv = true;
     }
     else if (eq_cstr (arg, "-max-depth")) {
       if (!xget_uint_cstr (&opt.max_depth, argv[argi++])) {
