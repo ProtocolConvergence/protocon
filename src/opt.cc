@@ -144,6 +144,9 @@ handle_param_arg(ProtoconParamOpt& psys_opt, const char* arg, int& argi, int arg
   else if (eq_cstr (arg, "-synchronous")) {
     psys_opt.stabilization_opt.synchronous = true;
   }
+  else if (eq_cstr (arg, "-uniring")) {
+    psys_opt.stabilization_opt.uniring = true;
+  }
   else if (eq_cstr (arg, "-count-convergence-layers")) {
     psys_opt.stabilization_opt.count_convergence_layers = true;
   }

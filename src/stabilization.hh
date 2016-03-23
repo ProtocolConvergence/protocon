@@ -12,11 +12,13 @@ public:
   uint max_nlayers;
   bool count_convergence_layers;
   bool synchronous;
+  bool uniring;
 
   StabilizationOpt()
     : max_nlayers( 0 )
     , count_convergence_layers( false )
     , synchronous( false )
+    , uniring( false )
   {}
 };
 

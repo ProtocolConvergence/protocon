@@ -68,7 +68,6 @@ public:
   OFile* log;
   bool verify_found;
 
-  // For parallel algorithms.
   bool randomize_pick;
   uint randomize_depth;
   bool system_urandom;

@@ -146,6 +146,15 @@ public:
                               uint* ret_nlayers = 0,
                               const P::Fmla* invariant = 0,
                               const P::Fmla* assumed = 0) const;
+
+  bool uniring_cycle_ck(P::Fmla* scc,
+                        uint* ret_nlayers = 0,
+                        const P::Fmla* invariant = 0,
+                        const P::Fmla* assumed = 0) const;
+
+  bool uniring_weak_convergence_ck(uint* ret_nlayers,
+                                   const P::Fmla& invariant,
+                                   const P::Fmla& assumed) const;
 };
 }
 

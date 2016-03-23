@@ -347,6 +347,11 @@ stabilization_ck(OFile& of, const Xn::Sys& sys,
     P::Fmla tmp_invariant = lo_xn.closure_within(sys.invariant & sys.closed_assume);
     lo_xfmlae.probabilistic_livelock_ck(&scc, sys.closed_assume, (~tmp_invariant).cross(tmp_invariant), &lo_xn);
   }
+  else if (opt.uniring) {
+    lo_xfmlae.uniring_cycle_ck(&scc, &nlayers,
+                               (opt.count_convergence_layers ? &sys.invariant : 0),
+                               &sys.closed_assume);
+  }
   else {
     lo_xn.cycle_ck(&scc, &nlayers,
                    (opt.count_convergence_layers ? &sys.invariant : 0),
@@ -408,6 +413,11 @@ stabilization_ck(OFile& of, const Xn::Sys& sys,
       of.flush();
       return false;
     }
+  }
+  else if (opt.uniring) {
+    const P::Fmla& invariant =
+      (opt.count_convergence_layers ? hi_invariant : (~lo_xn.pre() | scc));
+    lo_xfmlae.uniring_weak_convergence_ck(&reach_nlayers, invariant, sys.closed_assume);
   }
   else if (!opt.synchronous) {
     const P::Fmla& invariant =

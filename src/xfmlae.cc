@@ -215,3 +215,155 @@ X::Fmlae::deterministic_cycle_ck(P::Fmla* scc, uint* ret_nlayers,
   return span0.sat_ck();
 }
 
+
+  bool
+X::Fmlae::uniring_cycle_ck(P::Fmla* scc, uint* ret_nlayers,
+                           const P::Fmla* invariant, const P::Fmla* assumed) const
+{
+#if 0
+  X::Fmla xn((*this)[0] & this->ctx->act_unchanged_xfmlas[0]);
+
+  for (uint i = 1; i < this->sz(); ++i) {
+    const X::Fmla& pc_xn = (*this)[i] & this->ctx->act_unchanged_xfmlas[i];
+    X::Fmla tmp_xn(false);
+    tmp_xn |= pc_xn - xn.img();
+    tmp_xn |= xn - pc_xn.pre().as_img();
+
+    xn = xn.dotjoin(pc_xn);
+    xn |= tmp_xn;
+  }
+
+  return xn.cycle_ck(scc, ret_nlayers, invariant, assumed);
+#else
+  P::Fmla span0( this->pre() & this->img() );
+  span0.ensure_ctx(*this->ctx->ctx);
+
+  if (assumed)
+    span0 &= *assumed;
+
+  uint nlayers = 1;
+
+  while (true) {
+    P::Fmla span1(span0);
+
+    for (uint i = this->sz(); i --> 0 ;) {
+      const P::Fmla& pf = this->img(i, span1);
+      span1 -= this->pre(i);
+      span1 |= pf;
+    }
+
+    if (span0.equiv_ck(span1))  break;
+
+    if (ret_nlayers) {
+      if (invariant) {
+        if (!span0.subseteq_ck(*invariant)) {
+          nlayers += 1;
+        }
+      }
+      else {
+        nlayers += 1;
+      }
+      if (*ret_nlayers > 0 && nlayers > *ret_nlayers) {
+        *ret_nlayers = nlayers;
+        return false;
+      }
+    }
+    span0 = span1;
+  }
+
+  span0 &= this->pre();
+
+  {
+    P::Fmla span1(span0);
+
+    for (uint i = this->sz(); i --> 0 ;) {
+      const P::Fmla& pf = this->img(i, span1);
+      span1 -= this->pre(i);
+      span1 |= pf;
+      span0 |= pf;
+    }
+  }
+
+  // All states in {span0} should be live.
+  Claim( span0.subseteq_ck(this->pre()) );
+
+#if 0
+  while (true)
+  {
+    P::Fmla span1(span0);
+    for (uint i = 0; i < this->sz(); ++i) {
+      span0 |= this->img(i, span0);
+    }
+    if (span0.equiv_ck(span1))  break;
+    DBog0("continue");
+  }
+  span0 &= this->pre();
+  if (span0.sat_ck()) {
+    DBog0("done");
+  }
+
+
+  while (true) {
+    const P::Fmla& span1 = this->img(span0);
+    if (span0.equiv_ck(span1))  break;
+    Claim(0 && "Adding image?");
+    span0 = span1;
+  }
+
+  while (true) {
+    const P::Fmla& span1 = span0 & this->pre(span0);
+    if (span0.equiv_ck(span1))  break;
+    Claim(0 && "Pruning preimage?");
+    span0 = span1;
+  }
+#endif
+
+  if (scc)
+    *scc = span0;
+  if (ret_nlayers)
+    *ret_nlayers = nlayers;
+
+  return span0.sat_ck();
+#endif
+}
+
+  bool
+X::Fmlae::uniring_weak_convergence_ck(uint* ret_nlayers,
+                                      const P::Fmla& invariant,
+                                      const P::Fmla& assumed) const
+{
+  uint nlayers = 1;
+  P::Fmla span0(assumed - invariant);
+  if (!span0.subseteq_ck(this->pre())) {
+    *ret_nlayers = nlayers;
+    return false;
+  }
+
+  for (uint i = 0; i < this->sz()-1; ++i) {
+    span0 -= this->pre(i);
+  }
+
+  while (true) {
+    const P::Fmla span1( span0 );
+
+    for (uint i = this->sz(); i --> 0 ;) {
+      if (!span0.sat_ck()) {
+        if (ret_nlayers)
+          *ret_nlayers = nlayers;
+        return true;
+      }
+      ++ nlayers;
+      span0 = this->pre(i, span0) - invariant;
+      span0 -= this->pre(i, this->img(i, span0) & invariant);
+    }
+
+    if (span0.equiv_ck(span1)) {
+      break;
+    }
+  }
+
+  if (ret_nlayers)
+    *ret_nlayers = nlayers;
+  return false;
+}
+

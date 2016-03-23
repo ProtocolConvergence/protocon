@@ -1227,6 +1227,9 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
     P::Fmla tmp_invariant = lo_xn.closure_within(sys.invariant);
     lo_xfmlae.probabilistic_livelock_ck(&scc, sys.closed_assume, (~tmp_invariant).cross(tmp_invariant), &lo_xn);
   }
+  else if (this->stabilization_opt().uniring) {
+    lo_xfmlae.uniring_cycle_ck(&scc, &nlayers, 0, &sys.closed_assume);
+  }
   else {
     lo_xn.cycle_ck(&scc, &nlayers, 0, &sys.closed_assume);
   }
@@ -1306,7 +1309,14 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
   }
 
   nlayers = max_nlayers;
-  if (!weak_convergence_ck(&nlayers, this->hi_xn, this->hi_invariant, sys.closed_assume)) {
+
+  if (this->stabilization_opt().uniring) {
+    if (!hi_xfmlae.uniring_weak_convergence_ck(&nlayers, this->hi_invariant, sys.closed_assume)) {
+      *this->log << "REACH" << this->log->endl();
+      return false;
+    }
+  }
+  else if (!weak_convergence_ck(&nlayers, this->hi_xn, this->hi_invariant, sys.closed_assume)) {
     *this->log << "REACH" << this->log->endl();
 #if 0
     P::Fmla pf( ~this->hi_xn.pre_reach(this->hi_invariant) );
