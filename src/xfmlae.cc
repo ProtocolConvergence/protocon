@@ -155,3 +155,63 @@ bool
 }
 
 
+  bool
+X::Fmlae::deterministic_cycle_ck(P::Fmla* scc, uint* ret_nlayers,
+                                 const P::Fmla* invariant, const P::Fmla* assumed) const
+{
+  P::Fmla span0( this->pre() & this->img() );
+  span0.ensure_ctx(*this->ctx->ctx);
+
+  if (assumed)
+    span0 &= *assumed;
+
+  uint nlayers = 1;
+
+  while (true) {
+    P::Fmla span1(span0);
+
+    for (uint i = 0; i < this->sz(); ++i) {
+      const P::Fmla& pf = this->img(i, span1);
+      span1 -= this->pre(i);
+      span1 |= pf;
+    }
+
+    if (span0.equiv_ck(span1))  break;
+
+    if (ret_nlayers) {
+      if (invariant) {
+        if (!span0.subseteq_ck(*invariant)) {
+          nlayers += 1;
+        }
+      }
+      else {
+        nlayers += 1;
+      }
+      if (*ret_nlayers > 0 && nlayers > *ret_nlayers) {
+        *ret_nlayers = nlayers;
+        return false;
+      }
+    }
+    span0 = span1;
+  }
+  span0 &= this->pre();
+
+  {
+    P::Fmla span1(span0);
+    for (uint i = 0; i < this->sz()-1; ++i) {
+      const P::Fmla& pf = this->img(i, span1);
+      span1 -= this->pre(i, span1);
+      span1 |= pf;
+      span0 |= span1;
+    }
+    Claim( span0.equiv_ck(this->img(span0)) );
+  }
+
+  if (scc)
+    *scc = span0;
+  if (ret_nlayers)
+    *ret_nlayers = nlayers;
+
+  return span0.sat_ck();
+}
+

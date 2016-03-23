@@ -141,6 +141,11 @@ public:
      const P::Fmla& assumed,
      const X::Fmla& progress,
      const X::Fmla* global_xn = 0) const;
+
+  bool deterministic_cycle_ck(P::Fmla* scc,
+                              uint* ret_nlayers = 0,
+                              const P::Fmla* invariant = 0,
+                              const P::Fmla* assumed = 0) const;
 };
 }
 

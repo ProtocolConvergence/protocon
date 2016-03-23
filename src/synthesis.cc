@@ -1052,6 +1052,7 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
     Set<uint> membs;
     if (!this->ctx->conflicts.conflict_membs(&membs, action_set, candidate_set)) {
       *this->log << "CONFLICT" << this->log->endl();
+      *this->log << this->actions.size() << this->log->endl();
       return false;
     }
     dels |= membs;
@@ -1062,8 +1063,8 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
 
     for (it = adds.begin(); it != adds.end(); ++it) {
       uint actidx = *it;
-      Remove1(this->actions, actidx);
       Remove1(this->candidates, actidx);
+      Remove1(this->actions, actidx);
       this->actions.push_back(actidx);
       add_act_xfmlae |= topo.action_xfmlae(actidx);
     }
@@ -1624,8 +1625,6 @@ SynthesisCtx::add(const Xn::Sys& sys, const StabilizationOpt& stabilization_opt)
   for (uint i = 0; i < rejs.sz(); ++i) {
     synctx.conflicts.add_impossible(rejs[i]);
   }
-  if (topo.lightweight)
-    return good;
 
   for (uint pcidx = 0; pcidx < topo.pc_symms.sz(); ++pcidx) {
     const Table< FlatSet<Xn::ActSymm> >& conflicts =
@@ -1667,16 +1666,20 @@ SynthesisCtx::add(const Xn::Sys& sys, const StabilizationOpt& stabilization_opt)
 
   partial.lo_xfmlae = X::Fmlae(&topo.xfmlae_ctx);
   partial.hi_xfmlae = X::Fmlae(&topo.xfmlae_ctx);
-  for (uint i = 0; i < partial.candidates.size(); ++i) {
-    partial.hi_xfmlae |= topo.action_xfmlae(partial.candidates[i]);
-  }
-  partial.hi_xn = partial.hi_xfmlae.xfmla();
 
   partial.deadlockPF = ~sys.invariant & sys.closed_assume;
   partial.hi_invariant = sys.invariant & sys.closed_assume;
   if (sys.shadow_puppet_synthesis_ck()) {
     partial.deadlockPF |= sys.shadow_pfmla.pre();
   }
+
+  if (topo.lightweight)
+    return good;
+
+  for (uint i = 0; i < partial.candidates.size(); ++i) {
+    partial.hi_xfmlae |= topo.action_xfmlae(partial.candidates[i]);
+  }
+  partial.hi_xn = partial.hi_xfmlae.xfmla();
 
   RankDeadlocksMRV(partial.mcv_deadlocks,
                    sys.topology,

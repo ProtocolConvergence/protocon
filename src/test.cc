@@ -179,6 +179,37 @@ TestConflictFamily()
 }
 
 static void
+TestXFmlae()
+{
+  Xn::Sys sys;
+  Xn::Net& topo = sys.topology;
+
+  P::Fmla pf;
+
+  const char* filename = "examplespec/SumNotTwo.prot";
+
+  ProtoconFileOpt infile_opt;
+  infile_opt.text.moveq
+    (textfile_AlphaTab (0, filename));
+
+  topo.lightweight = true;
+
+  if (!ReadProtoconFile(sys, infile_opt)) {
+    Claim( 0 && "Can't parse file" );
+  }
+
+  Xn::ActSymm act;
+  topo.action(act, 0);
+  act.vals[0] = 2;
+  act.vals[1] = 0;
+  act.vals[2] = 1;
+  uint actidx = topo.action_index(act);
+
+  Claim( topo.action_pfmla(actidx).pre().equiv_ck
+         (topo.action_xfmlae(actidx).pre()) );
+}
+
+static void
 TestXnSys()
 {
   Xn::Sys sys;
