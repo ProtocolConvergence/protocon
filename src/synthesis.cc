@@ -1052,7 +1052,6 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
     Set<uint> membs;
     if (!this->ctx->conflicts.conflict_membs(&membs, action_set, candidate_set)) {
       *this->log << "CONFLICT" << this->log->endl();
-      *this->log << this->actions.size() << this->log->endl();
       return false;
     }
     dels |= membs;
