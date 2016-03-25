@@ -150,6 +150,10 @@ handle_param_arg(ProtoconParamOpt& psys_opt, const char* arg, int& argi, int arg
   else if (eq_cstr (arg, "-count-convergence-layers")) {
     psys_opt.stabilization_opt.count_convergence_layers = true;
   }
+  else if (eq_cstr (arg, "-count-convergence-steps")) {
+    psys_opt.stabilization_opt.count_convergence_layers = true;
+    psys_opt.stabilization_opt.count_convergence_steps = true;
+  }
   else if (eq_cstr (arg, "-max-nlayers")) {
     uint x = 0;
     if (argi >= argc) {

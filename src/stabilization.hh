@@ -11,12 +11,14 @@ class StabilizationOpt
 public:
   uint max_nlayers;
   bool count_convergence_layers;
+  bool count_convergence_steps;
   bool synchronous;
   bool uniring;
 
   StabilizationOpt()
     : max_nlayers( 0 )
     , count_convergence_layers( false )
+    , count_convergence_steps( false )
     , synchronous( false )
     , uniring( false )
   {}

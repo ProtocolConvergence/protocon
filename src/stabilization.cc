@@ -427,7 +427,12 @@ stabilization_ck(OFile& of, const Xn::Sys& sys,
   else {
     reach_nlayers = nlayers;
   }
-  of << "Max strong/weak " << (opt.synchronous ? "sync" : "async") << " layers to "
+  if (opt.count_convergence_steps) {
+    nlayers -= 1;
+    reach_nlayers -= 1;
+  }
+  of << "Max strong/weak " << (opt.synchronous ? "sync" : "async") << " "
+    << (opt.count_convergence_steps ? "steps" : "ayers") << " to "
     << (opt.count_convergence_layers ? "converge" : "fixpoint")
     << ": " << nlayers << "/" << reach_nlayers << of.endl();
 #if 0

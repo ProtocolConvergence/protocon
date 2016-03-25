@@ -33,7 +33,7 @@ process P[i <- Nat % N]
     ( m[i-1]!=R && m[i]!=S && m[i+1]==R --> m[i]:=S; )
     ( m[i-1]==R && m[i]!=L && m[i+1]!=L --> m[i]:=L; )
 
-    // Last two action can be rewritten as:
+    // Last action verifies faster if rewritten as:
     //( m[i-1]==R && m[i]==S              --> m[i]:=L; )
     //( m[i-1]==R && m[i]==R && m[i+1]!=L --> m[i]:=L; )
     ;
