@@ -1,7 +1,7 @@
 
 // Determine a root in a tree.
 // The maximum degree of a node is 3.
-// See exampleargs/LeaderTree.args for example topologies.
+// See examplesett/LeaderTree.args for example topologies.
 
 constant N_uni := 3;
 constant N_bin := 1;
