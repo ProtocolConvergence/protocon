@@ -1,0 +1,58 @@
+
+// Command: mpirun -np 64 protocon-mpi
+//  -x ../examplespec/ColorKautz.prot -prep-conflicts
+//  -def N 2 -param N 3 -param N 4 -param N 5
+//  -param [ -def N 6  -no-conflict ] -param [ -def N 7 -no-conflict ] -param [ -def N 8 -no-conflict ]
+//  -param [ -def N 9  -no-partial  ] -param [ -def N 10 -no-partial ] -param [ -def N 11 -no-partial ]
+//  -param [ -def N 12 -no-partial  ] -param [ -def N 13 -no-partial ] -param [ -def N 14 -no-partial ]
+// Time: 103h22m55.348s
+constant N := 6;
+constant M := 4;
+variable x[Nat % N] <- Nat % M;
+(future & silent)
+  (forall i <- Nat % N : (forall q <- Nat % 2 : (i==-(2*i+q+1)%N) || (x[i]!=x[-(2*i+q+1)])))
+  ;
+process P[i <- Nat % N]
+{
+  let idx0_even := (N-1-i)/2;
+  let idx1_even := idx0_even+N/2;
+  let idx0_odd := (N-1)/2*(i+1);
+  let idx1_odd := (N-1)/2*(i+2);
+  let idx0_tmp := if (N%2==0) then (idx0_even) else (idx0_odd);
+  let idx1_tmp := if (N%2==0) then (idx1_even) else (idx1_odd);
+  let idx0 := if (idx0_tmp%N!=i) then (idx0_tmp) else (idx1_tmp);
+  let idx1 := if (idx1_tmp%N!=i) then (idx1_tmp) else (idx0_tmp);
+  read: x[idx0];
+  read: x[idx1];
+  write: x[i];
+  puppet:
+    ( x[idx0]==0 && x[idx1]==0 && x[i]==0 --> x[i]:=1; )
+    ( x[idx0]==0 && x[idx1]==1 && x[i]==0 --> x[i]:=3; )
+    ( x[idx0]==0 && x[idx1]==1 && x[i]==1 --> x[i]:=3; )
+    ( x[idx0]==0 && x[idx1]==2 && x[i]==0 --> x[i]:=3; )
+    ( x[idx0]==0 && x[idx1]==2 && x[i]==2 --> x[i]:=1; )
+    ( x[idx0]==0 && x[idx1]==3 && x[i]==0 --> x[i]:=1; )
+    ( x[idx0]==0 && x[idx1]==3 && x[i]==3 --> x[i]:=1; )
+    ( x[idx0]==1 && x[idx1]==0 && x[i]==0 --> x[i]:=2; )
+    ( x[idx0]==1 && x[idx1]==0 && x[i]==1 --> x[i]:=2; )
+    ( x[idx0]==1 && x[idx1]==1 && x[i]==1 --> x[i]:=2; )
+    ( x[idx0]==1 && x[idx1]==2 && x[i]==1 --> x[i]:=0; )
+    ( x[idx0]==1 && x[idx1]==2 && x[i]==2 --> x[i]:=0; )
+    ( x[idx0]==1 && x[idx1]==3 && x[i]==1 --> x[i]:=2; )
+    ( x[idx0]==1 && x[idx1]==3 && x[i]==3 --> x[i]:=0; )
+    ( x[idx0]==2 && x[idx1]==0 && x[i]==0 --> x[i]:=1; )
+    ( x[idx0]==2 && x[idx1]==0 && x[i]==2 --> x[i]:=1; )
+    ( x[idx0]==2 && x[idx1]==1 && x[i]==1 --> x[i]:=0; )
+    ( x[idx0]==2 && x[idx1]==1 && x[i]==2 --> x[i]:=0; )
+    ( x[idx0]==2 && x[idx1]==2 && x[i]==2 --> x[i]:=3; )
+    ( x[idx0]==2 && x[idx1]==3 && x[i]==2 --> x[i]:=1; )
+    ( x[idx0]==2 && x[idx1]==3 && x[i]==3 --> x[i]:=0; )
+    ( x[idx0]==3 && x[idx1]==0 && x[i]==0 --> x[i]:=1; )
+    ( x[idx0]==3 && x[idx1]==0 && x[i]==3 --> x[i]:=1; )
+    ( x[idx0]==3 && x[idx1]==1 && x[i]==1 --> x[i]:=0; )
+    ( x[idx0]==3 && x[idx1]==1 && x[i]==3 --> x[i]:=0; )
+    ( x[idx0]==3 && x[idx1]==2 && x[i]==2 --> x[i]:=1; )
+    ( x[idx0]==3 && x[idx1]==2 && x[i]==3 --> x[i]:=0; )
+    ( x[idx0]==3 && x[idx1]==3 && x[i]==3 --> x[i]:=2; )
+    ;
+}

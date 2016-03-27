@@ -10,7 +10,7 @@ process P[i <- Nat % N]
     (x[i-1]!=x[i] && x[i]!=x[i+1]);
 
   puppet action:
-    ( x[i-1]==x[i] && x[i+1]==x[i] --> x[i]:=x[i]+1; )
-    ( x[i-1]==x[i] && x[i+1]!=x[i] --> x[i]:=2*x[i]-x[i+1]; )
+    ( x[i-1]==x[i] && x[i]==x[i+1] --> x[i]:=x[i]+1; )
+    ( x[i-1]==x[i] && x[i]!=x[i+1] --> x[i]:=2*x[i]-x[i+1]; )
     ;
 }
