@@ -1,4 +1,8 @@
 
+// NOTE: This does not have exactly the same topology as ../examplespec/ColorKautz.prot.
+// And it will hopefully be replaced soon.
+// It fails for N=15. Its replacement probably will too.
+
 // Command: mpirun -np 64 protocon-mpi
 //  -x ../examplespec/ColorKautz.prot -prep-conflicts
 //  -def N 2 -param N 3 -param N 4 -param N 5

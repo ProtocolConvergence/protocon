@@ -6,20 +6,16 @@ variable x[Nat % N] <- Nat % M;
 
 process P[i <- Nat % N]
 {
-  let idx0_even := (N-1-i)/2;
-  let idx1_even := idx0_even + N/2;
+  let j_tmp := (N-1-i)/2;
+  let k_tmp := N-1-(i/2);
 
-  let idx0_odd  := (N-1)/2 * (i + 1);
-  let idx1_odd  := (N-1)/2 * (i + 2);
 
-  let idx0_tmp := if (N % 2 == 0) then (idx0_even) else (idx0_odd);
-  let idx1_tmp := if (N % 2 == 0) then (idx1_even) else (idx1_odd);
+  let j := if (j_tmp != i) then (j_tmp) else (k_tmp);
+  let k := if (k_tmp != i) then (k_tmp) else (j_tmp);
 
-  let idx0 := if (idx0_tmp % N != i) then (idx0_tmp) else (idx1_tmp);
-  let idx1 := if (idx1_tmp % N != i) then (idx1_tmp) else (idx0_tmp);
 
-  read: x[idx0];
-  read: x[idx1];
+  read: x[j];
+  read: x[k];
   write: x[i];
 }
 
