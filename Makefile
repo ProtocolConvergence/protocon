@@ -92,4 +92,5 @@ update:
 pull:
 	git pull origin master
 	git submodule foreach git pull origin master
+	if [ -d $(DepPath)/tex2web ] ; then $(GODO) $(DepPath)/tex2web git pull origin master ; fi
 

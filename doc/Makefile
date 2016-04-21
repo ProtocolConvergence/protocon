@@ -1,10 +1,17 @@
 
-default: all
-
-CxPfx = ../../cx
-
-tex2web = ../../tex2web/bin/tex2web
+tex2webTopPath = ../dep/tex2web
+tex2web = $(tex2webTopPath)/bin/tex2web
 man2html = man2html
+
+CMAKE=cmake
+GODO=$(CMAKE) -E chdir
+MKDIR=$(CMAKE) -E make_directory
+
+SPACE :=
+SPACE +=
+
+
+default: all
 
 html/ html/example/ pubhtml/ pubhtml/example/ \
  	pubhtml/examplespec/ pubhtml/examplesett/ \
@@ -12,14 +19,24 @@ html/ html/example/ pubhtml/ pubhtml/example/ \
 	mkdir -p $@
 	chmod a+rx $@
 
-SPACE :=
-SPACE +=
+
+$(tex2web):
+	if [ ! -f $(tex2webTopPath)/src/tex2web.c ] ; then \
+		git clone https://github.com/grencez/tex2web.git $(tex2webTopPath) ; \
+		fi
+	if [ ! -d $(tex2webTopPath)/bld ] ; then \
+		$(MKDIR) $(tex2webTopPath)/bld ; \
+		$(GODO) $(tex2webTopPath)/bld $(CMAKE) -D DepPath=../.. ../src ; \
+		fi
+	#$(GODO) $(tex2webTopPath) git pull origin master
+	$(GODO) $(tex2webTopPath)/bld $(MAKE)
+
 
 define webtex_rule
 Targets += html/$(1).html
 PubTargets += pubhtml/$(1).html
 
-html/$(1).html: webtex/$(1).tex $(2)
+html/$(1).html: webtex/$(1).tex $(2) $(tex2web)
 	$(tex2web) -x $$< -o $$@ \
 		-def rel $(subst $(SPACE),/,$(strip $(patsubst %,..,$(subst /, ,$(1)))))/.. \
 		-def examplespec '\rel/examplespec' \
@@ -30,7 +47,7 @@ html/$(1).html: webtex/$(1).tex $(2)
 
 html/$(1).html: | $(dir html/$(1))
 
-pubhtml/$(1).html: webtex/$(1).tex $(2)
+pubhtml/$(1).html: webtex/$(1).tex $(2) $(tex2web)
 	$(tex2web) -x $$< -o $$@ \
 		-def rel $(patsubst .%,%,$(subst $(SPACE),/,$(strip $(patsubst %,..,$(subst /, ,$(1)))))) \
 		-def examplespec '\rel/examplespec' \
@@ -94,8 +111,9 @@ pub: $(PubTargets)
 .PHONY: clean
 clean:
 	rm -fr html pubhtml
+	rm -fr $(tex2webTopPath)/bld
 
 .PHONY: distclean
 distclean: clean
-	# Nothing more than a clean.
+	rm -f $(tex2webTopPath)/bin/tex2web
 

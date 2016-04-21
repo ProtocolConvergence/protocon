@@ -6,6 +6,7 @@
 
 /dep/glu-*/
 /dep/peg-*/
+/dep/tex2web/
 
 /doc/html/
 /doc/pubhtml/
