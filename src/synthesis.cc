@@ -130,11 +130,11 @@ RankDeadlocksMRV(vector<DeadlockConstraint>& dlsets,
   dlsets.push_back(DeadlockConstraint(deadlockPF));
   for (uint cidx = 0; cidx < candidates.size(); ++cidx) {
     uint actidx = candidates[cidx];
-    const X::Fmla& act_xn = topo.action_pfmla(actidx);
+    const P::Fmla& act_pre = topo.action_pfmla(actidx).pre();
     uint i = dlsets.size();
     while (i > 0) {
       i -= 1;
-      P::Fmla resolved = dlsets[i].deadlockPF & act_xn.pre();
+      P::Fmla resolved = dlsets[i].deadlockPF & act_pre;
       if (resolved.sat_ck()) {
         if (i == dlsets.size()-1) {
           dlsets.push_back(DeadlockConstraint(P::Fmla(false)));
@@ -1228,14 +1228,15 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
     lo_xfmlae.probabilistic_livelock_ck(&scc, sys.closed_assume, (~tmp_invariant).cross(tmp_invariant), &lo_xn);
   }
   else if (this->stabilization_opt().uniring) {
-    lo_xfmlae.uniring_cycle_ck(&scc, &nlayers, 0, &sys.closed_assume);
+    lo_xfmlae.uniring_cycle_ck(&scc, &nlayers, &this->hi_invariant, &sys.closed_assume);
   }
   else {
-    lo_xn.cycle_ck(&scc, &nlayers, 0, &sys.closed_assume);
+    lo_xn.cycle_ck(&scc, &nlayers, &this->hi_invariant, &sys.closed_assume);
   }
   if (max_nlayers > 0 && nlayers > max_nlayers) {
     *this->log << "NLAYERS (maximum number of convergence layers exceeded: "
       << nlayers << "+ > " << max_nlayers << ")" << this->log->endl();
+    *this->log << "NLAYERS sys_idx:" << this->sys_idx << " nlayers:" << nlayers << this->log->endl();
     return false;
   }
   if (ret_nlayers) {
@@ -1287,7 +1288,7 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
     *this->log << "SHADOW" << this->log->endl();
     return false;
   }
-  if (candidates_contain_all_adds) {
+  if (true || candidates_contain_all_adds) {
     Claim(this->hi_invariant.subseteq_ck(old_hi_invariant));
   }
 
@@ -1372,10 +1373,12 @@ PartialSynthesis::revise_actions(const Set<uint>& adds, const Set<uint>& dels,
   while (keep_going) {
     keep_going = false;
 
+    Set<uint> common_dels;
+
     // Generally, systems with higher indices should be more computationally intensive.
     // Therefore if {keep_going} becomes true, we should revise the systems with lower
     // indices before revising the systems with higher indices.
-    for (uint i = 0; !keep_going && i < this->sz(); ++i) {
+    for (uint i = 0; !(keep_going && common_dels.empty()) && i < this->sz(); ++i) {
       if (!force_revise && all_adds[i].empty() && all_dels[i].empty())
         continue;
 
@@ -1404,16 +1407,24 @@ PartialSynthesis::revise_actions(const Set<uint>& adds, const Set<uint>& dels,
         return false;
       Claim( rejs.subseteq_ck(all_dels[i]) );
 
-      if (!all_adds[i].empty() || !all_dels[i].empty() || !rejs.empty()) {
+      if (i==0)  common_dels  = all_dels[i];
+      else       common_dels &= all_dels[i];
+      all_dels[i].clear();
+
+      if (!all_adds[i].empty() || !rejs.empty()) {
         keep_going = true;
         for (uint j = 0; j < this->sz(); ++j) {
           all_adds[j] |= all_adds[i];
           all_dels[j] |= rejs;
         }
         // Stop forcing if we'll check everything anyway.
-        if (!all_adds[i].empty() || !rejs.empty()) {
-          force_revise = false;
-        }
+        force_revise = false;
+      }
+    }
+
+    if (!common_dels.empty()) {
+      for (uint j = 0; j < this->sz(); ++j) {
+        all_dels[j] |= common_dels;
       }
     }
   }

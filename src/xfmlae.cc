@@ -255,21 +255,22 @@ X::Fmlae::uniring_cycle_ck(P::Fmla* scc, uint* ret_nlayers,
     if (span0.equiv_ck(span1))  break;
 
     if (ret_nlayers) {
-      if (invariant) {
-        if (!span0.subseteq_ck(*invariant)) {
-          nlayers += 1;
-        }
+      if (invariant && span0.subseteq_ck(*invariant)) {
+        *ret_nlayers = nlayers;
+        ret_nlayers = 0;
       }
       else {
         nlayers += 1;
-      }
-      if (*ret_nlayers > 0 && nlayers > *ret_nlayers) {
-        *ret_nlayers = nlayers;
-        return false;
+        if (*ret_nlayers > 0 && nlayers > *ret_nlayers) {
+          *ret_nlayers = nlayers;
+          return false;
+        }
       }
     }
     span0 = span1;
   }
+  if (ret_nlayers)
+    *ret_nlayers = nlayers;
 
   span0 &= this->pre();
 
@@ -320,8 +321,6 @@ X::Fmlae::uniring_cycle_ck(P::Fmla* scc, uint* ret_nlayers,
 
   if (scc)
     *scc = span0;
-  if (ret_nlayers)
-    *ret_nlayers = nlayers;
 
   return span0.sat_ck();
 #endif

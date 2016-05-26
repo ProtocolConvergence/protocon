@@ -3,6 +3,10 @@
 // The maximum degree of a node is 3.
 // See examplesett/LeaderTree.args for example topologies.
 
+// It may not be obvious, but the protocol is:
+//   (all but one neighbor pointing towards) --> point at that neighbor
+//   (otherwise) --> point at nothing
+
 constant N_uni := 3;
 constant N_bin := 1;
 constant N_tri := 1;
@@ -26,7 +30,7 @@ process P_uni[i <- Nat % N_uni]
     (w[ij]!=w[ji]);
 
   puppet action:
-    ( w[ij]==w[ji] --> w[ij]:=1-w[ij]; )
+    ( true -=> w[ij]:=1-w[ji]; )
     ;
 }
 
@@ -51,8 +55,8 @@ process P_bin[i <- Nat % N_bin]
     (w[ij]!=w[ji] && w[ik]!=w[ki]);
 
   puppet action:
-    ( w[ij]+w[ik]==0 && w[ji]+w[ki]==1 --> w[ij]:=1-w[ji]; w[ik]:=1-w[ki]; )
-    ( w[ij]+w[ik]==1 && w[ji]==w[ki] --> w[ij]:=0; w[ik]:=0; )
+    ( w[ji]+w[ki]==1 -=> w[ij]:=1-w[ji]; w[ik]:=1-w[ki]; )
+    ( w[ji]+w[ki]!=1 -=> w[ij]:=0; w[ik]:=0; )
     ;
 }
 
@@ -79,16 +83,8 @@ process P_tri[i <- Nat % N_tri]
     (w[ij]!=w[ji] && w[ik]!=w[ki] && w[il]!=w[li]);
 
   puppet action:
-    ( w[ij]+w[ik]+w[il]==0 && w[ji]+w[ki]+w[li]==2
-     --> w[ij]:=1-w[ji]; w[ik]:=1-w[ki]; w[il]:=1-w[li];
-    )
-    ( w[ij]+w[ik]+w[il]==1 && w[ji]+w[ki]+w[li]==3
-     --> w[ij]:=0; w[ik]:=0; w[il]:=0;
-    )
-    ( w[ij]+w[ik]+w[il]==1 && w[ji]+w[ki]+w[li]==1
-      && w[ij]*w[ji]==0 && w[ik]*w[ki]==0 && w[il]*w[li]==0
-     --> w[ij]:=0; w[ik]:=0; w[il]:=0;
-    )
+    ( w[ji]+w[ki]+w[li]==2 -=> w[ij]:=1-w[ji]; w[ik]:=1-w[ki]; w[il]:=1-w[li]; )
+    ( w[ji]+w[ki]+w[li]!=2 -=> w[ij]:=0; w[ik]:=0; w[il]:=0; )
     ;
 }
 

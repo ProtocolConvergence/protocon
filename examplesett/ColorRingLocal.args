@@ -1,5 +1,7 @@
 #!mpirun -np 4 protocon-mpi -x-args
 
+# This eats a lot of memory!
+
 -x ../examplespec/ColorRingLocal.prot
 -def N 3
 -param N 4

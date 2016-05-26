@@ -17,8 +17,8 @@ public:
 
   StabilizationOpt()
     : max_nlayers( 0 )
-    , count_convergence_layers( false )
-    , count_convergence_steps( false )
+    , count_convergence_layers( true )
+    , count_convergence_steps( true )
     , synchronous( false )
     , uniring( false )
   {}
