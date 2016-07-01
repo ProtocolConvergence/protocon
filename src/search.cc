@@ -575,17 +575,17 @@ stabilization_search_init
   }
 
   if (exec_opt.task != ProtoconOpt::VerifyTask)
-  for (uint i = 0; good && i < exec_opt.params.sz(); ++i) {
+  for (uint i = 0; good && i < exec_opt.instances.sz(); ++i) {
     ProtoconFileOpt param_infile_opt = infile_opt;
-    param_infile_opt.constant_map = exec_opt.params[i].constant_map;
+    param_infile_opt.constant_map = exec_opt.instances[i].constant_map;
 
     Xn::Sys& param_sys = systems.grow1();
     param_sys.topology.pfmla_ctx.use_context_of(sys.topology.pfmla_ctx);
-    param_sys.topology.lightweight = !exec_opt.params[i].partial_ck();
+    param_sys.topology.lightweight = !exec_opt.instances[i].partial_ck();
     DoLegitLine("reading param file")
       ReadProtoconFile(param_sys, param_infile_opt);
     DoLegitLine("add param sys")
-      synctx.add(param_sys, exec_opt.params[i].stabilization_opt);
+      synctx.add(param_sys, exec_opt.instances[i].stabilization_opt);
   }
 
   DoLegit("The -def flag changes variable domains, put it before -x")
@@ -613,9 +613,9 @@ stabilization_search_init
 
   PartialSynthesis& synlvl = synctx.base_partial;
 
-  for (uint i = 0; good && i < exec_opt.params.sz(); ++i) {
-    synlvl[i].no_conflict = !exec_opt.params[i].conflict_ck();
-    synlvl[i].no_partial = !exec_opt.params[i].partial_ck();
+  for (uint i = 0; good && i < exec_opt.instances.sz(); ++i) {
+    synlvl[i].no_conflict = !exec_opt.instances[i].conflict_ck();
+    synlvl[i].no_partial = !exec_opt.instances[i].partial_ck();
   }
 
   if (exec_opt.task != ProtoconOpt::VerifyTask)
@@ -658,7 +658,7 @@ void
 {
   Xn::Sys sys;
   ProtoconFileOpt verif_infile_opt( infile_opt );
-  verif_infile_opt.constant_map = exec_opt.params[0].constant_map;
+  verif_infile_opt.constant_map = exec_opt.instances[0].constant_map;
   const String& xfilepath = exec_opt.xfilepaths[i];
   if (xfilepath != exec_opt.xfilepath) {
     verif_infile_opt.text.moveq
@@ -670,7 +670,7 @@ void
   if (ReadProtoconFile(sys, verif_infile_opt)) {
     StabilizationCkInfo info;
     info.find_livelock_actions = !lightweight;
-    if (stabilization_ck(*opt.log, sys, exec_opt.params[0].stabilization_opt, &info)) {
+    if (stabilization_ck(*opt.log, sys, exec_opt.instances[0].stabilization_opt, &info)) {
       solution_found = true;
       ret_actions = sys.actions;
       *opt.log << "System is stabilizing." << opt.log->endl();

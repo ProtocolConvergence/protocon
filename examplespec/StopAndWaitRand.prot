@@ -1,0 +1,97 @@
+
+// Stop-and-Wait protocol, where process A waits for B
+// to receive its message before sending a new one.
+//
+// For stabilization, we must have (SeqSz > AB + BA).
+// Thus, we use a single size-1 channel for the Alternating Bit protocol.
+//   protocon -def SeqSz 2 -x StopAndWait.prot -def BA 0 ...
+//   protocon -def SeqSz 2 -x StopAndWait.prot -def AB 0 ...
+
+// Size of message and sequence number.
+constant MsgSz := 3;
+constant SeqSz := 3;
+
+// Size of channels from A to B and B to A.
+constant AB := 1;
+constant BA := 1;
+
+// Used for determining next message in somewhat variable way.
+constant DiffSz := MsgSz-1;
+
+puppet variable msg[Nat % (2+AB)] <- Nat % MsgSz;
+puppet variable seq[Nat % (2+AB+BA)] <- Nat % 4;
+puppet variable rng[Nat % 1] <- Nat % 1;
+
+shadow variable y[Nat % 2] <- Nat % MsgSz;
+direct variable d[Nat % 1] <- Nat % DiffSz;
+
+(future & future shadow)
+  (y[0]==y[1] || y[0]==(y[1]+d[0]+1)%MsgSz);
+
+
+process A[id <- Nat % 1]
+{
+  let i := 0;
+
+  write: y[0];
+  read: y[1];
+
+  write: seq[i];
+  read: seq[i-1];
+  random read: rng[i];
+
+  write: msg[i];
+  read: d[0];
+
+  // Value of {msg} should represent {y}.
+  (assume & closed)  (y[0]==msg[i]);
+
+  permit: ( true --> seq[i]:=2*(1+seq[i]/2)+rng[i]; );
+
+  shadow: ( y[0]==y[1] --> y[0]:=y[1]+d[0]+1; );
+}
+
+
+process B[id <- Nat % 1]
+{
+  let i := AB+1;
+
+  read: y[0];
+  write: y[1];
+
+  read: seq[i-1];
+  write: seq[i];
+
+  read: msg[i-1];
+  write: msg[i];
+
+  // Value of {msg} should represent {y}.
+  (assume & closed)  (y[1]==msg[i]);
+
+  // Keep receiving new messages within the legitimate states.
+  shadow: ( y[0]!=y[1] --> y[1]:=y[0]; );
+}
+
+
+// Channel from A to B.
+process CommAB[id <- Nat % AB]
+{
+  let i := id+1;
+  read: msg[i-1];
+  read: seq[i-1];
+  write: msg[i];
+  write: seq[i];
+
+  puppet: ( true -=> msg[i]:=msg[i-1]; seq[i]:=seq[i-1]; );
+}
+
+// Channel from B to A.
+process CommBA[id <- Nat % BA]
+{
+  let i := id+AB+2;
+  read: seq[i-1];
+  write: seq[i];
+
+  puppet: ( true -=> seq[i]:=seq[i-1]; );
+}
+

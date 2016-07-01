@@ -12,8 +12,27 @@
 
 class AddConvergenceOpt;
 class ProtoconFileOpt;
-class ProtoconOpt;
 class ProtoconParamOpt;
+class ProtoconOpt;
+
+class ProtoconParamOpt {
+public:
+  Map<String, Xn::NatMap> constant_map;
+  bool conflict;
+  bool partial;
+  StabilizationOpt stabilization_opt;
+
+  ProtoconParamOpt()
+    : conflict( true )
+    , partial( true )
+  {}
+  bool conflict_ck() const {
+    return conflict && partial;
+  }
+  bool partial_ck() const {
+    return partial;
+  }
+};
 
 class ProtoconOpt {
 public:
@@ -34,7 +53,8 @@ public:
 
   ExecTask task;
   uint nparallel;
-  Table< ProtoconParamOpt > params;
+  ProtoconParamOpt instance_def;
+  Table< ProtoconParamOpt > instances;
   String log_ofilename;
   String xfilepath;
   String ofilepath;
@@ -53,29 +73,9 @@ public:
   ProtoconOpt()
     : task(SearchTask)
     , nparallel( 1 )
-    , params( 1 )
     , use_espresso( false )
     , conflict_order( HiLoOrder )
   {}
-};
-
-class ProtoconParamOpt {
-public:
-  Map<String, Xn::NatMap> constant_map;
-  bool conflict;
-  bool partial;
-  StabilizationOpt stabilization_opt;
-
-  ProtoconParamOpt()
-    : conflict( true )
-    , partial( true )
-  {}
-  bool conflict_ck() const {
-    return conflict && partial;
-  }
-  bool partial_ck() const {
-    return partial;
-  }
 };
 
 

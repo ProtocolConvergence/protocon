@@ -3,6 +3,6 @@
 
 -def SeqSz 2
 -x ../examplespec/StopAndWait.prot
--def BA 0
+-param BA 0
 -prep-conflicts
 

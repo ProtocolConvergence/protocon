@@ -2,7 +2,5 @@
 # ApproxTime: < 1 sec (serial)
 
 -x ../examplespec/ColorRing.prot
--def N 3
--param N 4
--param N 5
+-param N 3..5
 

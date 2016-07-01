@@ -2,13 +2,7 @@
 
 -def M 5
 -x ../examplespec/TokenRing.prot
--def N 2
--param N 3
--param N 4
--param N 5
--param [ -def N 6 -no-conflict ]
--param [ -def N 7 -no-conflict ]
--param [ -def N 8 -no-conflict ]
--param [ -def N 9 -no-conflict ]
+-param N 2..5
+-param [ -def N 6..9 -no-conflict ]
 -prep-conflicts
 

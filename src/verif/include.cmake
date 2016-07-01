@@ -75,7 +75,7 @@ set (GenericSpecs
 
 foreach (f ${ExampleSpecs} ${GenericSpecs})
   add_test (NAME Synth3_${f}
-    COMMAND protocon -x ${SpecPath}/${f}.prot -def N 3)
+    COMMAND protocon -x ${SpecPath}/${f}.prot -param N 3)
 endforeach ()
 
 foreach (f SortRing TokenRingDijkstra)
@@ -118,7 +118,7 @@ list (APPEND ExampleSolns
 
 foreach (f ${ExampleSolns})
   add_test (NAME Verif5_${f}
-    COMMAND protocon -verify -x ${SolnPath}/${f}.prot -def N 5)
+    COMMAND protocon -verify -x ${SolnPath}/${f}.prot -param N 5)
 endforeach ()
 
 add_test (NAME Verif_ByzantineGenerals
@@ -142,9 +142,9 @@ set (ExampleSynts
 
 foreach (f ${ExampleSynts})
   add_test (NAME TrySynt_${f}
-    COMMAND protocon -test -x ${SpecPath}/${f}.prot -x-try-subset ${SyntPath}/${f}.prot -def N 5)
+    COMMAND protocon -test -x ${SpecPath}/${f}.prot -x-try-subset ${SyntPath}/${f}.prot -param N 5)
   add_test (NAME VerifSynt_${f}
-    COMMAND protocon -verify -x ${SyntPath}/${f}.prot -def N 5)
+    COMMAND protocon -verify -x ${SyntPath}/${f}.prot -param N 5)
   add_test (NAME overify_synt_${f}
     COMMAND "${CMAKE_COMMAND}"
     -Dprotocon_exe=${protocon_exe}
@@ -155,11 +155,11 @@ endforeach ()
 
 add_test (NAME TrySynt2_TokenChainDijkstra
   COMMAND protocon -test -x ${SpecPath}/TokenChainDijkstra.prot
-  -x-try-subset ${SyntPath}/TokenChainDijkstra.prot -def N 2)
+  -x-try-subset ${SyntPath}/TokenChainDijkstra.prot -param N 2)
 
 add_test (NAME TrySynt5_TokenRingFourState
   COMMAND protocon -test -def M 2 -x ${SpecPath}/TokenRingSuperpos.prot
-  -x-try-subset ${SyntPath}/TokenRingFourState.prot -def N 5)
+  -x-try-subset ${SyntPath}/TokenRingFourState.prot -param N 5)
 
 set (VerifyBySynthesis
   ColorRing
@@ -169,7 +169,7 @@ set (VerifyBySynthesis
 
 foreach (f ${VerifyBySynthesis})
   add_test (NAME VerifSyn_${f}
-    COMMAND protocon -x ${SolnPath}/${f}.prot -def N 5)
+    COMMAND protocon -x ${SolnPath}/${f}.prot -param N 5)
 endforeach ()
 
 foreach (f LeaderTree)
@@ -188,20 +188,20 @@ set (VerifyBySynthesis
   )
 foreach (f ${VerifyBySynthesis})
   add_test (NAME VerifSyn_${f}
-    COMMAND protocon -x ${SolnPath}/${f}.prot -def N 5)
+    COMMAND protocon -x ${SolnPath}/${f}.prot -param N 5)
 endforeach ()
 
 add_test (NAME Verif4_Sync_OrientRing
-  COMMAND protocon -verify -synchronous -x ${SolnPath}/OrientRing.prot -def N 4)
+  COMMAND protocon -verify -synchronous -x ${SolnPath}/OrientRing.prot -param N 4)
 
 
 ## Promela file output.
 add_test (NAME Promela_OrientDaisy
   COMMAND comparispawn ${TestPath}/expect/OrientDaisy.pml
-  ${protocon_exe} -nop -x ${SolnPath}/OrientDaisy.prot -def N 5 -o-pml -)
+  ${protocon_exe} -nop -x ${SolnPath}/OrientDaisy.prot -param N 5 -o-pml -)
 
 ## Ensure our tests can actually detect failure.
 add_test (NAME Verif4_OrientRingOdd
-  COMMAND protocon -verify -x ${SolnPath}/OrientRingOdd.prot -def N 4)
+  COMMAND protocon -verify -x ${SolnPath}/OrientRingOdd.prot -param N 4)
 set_tests_properties (Verif4_OrientRingOdd PROPERTIES WILL_FAIL TRUE)
 

@@ -1,0 +1,8 @@
+
+# ApproxTime: < 30 sec (serial)
+#
+-x ../examplespec/TokenRingRand.prot
+-param N 2..5
+-param [ -def N 6..9 -no-conflict ]
+-prep-conflicts
+

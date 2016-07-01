@@ -233,9 +233,9 @@ SymmetricLinks =
   { yy->st->add_symmetric_links(let_names.sp, let_vals_list.sp); }
   ( random_flag:NOP
     write_flag:NOP
+    ('random' WS {random_flag.aux.i=1;})?
     (  'read:'
-     | ('random' WS {random_flag.aux.i=1;})?
-       'write:' {write_flag.aux.i=1;}
+     | 'write:' {write_flag.aux.i=1;}
     )
     WS? u:VblRef WS? {u.sp = list1_Sesp (u.sp);}
     (',' WS? v:VblRef WS? {pushlast_Sesp (u.sp, v.sp);} )*

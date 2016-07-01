@@ -2,9 +2,6 @@
 # ApproxTime: < 1 sec (serial)
 
 -x ../examplespec/ColorRingSymm.prot
--def N 3
--param N 4
--param N 5
--param N 6
+-param N 3..6
 -optimize
 

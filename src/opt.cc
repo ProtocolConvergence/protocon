@@ -174,41 +174,108 @@ static
   bool
 parse_NatMap (Xn::NatMap& tup, const char* line)
 {
+  DeclLegit( good );
   tup = Xn::NatMap();
   ::XFile xf[1];
   init_XFile_olay_cstr (xf, (char*)line);
+  if (line[0] == '(') {
+    tup.scalar = false;
+  }
   skipds_XFile (xf, "(");
   int x = 0;
-  while (xget_int_XFile (xf, &x)) {
-    tup.membs << x;
+
+  if (strstr(line, "..")) {
+    int begval = 0;
+    int endval = 0;
+
+    DoLegitLine("")
+      xget_int_XFile (xf, &begval);
     skipds_XFile (xf, 0);
-    skipds_XFile (xf, ",)");
-  }
+    skipds_XFile (xf, ".");
+    DoLegitLine("")
+      xget_int_XFile (xf, &endval);
 
-  if (tup.membs.sz() == 0 && line[0]!='(')
-    return false;
-
-  if (tup.membs.sz() == 1) {
-    tup.expression << tup.membs[0];
+    DoLegit("") {
+      int diff = (begval < endval ? 1 : -1);
+      for (int val = begval; val != endval + diff; val += diff) {
+        tup.membs << val;
+      }
+    }
   }
   else {
-    tup.expression << '(';
-    for (uint i = 0; i < tup.membs.sz(); ++i) {
-      if (i > 0)
-        tup.expression << ",";
-      tup.expression << tup.membs[i];
+    while (xget_int_XFile (xf, &x)) {
+      tup.membs << x;
+      skipds_XFile (xf, 0);
+      skipds_XFile (xf, ",)");
     }
-    tup.expression << ')';
+
+    good = (tup.membs.sz() > 0 || line[0]=='(');
   }
-  return true;
+
+  DoLegit( "" ) {
+    if (tup.membs.sz() == 1) {
+      tup.expression << tup.membs[0];
+    }
+    else {
+      tup.expression << '(';
+      for (uint i = 0; i < tup.membs.sz(); ++i) {
+        if (i > 0)
+          tup.expression << ",";
+        tup.expression << tup.membs[i];
+      }
+      tup.expression << ')';
+    }
+  }
+  return !!good;
+}
+
+static
+  void
+push_instances(Table< ProtoconParamOpt >& instances,
+               const ProtoconParamOpt& instdef)
+{
+  const uint begidx = instances.sz();
+
+  {
+    ProtoconParamOpt& instance = instances.grow1();
+    instance = instdef;
+    Map<String, Xn::NatMap>::iterator param_it = instance.constant_map.begin();
+    while (param_it != instance.constant_map.end()) {
+      Xn::NatMap& tup = param_it->second;
+      if (tup.scalar) {
+        tup.membs.resize(1);
+      }
+      ++ param_it;
+    }
+  }
+
+  Map<String, Xn::NatMap>::const_iterator param_it = instdef.constant_map.begin();
+  while (param_it != instdef.constant_map.end()) {
+    const String& key = param_it->first;
+    const Xn::NatMap& param_range = param_it->second;
+    const uint endidx = instances.sz();
+    if (param_range.scalar) {
+      for (uint i = 1; i < param_range.sz(); ++i) {
+        for (uint j = begidx; j < endidx; ++j) {
+          ProtoconParamOpt& instance = instances.grow1();
+          instance = instances[j];
+          instance.constant_map[key] = param_range.eval(i);
+        }
+      }
+    }
+    ++ param_it;
+  }
 }
 
 static
   bool
 parse_param(ProtoconOpt& opt, int& argi, int argc, char** argv)
 {
-  ProtoconParamOpt& psys_opt = opt.params.grow1();
-  psys_opt = opt.params[0];
+  static const char SyntaxMsg[] =
+    "Argument Usage: -param KEY VAL\nWhere VAL is an integer, list, or range!";
+
+  ProtoconParamOpt instdef = opt.instance_def;
+
   if (!eq_cstr(argv[argi], "(") &&
       !eq_cstr(argv[argi], "[")) {
     if (argi + 1 >= argc) {
@@ -216,8 +283,10 @@ parse_param(ProtoconOpt& opt, int& argi, int argc, char** argv)
     }
     const char* key = argv[argi++];
     const char* val = argv[argi++];
-    if (!parse_NatMap (psys_opt.constant_map[key], val))
-      failout_sysCx("Argument Usage: -param KEY VAL\nWhere VAL is an integer or list!");
+
+    if (!parse_NatMap (instdef.constant_map[key], val))
+      failout_sysCx(SyntaxMsg);
+    push_instances(opt.instances, instdef);
     return true;
   }
   ++ argi;
@@ -233,19 +302,20 @@ parse_param(ProtoconOpt& opt, int& argi, int argc, char** argv)
       }
       const char* key = argv[argi++];
       const char* val = argv[argi++];
-      if (!parse_NatMap (psys_opt.constant_map[key], val))
-        failout_sysCx("Argument Usage: -def KEY VAL\nWhere VAL is an integer or list!");
+      if (!parse_NatMap (instdef.constant_map[key], val))
+        failout_sysCx(SyntaxMsg);
     }
-    else if (handle_param_arg (psys_opt, arg, argi, argc, argv))
+    else if (handle_param_arg (instdef, arg, argi, argc, argv))
     {}
     else if (eq_cstr (arg, "-no-partial")) {
-      psys_opt.partial = false;
+      instdef.partial = false;
     }
   }
   if (argi >= argc) {
     failout_sysCx("Need closing paren for -param!");
   }
   ++ argi;
+  push_instances(opt.instances, instdef);
 
   return true;
 }
@@ -338,10 +408,10 @@ protocon_options_rec
       }
       const char* key = argv[argi++];
       const char* val = argv[argi++];
-      if (!parse_NatMap (exec_opt.params[0].constant_map[key], val))
-        failout_sysCx("Argument Usage: -def KEY VAL\nWhere VAL is an integer or list!");
+      if (!parse_NatMap (exec_opt.instance_def.constant_map[key], val))
+        failout_sysCx("Argument Usage: -def KEY VAL\nWhere VAL is an integer, list, or range!");
     }
-    else if (handle_param_arg (exec_opt.params[0], arg, argi, argc, argv))
+    else if (handle_param_arg (exec_opt.instance_def, arg, argi, argc, argv))
     {}
     else if (eq_cstr (arg, "-param")) {
       if (!parse_param(exec_opt, argi, argc, argv)) {
@@ -371,7 +441,7 @@ protocon_options_rec
         pathname2_AlphaTab (&tmpf, relpath, arg);
         exec_opt.xfilepath = tmpf;
       }
-      infile_opt.constant_map = exec_opt.params[0].constant_map;
+      infile_opt.constant_map = exec_opt.instance_def.constant_map;
     }
     else if (eq_cstr (arg, "-x-args")) {
       copy_to_argline = false;
@@ -442,7 +512,7 @@ protocon_options_rec
     else if (eq_cstr (arg, "-x-test-known")) {
       Xn::Sys test_sys;
       ProtoconFileOpt file_opt;
-      file_opt.constant_map = exec_opt.params[0].constant_map;
+      file_opt.constant_map = exec_opt.instance_def.constant_map;
       const char* const filename = argv[argi++];
       if (!filename) {
         failout_sysCx("Not enuff arguments for -x-test-known.");
@@ -458,7 +528,7 @@ protocon_options_rec
              eq_cstr (arg, "-x-try-subset")) {
       Xn::Sys try_sys;
       ProtoconFileOpt file_opt;
-      file_opt.constant_map = exec_opt.params[0].constant_map;
+      file_opt.constant_map = exec_opt.instance_def.constant_map;
       const char* const filename = argv[argi++];
       if (!filename) {
         failout_sysCx("Not enuff arguments for -x-try.");
@@ -694,6 +764,10 @@ protocon_options
     if (!!exec_opt.xfilepath) {
       exec_opt.xfilepaths.push(exec_opt.xfilepath);
     }
+  }
+
+  if (exec_opt.instances.sz() == 0) {
+    push_instances(exec_opt.instances, exec_opt.instance_def);
   }
 
   // Set up the chosen problem.

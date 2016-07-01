@@ -1,8 +1,5 @@
 
 -x ../examplespec/TokenChain.prot
 -prep-conflicts
--def N 2
--param N 3
--param N 4
--param N 5
+-param N 2..5
 

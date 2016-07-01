@@ -1,8 +1,6 @@
 
 -x ../examplespec/ColorRingDistrib.prot
--def N 2
--param N 3
--param N 4
+-param N 2..4
 -pure
 -prep-conflicts
 

@@ -1,0 +1,7 @@
+
+-x ../examplespec/OrientRingRand.prot
+
+-prep-conflicts
+
+-param N 2..6
+

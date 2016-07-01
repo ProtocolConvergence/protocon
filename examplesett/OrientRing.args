@@ -1,13 +1,8 @@
 #!mpirun -np 16 protocon-mpi -x-args
 
 -x ../examplespec/OrientRing.prot
--def N 2
--param N 3
--param N 4
--param N 5
--param [ -def N 6 -no-conflict ]
--param [ -def N 7 -no-conflict ]
--param [ -def N 8 -no-partial -synchronous ]
--param [ -def N 9 -no-partial -synchronous ]
+-param N 2..5
+-param [ -def N 6..7 -no-conflict ]
+-param [ -def N 8..9 -no-partial -synchronous ]
 -prep-conflicts
 

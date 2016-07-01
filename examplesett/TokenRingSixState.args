@@ -5,13 +5,7 @@
 
 -def M 3
 -x ../examplespec/TokenRingSuperpos.prot
--def N 2
--param N 3
--param N 4
--param N 5
--param N 6
--param N 7
--param [ -def N 8 -no-conflict ]
--param [ -def N 9 -no-conflict ]
+-param N 2..7
+-param [ -def N 8..9 -no-conflict ]
 -prep-conflicts
 

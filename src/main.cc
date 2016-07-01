@@ -35,7 +35,7 @@ int main(int argc, char** argv)
     interactive(sys);
   }
   else if (exec_opt.task == ProtoconOpt::VerifyTask) {
-    if (exec_opt.params.sz() > 1) {
+    if (exec_opt.instances.sz() > 1) {
       failout_sysCx ("The -verify mode does not allow -param flags!");
     }
     found =
@@ -93,7 +93,7 @@ int main(int argc, char** argv)
     const Xn::Net* o_topology = &sys.topology;
     if (exec_opt.task == ProtoconOpt::NoTask) {
       ProtoconFileOpt file_opt = infile_opt;
-      file_opt.constant_map = exec_opt.params[0].constant_map;
+      file_opt.constant_map = exec_opt.instances[0].constant_map;
       ReadProtoconFile(osys, file_opt);
       o_topology = &osys.topology;
     }

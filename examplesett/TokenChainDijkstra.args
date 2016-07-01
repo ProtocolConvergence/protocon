@@ -1,7 +1,5 @@
 #!mpirun -np 4 protocon-mpi -x-args
 
 -x ../examplespec/TokenChainDijkstra.prot
--def N 2
--param N 3
--param N 4
+-param N 2..4
 -prep-conflicts

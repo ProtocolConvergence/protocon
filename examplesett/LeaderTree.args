@@ -1,5 +1,7 @@
 
 # ApproxTime: < 5 sec (serial)
+#
+-x ../examplespec/LeaderTree.prot
 
 # This is the default toplogy.
 #        _
@@ -14,7 +16,7 @@
 # -def w_uni (3,5,7)
 # -def w_bin (0,2)
 # -def w_tri (1,4,6)
--x ../examplespec/LeaderTree.prot
+-param [ ]
 
 #      _
 #    0/ \2

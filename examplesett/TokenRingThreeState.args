@@ -1,9 +1,6 @@
 #!mpirun -np 4 protocon-mpi -x-args
 
 -x ../examplespec/TokenRingThreeState.prot
--def N 2
--param N 3
--param N 4
--param N 5
+-param N 2..5
 -prep-conflicts
 

@@ -1,0 +1,12 @@
+#!mpirun -np 4 protocon-mpi -x-args
+
+-x ../examplespec/StopAndWaitRand.prot
+-def AB 0 -def BA 0
+-param [ -def AB 1 ]
+-param [ -def BA 1 ]
+-param [ -def AB 1 -def BA 1 ]
+-param [ -def AB 2 -def BA 2 ]
+-param [ -def AB 3 -def BA 3 ]
+-param [ -def AB 4 -def BA 4 ]
+-disabling
+

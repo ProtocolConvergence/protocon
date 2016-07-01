@@ -37,20 +37,20 @@ mkdir tmp
 \subsection{Synthesis}
 Synthesize a 3-coloring protocol that works on rings of size $3$, $4$, and $5$.
 \begin{code}
-./bin/protocon -x examplespec/ColorRing.prot -def N 3 -param N 4 -param N 5 -o tmp/color.prot
+./bin/protocon -x examplespec/ColorRing.prot -param N 3..5 -o tmp/color.prot
 \end{code}
 
 \subsection{Verification}
 Check if the protocol is self-stabilizing rings of size $7$. It should be fine!
 \begin{code}
-./bin/protocon -verify -x tmp/color.prot -def N 7
+./bin/protocon -verify -x tmp/color.prot -param N 7
 \end{code}
 
 \subsection{Model Checking with Spin}
 We can also verify this protocol's correctness in the \href{http://spinroot.com}{Spin model checker} (here's a \href{../../tut/spin.html}{quick setup guide}).
 First output a model in the Promela language for a ring of $6$ processes.
 \begin{code}
-./bin/protocon -nop -x tmp/color.prot -def N 6 -o-promela tmp/color.pml
+./bin/protocon -nop -x tmp/color.prot -param N 6 -o-promela tmp/color.pml
 \end{code}
 Now open the model in iSpin.
 \begin{code}
@@ -83,7 +83,7 @@ When a problem instance is difficult, it may help to perform multiple searches a
 Since multiple searches are occurring simultaneously, the search progress output is hidden.
 This is remedied with the \ilflag{-o-log} flag to create log files \ilfile{search.log.}\ilsym{tid} for each thread of index \ilsym{tid}.
 \begin{code}
-./bin/protocon -parallel -x examplespec/ColorRing.prot -def N 3 -param N 4 -param N 5 -o tmp/color.prot -o-log tmp/color.log
+./bin/protocon -parallel -x examplespec/ColorRing.prot -param N 3..5 -o tmp/color.prot -o-log tmp/color.log
 \end{code}
 If these log files are not desired, simply do not give the flag.
 
@@ -91,7 +91,7 @@ To control the number of threads used at runtime, simply give a number after the
 For example, imagine we want to use exactly $2$ threads.
 
 \begin{code}
-./bin/protocon -parallel 2 -x examplespec/ColorRing.prot -def N 5
+./bin/protocon -parallel 2 -x examplespec/ColorRing.prot -param N 5
 \end{code}
 
 \section{Distributed 3-Coloring on a Ring}
