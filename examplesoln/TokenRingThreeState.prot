@@ -19,9 +19,8 @@ process Bot[i <- Nat % 1]
     ;
 }
 
-process P[j <- Nat % (N-2)]
+process P[i <- 1 + Nat % (N-2)]
 {
-  let i := j+1;
   read:  z[i-1];
   write: z[i];
   read:  z[i+1];
@@ -36,9 +35,8 @@ process P[j <- Nat % (N-2)]
 }
 
 
-process Top[j <- Nat % 1]
+process Top[i <- (N-1) + Nat % 1]
 {
-  let i := N-1;
   read: z[i-1];
   write: z[i];
   read: z[i+1];

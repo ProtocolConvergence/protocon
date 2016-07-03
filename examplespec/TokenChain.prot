@@ -20,10 +20,8 @@ process Bot[i <- Nat % 1]
     ( tok[i]==1 --> fwd[0]:=1; tok[i]:=0; tok[i+1]:=1; );
 }
 
-process P[j <- Nat % (N-2)]
+process P[i <- 1 + Nat % (N-2)]
 {
-  let i := j+1;
-
   read: x[i-1];
   write: x[i];
   read: x[i+1];
@@ -37,10 +35,8 @@ process P[j <- Nat % (N-2)]
     ;
 }
 
-process Top[j <- Nat % 1]
+process Top[i <- (N-1) + Nat % 1]
 {
-  let i := N-1;
-
   read: x[i-1];
   write: x[i];
 

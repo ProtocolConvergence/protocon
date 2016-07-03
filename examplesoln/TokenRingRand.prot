@@ -28,10 +28,8 @@ process Bot[i <- Nat % 1]
     ( x[i-1]==x[i] --> x[i]:=1+x[i-1]+b[i]; tok[i]:=0; tok[i+1]:=1; );
 }
 
-process P[j <- Nat % (N-1)]
+process P[i <- 1 + Nat % (N-1)]
 {
-  let i := j+1;
-
   read:  x[i-1];
   write: x[i];
 

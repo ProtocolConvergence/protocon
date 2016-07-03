@@ -71,6 +71,7 @@ public:
   SespCtx* spctx;
   Mem<Xn::PcSymm> pc_symm;
   Mem<Xn::PcSymmSpec> pc_symm_spec;
+  Mem<Xn::Pc> pc_in_use;
   X::Fmla permit_xn;
   Table<Xn::ActSymm> conflict;
   bool legit_mode_assigned;
@@ -80,6 +81,7 @@ public:
     , text_nlines(0)
     , pc_symm(0)
     , pc_symm_spec(0)
+    , pc_in_use(0)
     , permit_xn(false)
     , legit_mode_assigned(false)
   {
@@ -104,7 +106,7 @@ public:
   bool add_variables(Sesp vbl_name_sp, Sesp vbl_nmembs_sp, Sesp vbl_dom_sp,
                      Xn::Vbl::ShadowPuppetRole role);
 
-  bool add_processes(Sesp pc_name, Sesp idx_name, Sesp npcs);
+  bool add_processes(Sesp pc_name, Sesp idx_name, Sesp npcs, Sesp idx_offset);
 
   bool add_constant(Sesp name_sp, Sesp val_sp);
 
@@ -164,6 +166,9 @@ public:
   bool eval_gtz(uint* ret, Sesp sp);
 
   bool eval_vbl(IntPFmla* ret, const String& name, Sesp idx_sp);
+
+  void within_process(uint pcidx);
+  void escape_process();
 
   bool lookup_vbl(Xn::Vbl** ret, const String& name, Sesp c);
   bool lookup_pfmla(P::Fmla* ret, const String& name);

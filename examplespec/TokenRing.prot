@@ -22,10 +22,8 @@ process Bot[i <- Int % 1]
     ( tok[i]==1 --> tok[i]:=0; tok[i+1]:=1; );
 }
 
-process P[j <- Int % (N-1)]
+process P[i <- 1 + Int % (N-1)]
 {
-  let i := j+1;
-
   read:  x[i-1];
   write: x[i];
 

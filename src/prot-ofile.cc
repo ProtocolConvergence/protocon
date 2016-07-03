@@ -539,7 +539,12 @@ oput_protocon_file (OFile& of, const Xn::Sys& sys,
     if (pc_symm.membs.sz() == 0)  continue;
 
     of << "\nprocess " << pc_symm.spec->name
-      << "[" << pc_symm.spec->idx_name << " <- Nat % "
+      << "[" << pc_symm.spec->idx_name << " <- "
+      ;
+    if (!!pc_symm.spec->offset_expression)
+      of << pc_symm.spec->offset_expression << " + ";
+
+    of << "Nat % "
       << o_topology.pc_symms[i].spec->nmembs_expression << "]"
       << "\n{"
       ;

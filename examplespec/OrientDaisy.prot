@@ -25,9 +25,8 @@ process End[id <- Nat % (2*Chain)]
     (w[ji]!=w[ij]);
 }
 
-process P[id <- Nat % (N-2*Chain)]
+process P[i <- Chain + Nat % (N-2*Chain)]
 {
-  let i := Chain+id;
   let j := i-1;
   let k := i+1;
   let ji := 2*i-1;

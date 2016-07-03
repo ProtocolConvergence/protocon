@@ -2,10 +2,11 @@
 # ApproxTime: 2 min (serial)
 
 -x ../examplespec/OrientDaisy.prot
--param [ -def N 2 -def Chain 1..0 ]
--param [ -def N 3 -def Chain 1..0 ]
--param [ -def N 4 -def Chain 1..0 ]
--param [ -def N 5 -def Chain 1..0 ]
--param [ -def N 6 -def Chain 1..0 ]
+-def Chain 1..0
+-param N 2
+-param N 3
+-param N 4
+-param N 5
+-param N 6
 -prep-conflicts
 

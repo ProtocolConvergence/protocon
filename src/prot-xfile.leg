@@ -167,8 +167,9 @@ ProcLegit =
   ;
 
 ProcDecl =
-  'process' WS pc_name:ID '[' WS? idx_name:ID WS? IN WS? npcs:NatDom WS? ']'
-  {yy->st->add_processes(pc_name.sp, idx_name.sp, npcs.sp);}
+  idx_offset:NOP
+  'process' WS pc_name:ID '[' WS? idx_name:ID WS? IN WS? (idx_offset:ConstProduct WS? '+' WS?)? npcs:NatDom WS? ']'
+  {yy->st->add_processes(pc_name.sp, idx_name.sp, npcs.sp, idx_offset.sp);}
   WS? '{' WS?
   ( 'let' WS let_name:ID DEFEQ let_val:Expr END_STMT WS?
     {yy->st->add_let(let_name.sp, let_val.sp);}
@@ -697,7 +698,11 @@ WS = (WHITE_SPACE | LINE_COMMENT)+ {}
   ;
 END_OF_FILE = !.
   ;
-NOP = {memset(&$$, 0, sizeof($$));}
+NOP =
+  {
+    memset(&$$, 0, sizeof($$));
+    $$.sp = &yy->st->spctx->nil.base;
+  }
   ;
 
 %%

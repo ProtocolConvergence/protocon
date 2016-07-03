@@ -52,9 +52,8 @@ process Bot[i <- Int % 1]
     );
 }
 
-process P[j <- Int % (N-1)]
+process P[i <- 1 + Int % (N-1)]
 {
-  let i := j+1;
   read:  e[i-1], t[i-1];
   write: e[i], t[i], ready[i];
 

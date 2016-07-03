@@ -24,10 +24,8 @@ process Bot[i <- Nat % 1]
   shadow action: ( t[i-1] == t[i] --> t[i] := 1 - t[i-1]; );
 }
 
-process P[j <- Nat % (N-1)]
+process P[i <- 1 + Nat % (N-1)]
 {
-  let i := j+1; // We really want P[1],...,P[N-1] rather than P[0],...,P[N-2].
-
   read:  e[i-1], t[i-1];
   write: e[i], t[i], ready[i];
 
