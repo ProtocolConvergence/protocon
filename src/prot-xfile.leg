@@ -44,7 +44,7 @@ Protocol = 'protocol' WS name:ID END_STMT {}
 
 ConstDecl =
   'constant' WS name:ID DEFEQ
-  (  v:ConstExpr
+  (  v:ConstIntExpr
      {yy->st->add_constant(name.sp, v.sp);}
    | v:ConstIntList
      {yy->st->add_constant_list(name.sp, v.sp);}
@@ -54,8 +54,8 @@ ConstDecl =
 
 
 ConstIntList =
-  '(' WS? a:ConstExpr WS?  {a.sp = list2_ccstr_Sesp ("list", a.sp);}
-  (',' WS? b:ConstExpr WS?  {pushlast_Sesp (a.sp, b.sp);})*
+  '(' WS? a:ConstIntExpr WS?  {a.sp = list2_ccstr_Sesp ("list", a.sp);}
+  (',' WS? b:ConstIntExpr WS?  {pushlast_Sesp (a.sp, b.sp);})*
   ')'
   {$$ = a;}
   ;
@@ -71,7 +71,12 @@ OptionalShadowPuppetRole =
 
 VarDecl =
   role:OptionalShadowPuppetRole 'variable'
-  WS a:ID '[' WS? b:NatDom WS? ']' WS? IN WS? c:NatDom END_STMT
+  WS a:ID '[' WS?
+  (  b:NatDom
+   | b:ConstIntExpr
+     { b.sp = list2_ccstr_Sesp ("NatDom", b.sp); b.int_ck = 1; }
+  )
+  WS? ']' WS? c:InNatDom END_STMT
   {
     yy->st->add_variables(a.sp, b.sp, c.sp,
                           (Xn::Vbl::ShadowPuppetRole) role.aux.i);
@@ -167,9 +172,18 @@ ProcLegit =
   ;
 
 ProcDecl =
-  idx_offset:NOP
-  'process' WS pc_name:ID '[' WS? idx_name:ID WS? IN WS? (idx_offset:ConstProduct WS? '+' WS?)? npcs:NatDom WS? ']'
-  {yy->st->add_processes(pc_name.sp, idx_name.sp, npcs.sp, idx_offset.sp);}
+  map_vbl:NOP map_expr:NOP
+  'process' WS pc_name:ID '[' WS? idx_name:ID WS?
+  (  IN WS? 'map' WS map_vbl:ID WS? '<' WS? npcs:ConstIntExpr SUCH_THAT map_expr:IntExpr
+     {
+       npcs.sp = list2_ccstr_Sesp ("NatDom", npcs.sp);
+       npcs.int_ck = 1;
+     }
+
+   | npcs:InNatDom
+  )
+  WS? ']'
+  {yy->st->add_processes(pc_name.sp, idx_name.sp, npcs.sp, map_vbl.sp, map_expr.sp);}
   WS? '{' WS?
   ( 'let' WS let_name:ID DEFEQ let_val:Expr END_STMT WS?
     {yy->st->add_let(let_name.sp, let_val.sp);}
@@ -294,7 +308,7 @@ GlobalLegitBehav =
   END_STMT
   ;
 
-ConstExpr = a:ConstSum {$$ = a;}
+ConstIntExpr = a:ConstSum {$$ = a;}
   ;
 
 ConstSum =
@@ -350,7 +364,7 @@ ConstIntFuncall =
     (  'max' {op.aux.s = "max";}
      | 'min' {op.aux.s = "min";}
     )
-    WS? '(' WS? a:ConstExpr WS? ',' WS? b:ConstExpr WS? ')'
+    WS? '(' WS? a:ConstIntExpr WS? ',' WS? b:ConstIntExpr WS? ')'
     {
       $$.sp = list3_ccstr_Sesp (op.aux.s, a.sp, b.sp);
       $$.int_ck = 1;
@@ -361,7 +375,7 @@ ConstIntFuncall =
 ConstValue =
     a:NAT {$$ = a;}
   | a:ID {$$ = a; }
-  | '(' WS? a:ConstExpr WS? ')'
+  | '(' WS? a:ConstIntExpr WS? ')'
     {
       $$.sp = list2_ccstr_Sesp ("(int)", a.sp);
       $$.int_ck = a.int_ck;
@@ -398,7 +412,7 @@ Quantify =
    | 'exists' {quant.aux.s = "exists";}
    | 'unique' {quant.aux.s = "unique";}
   )
-  WS a:ID WS? IN WS? b:NatDom WS? ':' WS? c:Expr
+  WS a:ID WS? b:InNatDom SUCH_THAT c:Expr
   {
     $$.sp = list4_ccstr_Sesp (quant.aux.s, a.sp, b.sp, c.sp);
     $$.int_ck = 0;
@@ -562,6 +576,16 @@ VblRef =
   }
   ;
 
+InNatDom =
+    IN WS? a:NatDom
+    { $$ = a; }
+  | '<' WS? a:ConstIntExpr
+    {
+      $$.sp = list2_ccstr_Sesp ("NatDom", a.sp);
+      $$.int_ck = 1;
+    }
+  ;
+
 NatDom =
   ('Int' | 'Nat') WS? '%' WS? a:ConstValue
   {
@@ -677,6 +701,7 @@ ACTION = 'act:' | 'action:' ;
 DEFEQ = WS? ':=' WS?;
 
 END_STMT = WS? ';' ;
+SUCH_THAT = WS? ':' WS? ;
 
 WILD = '_'
   {

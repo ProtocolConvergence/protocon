@@ -1,0 +1,16 @@
+constant N := 3;      // Total number of processes.
+variable w[2*N] < 2;  // Direction variables.
+process P[i < N] {    // Processes P[0..N-1].
+  let ij := 2*i;    let j := i-1;  let ji := 2*j+1;
+  let ik := 2*i+1;  let k := i+1;  let ki := 2*k;
+  // P[i] is disoriented and therefore treats P[j] and P[k] identically.
+  symmetric (to, from, away) <- {# (ij, ji, ji-1), (ik, ki, ki+1) #} {
+    write: w[to];  read: w[from], w[away];
+  }
+  (future & silent)   // Point in at most one direction.
+    (w[ij] + w[ik] <= 1);
+  (future & silent)   // Eventually reach a matching.
+    (w[ji]==w[ij] && w[ik]==w[ki]);
+  (future & silent)   // Eventually 2 of every 3 are matched.
+    (w[ij] + w[ik] == 1 || (w[ji-1]==1 && w[ki+1]==1));
+}

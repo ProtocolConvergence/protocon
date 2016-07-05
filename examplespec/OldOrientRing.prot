@@ -26,11 +26,11 @@ constant FlipField :=
    + Flip8 * 2^8
   );
 
-puppet variable color[Nat % N] <- Nat % 2;
-puppet variable phase[Nat % N] <- Nat % 2;
-direct variable orientation[Nat % N] <- Nat % 2;
+puppet variable color[N] < 2;
+puppet variable phase[N] < 2;
+direct variable orientation[N] < 2;
 
-process P[q <- Int % N]
+process P[q < N]
 {
   let flip := (FlipField / 2^q) % 2;
 
@@ -46,8 +46,8 @@ process P[q <- Int % N]
 // Eventually, all processes are pointing in the same direction.
 ((future & shadow) % puppet)
 (
-  (forall i <- Nat % N : orientation[i] == (FlipField / 2^i) % 2)
+  (forall i < N : orientation[i] == (FlipField / 2^i) % 2)
   ||
-  (forall i <- Nat % N : orientation[i] != (FlipField / 2^i) % 2)
+  (forall i < N : orientation[i] != (FlipField / 2^i) % 2)
 );
 

@@ -4,13 +4,13 @@ constant M := 2;
 
 constant OptionalAct := 1;
 
-puppet variable x[Nat % N] <- Nat % M;
-shadow variable tok[Nat % N] <- Nat % 2;
+puppet variable x[N] < M;
+shadow variable tok[N] < 2;
 
 (future & future shadow)
-  (exists i <- Nat % N : tok[i]==1);
+  (exists i < N : tok[i]==1);
 
-process P[i <- Nat % N]
+process P[i < N]
 {
   read: x[i-1];
   write: x[i];

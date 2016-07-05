@@ -4,30 +4,30 @@ constant N := 3;
 // This can be 0, 3, or 4.
 constant NColors := 0;
 
-puppet variable cgt[Nat % (2*N)] <- Nat % 2;
-puppet variable flipped[Nat % N] <- Nat % 2;
-direct variable way[Nat % (2*N)] <- Nat % 2;
+puppet variable cgt[(2*N)] < 2;
+puppet variable flipped[N] < 2;
+direct variable way[(2*N)] < 2;
 
 
 // Colors of processes can be compared logically.
 // If P[i-1]'s color is less than P[i]'s color, then cgt[2*i-1]==0 && cgt[2*i]==1.
 // If P[i-1]'s color is greater than P[i]'s color, then cgt[2*i-1]==1 && cgt[2*i]==0.
 (assume & closed)
-  (forall i <- Nat % N : cgt[2*i-1] != cgt[2*i]);
+  (forall i < N : cgt[2*i-1] != cgt[2*i]);
 
 // Arbitrary coloring (NColors==0).
 // We can't have P[i-1]'s color be less (resp. greater) than P[i]'s color for all i.
 // This is just not possible... but must be enforced in our abstraction by the
 // existence of a process with a local minimum or maximum color.
 (assume & closed)
-  (exists i <- Nat % N :
+  (exists i < N :
    NColors != 0
    || cgt[2*i] == cgt[2*i+1]
   );
 
 // 3-coloring (not used by default when NColors==0)
 (assume & closed)
-  (forall i <- Nat % N :
+  (forall i < N :
    NColors != 3
    || cgt[2*i-2] == cgt[2*i-1]
    || cgt[2*i] == cgt[2*i+1]
@@ -35,7 +35,7 @@ direct variable way[Nat % (2*N)] <- Nat % 2;
 
 // 4-coloring (not used by default when NColors==0)
 (assume & closed)
-  (forall i <- Nat % N :
+  (forall i < N :
    NColors != 4
    || cgt[2*i-2] == cgt[2*i-1]
    || cgt[2*i] == cgt[2*i+1]
@@ -45,18 +45,18 @@ direct variable way[Nat % (2*N)] <- Nat % 2;
 
 // Eventually, all processes point in the same direction.
 (future & shadow)
-  (forall i <- Nat % N : way[2*i-1]==way[2*i+1]);
+  (forall i < N : way[2*i-1]==way[2*i+1]);
 
 // We want a silent protocol.
 future silent;
 
 
-process P[i <- Nat % N]
+process P[i < N]
 {
   // Declare read and write access to variables corresponding to
   // P[i]'s links with P[i-1] and P[i+1] such that P[i] would
   // behave no differently if the links were swapped.
-  // See examplespec/ColorRingSymm.prot and examplesoln/ColorRingSymm.prot
+  // See examplespec/ColorRingDizzy.prot and examplesoln/ColorRingDizzy.prot
   // for more details.
   symmetric (j, way_idx, adj_way_idx) <- {# (i-1, 2*i, 2*i-1), (i+1, 2*i+1, 2*i+2) #}
   {

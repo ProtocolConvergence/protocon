@@ -5,19 +5,19 @@ constant L := 0;
 constant S := 1;
 constant R := 2;
 
-puppet variable x[Nat % N] <- Nat % 2;
-direct variable m[Nat % N] <- Nat % 3;
+puppet variable x[N] < 2;
+direct variable m[N] < 3;
 
 // The following cases are P[i] pointing
 // to P[i-1], itself, or P[i+1] respectively.
 ((future & silent) % puppet)
-  (forall i <- Nat % N :
+  (forall i < N :
       m[i-1]==R && m[i]==L
    || m[i-1]==L && m[i]==S && m[i+1]==R
    ||              m[i]==R && m[i+1]==L
   );
 
-process P[i <- Nat % N]
+process P[i < N]
 {
   read: x[i-1];
   write: x[i];

@@ -66,7 +66,7 @@ ProtoconFile::add_variables(Sesp vbl_name_sp, Sesp vbl_nmembs_sp, Sesp vbl_dom_s
 }
 
   bool
-ProtoconFile::add_processes(Sesp pc_name, Sesp idx_name, Sesp npcs, Sesp idx_offset)
+ProtoconFile::add_processes(Sesp pc_name, Sesp idx_name, Sesp npcs, Sesp map_vbl, Sesp map_expr)
 {
   if (!allgood)  return false;
   Claim2( index_map.sz() ,==, 0 );
@@ -91,11 +91,18 @@ ProtoconFile::add_processes(Sesp pc_name, Sesp idx_name, Sesp npcs, Sesp idx_off
     good = string_expression (pc_symm_spec->nmembs_expression, cadr_of_Sesp (npcs));
   }
 
-  if (!nil_ck_Sesp (idx_offset)) {
-    DoLegitLine( "evaluating process index offset" )
-      eval_int (&this->pc_symm->memb_idx_offset, idx_offset);
+  if (!nil_ck_Sesp (map_vbl)) {
     DoLegitLine( 0 )
-      string_expression (pc_symm_spec->offset_expression, idx_offset);
+      string_expression (pc_symm_spec->idxmap_name, map_vbl);
+    DoLegitLine( 0 )
+      string_expression (pc_symm_spec->idxmap_expression, map_expr);
+
+    for (uint pcidx = 0; pcidx < pc_symm->membs.sz(); ++pcidx) {
+      index_map[pc_symm_spec->idxmap_name] = pcidx;
+      DoLegitLine( "evaluating process index map" )
+        eval_int (&pc_symm->mapped_indices.membs[pcidx], map_expr);
+    }
+    index_map.erase(pc_symm_spec->idxmap_name);
   }
   return update_allgood (good);
 }
@@ -1112,8 +1119,9 @@ ProtoconFile::string_expression(String& ss, Sesp a)
     ss += key;
     ss += " ";
     ss += ccstr_of_Sesp (cadr_of_Sesp (a));
-    ss += " <- ";
-    string_expression (ss, caddr_of_Sesp (a));
+    ss += " < ";
+    Sesp b = caddr_of_Sesp (a);
+    string_expression (ss, cadr_of_Sesp (b));
     ss += " : ";
     string_expression (ss, cadddr_of_Sesp (a));
   }
@@ -1623,7 +1631,7 @@ ProtoconFile::within_process(uint pcidx)
 {
   Claim( !!pc_symm );
   Claim( !!pc_symm_spec );
-  index_map[pc_symm_spec->idx_name] = pc_symm->memb_idx_offset + (int)pcidx;
+  index_map[pc_symm_spec->idx_name] = pc_symm->mapped_indices.eval(pcidx);
   pc_in_use = pc_symm->membs[pcidx];
 }
 

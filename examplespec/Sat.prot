@@ -28,9 +28,9 @@ constant M := 3;
 //////////////////////////////////////////////////////////////////////////////
 //// System Variables
 
-variable x[Nat % 3] <- Nat % M;
-variable y[Nat % 3] <- Nat % 2;
-variable sat[Nat % 1] <- Nat % 2;
+variable x[3] < M;
+variable y[3] < 2;
+variable sat[1] < 2;
 
 //////////////////////////////////////////////////////////////////////////////
 // Instance-Specific Predicates
@@ -64,8 +64,8 @@ predicate UnsatClauses := SatClauses
 //// Invariant
 
 predicate Iden :=
-  (forall i <- Nat % 3 :
-   (forall j <- Nat % 3 :
+  (forall i < 3 :
+   (forall j < 3 :
     (x[i] != x[j]) || (y[i] == y[j])));
 
 predicate Clauses :=
@@ -88,7 +88,7 @@ predicate Clauses :=
 //////////////////////////////////////////////////////////////////////////////
 //// Topology
 
-process P[i <- Nat % 3]
+process P[i < 3]
 {
   read: sat[0];
   read: x[i];
@@ -97,11 +97,11 @@ process P[i <- Nat % 3]
 
 // Use these processes instead of P[0..2] instead if you want to allow asymmetry.
 // (Hint: The processes will still be symmetric!)
-//process P0[i <- Nat % 1] { read: sat[0], x[0]; write: y[0]; }
-//process P1[i <- Nat % 1] { read: sat[0], x[1]; write: y[1]; }
-//process P2[i <- Nat % 1] { read: sat[0], x[2]; write: y[2]; }
+//process P0[i < 1] { read: sat[0], x[0]; write: y[0]; }
+//process P1[i < 1] { read: sat[0], x[1]; write: y[1]; }
+//process P2[i < 1] { read: sat[0], x[2]; write: y[2]; }
 
-process P3[i <- Nat % 1]
+process P3[i < 1]
 {
   read: x[0], x[1], x[2];
   read: y[0], y[1], y[2];

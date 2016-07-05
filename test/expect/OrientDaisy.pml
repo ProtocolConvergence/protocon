@@ -33,95 +33,95 @@ init {
 
 active [2] proctype End()
 {
-  int id = (_pid - 1)
+#define tid (_pid - 1)
+  int i = tid*(N-1);
+#undef tid
   (initialized==1);
-#define i (if (id==0) then (0) else (N-1))
-#define j (if (id==0) then (i+1) else (i-1))
-#define ij (if (id==0) then (2*i+1) else (2*i))
-#define ji (if (id==0) then (2*i+2) else (2*i-1))
+#define ij (if (i==0) then (2*i+1) else (2*i))
+#define j (if (i==0) then (i+1) else (i-1))
+#define ji (if (i==0) then (2*j) else (2*j+1))
 end_End:
   do
-  :: atomic { w[ji]==0 && w[ij]==0 && b[j]==0 && b[i]==0 -> w[ij]=0; b[i]=1; }
-  :: atomic { w[ji]==0 && w[ij]==0 && b[j]==1 && b[i]==0 -> w[ij]=1; b[i]=1; }
-  :: atomic { w[ji]==0 && w[ij]==0 && b[j]==1 && b[i]==1 -> w[ij]=1; b[i]=1; }
-  :: atomic { w[ji]==0 && w[ij]==1 && b[j]==0 && b[i]==0 -> w[ij]=0; b[i]=1; }
-  :: atomic { w[ji]==0 && w[ij]==1 && b[j]==0 && b[i]==1 -> w[ij]=0; b[i]=1; }
-  :: atomic { w[ji]==0 && w[ij]==1 && b[j]==1 && b[i]==0 -> w[ij]=1; b[i]=1; }
-  :: atomic { w[ji]==1 && w[ij]==0 && b[j]==0 && b[i]==0 -> w[ij]=1; b[i]=1; }
-  :: atomic { w[ji]==1 && w[ij]==0 && b[j]==0 && b[i]==1 -> w[ij]=1; b[i]=1; }
-  :: atomic { w[ji]==1 && w[ij]==0 && b[j]==1 && b[i]==0 -> w[ij]=0; b[i]=1; }
-  :: atomic { w[ji]==1 && w[ij]==1 && b[j]==0 && b[i]==0 -> w[ij]=1; b[i]=1; }
-  :: atomic { w[ji]==1 && w[ij]==1 && b[j]==1 && b[i]==0 -> w[ij]=0; b[i]=1; }
-  :: atomic { w[ji]==1 && w[ij]==1 && b[j]==1 && b[i]==1 -> w[ij]=0; b[i]=1; }
+  :: atomic { b[i]==0 && w[ij]==0 && b[j]==0 && w[ji]==0 -> b[i]=1; w[ij]=0; }
+  :: atomic { b[i]==0 && w[ij]==0 && b[j]==0 && w[ji]==1 -> b[i]=1; w[ij]=1; }
+  :: atomic { b[i]==0 && w[ij]==0 && b[j]==1 && w[ji]==0 -> b[i]=1; w[ij]=1; }
+  :: atomic { b[i]==0 && w[ij]==0 && b[j]==1 && w[ji]==1 -> b[i]=1; w[ij]=0; }
+  :: atomic { b[i]==0 && w[ij]==1 && b[j]==0 && w[ji]==0 -> b[i]=1; w[ij]=0; }
+  :: atomic { b[i]==0 && w[ij]==1 && b[j]==0 && w[ji]==1 -> b[i]=1; w[ij]=1; }
+  :: atomic { b[i]==0 && w[ij]==1 && b[j]==1 && w[ji]==0 -> b[i]=1; w[ij]=1; }
+  :: atomic { b[i]==0 && w[ij]==1 && b[j]==1 && w[ji]==1 -> b[i]=1; w[ij]=0; }
+  :: atomic { b[i]==1 && w[ij]==0 && b[j]==0 && w[ji]==1 -> b[i]=1; w[ij]=1; }
+  :: atomic { b[i]==1 && w[ij]==0 && b[j]==1 && w[ji]==0 -> b[i]=1; w[ij]=1; }
+  :: atomic { b[i]==1 && w[ij]==1 && b[j]==0 && w[ji]==0 -> b[i]=1; w[ij]=0; }
+  :: atomic { b[i]==1 && w[ij]==1 && b[j]==1 && w[ji]==1 -> b[i]=1; w[ij]=0; }
   od;
-#undef i
-#undef j
 #undef ij
+#undef j
 #undef ji
 }
 
 active [3] proctype P()
 {
-  int id = (_pid - 3)
+#define tid (_pid - 3)
+  int i = tid+Chain;
+#undef tid
   (initialized==1);
-#define i (Chain+id)
-#define j (i-1)
-#define k (i+1)
-#define ji (2*i-1)
 #define ij (2*i)
+#define j (i-1)
+#define ji (2*j+1)
 #define ik (2*i+1)
-#define ki (2*i+2)
+#define k (i+1)
+#define ki (2*k)
 end_P:
   do
-  :: atomic { w[ji]==0 && w[ki]==0 && w[ij]==0 && w[ik]==1 && b[j]==0 && b[k]==0 && b[i]==1 -> w[ij]=0; w[ik]=1; b[i]=0; }
-  :: atomic { w[ji]==0 && w[ki]==0 && w[ij]==1 && w[ik]==0 && b[j]==0 && b[k]==0 && b[i]==1 -> w[ij]=1; w[ik]=0; b[i]=0; }
-  :: atomic { w[ji]==0 && w[ki]==0 && w[ij]==0 && w[ik]==1 && b[j]==0 && b[k]==1 && b[i]==1 -> w[ij]=0; w[ik]=1; b[i]=0; }
-  :: atomic { w[ji]==0 && w[ki]==0 && w[ij]==1 && w[ik]==0 && b[j]==1 && b[k]==0 && b[i]==1 -> w[ij]=1; w[ik]=0; b[i]=0; }
-  :: atomic { w[ji]==0 && w[ki]==0 && w[ij]==0 && w[ik]==1 && b[j]==1 && b[k]==0 && b[i]==1 -> w[ij]=0; w[ik]=1; b[i]=0; }
-  :: atomic { w[ji]==0 && w[ki]==0 && w[ij]==1 && w[ik]==0 && b[j]==0 && b[k]==1 && b[i]==1 -> w[ij]=1; w[ik]=0; b[i]=0; }
-  :: atomic { w[ji]==0 && w[ki]==0 && w[ij]==0 && w[ik]==1 && b[j]==1 && b[k]==1 && b[i]==1 -> w[ij]=0; w[ik]=1; b[i]=0; }
-  :: atomic { w[ji]==0 && w[ki]==0 && w[ij]==1 && w[ik]==0 && b[j]==1 && b[k]==1 && b[i]==1 -> w[ij]=1; w[ik]=0; b[i]=0; }
-  :: atomic { w[ji]==0 && w[ki]==1 && w[ij]==0 && w[ik]==1 && b[j]==0 && b[k]==0 && b[i]==0 -> w[ij]=1; w[ik]=0; b[i]=0; }
-  :: atomic { w[ji]==1 && w[ki]==0 && w[ij]==1 && w[ik]==0 && b[j]==0 && b[k]==0 && b[i]==0 -> w[ij]=0; w[ik]=1; b[i]=0; }
-  :: atomic { w[ji]==0 && w[ki]==1 && w[ij]==0 && w[ik]==1 && b[j]==0 && b[k]==0 && b[i]==1 -> w[ij]=1; w[ik]=0; b[i]=0; }
-  :: atomic { w[ji]==1 && w[ki]==0 && w[ij]==1 && w[ik]==0 && b[j]==0 && b[k]==0 && b[i]==1 -> w[ij]=0; w[ik]=1; b[i]=0; }
-  :: atomic { w[ji]==0 && w[ki]==1 && w[ij]==0 && w[ik]==1 && b[j]==0 && b[k]==1 && b[i]==0 -> w[ij]=1; w[ik]=0; b[i]=0; }
-  :: atomic { w[ji]==1 && w[ki]==0 && w[ij]==1 && w[ik]==0 && b[j]==1 && b[k]==0 && b[i]==0 -> w[ij]=0; w[ik]=1; b[i]=0; }
-  :: atomic { w[ji]==0 && w[ki]==1 && w[ij]==0 && w[ik]==1 && b[j]==0 && b[k]==1 && b[i]==1 -> w[ij]=1; w[ik]=0; b[i]=0; }
-  :: atomic { w[ji]==1 && w[ki]==0 && w[ij]==1 && w[ik]==0 && b[j]==1 && b[k]==0 && b[i]==1 -> w[ij]=0; w[ik]=1; b[i]=0; }
-  :: atomic { w[ji]==0 && w[ki]==1 && w[ij]==0 && w[ik]==1 && b[j]==1 && b[k]==0 && b[i]==0 -> w[ij]=1; w[ik]=0; b[i]=0; }
-  :: atomic { w[ji]==1 && w[ki]==0 && w[ij]==1 && w[ik]==0 && b[j]==0 && b[k]==1 && b[i]==0 -> w[ij]=0; w[ik]=1; b[i]=0; }
-  :: atomic { w[ji]==0 && w[ki]==1 && w[ij]==0 && w[ik]==1 && b[j]==1 && b[k]==0 && b[i]==1 -> w[ij]=1; w[ik]=0; b[i]=0; }
-  :: atomic { w[ji]==1 && w[ki]==0 && w[ij]==1 && w[ik]==0 && b[j]==0 && b[k]==1 && b[i]==1 -> w[ij]=0; w[ik]=1; b[i]=0; }
-  :: atomic { w[ji]==0 && w[ki]==1 && w[ij]==0 && w[ik]==1 && b[j]==1 && b[k]==1 && b[i]==0 -> w[ij]=1; w[ik]=0; b[i]=1; }
-  :: atomic { w[ji]==1 && w[ki]==0 && w[ij]==1 && w[ik]==0 && b[j]==1 && b[k]==1 && b[i]==0 -> w[ij]=0; w[ik]=1; b[i]=1; }
-  :: atomic { w[ji]==0 && w[ki]==1 && w[ij]==0 && w[ik]==1 && b[j]==1 && b[k]==1 && b[i]==1 -> w[ij]=1; w[ik]=0; b[i]=1; }
-  :: atomic { w[ji]==1 && w[ki]==0 && w[ij]==1 && w[ik]==0 && b[j]==1 && b[k]==1 && b[i]==1 -> w[ij]=0; w[ik]=1; b[i]=1; }
-  :: atomic { w[ji]==0 && w[ki]==1 && w[ij]==1 && w[ik]==0 && b[j]==0 && b[k]==0 && b[i]==1 -> w[ij]=1; w[ik]=0; b[i]=0; }
-  :: atomic { w[ji]==1 && w[ki]==0 && w[ij]==0 && w[ik]==1 && b[j]==0 && b[k]==0 && b[i]==1 -> w[ij]=0; w[ik]=1; b[i]=0; }
-  :: atomic { w[ji]==0 && w[ki]==1 && w[ij]==1 && w[ik]==0 && b[j]==0 && b[k]==1 && b[i]==1 -> w[ij]=1; w[ik]=0; b[i]=0; }
-  :: atomic { w[ji]==1 && w[ki]==0 && w[ij]==0 && w[ik]==1 && b[j]==1 && b[k]==0 && b[i]==1 -> w[ij]=0; w[ik]=1; b[i]=0; }
-  :: atomic { w[ji]==0 && w[ki]==1 && w[ij]==1 && w[ik]==0 && b[j]==1 && b[k]==0 && b[i]==1 -> w[ij]=1; w[ik]=0; b[i]=0; }
-  :: atomic { w[ji]==1 && w[ki]==0 && w[ij]==0 && w[ik]==1 && b[j]==0 && b[k]==1 && b[i]==1 -> w[ij]=0; w[ik]=1; b[i]=0; }
-  :: atomic { w[ji]==0 && w[ki]==1 && w[ij]==1 && w[ik]==0 && b[j]==1 && b[k]==1 && b[i]==0 -> w[ij]=1; w[ik]=0; b[i]=1; }
-  :: atomic { w[ji]==1 && w[ki]==0 && w[ij]==0 && w[ik]==1 && b[j]==1 && b[k]==1 && b[i]==0 -> w[ij]=0; w[ik]=1; b[i]=1; }
-  :: atomic { w[ji]==1 && w[ki]==1 && w[ij]==0 && w[ik]==1 && b[j]==0 && b[k]==0 && b[i]==0 -> w[ij]=0; w[ik]=1; b[i]=1; }
-  :: atomic { w[ji]==1 && w[ki]==1 && w[ij]==1 && w[ik]==0 && b[j]==0 && b[k]==0 && b[i]==0 -> w[ij]=1; w[ik]=0; b[i]=1; }
-  :: atomic { w[ji]==1 && w[ki]==1 && w[ij]==0 && w[ik]==1 && b[j]==0 && b[k]==1 && b[i]==0 -> w[ij]=1; w[ik]=0; b[i]=1; }
-  :: atomic { w[ji]==1 && w[ki]==1 && w[ij]==1 && w[ik]==0 && b[j]==1 && b[k]==0 && b[i]==0 -> w[ij]=0; w[ik]=1; b[i]=1; }
-  :: atomic { w[ji]==1 && w[ki]==1 && w[ij]==0 && w[ik]==1 && b[j]==0 && b[k]==1 && b[i]==1 -> w[ij]=1; w[ik]=0; b[i]=1; }
-  :: atomic { w[ji]==1 && w[ki]==1 && w[ij]==1 && w[ik]==0 && b[j]==1 && b[k]==0 && b[i]==1 -> w[ij]=0; w[ik]=1; b[i]=1; }
-  :: atomic { w[ji]==1 && w[ki]==1 && w[ij]==0 && w[ik]==1 && b[j]==1 && b[k]==0 && b[i]==0 -> w[ij]=0; w[ik]=1; b[i]=1; }
-  :: atomic { w[ji]==1 && w[ki]==1 && w[ij]==1 && w[ik]==0 && b[j]==0 && b[k]==1 && b[i]==0 -> w[ij]=1; w[ik]=0; b[i]=1; }
-  :: atomic { w[ji]==1 && w[ki]==1 && w[ij]==0 && w[ik]==1 && b[j]==1 && b[k]==1 && b[i]==1 -> w[ij]=0; w[ik]=1; b[i]=0; }
-  :: atomic { w[ji]==1 && w[ki]==1 && w[ij]==1 && w[ik]==0 && b[j]==1 && b[k]==1 && b[i]==1 -> w[ij]=1; w[ik]=0; b[i]=0; }
+  :: atomic { b[i]==0 && w[ij]==0 && w[ik]==1 && b[j]==0 && b[k]==0 && w[ji]==0 && w[ki]==1 -> b[i]=0; w[ij]=1; w[ik]=0; }
+  :: atomic { b[i]==0 && w[ij]==1 && w[ik]==0 && b[j]==0 && b[k]==0 && w[ji]==1 && w[ki]==0 -> b[i]=0; w[ij]=0; w[ik]=1; }
+  :: atomic { b[i]==0 && w[ij]==0 && w[ik]==1 && b[j]==0 && b[k]==0 && w[ji]==1 && w[ki]==1 -> b[i]=1; w[ij]=0; w[ik]=1; }
+  :: atomic { b[i]==0 && w[ij]==1 && w[ik]==0 && b[j]==0 && b[k]==0 && w[ji]==1 && w[ki]==1 -> b[i]=1; w[ij]=1; w[ik]=0; }
+  :: atomic { b[i]==0 && w[ij]==0 && w[ik]==1 && b[j]==0 && b[k]==1 && w[ji]==0 && w[ki]==1 -> b[i]=0; w[ij]=1; w[ik]=0; }
+  :: atomic { b[i]==0 && w[ij]==1 && w[ik]==0 && b[j]==1 && b[k]==0 && w[ji]==1 && w[ki]==0 -> b[i]=0; w[ij]=0; w[ik]=1; }
+  :: atomic { b[i]==0 && w[ij]==0 && w[ik]==1 && b[j]==0 && b[k]==1 && w[ji]==1 && w[ki]==1 -> b[i]=1; w[ij]=1; w[ik]=0; }
+  :: atomic { b[i]==0 && w[ij]==1 && w[ik]==0 && b[j]==1 && b[k]==0 && w[ji]==1 && w[ki]==1 -> b[i]=1; w[ij]=0; w[ik]=1; }
+  :: atomic { b[i]==0 && w[ij]==0 && w[ik]==1 && b[j]==1 && b[k]==0 && w[ji]==0 && w[ki]==1 -> b[i]=0; w[ij]=1; w[ik]=0; }
+  :: atomic { b[i]==0 && w[ij]==1 && w[ik]==0 && b[j]==0 && b[k]==1 && w[ji]==1 && w[ki]==0 -> b[i]=0; w[ij]=0; w[ik]=1; }
+  :: atomic { b[i]==0 && w[ij]==0 && w[ik]==1 && b[j]==1 && b[k]==0 && w[ji]==1 && w[ki]==1 -> b[i]=1; w[ij]=0; w[ik]=1; }
+  :: atomic { b[i]==0 && w[ij]==1 && w[ik]==0 && b[j]==0 && b[k]==1 && w[ji]==1 && w[ki]==1 -> b[i]=1; w[ij]=1; w[ik]=0; }
+  :: atomic { b[i]==0 && w[ij]==0 && w[ik]==1 && b[j]==1 && b[k]==1 && w[ji]==0 && w[ki]==1 -> b[i]=1; w[ij]=1; w[ik]=0; }
+  :: atomic { b[i]==0 && w[ij]==1 && w[ik]==0 && b[j]==1 && b[k]==1 && w[ji]==1 && w[ki]==0 -> b[i]=1; w[ij]=0; w[ik]=1; }
+  :: atomic { b[i]==0 && w[ij]==0 && w[ik]==1 && b[j]==1 && b[k]==1 && w[ji]==1 && w[ki]==0 -> b[i]=1; w[ij]=0; w[ik]=1; }
+  :: atomic { b[i]==0 && w[ij]==1 && w[ik]==0 && b[j]==1 && b[k]==1 && w[ji]==0 && w[ki]==1 -> b[i]=1; w[ij]=1; w[ik]=0; }
+  :: atomic { b[i]==1 && w[ij]==0 && w[ik]==1 && b[j]==0 && b[k]==0 && w[ji]==0 && w[ki]==0 -> b[i]=0; w[ij]=0; w[ik]=1; }
+  :: atomic { b[i]==1 && w[ij]==1 && w[ik]==0 && b[j]==0 && b[k]==0 && w[ji]==0 && w[ki]==0 -> b[i]=0; w[ij]=1; w[ik]=0; }
+  :: atomic { b[i]==1 && w[ij]==0 && w[ik]==1 && b[j]==0 && b[k]==0 && w[ji]==0 && w[ki]==1 -> b[i]=0; w[ij]=1; w[ik]=0; }
+  :: atomic { b[i]==1 && w[ij]==1 && w[ik]==0 && b[j]==0 && b[k]==0 && w[ji]==1 && w[ki]==0 -> b[i]=0; w[ij]=0; w[ik]=1; }
+  :: atomic { b[i]==1 && w[ij]==0 && w[ik]==1 && b[j]==0 && b[k]==0 && w[ji]==1 && w[ki]==0 -> b[i]=0; w[ij]=0; w[ik]=1; }
+  :: atomic { b[i]==1 && w[ij]==1 && w[ik]==0 && b[j]==0 && b[k]==0 && w[ji]==0 && w[ki]==1 -> b[i]=0; w[ij]=1; w[ik]=0; }
+  :: atomic { b[i]==1 && w[ij]==0 && w[ik]==1 && b[j]==0 && b[k]==1 && w[ji]==0 && w[ki]==0 -> b[i]=0; w[ij]=0; w[ik]=1; }
+  :: atomic { b[i]==1 && w[ij]==1 && w[ik]==0 && b[j]==1 && b[k]==0 && w[ji]==0 && w[ki]==0 -> b[i]=0; w[ij]=1; w[ik]=0; }
+  :: atomic { b[i]==1 && w[ij]==0 && w[ik]==1 && b[j]==0 && b[k]==1 && w[ji]==0 && w[ki]==1 -> b[i]=0; w[ij]=1; w[ik]=0; }
+  :: atomic { b[i]==1 && w[ij]==1 && w[ik]==0 && b[j]==1 && b[k]==0 && w[ji]==1 && w[ki]==0 -> b[i]=0; w[ij]=0; w[ik]=1; }
+  :: atomic { b[i]==1 && w[ij]==0 && w[ik]==1 && b[j]==0 && b[k]==1 && w[ji]==1 && w[ki]==0 -> b[i]=0; w[ij]=0; w[ik]=1; }
+  :: atomic { b[i]==1 && w[ij]==1 && w[ik]==0 && b[j]==1 && b[k]==0 && w[ji]==0 && w[ki]==1 -> b[i]=0; w[ij]=1; w[ik]=0; }
+  :: atomic { b[i]==1 && w[ij]==0 && w[ik]==1 && b[j]==0 && b[k]==1 && w[ji]==1 && w[ki]==1 -> b[i]=1; w[ij]=1; w[ik]=0; }
+  :: atomic { b[i]==1 && w[ij]==1 && w[ik]==0 && b[j]==1 && b[k]==0 && w[ji]==1 && w[ki]==1 -> b[i]=1; w[ij]=0; w[ik]=1; }
+  :: atomic { b[i]==1 && w[ij]==0 && w[ik]==1 && b[j]==1 && b[k]==0 && w[ji]==0 && w[ki]==0 -> b[i]=0; w[ij]=0; w[ik]=1; }
+  :: atomic { b[i]==1 && w[ij]==1 && w[ik]==0 && b[j]==0 && b[k]==1 && w[ji]==0 && w[ki]==0 -> b[i]=0; w[ij]=1; w[ik]=0; }
+  :: atomic { b[i]==1 && w[ij]==0 && w[ik]==1 && b[j]==1 && b[k]==0 && w[ji]==0 && w[ki]==1 -> b[i]=0; w[ij]=1; w[ik]=0; }
+  :: atomic { b[i]==1 && w[ij]==1 && w[ik]==0 && b[j]==0 && b[k]==1 && w[ji]==1 && w[ki]==0 -> b[i]=0; w[ij]=0; w[ik]=1; }
+  :: atomic { b[i]==1 && w[ij]==0 && w[ik]==1 && b[j]==1 && b[k]==0 && w[ji]==1 && w[ki]==0 -> b[i]=0; w[ij]=0; w[ik]=1; }
+  :: atomic { b[i]==1 && w[ij]==1 && w[ik]==0 && b[j]==0 && b[k]==1 && w[ji]==0 && w[ki]==1 -> b[i]=0; w[ij]=1; w[ik]=0; }
+  :: atomic { b[i]==1 && w[ij]==0 && w[ik]==1 && b[j]==1 && b[k]==1 && w[ji]==0 && w[ki]==0 -> b[i]=0; w[ij]=0; w[ik]=1; }
+  :: atomic { b[i]==1 && w[ij]==1 && w[ik]==0 && b[j]==1 && b[k]==1 && w[ji]==0 && w[ki]==0 -> b[i]=0; w[ij]=1; w[ik]=0; }
+  :: atomic { b[i]==1 && w[ij]==0 && w[ik]==1 && b[j]==1 && b[k]==1 && w[ji]==0 && w[ki]==1 -> b[i]=1; w[ij]=1; w[ik]=0; }
+  :: atomic { b[i]==1 && w[ij]==1 && w[ik]==0 && b[j]==1 && b[k]==1 && w[ji]==1 && w[ki]==0 -> b[i]=1; w[ij]=0; w[ik]=1; }
+  :: atomic { b[i]==1 && w[ij]==0 && w[ik]==1 && b[j]==1 && b[k]==1 && w[ji]==1 && w[ki]==1 -> b[i]=0; w[ij]=0; w[ik]=1; }
+  :: atomic { b[i]==1 && w[ij]==1 && w[ik]==0 && b[j]==1 && b[k]==1 && w[ji]==1 && w[ki]==1 -> b[i]=0; w[ij]=1; w[ik]=0; }
   od;
-#undef i
-#undef j
-#undef k
-#undef ji
 #undef ij
+#undef j
+#undef ji
 #undef ik
+#undef k
 #undef ki
 }
 

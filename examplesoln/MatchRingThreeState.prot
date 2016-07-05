@@ -14,9 +14,9 @@ constant L := 0;
 constant S := 1;
 constant R := 2;
 
-variable m[Nat % N] <- Nat % 3;
+variable m[N] < 3;
 
-process P[i <- Nat % N]
+process P[i < N]
 {
   read:  m[i-1];
   write: m[i];

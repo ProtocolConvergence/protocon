@@ -18,18 +18,18 @@ constant BA := 1;
 // Used for determining next message in somewhat variable way.
 constant DiffSz := MsgSz-1;
 
-puppet variable msg[Nat % (2+AB)] <- Nat % MsgSz;
-puppet variable seq[Nat % (2+AB+BA)] <- Nat % 4;
-puppet variable rng[Nat % 1] <- Nat % 1;
+puppet variable msg[(2+AB)] < MsgSz;
+puppet variable seq[(2+AB+BA)] < 4;
+puppet variable rng[1] < 1;
 
-shadow variable y[Nat % 2] <- Nat % MsgSz;
-direct variable d[Nat % 1] <- Nat % DiffSz;
+shadow variable y[2] < MsgSz;
+direct variable d[1] < DiffSz;
 
 (future & future shadow)
   (y[0]==y[1] || y[0]==(y[1]+d[0]+1)%MsgSz);
 
 
-process A[id <- Nat % 1]
+process A[id < 1]
 {
   let i := 0;
 
@@ -52,7 +52,7 @@ process A[id <- Nat % 1]
 }
 
 
-process B[id <- Nat % 1]
+process B[id < 1]
 {
   let i := AB+1;
 
@@ -74,7 +74,7 @@ process B[id <- Nat % 1]
 
 
 // Channel from A to B.
-process CommAB[id <- Nat % AB]
+process CommAB[id < AB]
 {
   let i := id+1;
   read: msg[i-1];
@@ -86,7 +86,7 @@ process CommAB[id <- Nat % AB]
 }
 
 // Channel from B to A.
-process CommBA[id <- Nat % BA]
+process CommBA[id < BA]
 {
   let i := id+AB+2;
   read: seq[i-1];

@@ -200,7 +200,8 @@ public:
   Table<bool> random_write_flags;
   Table<LinkSymmetry> link_symmetries;
   String nmembs_expression;
-  String offset_expression;
+  String idxmap_name;
+  String idxmap_expression;
   Table<String> shadow_act_strings;
   Table<String> forbid_act_strings;
   Table<String> permit_act_strings;

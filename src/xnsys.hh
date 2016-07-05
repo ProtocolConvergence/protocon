@@ -200,7 +200,7 @@ class PcSymm {
 public:
   Mem<PcSymmSpec> spec;
   Table< Pc* > membs;
-  int memb_idx_offset;
+  NatMap mapped_indices;
   /// The rvbls should include wvbls.
   Table< const VblSymm* > rvbl_symms;
   Table< const VblSymm* > wvbl_symms;
@@ -227,8 +227,7 @@ private:
 
 public:
   PcSymm()
-    : memb_idx_offset( 0 )
-    , shadow_pfmla( false )
+    : shadow_pfmla( false )
     , direct_pfmla( false )
   {
     InitDomMax( representative_pcidx );
@@ -260,7 +259,7 @@ public:
 };
 
 inline String name_of(const Pc& pc) {
-  return pc.symm->spec->name + "[" + pc.symm_idx + pc.symm->memb_idx_offset + "]";
+  return pc.symm->spec->name + "[" + pc.symm->mapped_indices.eval(pc.symm_idx) + "]";
 }
 
 inline uint ActSymm::guard(uint vbl_idx) const

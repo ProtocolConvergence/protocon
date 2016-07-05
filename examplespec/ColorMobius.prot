@@ -4,9 +4,9 @@
 constant N := 3;
 constant M := 4;
 
-variable x[Nat % (2*N)] <- Nat % M;
+variable x[(2*N)] < M;
 
-process P[i <- Nat % (2*N)]
+process P[i < (2*N)]
 {
   read:  x[i-1];
   read:  x[i+N];

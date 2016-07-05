@@ -4,15 +4,15 @@
 
 constant N := 3;
 
-shadow variable c[Int % N] <- Int % 3;
-puppet variable x[Int % N] <- Int % 3;
+shadow variable c[N] < 3;
+puppet variable x[N] < 3;
 
 ((future & silent) % puppet)
-  (forall i <- Nat % N :
+  (forall i < N :
    (c[i] != c[i-1]) && (c[i] != c[i+1])
   );
 
-process P[i <- Int % N]
+process P[i < N]
 {
   read:  x[i-1];
   write: x[i];

@@ -4,18 +4,18 @@
 
 constant N := 3;
 
-variable x[Nat % N] <- Nat % 3;
+variable x[N] < 3;
 
 // Values are nondecreasing.
 (future & closed)
-  (forall i <- Nat % (N-1) : x[i]<=x[i+1]);
+  (forall i < (N-1) : x[i]<=x[i+1]);
 
 // Process has token when it sees one of:
 //   x[i-1]==1 && x[i]==2
 //                x[i]==0 && x[i+1]==2
 // The Top process also has the token when x[N-1]!=2.
 //(future & closed)
-//  (unique i <- Nat % N : false
+//  (unique i < N : false
 //   || i > 0    && x[i-1]==1 && x[i]==2
 //   || i < N-1  && x[i]==0 && x[i+1]==2
 //   || i == N-1 && x[i]!=2
@@ -24,7 +24,7 @@ variable x[Nat % N] <- Nat % 3;
 // The protocol remains active.
 future active shadow;
 
-process Bot[i <- Nat % 1]
+process Bot[i < 1]
 {
   write: x[i];
   read:  x[i+1];
@@ -37,7 +37,7 @@ process Bot[i <- Nat % 1]
     ;
 }
 
-process P[i <- 1 + Nat % (N-2)]
+process P[i <- map tid < N-2 : tid+1]
 {
   read: x[i-1];
   write: x[i];
@@ -50,7 +50,7 @@ process P[i <- 1 + Nat % (N-2)]
     ;
 }
 
-process Top[i <- (N-1) + Nat % 1]
+process Top[i <- map tid < 1 : N-1]
 {
   read: x[i-1];
   write: x[i];

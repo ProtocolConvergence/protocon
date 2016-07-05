@@ -6,9 +6,9 @@ constant N := 3;
 constant M := 4;
 constant E := N + 2*(N-1);
 
-variable e[Nat % E] <- Nat % 2;
+variable e[E] < 2;
 
-process P[i <- Nat % (2*N-4)]
+process P[i < (2*N-4)]
 {
   let ac := 3*(i/2+1);
   let pd := (i % 2) + ac-2;
@@ -22,7 +22,7 @@ process P[i <- Nat % (2*N-4)]
   //  ;
 }
 
-process End[i <- Nat % 4]
+process End[i < 4]
 {
   let ac := if (i < 2) then (0) else (E-1);
   let sc := (i % 2) + (if (i < 2) then (ac+1) else (ac-2));
@@ -35,10 +35,10 @@ process End[i <- Nat % 4]
 
 (future & silent)
 (
-  (forall i <- Nat % N : e[3*i] == 1)
+  (forall i < N : e[3*i] == 1)
   &&
-  (forall i <- Nat % (N-1) : e[3*i+1] == 0)
+  (forall i < (N-1) : e[3*i+1] == 0)
   &&
-  (forall i <- Nat % (N-1) : e[3*i+2] == 0)
+  (forall i < (N-1) : e[3*i+2] == 0)
 );
 

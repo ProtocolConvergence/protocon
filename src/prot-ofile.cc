@@ -153,8 +153,8 @@ oput_protocon_pc_vbls (OFile& ofile, const Xn::PcSymm& pc_symm)
         for (uint v = 0; v < link_symmetry.nvbls; ++v) {
           uint vidx = link_symmetry(v, 0);
           ofile << "\n    ";
-          oput_protocon_pc_vbl ((ofile << "\n    "), pc_symm,
-                                vidx, link_symmetry.index_expressions[v]);
+          oput_protocon_pc_vbl (ofile, pc_symm, vidx,
+                                link_symmetry.index_expressions[v]);
         }
         ofile << "\n  }";
         i += link_symmetry.nlinks * link_symmetry.nvbls - 1;
@@ -500,8 +500,8 @@ oput_protocon_file (OFile& of, const Xn::Sys& sys,
       of << "puppet ";
 
     of << "variable " << vbl_symm.spec->name
-      << "[Nat % " << vbl_symm.spec->nmembs_expression
-      << "] <- Nat % " << vbl_symm.spec->domsz_expression << ";";
+      << "[" << vbl_symm.spec->nmembs_expression
+      << "] < " << vbl_symm.spec->domsz_expression << ";";
   }
 
   for (uint i = 0; i < sys.predicate_map.sz(); ++i) {
@@ -539,15 +539,17 @@ oput_protocon_file (OFile& of, const Xn::Sys& sys,
     if (pc_symm.membs.sz() == 0)  continue;
 
     of << "\nprocess " << pc_symm.spec->name
-      << "[" << pc_symm.spec->idx_name << " <- "
+      << "[" << pc_symm.spec->idx_name
       ;
-    if (!!pc_symm.spec->offset_expression)
-      of << pc_symm.spec->offset_expression << " + ";
-
-    of << "Nat % "
-      << o_topology.pc_symms[i].spec->nmembs_expression << "]"
-      << "\n{"
-      ;
+    if (!!pc_symm.spec->idxmap_name) {
+      of << " <- map " << pc_symm.spec->idxmap_name
+        << " < " << o_topology.pc_symms[i].spec->nmembs_expression
+        << " : " << pc_symm.spec->idxmap_expression;
+    }
+    else {
+      of << " < " << o_topology.pc_symms[i].spec->nmembs_expression;
+    }
+    of << "]" << "\n{";
     oput_protocon_pc_lets (of, pc_symm);
     oput_protocon_pc_vbls (of, pc_symm);
     oput_protocon_pc_predicates (of, pc_symm);

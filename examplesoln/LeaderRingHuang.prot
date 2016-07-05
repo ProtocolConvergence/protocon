@@ -7,9 +7,9 @@
 constant N := 5;
 constant M := N;
 
-variable x[Nat % N] <- Nat % M;
+variable x[N] < M;
 
-process P[i <- Nat % N]
+process P[i < N]
 {
   read:  x[i-1];
   write: x[i];
@@ -25,13 +25,13 @@ process P[i <- Nat % N]
 // A leader can be chosen by finding the process whose x[i]==0.
 (future & silent)
 (
-  (forall i <- Nat % N :
+  (forall i < N :
    (x[i-1] - x[i]) % M == (x[i] - x[i+1]) % M
   )
   &&
   // All values are unique.
-  (forall i <- Nat % N :
-   (forall j <- Nat % N :
+  (forall i < N :
+   (forall j < N :
     i == j || x[i] != x[j]
    )
   )

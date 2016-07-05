@@ -3,9 +3,9 @@
 // By default, use a tree tall enough to contain all three types of processes.
 constant L := 3;
 
-variable x[Int % (2^L-1)] <- Int % 3;
+variable x[(2^L-1)] < 3;
 
-process Root[i <- Int % 1]
+process Root[i < 1]
 {
   read:  x[1];
   read:  x[2];
@@ -16,7 +16,7 @@ process Root[i <- Int % 1]
     ;
 }
 
-process P[j <- Int % (2^(L-1)-2)]
+process P[j < (2^(L-1)-2)]
 {
   let i := j + 1;
   let parent_idx := (i-1)/2;
@@ -36,7 +36,7 @@ process P[j <- Int % (2^(L-1)-2)]
     ;
 }
 
-process Leaf[j <- Int % (2^(L-1))]
+process Leaf[j < (2^(L-1))]
 {
   let i := j + (2^(L-1)-1);
   let parent_idx := (i-1)/2;

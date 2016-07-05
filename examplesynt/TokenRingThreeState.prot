@@ -4,14 +4,14 @@
 
 constant N := 3;
 
-shadow variable fwd[Nat % 1] <- Nat % 2;
-shadow variable tok[Nat % N] <- Nat % 2;
-puppet variable z[Nat % N] <- Nat % 3;
+shadow variable fwd[1] < 2;
+shadow variable tok[N] < 2;
+puppet variable z[N] < 3;
 
 ((future & active shadow) % puppet)
-  (unique i <- Nat % N : tok[i]==1);
+  (unique i < N : tok[i]==1);
 
-process Bot[i <- Nat % 1]
+process Bot[i < 1]
 {
   write: fwd[0], tok[i], tok[i+1];
 
@@ -26,7 +26,7 @@ process Bot[i <- Nat % 1]
     ;
 }
 
-process P[i <- 1 + Nat % (N-2)]
+process P[i <- map tid < N-2 : tid+1]
 {
   read: fwd[0];
   write: tok[i-1], tok[i], tok[i+1];
@@ -50,7 +50,7 @@ process P[i <- 1 + Nat % (N-2)]
     ;
 }
 
-process Top[i <- (N-1) + Nat % 1]
+process Top[i <- map tid < 1 : N-1]
 {
   write: fwd[0], tok[i-1], tok[i];
 

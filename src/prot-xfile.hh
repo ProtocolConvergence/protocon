@@ -106,7 +106,7 @@ public:
   bool add_variables(Sesp vbl_name_sp, Sesp vbl_nmembs_sp, Sesp vbl_dom_sp,
                      Xn::Vbl::ShadowPuppetRole role);
 
-  bool add_processes(Sesp pc_name, Sesp idx_name, Sesp npcs, Sesp idx_offset);
+  bool add_processes(Sesp pc_name, Sesp idx_name, Sesp npcs, Sesp map_vbl, Sesp map_expr);
 
   bool add_constant(Sesp name_sp, Sesp val_sp);
 

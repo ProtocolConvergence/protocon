@@ -12,9 +12,9 @@
 constant M := 3;
 constant N := 3;
 
-variable x[Nat % (M*N)] <- Nat % 5;
+variable x[(M*N)] < 5;
 
-process P[id <- Nat % (M*N)]
+process P[id < (M*N)]
 {
   let i := id / N;
   let j := id % N;

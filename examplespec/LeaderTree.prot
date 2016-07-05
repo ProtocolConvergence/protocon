@@ -12,9 +12,9 @@ constant w_tri := (1,4,6);
 
 constant N_conn := (N_uni + 2*N_bin + 3*N_tri) / 2;
 
-variable w[Nat % (2*N_conn)] <- Nat % 2;
+variable w[(2*N_conn)] < 2;
 
-process P_uni[i <- Nat % N_uni]
+process P_uni[i < N_uni]
 {
   let ij := w_uni[i];
   let ji := if (ij % 2 == 0) then (ij+1) else (ij-1);
@@ -26,7 +26,7 @@ process P_uni[i <- Nat % N_uni]
     (w[ij]!=w[ji]);
 }
 
-process P_bin[i <- Nat % N_bin]
+process P_bin[i < N_bin]
 {
   let ij := w_bin[2*i+0];
   let ik := w_bin[2*i+1];
@@ -47,7 +47,7 @@ process P_bin[i <- Nat % N_bin]
     (w[ij]!=w[ji] && w[ik]!=w[ki]);
 }
 
-process P_tri[i <- Nat % N_tri]
+process P_tri[i < N_tri]
 {
   let ij := w_tri[3*i+0];
   let ik := w_tri[3*i+1];

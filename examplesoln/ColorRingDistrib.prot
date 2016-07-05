@@ -3,14 +3,14 @@
 // between processes. This models the unfair read/write daemon.
 
 constant N := 3;
-puppet variable x_pd[Nat % N] <- Nat % 3;
-direct variable x[Nat % N] <- Nat % 3;
-puppet variable x_sc[Nat % N] <- Nat % 3;
+puppet variable x_pd[N] < 3;
+direct variable x[N] < 3;
+puppet variable x_sc[N] < 3;
 
 ((future & shadow) % puppet)
-  (forall i <- Nat % N : x[i]!=x[i-1]);
+  (forall i < N : x[i]!=x[i-1]);
 
-process P[i <- Nat % N]
+process P[i < N]
 {
   read: x_pd[i];
   random write: x[i];
@@ -26,7 +26,7 @@ process P[i <- Nat % N]
 }
 
 // Communication delay.
-process GetPd[i <- Nat % N]
+process GetPd[i < N]
 {
   read: x[i-1];
   write: x_pd[i];
@@ -34,7 +34,7 @@ process GetPd[i <- Nat % N]
 }
 
 // Communication delay.
-process GetSc[i <- Nat % N]
+process GetSc[i < N]
 {
   read: x[i+1];
   write: x_sc[i];

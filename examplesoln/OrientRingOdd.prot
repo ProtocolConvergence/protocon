@@ -6,17 +6,17 @@
 
 constant N := 3;
 
-puppet variable color[Nat % N] <- Nat % 2;
-puppet variable phase[Nat % N] <- Nat % 2;
-direct variable way[Nat % (2*N)] <- Nat % 2;
+puppet variable color[N] < 2;
+puppet variable phase[N] < 2;
+direct variable way[(2*N)] < 2;
 
 // Eventually, all processes are pointing in the same direction.
 ((future & shadow) % puppet)
-  (forall i <- Nat % N :
+  (forall i < N :
    way[2*i] == way[2*(i+1)]
   );
 
-process P[i <- Nat % N]
+process P[i < N]
 {
   symmetric (hand_idx, j)  <- {# (2*i, i-1), (2*i+1, i+1) #}
   {

@@ -2,15 +2,15 @@
 constant N := 4;
 constant M := 5;
 
-variable x[Nat % N] <- Nat % M;
+variable x[N] < M;
 
 // Want to converge to a state where the array is sorted.
 (future & silent)
-  (forall i <- Nat % (N-1) :
+  (forall i < (N-1) :
    x[i] <= x[i+1]);
 
 
-process P[i <- Nat % (N-1)]
+process P[i < (N-1)]
 {
   write: x[i];
   write: x[i+1];

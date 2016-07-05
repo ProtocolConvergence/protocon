@@ -2,16 +2,16 @@
 constant N := 3;
 constant M := 3;
 
-shadow variable tok[Nat % N] <- Nat % 2;
-puppet variable x[Nat % N] <- Nat % M;
-puppet variable b[Nat % 1] <- Nat % (M-1);
+shadow variable tok[N] < 2;
+puppet variable x[N] < M;
+puppet variable b[1] < (M-1);
 
 // There exists one token in the ring.
 // Also, every action should pass a token (see shadow actions below).
 ((future & active shadow) % puppet)
-  (unique i <- Nat % N : tok[i]==1);
+  (unique i < N : tok[i]==1);
 
-process Bot[i <- Nat % 1]
+process Bot[i < 1]
 {
   read:  x[i-1];
   write: x[i];
@@ -28,7 +28,7 @@ process Bot[i <- Nat % 1]
     ( x[i-1]==x[i] --> x[i]:=1+x[i-1]+b[i]; tok[i]:=0; tok[i+1]:=1; );
 }
 
-process P[i <- 1 + Nat % (N-1)]
+process P[i <- map tid < N-1 : tid+1]
 {
   read:  x[i-1];
   write: x[i];

@@ -3,16 +3,16 @@
 
 constant N := 3;
 
-variable hungry[Nat % N] <- Nat % 2;
-variable chopstick[Nat % (2*N)] <- Nat % 2;
-puppet variable b[Nat % N] <- Nat % 2;
+variable hungry[N] < 2;
+variable chopstick[(2*N)] < 2;
+puppet variable b[N] < 2;
 
 // These are more intuitively defined within P[i].
 // (future & future silent) ...;
 // (assume & closed) ...;
 
 
-process P[i <- Nat % N]
+process P[i < N]
 {
   let L := 2*i;
   let R := 2*i+1;

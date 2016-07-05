@@ -8,12 +8,12 @@
 
 constant N := 3;
 
-puppet variable youare[Nat % (2*N)] <- Nat % 2;
-direct variable dir[Nat % (2*N)] <- Nat % 2;
-puppet variable ord[Nat % (2*N)] <- Nat % 2;
-puppet variable parity[Nat % (2*N)] <- Nat % 2;
+puppet variable youare[(2*N)] < 2;
+direct variable dir[(2*N)] < 2;
+puppet variable ord[(2*N)] < 2;
+puppet variable parity[(2*N)] < 2;
 
-process P[q <- Int % N]
+process P[q < N]
 {
   let p := (q-1) % N;
   let r := (q+1) % N;
@@ -58,8 +58,8 @@ process P[q <- Int % N]
 // Eventually, all processes are pointing in the same direction.
 ((future & shadow) % puppet)
 (
-  (forall i <- Nat % N : dir[2*i]==1 && dir[2*i+1]==0)
+  (forall i < N : dir[2*i]==1 && dir[2*i+1]==0)
   ||
-  (forall i <- Nat % N : dir[2*i]==0 && dir[2*i+1]==1)
+  (forall i < N : dir[2*i]==0 && dir[2*i+1]==1)
 );
 

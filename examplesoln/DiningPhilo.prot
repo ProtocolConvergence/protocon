@@ -5,13 +5,13 @@
 
 constant N := 3;
 
-variable hungry[Nat % N] <- Nat % 2;
-variable chopstick[Nat % (2*N)] <- Nat % 2;
-variable cgt[Nat % (2*N)] <- Nat % 2;
+variable hungry[N] < 2;
+variable chopstick[(2*N)] < 2;
+variable cgt[(2*N)] < 2;
 
 // Converge to a state where no philosopher is hungry or has a chopstick.
 (future & future silent)
-  (forall i <- Nat % N : true
+  (forall i < N : true
    && hungry[i]==0
    && chopstick[2*i  ]==0
    && chopstick[2*i+1]==0
@@ -19,7 +19,7 @@ variable cgt[Nat % (2*N)] <- Nat % 2;
 
 // Assume two philosophers can't have the same chopstick.
 (assume & closed)
-  (forall i <- Nat % N :
+  (forall i < N :
    chopstick[2*i+1]==0 || chopstick[2*i+2]==0
   );
 
@@ -28,13 +28,13 @@ variable cgt[Nat % (2*N)] <- Nat % 2;
 // Values cgt[2*i] and cgt[2*i+1] denote whether P[i]'s color is greater
 // than   P[i-1]   and P[i+1]     respectively.
 (assume & closed)
-  ((forall i <- Nat % N : cgt[2*i+1]!=cgt[2*i+2])
+  ((forall i < N : cgt[2*i+1]!=cgt[2*i+2])
    &&
-   (exists i <- Nat % N : cgt[2*i] == cgt[2*i+1])
+   (exists i < N : cgt[2*i] == cgt[2*i+1])
   );
 
 
-process P[i <- Nat % N]
+process P[i < N]
 {
   let L := 2*i;
   let R := 2*i+1;

@@ -1,19 +1,19 @@
 
 constant N := 3;
 
-variable x[Nat % N] <- Nat % 2;
+variable x[N] < 2;
 
 (future & silent)
-  (forall i <- Nat % (N-1) : x[i]!=x[i+1])
+  (forall i < (N-1) : x[i]!=x[i+1])
   ;
 
-process Bot[i <- Int % 1]
+process Bot[i < 1]
 {
   write: x[i];
   read: x[i+1];
 }
 
-process P[j <- Int % (N-2)]
+process P[j < (N-2)]
 {
   let i := j+1;
   read: x[i-1];
@@ -21,7 +21,7 @@ process P[j <- Int % (N-2)]
   read: x[i+1];
 }
 
-process Top[j <- Int % 1]
+process Top[j < 1]
 {
   let i := N-1;
   read: x[i-1];

@@ -1,18 +1,18 @@
 
 constant N := 3;
 
-puppet variable e[Nat % N] <- Nat % 2;
-direct variable t[Nat % N] <- Nat % 2;
-puppet variable dec[Nat % N] <- Nat % 2;
+puppet variable e[N] < 2;
+direct variable t[N] < 2;
+puppet variable dec[N] < 2;
 
 // Ensure that N is odd.
 (assume & closed)
   (N % 2 == 1);
 
 (future & shadow)
-  (unique i <- Nat % N : t[i-1]==t[i]);
+  (unique i < N : t[i-1]==t[i]);
 
-process P[i <- Nat % N]
+process P[i < N]
 {
   read: e[i-1];
   write: e[i];

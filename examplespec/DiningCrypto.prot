@@ -3,30 +3,30 @@ constant N := 3;
 
 // Hold whether a cryptographer pays.
 // Must be derived from the state of the Bot process.
-shadow variable ans[Nat % 1] <- Nat % 2;
+shadow variable ans[1] < 2;
 
 // These can be puppet variables, but they don't have to be
 // since the invariant is (future & future silent).
-variable coin[Nat % N] <- Nat % 2;
-variable agree[Nat % N] <- Nat % 2;
-variable pay[Nat % N] <- Nat % 2;
+variable coin[N] < 2;
+variable agree[N] < 2;
+variable pay[N] < 2;
 
 // ans[0] holds whether a cryptographer pays.
 (future & future silent)
   (ans[0] == 1
    <=>
-   exists i <- Nat % N : pay[i] == 1
+   exists i < N : pay[i] == 1
   );
 
 // Assume exactly zero or one cryptographers pay.
 (assume & closed)
-  (!(exists i <- Nat % N : pay[i]==1)
+  (!(exists i < N : pay[i]==1)
    ||
-   (unique i <- Nat % N : pay[i]==1)
+   (unique i < N : pay[i]==1)
   );
 
 
-process Bot[i <- Nat % 1]
+process Bot[i < 1]
 {
   read: pay[i];
   read: coin[i-1], agree[i-1];
@@ -35,7 +35,7 @@ process Bot[i <- Nat % 1]
   write: ans[0];
 }
 
-process P[j <- Nat % (N-1)]
+process P[j < (N-1)]
 {
   let i := j+1;
   read: pay[i];

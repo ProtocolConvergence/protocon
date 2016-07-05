@@ -1,9 +1,9 @@
 constant N := 3;
 constant M := 3;
 
-variable x[Nat % N] <- Nat % M;
+variable x[N] < M;
 
-process P[i <- Nat % N]
+process P[i < N]
 {
   read:  x[i-1];
   write: x[i];

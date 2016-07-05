@@ -6,15 +6,15 @@
 constant N := 3;
 constant M := 5;
 
-direct variable x[Nat % N] <- Nat % M;
-puppet variable b[Nat % N] <- Nat % 2;
+direct variable x[N] < M;
+puppet variable b[N] < 2;
 
 // Each process P[i] must have a different color than P[i-1] and P[i-2].
 // This implies that P[i] also has a different color than P[i+1] and P[i+2].
 (future & future silent)
-  (forall i <- Nat % N : x[i]!=x[i-1] && x[i]!=x[i-2]);
+  (forall i < N : x[i]!=x[i-1] && x[i]!=x[i-2]);
 
-process P[i <- Nat % N]
+process P[i < N]
 {
   read: x[i-1];
   write: x[i];

@@ -7,12 +7,12 @@
 
 constant N := 3;
 
-direct variable c[Nat % N] <- Nat % 3;
-puppet variable tok[Nat % N] <- Nat % 3; // R S I
-direct variable way[Nat % (2*N)] <- Nat % 2;
+direct variable c[N] < 3;
+puppet variable tok[N] < 3; // R S I
+direct variable way[(2*N)] < 2;
 
 
-process P[i <- Nat % N]
+process P[i < N]
 {
   symmetric (j, way_idx, adj_way_idx, adj_way_idx_far)
     <- {# (i-1, 2*i, 2*i-1, 2*i-2), (i+1, 2*i+1, 2*i+2, 2*i+3) #}
@@ -56,5 +56,5 @@ process P[i <- Nat % N]
 }
 
 ((future & shadow) % puppet)
-  (forall i <- Nat % N : way[2*i-1] == way[2*i+1]);
+  (forall i < N : way[2*i-1] == way[2*i+1]);
 

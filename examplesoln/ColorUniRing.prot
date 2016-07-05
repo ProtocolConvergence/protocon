@@ -1,8 +1,8 @@
 constant N := 3;
 
-variable x[Nat % N] <- Nat % 3;
+variable x[N] < 3;
 
-process P[i <- Nat % N]
+process P[i < N]
 {
   read: x[i-1];
   random write: x[i];

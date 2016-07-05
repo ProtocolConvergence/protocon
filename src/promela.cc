@@ -92,10 +92,24 @@ OPutPromelaPc(OFile& ofile, const Xn::PcSymm& pc_symm, const Table<Xn::ActSymm>&
     << "\nactive [" << o_pc_symm.membs.sz() << "] proctype "
     << pc_symm_spec.name << "()"
     << "\n{"
-    << "\n  int " << pc_symm_spec.idx_name
-    << " = (_pid - " << pcidx_offset << ")"
-    << "\n  (initialized==1);"
     ;
+  if (!!pc_symm_spec.idxmap_name) {
+
+    ofile
+      << "\n#define " << pc_symm_spec.idxmap_name
+      << " (_pid - " << pcidx_offset << ")"
+      << "\n  int " << pc_symm_spec.idx_name
+      << " = " << pc_symm_spec.idxmap_expression << ";"
+      << "\n#undef " << pc_symm_spec.idxmap_name
+      ;
+  }
+  else {
+    ofile
+      << "\n  int " << pc_symm_spec.idx_name
+      << " = _pid - " << pcidx_offset
+      << ";";
+  }
+  ofile << "\n  (initialized==1);";
 
   for (uint i = 0; i < pc_symm_spec.let_map.keys.sz(); ++i) {
     ofile

@@ -18,6 +18,7 @@ syn region	protoconComment		start="//" skip="\\$" end="$" keepend
 
 " Identifiers
 syn keyword	protoconFunction		min max
+syn keyword	protoconFunction		map
 syn keyword	protoconType		Nat Int
 syn match	protoconNumber		"\<[0-9]\+\>"
 syn keyword	protoconLiteral		 true false

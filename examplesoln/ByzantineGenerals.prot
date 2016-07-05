@@ -12,14 +12,14 @@ constant N := 3;
 constant D := 2;
 
 // A general can be loyal or disloyal.
-direct variable loyal[Nat % (N+1)] <- Nat % 2;
+direct variable loyal[(N+1)] < 2;
 
 // Each general will choose a plan (e.g., attack or retreat).
-direct variable plan[Nat % (N+1)] <- Nat % D;
-puppet variable cplan[Nat % N] <- Nat % D;
+direct variable plan[(N+1)] < D;
+puppet variable cplan[N] < D;
 
 // Variables used for communication.
-puppet variable y[Nat % (2*N)] <- Nat % D;
+puppet variable y[(2*N)] < D;
 
 
 // There must be at least 3 loyal generals.
@@ -28,14 +28,14 @@ puppet variable y[Nat % (2*N)] <- Nat % D;
 
 // Eventually, every loyal general should agree.
 ((future & silent) % puppet)
-  (exists val <- Nat % D :
-   (forall i <- Nat % 4 : loyal[i]==0 || plan[i]==val)
+  (exists val < D :
+   (forall i < 4 : loyal[i]==0 || plan[i]==val)
   );
 
 // Captain General.
 // The captain is represented by N processes,
 // where each one communicates to a different lieutenant.
-process Captain[i <- Nat % N]
+process Captain[i < N]
 {
   read: loyal[N];
 
@@ -53,7 +53,7 @@ process Captain[i <- Nat % N]
 }
 
 // Lieutenant General.
-process Lieutenant[i <- Nat % N]
+process Lieutenant[i < N]
 {
   read: loyal[i];
   write: plan[i];

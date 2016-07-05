@@ -10,11 +10,11 @@
 
 constant N := 3;
 
-puppet variable c[Nat % N] <- Nat % 3;
-puppet variable tok[Nat % N] <- Nat % 3;
-direct variable way[Nat % (2*N)] <- Nat % 2;
+puppet variable c[N] < 3;
+puppet variable tok[N] < 3;
+direct variable way[(2*N)] < 2;
 
-process P[i <- Nat % N]
+process P[i < N]
 {
   symmetric (j, way_idx, adj_way_idx, adj_way_idx_far)
     <- {# (i-1, 2*i, 2*i-1, 2*i-2), (i+1, 2*i+1, 2*i+2, 2*i+3) #}
@@ -38,6 +38,6 @@ process P[i <- Nat % N]
 
 // Eventually, all processes are pointing in the same direction.
 ((future & shadow) % puppet)
-  (forall i <- Nat % (2*N) : way[i] != way[i-1])
+  (forall i < (2*N) : way[i] != way[i-1])
   ;
 

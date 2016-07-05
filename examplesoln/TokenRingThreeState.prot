@@ -8,9 +8,9 @@
 
 constant N := 3;
 
-variable z[Nat % N] <- Nat % 3;
+variable z[N] < 3;
 
-process Bot[i <- Nat % 1]
+process Bot[i < 1]
 {
   write: z[i];
   read:  z[i+1];
@@ -19,7 +19,7 @@ process Bot[i <- Nat % 1]
     ;
 }
 
-process P[i <- 1 + Nat % (N-2)]
+process P[i <- map tid < N-2 : tid+1]
 {
   read:  z[i-1];
   write: z[i];
@@ -35,7 +35,7 @@ process P[i <- 1 + Nat % (N-2)]
 }
 
 
-process Top[i <- (N-1) + Nat % 1]
+process Top[i <- map tid < 1 : N-1]
 {
   read: z[i-1];
   write: z[i];
@@ -47,12 +47,12 @@ process Top[i <- (N-1) + Nat % 1]
 
 (future & shadow)
 (
-  (exists a <- Nat % 3 :
-   (forall i <- Nat % N :
+  (exists a < 3 :
+   (forall i < N :
     z[i] != a))
   &&
   // One process has a token.
-  (unique i <- Nat % N :
+  (unique i < N :
    (   (i == 0 &&
         ((z[i]+1)%3 == z[i+1]))
     || (i != 0 && i != N-1 &&

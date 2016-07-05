@@ -2,24 +2,24 @@
 constant N := 4;
 constant M := 5;
 
-variable x[Nat % N] <- Nat % M;
+variable x[N] < M;
 
 // Assumed initial states.
 // Exactly one x[i] is zero.
 (assume & closed)
-  (unique i <- Nat % N : x[i]==0);
+  (unique i < N : x[i]==0);
 
 // Want to converge to a state where the values are sorted
 // starting from the zero value.
 (future & silent)
-  (forall i <- Nat % N :
+  (forall i < N :
    x[i] <= x[i+1]
    ||
    x[i+1]==0
   );
 
 
-process P[i <- Nat % N]
+process P[i < N]
 {
   write: x[i];
   write: x[i+1];

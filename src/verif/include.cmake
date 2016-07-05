@@ -47,8 +47,8 @@ endforeach ()
 set (ExampleSpecs
   ColorRing
   ColorRingDistrib
+  ColorRingDizzy
   ColorRingLocal
-  ColorRingSymm
   ColorTree
   ColorUniRing
   DiningCrypto

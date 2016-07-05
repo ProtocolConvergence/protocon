@@ -2,24 +2,21 @@
 
 constant N := 3;
 constant Chain := 1;
-variable b[Nat % N] <- Nat % 2;
-variable w[Nat % (2*N)] <- Nat % 2;
+variable b[N] < 2;
+variable w[(2*N)] < 2;
 
 // When it is a chain, just zero out the unused {w} variables.
 (assume & closed)
   (Chain==1 ==> w[0]==0 && w[2*(N-1)+1]==0);
 
-process End[id <- Nat % (2*Chain)]
+process End[i <- map tid < 2*Chain : tid * (N-1)]
 {
-  let i := if (id==0) then (0) else (N-1);
-  let j := if (id==0) then (i+1) else (i-1);
-  let ij := if (id==0) then (2*i+1) else (2*i);
-  let ji := if (id==0) then (2*i+2) else (2*i-1);
+  let ij := if (i==0) then (2*i+1) else (2*i);
+  let j  := if (i==0) then (i+1) else (i-1);
+  let ji := if (i==0) then (2*j) else (2*j+1);
 
-  read: w[ji];
-  write: w[ij];
-  read: b[j];
-  write: b[i];
+  write: b[i], w[ij];
+  read:  b[j], w[ji];
 
   (future & future silent)
     (w[ji]!=w[ij]);
@@ -30,23 +27,16 @@ process End[id <- Nat % (2*Chain)]
     ;
 }
 
-process P[id <- Nat % (N-2*Chain)]
+process P[i <- map tid < N-2*Chain : tid + Chain]
 {
-  let i := Chain+id;
-  let j := i-1;
-  let k := i+1;
-  let ji := 2*i-1;
-  let ij := 2*i;
-  let ik := 2*i+1;
-  let ki := 2*i+2;
+  let ij := 2*i;    let j := i-1;  let ji := 2*j+1;
+  let ik := 2*i+1;  let k := i+1;  let ki := 2*k;
 
-  symmetric (l, way_idx, adj_way_idx) <- {# (j, ij, ji), (k, ik, ki) #}
-  {
-    read: w[adj_way_idx];
-    write: w[way_idx];
-    read: b[l];
-  }
   write: b[i];
+  // P[i] is disoriented and therefore treats P[j] and P[k] identically.
+  symmetric (to, adj, from) <- {# (ij, j, ji), (ik, k, ki) #} {
+    write: w[to];  read: b[adj], w[from];
+  }
 
   predicate OneWay := w[ij]!=w[ik];
 

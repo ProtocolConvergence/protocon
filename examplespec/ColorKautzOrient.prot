@@ -2,10 +2,10 @@
 constant N := 6;
 constant M := 4;
 
-variable x[Nat % N] <- Nat % M;
-variable way[Nat % (2*N)] <- Nat % 2;
+variable x[N] < M;
+variable way[(2*N)] < 2;
 
-process P[i <- Nat % N]
+process P[i < N]
 {
   let idx0_even := (N-1-i)/2;
   let idx1_even := idx0_even + N/2;
@@ -31,8 +31,8 @@ process P[i <- Nat % N]
 }
 
 (future & silent)
-  (forall i <- Nat % N :
-   (forall q <- Nat % 2 :
+  (forall i < N :
+   (forall q < 2 :
     (i == -(2*i + q+1) % N)
     ||
     (x[i] != x[-(2*i + q+1)])

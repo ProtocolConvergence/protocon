@@ -2,14 +2,14 @@ ByzantineGenerals
 ColorChain
 ColorKautz
 ColorKautzBi
+ColorKautzDizzy
 ColorKautzOrient
 ColorKautzReverse
-ColorKautzSymm
 ColorMobius
 ColorRing
 ColorRingDistrib
+ColorRingDizzy
 ColorRingLocal
-ColorRingSymm
 ColorTorus
 ColorTree
 ColorUniRing
@@ -20,6 +20,7 @@ LeaderRing
 LeaderRingHuang
 LeaderTree
 MatchRing
+MatchRingDizzy
 MatchRingOneBit
 MatchRingThreeState
 OrientDaisy

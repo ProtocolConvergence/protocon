@@ -3,14 +3,14 @@
 // Though it is only stabilizing when 2 <= N <= 7.
 constant M := 2;
 constant N := 3;
-puppet variable x[Nat % N] <- Nat % M;
-direct variable t[Nat % N] <- Nat % 2;
+puppet variable x[N] < M;
+direct variable t[N] < 2;
 
 (future & shadow)
-  (unique i <- Nat % N : i==0 && t[i-1]==t[i] || i!=0 && t[i-1]!=t[i])
+  (unique i < N : i==0 && t[i-1]==t[i] || i!=0 && t[i-1]!=t[i])
   ;
 
-process Bot[i <- Nat % 1]
+process Bot[i < 1]
 {
   read: x[i-1];  write: x[i];
   read: t[i-1];  write: t[i];
@@ -22,7 +22,7 @@ process Bot[i <- Nat % 1]
     ( x[i-1]==x[i] && t[i-1]==t[i] --> x[i]:=1-x[i]; t[i]:=x[i-1]; )
     ;
 }
-process P[i <- 1 + Nat % (N-1)]
+process P[i <- map tid < N-1 : tid+1]
 {
   read: x[i-1];  write: x[i];
   read: t[i-1];  write: t[i];

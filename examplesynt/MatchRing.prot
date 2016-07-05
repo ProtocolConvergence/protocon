@@ -2,11 +2,11 @@
 constant N := 3;
 constant M := 2;
 
-shadow variable e[Nat % N] <- Nat % 2;
-puppet variable x[Nat % N] <- Nat % M;
+shadow variable e[N] < 2;
+puppet variable x[N] < M;
 
 ((future & silent) % puppet)
-  (forall i <- Nat % N :
+  (forall i < N :
    // No two adjacent edges can be selected.
    !(e[i]==1 && e[i+1]==1)
    &&
@@ -14,7 +14,7 @@ puppet variable x[Nat % N] <- Nat % M;
    (e[i-1]==1 || e[i]==1 || e[i+1]==1)
   );
 
-process P[i <- Nat % N]
+process P[i < N]
 {
   read: x[i-1];
   write: e[i]; // Left edge.

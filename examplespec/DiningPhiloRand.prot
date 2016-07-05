@@ -3,13 +3,13 @@
 
 constant N := 3;
 
-variable hungry[Nat % N] <- Nat % 2;
-variable chopstick[Nat % (2*N)] <- Nat % 2;
-puppet variable b[Nat % N] <- Nat % 2;
+variable hungry[N] < 2;
+variable chopstick[(2*N)] < 2;
+puppet variable b[N] < 2;
 
 // Converge to a state where no philosopher is hungry or has a chopstick.
 (future & future silent)
-  (forall i <- Nat % N : true
+  (forall i < N : true
    && hungry[i]==0
    && chopstick[2*i  ]==0
    && chopstick[2*i+1]==0
@@ -17,12 +17,12 @@ puppet variable b[Nat % N] <- Nat % 2;
 
 // Assume two philosophers can't have the same chopstick.
 (assume & closed)
-  (forall i <- Nat % N :
+  (forall i < N :
    chopstick[2*i+1]==0 || chopstick[2*i+2]==0
   );
 
 
-process P[i <- Nat % N]
+process P[i < N]
 {
   let L := 2*i;
   let R := 2*i+1;

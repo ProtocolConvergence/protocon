@@ -230,6 +230,7 @@ Net::add_processes(const String& name, const String& idx_name, uint nmembs)
     xfmlae_ctx.wvbl_list_ids.push(pfmla_ctx.add_vbl_list());
     Pc& pc = pcs.push(Pc(&symm, i));
     symm.membs.push(&pc);
+    symm.mapped_indices.membs.push(i);
     if (this->featherweight)  continue;
     pc.act_unchanged_pfmla = this->identity_xn;
     xfmlae_ctx.act_unchanged_xfmlas.push(this->identity_xn);
