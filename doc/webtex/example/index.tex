@@ -31,7 +31,7 @@ In a computer network, a coloring applies to processes that communicate directly
 \begin{itemize}
 \item ColorRing \href{Coloring.html#sec:ColorRing}{\LinkText}
 - 3-coloring on a ring.
-\item ColorRingSymm (\href{\examplespec/ColorRingSymm.prot}{spec}, \href{\examplesoln/ColorRingSymm.prot}{soln})
+\item ColorRingDizzy (\href{\examplespec/ColorRingDizzy.prot}{spec}, \href{\examplesoln/ColorRingDizzy.prot}{soln})
 - Unoriented ring.
 \item ColorUniRing (\href{\examplespec/ColorUniRing.prot}{spec}, \href{\examplesoln/ColorUniRing.prot}{soln})
 - Randomized 3-coloring on a unidirectional ring.
@@ -54,7 +54,7 @@ We can find a protocol that stabilizes for up to $13$ processes, but not $14$.
 Tweaking the topology by
 \href{\examplespec/ColorKautzReverse.prot}{reversing edges}
 or
-\href{\examplespec/ColorKautzSymm.prot}{removing orientation}
+\href{\examplespec/ColorKautzDizzy.prot}{removing orientation}
 (even with \href{\examplespec/ColorKautzBi.prot}{bidirectional edges})
 gives definite impossibility results at around $8$ processes.
 \end{itemize}
@@ -72,6 +72,8 @@ This gives the 1-bit solution.
 - Maximal matching on a ring where processes point in certain directions.
 \item MatchRingOneBit \href{Matching.html#sec:MatchRingOneBit}{\LinkText}
 - Using the 3-state specification, find a matching using 1 bit per process.
+\item MatchRingDizzy (\href{\examplespec/MatchRingDizzy.prot}{spec}, \href{\examplesett/MatchRingDizzy.args}{args})
+- Maximal matching on an unoriented ring.
 \item SegmentRing \href{Matching.html#sec:SegmentRing}{\LinkText}
 - A problem similar to matching where a ring is segmented into chains.
 \end{itemize}

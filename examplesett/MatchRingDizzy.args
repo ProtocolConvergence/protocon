@@ -1,0 +1,7 @@
+
+# ApproxTime: < 30 sec (serial)
+
+-x ../examplespec/MatchRingDizzy.prot
+-param N 2..6
+-param [ -def N 7 -no-conflict ]
+
