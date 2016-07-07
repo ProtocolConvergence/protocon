@@ -1160,7 +1160,8 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
   }
 
   if (this->stabilization_opt().synchronous) {
-    this->lo_xn = topo.sync_xn(Table<uint>(this->actions));
+    const bool fully_sync = !this->stabilization_opt().semisynchronous;
+    this->lo_xn = topo.sync_xn(Table<uint>(this->actions), fully_sync);
     if (!this->lo_xn.img(sys.closed_assume).subseteq_ck(sys.closed_assume)) {
       *this->log << "SYNC_BREAKS_ASSUME" << this->log->endl();
       return false;

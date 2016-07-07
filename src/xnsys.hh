@@ -478,7 +478,8 @@ public:
   OFile& oput_all_pf(OFile& ofile, const P::Fmla& pf) const;
 
 
-  X::Fmla sync_xn(const Table<uint>& actidcs) const;
+  X::Fmla sync_xn(const Table<uint>& actidcs, const bool fully_synchronous) const;
+  X::Fmla semisync_xn(const Table<uint>& actidcs) const;
   X::Fmla xn_of_pc(const Xn::ActSymm& act, uint pcidx) const;
   X::Fmla represented_xns_of_pc(const Xn::ActSymm& act, uint relative_pcidx) const;
   void make_action_pfmla(X::Fmla* ret_xn, uint actid) const;

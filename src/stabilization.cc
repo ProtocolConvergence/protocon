@@ -462,7 +462,8 @@ stabilization_ck(OFile& of, const Xn::Sys& sys,
 
   if (opt.synchronous) {
     Table<uint> sync_actions( actions );
-    const X::Fmla lo_xn = sys.topology.sync_xn(sync_actions);
+    const bool fully_sync = !opt.semisynchronous;
+    const X::Fmla lo_xn = sys.topology.sync_xn(sync_actions, fully_sync);
 
     for (uint i = 0; i < candidates.size(); ++i) {
       sync_actions << candidates[i];
@@ -471,7 +472,7 @@ stabilization_ck(OFile& of, const Xn::Sys& sys,
     const X::Fmla hi_xn =
       (candidates.empty()
        ? lo_xn
-       : sys.topology.sync_xn(sync_actions));
+       : sys.topology.sync_xn(sync_actions, fully_sync));
 
     if (!candidates.empty()) {
       DBog0( "Synchronous semantics don't work well with overapproximation." );

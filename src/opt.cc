@@ -144,6 +144,10 @@ handle_param_arg(ProtoconParamOpt& psys_opt, const char* arg, int& argi, int arg
   else if (eq_cstr (arg, "-synchronous")) {
     psys_opt.stabilization_opt.synchronous = true;
   }
+  else if (eq_cstr (arg, "-semisynchronous")) {
+    psys_opt.stabilization_opt.synchronous = true;
+    psys_opt.stabilization_opt.semisynchronous = true;
+  }
   else if (eq_cstr (arg, "-uniring")) {
     psys_opt.stabilization_opt.uniring = true;
   }

@@ -936,7 +936,7 @@ oput_one_cycle(OFile& of, const X::Fmla& xn,
 }
 
   X::Fmla
-Xn::Net::sync_xn(const Table<uint>& actidcs) const
+Xn::Net::sync_xn(const Table<uint>& actidcs, const bool fully_synchronous) const
 {
   X::Fmlae xfmlae(&this->xfmlae_ctx);
   Set<uint> all_actidcs_set;
@@ -978,7 +978,9 @@ Xn::Net::sync_xn(const Table<uint>& actidcs) const
       }
       written_vbls[xnvbl_idx] = 1;
     }
-    self_loop -= xfmlae[pcidx].pre();
+    if (fully_synchronous) {
+      self_loop -= xfmlae[pcidx].pre();
+    }
     xn &= (self_loop | xfmlae[pcidx]);
   }
 
@@ -992,6 +994,12 @@ Xn::Net::sync_xn(const Table<uint>& actidcs) const
   xn &= read_only_identity_xn;
   xn -= this->identity_xn;
   return xn;
+}
+
+  X::Fmla
+Xn::Net::semisync_xn(const Table<uint>& actidcs) const
+{
+  return this->sync_xn(actidcs, false);
 }
 
 /**

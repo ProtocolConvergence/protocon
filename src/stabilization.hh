@@ -13,6 +13,7 @@ public:
   bool count_convergence_layers;
   bool count_convergence_steps;
   bool synchronous;
+  bool semisynchronous;
   bool uniring;
 
   StabilizationOpt()
@@ -20,6 +21,7 @@ public:
     , count_convergence_layers( true )
     , count_convergence_steps( true )
     , synchronous( false )
+    , semisynchronous( false )
     , uniring( false )
   {}
 };

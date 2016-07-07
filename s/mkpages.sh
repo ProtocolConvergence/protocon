@@ -1,7 +1,7 @@
 #!/bin/sh
 
 git checkout gh-pages
-git pull origin master
+git pull --no-edit origin master
 make -C doc pub
 rsync \
   --exclude=/examplespec/ \
@@ -10,5 +10,5 @@ rsync \
   --exclude=/examplesoln/ \
   -a doc/pubhtml/ ./
 git status
-echo 'Now commit and change back to master.'
+echo 'Now commit, push, and change back to master.'
 
