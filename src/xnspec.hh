@@ -16,9 +16,28 @@ extern Cx::OFile DBogOF;
 namespace Xn {
 class NatMap;
 class LetVblMap;
-class PcSymmSpec;
 class LinkSymmetry;
+class VblSymmSpec;
+class VblSymmAccessSpec;
+class PcSymmSpec;
 class Spec;
+
+enum VariableAccessType {
+  ReadAccess,
+  WriteAccess,
+  ReturnAccess,
+  EffectAccess,
+  RandomReadAccess,
+  RandomWriteAccess,
+  NVariableAccessTypes
+};
+
+enum ShadowPuppetRole {
+  Direct,
+  Shadow,
+  Puppet,
+  NShadowPuppetRoles
+};
 
 enum InvariantStyle {
   FutureAndClosed,
@@ -110,12 +129,6 @@ public:
   }
 };
 
-class VblSymmSpec {
-public:
-  String name;
-  String domsz_expression;
-  String nmembs_expression;
-};
 
 class LinkSymmetry {
 private:
@@ -187,6 +200,78 @@ public:
 #endif
 };
 
+
+class VblSymmSpec {
+public:
+  String name;
+  String domsz_expression;
+  String nmembs_expression;
+  uint domsz;
+  ShadowPuppetRole shadow_puppet_role;
+
+  VblSymmSpec()
+    : domsz(0)
+    , shadow_puppet_role(Xn::Direct)
+  {}
+
+  bool direct_ck() const { return shadow_puppet_role == Xn::Direct; }
+  bool pure_shadow_ck() const { return shadow_puppet_role == Xn::Shadow; }
+  bool pure_puppet_ck() const { return shadow_puppet_role == Xn::Puppet; }
+
+  bool shadow_ck() const { return pure_shadow_ck() || direct_ck(); }
+  bool puppet_ck() const { return pure_puppet_ck() || direct_ck(); }
+};
+
+class VblSymmAccessSpec {
+public:
+  Mem<const VblSymmSpec> vbl_symm;
+  VariableAccessType type;
+  String index_expression;
+
+  VblSymmAccessSpec()
+    : type(Xn::NVariableAccessTypes)
+  {}
+
+  bool write_ck() const {
+    return
+     (   type == Xn::WriteAccess
+      || type == Xn::ReturnAccess
+      || type == Xn::EffectAccess
+      || type == Xn::RandomWriteAccess
+     );
+  }
+  bool read_ck() const {
+    return
+     (   type == Xn::ReadAccess
+      || type == Xn::WriteAccess
+      || type == Xn::RandomReadAccess
+      || type == Xn::RandomWriteAccess
+     );
+  }
+
+  bool puppet_read_ck() const {
+    return vbl_symm->puppet_ck() && read_ck();
+  }
+  bool random_read_ck() const { return (type == Xn::RandomReadAccess); }
+  bool random_write_ck() const { return (type == Xn::RandomWriteAccess); }
+  bool random_ck() const { return (random_read_ck() || random_write_ck()); }
+
+  uint rdomsz() const {
+    const uint domsz = vbl_symm->domsz;
+    if (!read_ck())  return 1;
+    if (vbl_symm->pure_shadow_ck())  return 1;
+    return domsz;
+  }
+  uint wdomsz() const {
+    const uint domsz = vbl_symm->domsz;
+    if (!write_ck())  return 0;
+    if (random_write_ck())  return 1;
+    if (vbl_symm->pure_shadow_ck())  return domsz+1;
+    if (type == Xn::EffectAccess)  return domsz+1;
+    return domsz;
+  }
+};
+
 class PcSymmSpec {
 public:
   String name;
@@ -194,10 +279,9 @@ public:
   String closed_assume_expression;
   String invariant_expression;
   LetVblMap let_map;
-  Table<const VblSymmSpec*> rvbl_symms;
-  Table<const VblSymmSpec*> wvbl_symms;
-  Table<bool> random_read_flags;
-  Table<bool> random_write_flags;
+
+  Table<VblSymmAccessSpec> access;
+  Table<uint> wmap;
   Table<LinkSymmetry> link_symmetries;
   String nmembs_expression;
   String idxmap_name;
@@ -205,6 +289,11 @@ public:
   Table<String> shadow_act_strings;
   Table<String> forbid_act_strings;
   Table<String> permit_act_strings;
+
+
+  const VblSymmAccessSpec& waccess(uint i) const {
+    return access[wmap[i]];
+  }
 };
 
 class Spec {

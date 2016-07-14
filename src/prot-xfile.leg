@@ -61,9 +61,9 @@ ConstIntList =
   ;
 
 OptionalShadowPuppetRole =
-  {$$.aux.i = (int) Xn::Vbl::Direct;}
-  (  SHADOW WS {$$.aux.i = (int) Xn::Vbl::Shadow;}
-   | PUPPET WS {$$.aux.i = (int) Xn::Vbl::Puppet;}
+  {$$.aux.i = (int) Xn::Direct;}
+  (  SHADOW WS {$$.aux.i = (int) Xn::Shadow;}
+   | PUPPET WS {$$.aux.i = (int) Xn::Puppet;}
    | DIRECT WS
    | 'underlying' WS
   )?
@@ -79,7 +79,7 @@ VarDecl =
   WS? ']' WS? c:InNatDom END_STMT
   {
     yy->st->add_variables(a.sp, b.sp, c.sp,
-                          (Xn::Vbl::ShadowPuppetRole) role.aux.i);
+                          (Xn::ShadowPuppetRole) role.aux.i);
   }
   ;
 
@@ -111,22 +111,22 @@ ActionExpr =
 
 ShadowActionDef =
   (SHADOW | 'underlying') (WS ACTION | ':') WS? act:ActionExpr
-  {yy->st->add_action (act.sp, Xn::Vbl::Shadow);}
-  (WS? (',' WS?)? act2:ActionExpr {yy->st->add_action (act2.sp, Xn::Vbl::Shadow);} )*
+  {yy->st->add_action (act.sp, Xn::Shadow);}
+  (WS? (',' WS?)? act2:ActionExpr {yy->st->add_action (act2.sp, Xn::Shadow);} )*
   END_STMT
   ;
 
 DirectActionDef =
   ((DIRECT WS)? ACTION | DIRECT ':') WS? act:ActionExpr
-  {yy->st->add_action (act.sp, Xn::Vbl::Direct);}
-  (WS? (',' WS?)? act2:ActionExpr {yy->st->add_action (act2.sp, Xn::Vbl::Direct);} )*
+  {yy->st->add_action (act.sp, Xn::Direct);}
+  (WS? (',' WS?)? act2:ActionExpr {yy->st->add_action (act2.sp, Xn::Direct);} )*
   END_STMT
   ;
 
 PuppetActionDef =
   PUPPET (WS ACTION | ':') WS? act:ActionExpr
-  {yy->st->add_action (act.sp, Xn::Vbl::Puppet);}
-  (WS? (',' WS?)? act2:ActionExpr {yy->st->add_action (act2.sp, Xn::Vbl::Puppet);} )*
+  {yy->st->add_action (act.sp, Xn::Puppet);}
+  (WS? (',' WS?)? act2:ActionExpr {yy->st->add_action (act2.sp, Xn::Puppet);} )*
   END_STMT
   ;
 
@@ -189,14 +189,9 @@ ProcDecl =
     {yy->st->add_let(let_name.sp, let_val.sp);}
   )*
   (
-     (  random_flag:NOP
-        (RANDOM WS {random_flag.aux.i=1;})?
-        write_flag:NOP
-        (  'read:'
-         | 'write:' {write_flag.aux.i=1;}
-        )
-        WS?      u:VblRef WS? {yy->st->add_access(u.sp, write_flag.aux.i, random_flag.aux.i);}
-        (',' WS? v:VblRef WS? {yy->st->add_access(v.sp, write_flag.aux.i, random_flag.aux.i);} )*
+     (  access:VblAccessType
+        WS?      u:VblRef WS? {yy->st->add_access(u.sp, access.aux.access_type);}
+        (',' WS? v:VblRef WS? {yy->st->add_access(v.sp, access.aux.access_type);} )*
         END_STMT WS?
       | SymmetricLinks WS?
      )+
@@ -220,6 +215,15 @@ ProcDecl =
     yy->st->finish_pc_def();
   }
   '}'
+  ;
+
+VblAccessType =
+    'read:' {$$.aux.access_type = Xn::ReadAccess;}
+  | 'write:' {$$.aux.access_type = Xn::WriteAccess;}
+  | 'return:' {$$.aux.access_type = Xn::ReturnAccess;}
+  | 'effect:' {$$.aux.access_type = Xn::EffectAccess;}
+  | RANDOM WS 'read:' {$$.aux.access_type = Xn::RandomReadAccess;}
+  | RANDOM WS 'write:' {$$.aux.access_type = Xn::RandomWriteAccess;}
   ;
 
 ValueList =
@@ -246,19 +250,14 @@ SymmetricLinks =
   '#}' WS?
   '{' WS?
   { yy->st->add_symmetric_links(let_names.sp, let_vals_list.sp); }
-  ( random_flag:NOP
-    write_flag:NOP
-    ('random' WS {random_flag.aux.i=1;})?
-    (  'read:'
-     | 'write:' {write_flag.aux.i=1;}
-    )
+  ( access:VblAccessType
     WS? u:VblRef WS? {u.sp = list1_Sesp (u.sp);}
     (',' WS? v:VblRef WS? {pushlast_Sesp (u.sp, v.sp);} )*
     END_STMT WS?
     {
       Sesp vbls_sp = u.sp;
       yy->st->add_symmetric_access(let_names.sp, let_vals_list.sp, vbls_sp,
-                                   write_flag.aux.i, random_flag.aux.i);
+                                   access.aux.access_type);
     }
   )+
  '}'

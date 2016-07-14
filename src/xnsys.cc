@@ -23,8 +23,8 @@ Net::commit_initialization()
 {
   for (uint i = 0; i < pc_symms.sz(); ++i) {
     const Xn::PcSymm& pc_symm = pc_symms[i];
-    for (uint j = 0; j < pc_symm.rvbl_symms.sz(); ++j) {
-      if (pc_symm.spec->random_write_flags[j]) {
+    for (uint j = 0; j < pc_symm.wvbl_symms.sz(); ++j) {
+      if (pc_symm.spec->waccess(j).random_write_ck()) {
         this->random_write_exists = true;
       }
     }
@@ -39,23 +39,14 @@ Net::commit_initialization()
 
     pc.pre_domsz = 1;
     for (uint j = 0; j < pc.rvbl_symms.sz(); ++j) {
-      uint domsz = pc.rvbl_symms[j]->domsz;
-      if (pc.rvbl_symms[j]->pure_shadow_ck()) {
-        domsz = 1;
-      }
+      uint domsz = pc.spec->access[j].rdomsz();
       pc.doms.push(domsz);
       pc.pre_domsz *= domsz;
     }
 
     pc.img_domsz = 1;
     for (uint j = 0; j < pc.wvbl_symms.sz(); ++j) {
-      uint domsz = pc.wvbl_symms[j]->domsz;
-      if (pc.spec->random_write_flags[pc.wmap[j]]) {
-        domsz = 1;
-      }
-      else if (pc.wvbl_symms[j]->pure_shadow_ck()) {
-        domsz += 1;
-      }
+      uint domsz = pc.spec->waccess(j).wdomsz();
       pc.doms.push(domsz);
       pc.img_domsz *= domsz;
     }
@@ -113,8 +104,8 @@ Net::fixup_pc_xns()
     const Xn::PcSymm& pc_symm = *pc.symm;
 
     bool probabilistic = false;
-    for (uint i = 0; i < pc.rvbls.sz(); ++i) {
-      if (pc_symm.spec->random_write_flags[i]) {
+    for (uint i = 0; i < pc.wvbls.sz(); ++i) {
+      if (pc_symm.spec->waccess(i).random_write_ck()) {
         probabilistic = true;
         break;
       }
@@ -134,7 +125,7 @@ Net::fixup_pc_xns()
 
   VblSymm*
 Net::add_variables(const String& name, uint nmembs, uint domsz,
-                   Vbl::ShadowPuppetRole role)
+                   Xn::ShadowPuppetRole role)
 {
   // Cannot add variables after committing them.
   Claim2( vbls.sz() ,==, 0 );
@@ -145,8 +136,9 @@ Net::add_variables(const String& name, uint nmembs, uint domsz,
   symm.spec->name = name;
   symm.spec->domsz_expression = domsz;
   symm.spec->nmembs_expression = nmembs;
+  symm.spec->domsz = domsz;
+  symm.spec->shadow_puppet_role = role;
   symm.pfmla_list_id = pfmla_ctx.add_vbl_list();
-  symm.shadow_puppet_role = role;
   symm.membs.grow(nmembs, 0);
 
   return &symm;
@@ -239,44 +231,47 @@ Net::add_processes(const String& name, const String& idx_name, uint nmembs)
 }
 
   void
-Net::add_read_access (PcSymm* pc_symm, const VblSymm* vbl_symm,
-                      const NatMap& indices)
+Net::add_access (PcSymm* pc_symm, const VblSymm* vbl_symm,
+                 const NatMap& indices,
+                 Xn::VariableAccessType access_type)
 {
+  Xn::PcSymmSpec* spec = +pc_symm->spec;
   pc_symm->rvbl_symms.push(vbl_symm);
-  pc_symm->spec->rvbl_symms.push(+vbl_symm->spec);
-  pc_symm->write_flags.push_back(false);
-  pc_symm->spec->random_read_flags.push(false);
-  pc_symm->spec->random_write_flags.push(false);
-  pc_symm->rindices.push(indices);
-  for (uint i = 0; i < pc_symm->membs.sz(); ++i) {
-    const Vbl* vbl = vbl_symm->membs[indices.index(i, vbl_symm->membs.sz())];
-    pc_symm->membs[i]->rvbls.push(vbl);
-  }
-}
+  pc_symm->vbl_indices.push(indices);
 
-  void
-Net::add_write_access (PcSymm* pc_symm, const VblSymm* vbl_symm,
-                       const NatMap& indices)
-{
-  add_read_access (pc_symm, vbl_symm, indices);
-  pc_symm->wvbl_symms.push(vbl_symm);
-  pc_symm->spec->wvbl_symms.push(+vbl_symm->spec);
-  pc_symm->wmap.push(pc_symm->rvbl_symms.sz() - 1);
-  pc_symm->write_flags[pc_symm->rvbl_symms.sz() - 1] = true;
-  pc_symm->windices.push(indices);
+  Xn::VblSymmAccessSpec& access = spec->access.grow1();
+  access.vbl_symm = +vbl_symm->spec;
+  access.type = access_type;
+  access.index_expression = indices.expression;
+
+  if (access.write_ck()) {
+    spec->wmap.push(spec->access.sz()-1);
+    pc_symm->wvbl_symms.push(vbl_symm);
+  }
+
   for (uint i = 0; i < pc_symm->membs.sz(); ++i) {
-    const Vbl* vbl = vbl_symm->membs[indices.index(i, vbl_symm->membs.sz())];
+    Vbl& vbl = *vbl_symm->membs[indices.index(i, vbl_symm->membs.sz())];
     Pc& pc = *pc_symm->membs[i];
-    pc.wvbls.push(vbl);
+    pc.rvbls.push(&vbl);
+
+    if (access.random_read_ck()) {
+      vbl.random_flag = true;
+    }
+
+    if (!access.write_ck())  continue;
+
+    pc.wvbls.push(&vbl);
+
     if (this->featherweight)  continue;
+
     pc.act_unchanged_pfmla =
-      pc.act_unchanged_pfmla.smooth(pfmla_vbl(*vbl));
+      pc.act_unchanged_pfmla.smooth(pfmla_vbl(vbl));
 
     const uint pcidx = this->pcs.index_of(&pc);
     pfmla_ctx.add_to_vbl_list(xfmlae_ctx.wvbl_list_ids[pcidx],
-                              vbl->pfmla_idx);
+                              vbl.pfmla_idx);
     xfmlae_ctx.act_unchanged_xfmlas[pcidx] =
-      xfmlae_ctx.act_unchanged_xfmlas[pcidx].smooth(pfmla_vbl(*vbl));
+      xfmlae_ctx.act_unchanged_xfmlas[pcidx].smooth(pfmla_vbl(vbl));
   }
 }
 
@@ -355,8 +350,9 @@ static
 swap_pre_img (uint* vals, const Xn::PcSymm& pc_symm)
 {
   uint off = pc_symm.rvbl_symms.sz();
-  for (uint i = 0; i < pc_symm.wmap.sz(); ++i) {
-    uint* pre_x = &vals[pc_symm.wmap[i]];
+  const Table<uint>& wmap = pc_symm.spec->wmap;
+  for (uint i = 0; i < wmap.sz(); ++i) {
+    uint* pre_x = &vals[wmap[i]];
     uint* img_x = &vals[off + i];
     SwapT( uint, *pre_x, *img_x );
   }
@@ -416,7 +412,7 @@ Pc::actions(Table<uint>& ret_actions, PFmlaCtx& ctx) const
 
     P::Fmla img_pf = xn.img(pre_pf);
     for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
-      if (pc_symm.spec->random_write_flags[i]) {
+      if (pc_symm.spec->access[i].random_write_ck()) {
         const PFmlaVbl& v = ctx.vbl(pc.rvbls[i]->pfmla_idx);
         img_pf = img_pf.smooth(v) & (v == 0);
       }
@@ -761,7 +757,7 @@ Sys::commit_initialization()
   bool
 Sys::integrityCk() const
 {
-  bool good = true;
+  DeclLegit( good );
   const Net& topo = this->topology;
 
   if (topo.featherweight)  return true;
@@ -770,11 +766,21 @@ Sys::integrityCk() const
   Claim(topo.identity_xn.subseteq_ck(this->shadow_self));
   Claim(topo.proj_shadow(topo.identity_xn).equiv_ck(this->shadow_self));
 
+  for (uint i = 0; i < topo.pc_symms.sz(); ++i) {
+    const Xn::PcSymmSpec& pc_symm_spec = topo.spec->pc_symms[i];
+    for (uint j = 0; j < pc_symm_spec.access.sz(); ++j) {
+      if (pc_symm_spec.access[j].random_read_ck()) {
+        DoLegitLine( "Can only 'random read' with puppet variables!" )
+          pc_symm_spec.access[j].vbl_symm->pure_puppet_ck();
+      }
+    }
+  }
+
   if (false)
   for (uint i = 0; i < topo.pcs.sz(); ++i) {
     const Xn::Pc& pc = topo.pcs[i];
     for (uint j = 0; j < pc.rvbls.sz(); ++j) {
-      if (!pc.symm->write_flags[j]) {
+      if (!pc.symm->write_ck(j)) {
         DBog2( "%u %u", pc.rvbls[j]->pfmla_idx, i );
       }
     }
@@ -785,14 +791,12 @@ Sys::integrityCk() const
     DBog0( "Error: Shadow protocol contains self-loops!" );
     good = false;
   }
-  if (!this->invariant.sat_ck()) {
-    DBog0( "Error: Invariant is empty!" );
-    good = false;
-  }
-  else if (!topo.smooth_shadow_vbls(invariant).tautology_ck()) {
-    DBog0( "Error: Invariant includes non-shadow variables." );
-    good = false;
-  }
+
+  DoLegitLine( "Error: Invariant is empty!" )
+    this->invariant.sat_ck();
+
+  DoLegitLine( "Error: Invariant includes non-shadow variables." )
+    topo.smooth_shadow_vbls(invariant).tautology_ck();
 
   if (false)
   if (!(this->shadow_pfmla.img(this->invariant) <= this->invariant)) {
@@ -804,7 +808,7 @@ Sys::integrityCk() const
     topo.oput_one_xn(of, bad_xn);
   }
 
-  return good;
+  return !!good;
 }
 
 }
@@ -822,7 +826,7 @@ OPut(OFile& of, const Xn::ActSymm& act)
     of << delim;
     delim = " && ";
     of << pc.rvbl_symms[i]->spec->name
-      << "[" << pc.rindices[i].expression << "]"
+      << "[" << pc.spec->access[i].index_expression << "]"
       << "==" << act.guard(i);
   }
   of << " -->";
@@ -831,9 +835,9 @@ OPut(OFile& of, const Xn::ActSymm& act)
     if (vbl_symm.pure_shadow_ck() && act.assign(i)==vbl_symm.domsz)
       continue;
     of << ' ' << vbl_symm.spec->name
-      << "[" << pc.windices[i].expression << "]"
+      << "[" << pc.spec->waccess(i).index_expression << "]"
       << ":=";
-    if (pc.spec->random_write_flags[pc.wmap[i]])
+    if (pc.spec->waccess(i).random_write_ck())
       of << '_';
     else
       of << act.assign(i);
@@ -1020,7 +1024,7 @@ Xn::Net::xn_of_pc(const Xn::ActSymm& act, uint pcidx) const
     const Xn::VblSymm& vbl_symm = *pc_symm.wvbl_symms[i];
     const PFmlaVbl& vbl = pfmla_vbl(*pc.wvbls[i]);
     bool random_write =
-      pc_symm.spec->random_write_flags[pc_symm.wmap[i]];
+      pc_symm.spec->waccess(i).random_write_ck();
 
     if (vbl_symm.puppet_ck()) {
       if (random_write) {
@@ -1034,7 +1038,8 @@ Xn::Net::xn_of_pc(const Xn::ActSymm& act, uint pcidx) const
 
     if (random_write) {
     }
-    else if (vbl_symm.pure_shadow_ck() && act.assign(i)==vbl_symm.domsz) {
+    else if (act.assign(i)==vbl_symm.domsz) {
+      Claim( vbl_symm.pure_shadow_ck() || !pc_symm.spec->waccess(i).read_ck() );
       xn &= vbl.img_eq(vbl);
     }
     else {
@@ -1071,7 +1076,7 @@ Xn::Net::xn_of_pc(const Xn::ActSymm& act, uint pcidx) const
 
   for (uint i = 0; i < pc.rvbls.sz(); ++i) {
     const PFmlaVbl& vbl = pfmla_vbl(*pc.rvbls[i]);
-    if (!pc_symm.write_flags[i] && pc_symm.rvbl_symms[i]->puppet_ck()) {
+    if (!pc_symm.write_ck(i) && pc_symm.rvbl_symms[i]->puppet_ck()) {
       xn &= (vbl == act.guard(i));
     }
   }
@@ -1245,7 +1250,7 @@ candidate_actions(std::vector<uint>& candidates,
             shadow_xn = shadow_xn.smooth_pre(pf_vbl);
           }
         }
-        else if (pc_symm.spec->random_write_flags[pc_symm.wmap[i]]) {
+        else if (pc_symm.spec->waccess(i).random_write_ck()) {
           puppet_selfloop = false;
         }
         else if (act.assign(i) != act.aguard(i)) {
@@ -1253,7 +1258,7 @@ candidate_actions(std::vector<uint>& candidates,
         }
       }
       for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
-        if (pc_symm.write_flags[i])  continue;
+        if (pc_symm.write_ck(i))  continue;
         const Xn::VblSymm& vbl_symm = *pc_symm.rvbl_symms[i];
         if (vbl_symm.puppet_ck())  continue;
         const PFmlaVbl& pf_vbl = topo.pfmla_vbl(*pc.rvbls[i]);

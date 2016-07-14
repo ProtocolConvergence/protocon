@@ -24,7 +24,7 @@ coexist_ck(const Xn::ActSymm& a, const Xn::ActSymm& b,
   bool pure_shadow_img_eql = true;
   bool puppet_adj_eql = true;
   for (uint i = 0; i < pc.rvbl_symms.sz(); ++i) {
-    if (!pc.write_flags[i] && pc.rvbl_symms[i]->puppet_ck()) {
+    if (!pc.write_ck(i) && pc.rvbl_symms[i]->puppet_ck()) {
       if (a.guard(i) != b.guard(i))
         puppet_adj_eql = false;
     }
@@ -33,7 +33,7 @@ coexist_ck(const Xn::ActSymm& a, const Xn::ActSymm& b,
   bool puppet_img_eql = true;
   bool random_write = false;
   for (uint i = 0; i < pc.wvbl_symms.sz(); ++i) {
-    if (pc.spec->random_write_flags[pc.wmap[i]])
+    if (pc.spec->waccess(i).random_write_ck())
       random_write = true;
     if (pc.wvbl_symms[i]->puppet_ck()) {
       if (a.assign(i) != b.assign(i))
@@ -61,7 +61,7 @@ coexist_ck(const Xn::ActSymm& a, const Xn::ActSymm& b,
       continue;
     if (a.guard(j) != b.guard(j)) {
       deterministic = true;
-      if (!pc.write_ck(j) && !pc.spec->random_read_flags[j]) {
+      if (!pc.write_ck(j) && !pc.spec->access[j].random_read_ck()) {
         enabling = false;
       }
     }
@@ -360,7 +360,7 @@ PickActionMRV(uint& ret_actidx,
       const Xn::PcSymm& pc_symm = *act.pc_symm;
 
       for (uint j = 0; j < pc_symm.rvbl_symms.sz(); ++j) {
-        if (pc_symm.spec->random_read_flags[j] || pc_symm.spec->random_write_flags[j]) {
+        if (pc_symm.spec->access[j].random_read_ck() || pc_symm.spec->access[j].random_write_ck()) {
           act.vals[j] = 0;
         }
       }

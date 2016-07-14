@@ -33,7 +33,7 @@ UnidirectionalRing(Xn::Net& topo, uint npcs, uint domsz,
       indices.membs[i] = (int)i - 1;
     }
     indices.expression = "i-1";
-    topo.add_read_access(pc_symm, vbl_symm, indices);
+    topo.add_access(pc_symm, vbl_symm, indices, Xn::ReadAccess);
 
     // Now make this f(i) = i
     indices = Xn::NatMap(npcs);
@@ -41,7 +41,7 @@ UnidirectionalRing(Xn::Net& topo, uint npcs, uint domsz,
       indices.membs[i] = (int)i;
     }
     indices.expression = "i";
-    topo.add_write_access(pc_symm, vbl_symm, indices);
+    topo.add_access(pc_symm, vbl_symm, indices, Xn::WriteAccess);
   }
   else {
     // Create a new symmetry for each process.
@@ -52,12 +52,12 @@ UnidirectionalRing(Xn::Net& topo, uint npcs, uint domsz,
       Xn::NatMap indices(1);
       indices.membs[0] = (int)i - 1;
       indices.expression = indices.membs[0];
-      topo.add_read_access(pc_symm, vbl_symm, indices);
+      topo.add_access(pc_symm, vbl_symm, indices, Xn::ReadAccess);
 
       // Now make this f(j) = i
       indices.membs[0] = (int)i;
       indices.expression = indices.membs[0];
-      topo.add_write_access(pc_symm, vbl_symm, indices);
+      topo.add_access(pc_symm, vbl_symm, indices, Xn::WriteAccess);
     }
   }
 
@@ -69,11 +69,11 @@ UnidirectionalRing(Xn::Net& topo, uint npcs, uint domsz,
     Xn::NatMap indices(1);
     indices.membs[0] = (int)npcs - 2;
     indices.expression = indices.membs[0];
-    topo.add_read_access(pc_symm, vbl_symm, indices);
+    topo.add_access(pc_symm, vbl_symm, indices, Xn::ReadAccess);
 
     indices.membs[0] = (int)npcs - 1;
     indices.expression = indices.membs[0];
-    topo.add_write_access(pc_symm, vbl_symm, indices);
+    topo.add_access(pc_symm, vbl_symm, indices, Xn::WriteAccess);
   }
 }
 
@@ -97,7 +97,7 @@ BidirectionalRing(Xn::Net& topo, uint npcs, uint domsz,
       indices.membs[i] = (int)i + 1;
     }
     indices.expression = "i+1";
-    topo.add_read_access(pc_symm, &topo.vbl_symms[0], indices);
+    topo.add_access(pc_symm, &topo.vbl_symms[0], indices, Xn::ReadAccess);
   }
   else {
     for (uint i = 0; i < npcs; ++i) {
@@ -106,7 +106,7 @@ BidirectionalRing(Xn::Net& topo, uint npcs, uint domsz,
       Xn::NatMap indices(1);
       indices.membs[0] = (int)i + 1;
       indices.expression = indices.membs[0];
-      topo.add_read_access(pc_symm, &topo.vbl_symms[0], indices);
+      topo.add_access(pc_symm, &topo.vbl_symms[0], indices, Xn::ReadAccess);
     }
   }
 }

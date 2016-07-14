@@ -3,11 +3,11 @@
 constant N := 3;
 constant Chain := 1;
 variable b[N] < 2;
-variable w[(2*N)] < 2;
+variable w[2*N] < 2;
 
 // When it is a chain, just zero out the unused {w} variables.
 (assume & closed)
-  (Chain==1 ==> w[0]==0 && w[2*(N-1)+1]==0);
+  (Chain==1 ==> w[0]==0 && w[2*N-1]==0);
 
 process End[i <- map tid < 2*Chain : tid * (N-1)]
 {

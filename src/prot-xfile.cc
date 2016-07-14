@@ -32,7 +32,7 @@ ProtoconFile::bad_parse(const char* text, const char* reason)
 
   bool
 ProtoconFile::add_variables(Sesp vbl_name_sp, Sesp vbl_nmembs_sp, Sesp vbl_dom_sp,
-                            Xn::Vbl::ShadowPuppetRole role)
+                            Xn::ShadowPuppetRole role)
 {
   if (!allgood)  return false;
   DeclLegit( good );
@@ -208,7 +208,7 @@ ProtoconFile::del_scope_let(Sesp name_sp)
 }
 
   bool
-ProtoconFile::add_access(Sesp vbl_sp, Bit write, Bit random)
+ProtoconFile::add_access(Sesp vbl_sp, Xn::VariableAccessType access_type)
 {
   if (!allgood)  return false;
   DeclLegit( good );
@@ -248,26 +248,8 @@ ProtoconFile::add_access(Sesp vbl_sp, Bit write, Bit random)
     DoLegitLine( "string_expression()" )
       string_expression(indices.expression, vbl_idx_sp);
 
-    if (good) {
-      if (write) {
-        topo.add_write_access(+pc_symm, vbl_symm, indices);
-        if (random) {
-          pc_symm_spec->random_write_flags.top() = 1;
-        }
-      }
-      else {
-        topo.add_read_access(+pc_symm, vbl_symm, indices);
-        if (random) {
-          pc_symm_spec->random_read_flags.top() = 1;
-          for (uint i = 0; i < pc_symm->membs.sz(); ++i) {
-            uint vidx = topo.vbls.index_of(pc_symm->membs[i]->rvbls.top());
-            topo.vbls[vidx].random_flag = true;
-          }
-          DoLegitLine( "Can only 'random read' with puppet variables!" )
-            pc_symm->rvbl_symms.top()->pure_puppet_ck();
-        }
-      }
-    }
+    if (good)
+      topo.add_access(+pc_symm, vbl_symm, indices, access_type);
   }
 
   return update_allgood (good);
@@ -329,7 +311,7 @@ ProtoconFile::add_symmetric_links(Sesp let_names_sp, Sesp let_vals_list_sp)
 
   bool
 ProtoconFile::add_symmetric_access(Sesp let_names_sp, Sesp let_vals_list_sp,
-                                   Sesp vbls_sp, Bit write, Bit random)
+                                   Sesp vbls_sp, Xn::VariableAccessType access_type)
 {
   if (!allgood)  return false;
   DeclLegit( good );
@@ -354,8 +336,8 @@ ProtoconFile::add_symmetric_access(Sesp let_names_sp, Sesp let_vals_list_sp,
         nil_ck_Sesp (let_val_sp);
       if (!good)  break;
 
-      vbl_idcs.push(pc_symm_spec->rvbl_symms.sz());
-      add_access(car_of_Sesp (vbls_sp), write, random);
+      vbl_idcs.push(pc_symm_spec->access.sz());
+      add_access(car_of_Sesp (vbls_sp), access_type);
 
       let_name_sp = let_names_sp;
       while (!nil_ck_Sesp (let_name_sp)) {
@@ -376,7 +358,7 @@ ProtoconFile::add_symmetric_access(Sesp let_names_sp, Sesp let_vals_list_sp,
 
   bool
 ProtoconFile::parse_action(X::Fmla& act_xn, uint pcidx, Sesp act_sp,
-                           bool auto_iden, Xn::Vbl::ShadowPuppetRole role)
+                           bool auto_iden, Xn::ShadowPuppetRole role)
 {
   DeclLegit( good );
   const Xn::Net& topo = sys->topology;
@@ -475,7 +457,7 @@ ProtoconFile::parse_action(X::Fmla& act_xn, uint pcidx, Sesp act_sp,
     }
     else if (actto_op) {
       // The {-=>} operator automatically randomizes values.
-      if (pc_symm_spec->random_write_flags[pc_symm->wmap[i]]) {
+      if (pc_symm_spec->waccess(i).random_write_ck()) {
         if (!wvbl_assigned[i]) {
           wvbl_assigned[i] = 1;
           wvbl_randomized[i] = 1;
@@ -506,7 +488,7 @@ ProtoconFile::parse_action(X::Fmla& act_xn, uint pcidx, Sesp act_sp,
   // This is mostly just self-loops.
   if (actto_op) {
     X::Fmla pc_xn = act_xn;
-    if (role == Xn::Vbl::Shadow)
+    if (role == Xn::Shadow)
       pc_xn = topo.proj_shadow(pc_xn);
     else
       pc_xn = topo.proj_puppet(pc_xn);
@@ -514,10 +496,10 @@ ProtoconFile::parse_action(X::Fmla& act_xn, uint pcidx, Sesp act_sp,
     Table<bool> changing(pc_symm->rvbl_symms.sz());
     for (uint i = 0; i < pc_symm->rvbl_symms.sz(); ++i) {
       changing[i] =
-        pc_symm->write_flags[i]
+        pc_symm->write_ck(i)
         || pc.rvbls[i]->random_ck()
-        || (role == Xn::Vbl::Shadow && pc_symm->rvbl_symms[i]->pure_puppet_ck())
-        || (role != Xn::Vbl::Shadow && pc_symm->rvbl_symms[i]->pure_shadow_ck())
+        || (role == Xn::Shadow && pc_symm->rvbl_symms[i]->pure_puppet_ck())
+        || (role != Xn::Shadow && pc_symm->rvbl_symms[i]->pure_shadow_ck())
         ;
     }
     for (uint i = 0; i < pc_symm->rvbl_symms.sz(); ++i) {
@@ -555,7 +537,7 @@ ProtoconFile::parse_action(X::Fmla& act_xn, uint pcidx, Sesp act_sp,
 
   bool
 ProtoconFile::parse_action(X::Fmla& act_pf, Table<X::Fmla>& pc_xns, Sesp act_sp,
-                           bool auto_iden, Xn::Vbl::ShadowPuppetRole role)
+                           bool auto_iden, Xn::ShadowPuppetRole role)
 {
   if (!allgood)  return false;
   DeclLegit( good );
@@ -573,7 +555,7 @@ ProtoconFile::parse_action(X::Fmla& act_pf, Table<X::Fmla>& pc_xns, Sesp act_sp,
 }
 
   bool
-ProtoconFile::add_action(Sesp act_sp, Xn::Vbl::ShadowPuppetRole role)
+ProtoconFile::add_action(Sesp act_sp, Xn::ShadowPuppetRole role)
 {
   if (!allgood)  return false;
   DeclLegit( good );
@@ -582,7 +564,7 @@ ProtoconFile::add_action(Sesp act_sp, Xn::Vbl::ShadowPuppetRole role)
 
   DoLegit( "" )
   {
-    if (role != Xn::Vbl::Puppet) {
+    if (role != Xn::Puppet) {
       String act_expression;
       good = string_expression (act_expression, act_sp);
       if (good) {
@@ -600,10 +582,10 @@ ProtoconFile::add_action(Sesp act_sp, Xn::Vbl::ShadowPuppetRole role)
 
   if (good) {
     for (uint i = 0; i < pc_symm->membs.sz(); ++i) {
-      if (role != Xn::Vbl::Puppet) {
+      if (role != Xn::Puppet) {
         pc_symm->membs[i]->shadow_xn |= topo.proj_shadow(pc_xns[i]);
       }
-      if (role != Xn::Vbl::Shadow) {
+      if (role != Xn::Shadow) {
         pc_symm->membs[i]->puppet_xn |= pc_xns[i];
       }
     }
@@ -615,7 +597,7 @@ ProtoconFile::add_action(Sesp act_sp, Xn::Vbl::ShadowPuppetRole role)
 
   DoLegit("")
   {
-    if (role != Xn::Vbl::Puppet) {
+    if (role != Xn::Puppet) {
       const X::Fmla& shadow_act_pf =
         (topo.smooth_pure_puppet_vbls(act_pf) -
          topo.smooth_pure_puppet_vbls(topo.identity_xn));
@@ -624,7 +606,7 @@ ProtoconFile::add_action(Sesp act_sp, Xn::Vbl::ShadowPuppetRole role)
     }
 
 
-    if (role != Xn::Vbl::Shadow) {
+    if (role != Xn::Shadow) {
 #if 0
       uint rep_pcidx = 0;
       pc_symm->representative(&rep_pcidx);
@@ -660,7 +642,7 @@ ProtoconFile::forbid_action(Sesp act_sp)
   X::Fmla act_pf( false );
   Table<X::Fmla> pc_xns;
   DoLegitLine( "parse action" )
-    parse_action(act_pf, pc_xns, act_sp, false, Xn::Vbl::Puppet);
+    parse_action(act_pf, pc_xns, act_sp, false, Xn::Puppet);
 
   DoLegit( "" ) {
     for (uint i = 0; i < pc_symm->membs.sz(); ++i) {
@@ -692,7 +674,7 @@ ProtoconFile::permit_action(Sesp act_sp)
   X::Fmla act_pf( false );
   Table<X::Fmla> pc_xns;
   DoLegitLine( "parse action" )
-    parse_action(act_pf, pc_xns, act_sp, false, Xn::Vbl::Puppet);
+    parse_action(act_pf, pc_xns, act_sp, false, Xn::Puppet);
 
   DoLegit( "" ) {
     for (uint i = 0; i < pc_symm->membs.sz(); ++i) {
@@ -717,7 +699,7 @@ ProtoconFile::conflict_action(Sesp act_sp)
 
   X::Fmla xn;
   DoLegitLine( "parse action" )
-    parse_action(xn, rep_pcidx, act_sp, true, Xn::Vbl::Puppet);
+    parse_action(xn, rep_pcidx, act_sp, true, Xn::Puppet);
 
   const Xn::Pc& pc = *pc_symm->membs[rep_pcidx];
   Xn::ActSymm act;

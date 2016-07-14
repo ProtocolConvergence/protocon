@@ -6,7 +6,8 @@
 
 static
   void
-OPutPromelaVblRef(OFile& of, const Xn::VblSymm& vbl_symm, const Xn::NatMap& index_map)
+OPutPromelaVblRef(OFile& of, const Xn::VblSymm& vbl_symm, const Xn::NatMap& index_map,
+                  const String& index_expression)
 {
   uint mod_val = 0;
   uint add_val = 0;
@@ -25,7 +26,7 @@ OPutPromelaVblRef(OFile& of, const Xn::VblSymm& vbl_symm, const Xn::NatMap& inde
   if (mod_val > 0) {
     of << "(";
   }
-  of << index_map.expression;
+  of << index_expression;
   if (mod_val > 0) {
     if (add_val > 0) {
       of << "+" << add_val;
@@ -42,13 +43,16 @@ OPutPromelaAction(OFile& of, const Xn::ActSymm& act)
   const Xn::PcSymm& pc_symm = *act.pc_symm;
   for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
     if (i != 0)  of << " && ";
-    OPutPromelaVblRef(of, *pc_symm.rvbl_symms[i], pc_symm.rindices[i]);
+    OPutPromelaVblRef(of, *pc_symm.rvbl_symms[i], pc_symm.vbl_indices[i],
+                      pc_symm.spec->access[i].index_expression);
     of << "==" << act.guard(i);
   }
   of << " ->";
   for (uint i = 0; i < pc_symm.wvbl_symms.sz(); ++i) {
     of << ' ';
-    OPutPromelaVblRef(of, *pc_symm.wvbl_symms[i], pc_symm.windices[i]);
+    OPutPromelaVblRef(of, *pc_symm.wvbl_symms[i],
+                      pc_symm.vbl_indices[pc_symm.spec->wmap[i]],
+                      pc_symm.spec->waccess(i).index_expression);
     of << "=" << act.assign(i) << ';';
   }
 }

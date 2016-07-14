@@ -242,7 +242,7 @@ ReadUniRing(const char* filepath, Xn::Sys& sys, vector< array<PcState,2> >& legi
   Table<uint> rvbl_indices(2);
   rvbl_indices[0] = pc.rvbls[0]->pfmla_idx;
   rvbl_indices[1] = pc.rvbls[1]->pfmla_idx;
-  if (pc_symm.wmap[0]==0)
+  if (pc_symm.spec->wmap[0]==0)
     SwapT(uint, rvbl_indices[0], rvbl_indices[1]);
 
   // Get all legitimate states.
@@ -275,7 +275,7 @@ WriteUniRing(const char* filepath, const Xn::Sys& sys, const vector< array<PcSta
     act.pc_symm = &pc_symm;
     act.vals << actions[i][0] << actions[i][1] << actions[i][2];
 
-    if (pc_symm.wmap[0]==0)
+    if (pc_symm.spec->wmap[0]==0)
       SwapT(uint, act.vals[0], act.vals[1]);
     enum_actions.push_back(topo.action_index(act));
   }

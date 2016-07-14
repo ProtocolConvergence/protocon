@@ -102,8 +102,6 @@ public:
 
 class Vbl {
 public:
-  enum ShadowPuppetRole { Direct, Shadow, Puppet };
-public:
   const VblSymm* symm;
   uint symm_idx;
   uint pfmla_idx; ///< Index of the variable (in a PmlaFCtx).
@@ -125,18 +123,16 @@ public:
   uint domsz;
   Table< Vbl* > membs;
   uint pfmla_list_id;
-  Vbl::ShadowPuppetRole shadow_puppet_role;
 
   VblSymm()
-    : shadow_puppet_role( Vbl::Direct )
   {}
 
-  bool direct_ck() const { return shadow_puppet_role == Vbl::Direct; }
-  bool pure_shadow_ck() const { return shadow_puppet_role == Vbl::Shadow; }
-  bool pure_puppet_ck() const { return shadow_puppet_role == Vbl::Puppet; }
+  bool direct_ck() const { return spec->direct_ck(); }
+  bool pure_shadow_ck() const { return spec->pure_shadow_ck(); }
+  bool pure_puppet_ck() const { return spec->pure_puppet_ck(); }
 
-  bool shadow_ck() const { return pure_shadow_ck() || direct_ck(); }
-  bool puppet_ck() const { return pure_puppet_ck() || direct_ck(); }
+  bool shadow_ck() const { return spec->shadow_ck(); }
+  bool puppet_ck() const { return spec->puppet_ck(); }
 };
 
 inline String name_of(const Vbl& vbl) {
@@ -204,10 +200,7 @@ public:
   /// The rvbls should include wvbls.
   Table< const VblSymm* > rvbl_symms;
   Table< const VblSymm* > wvbl_symms;
-  Table< uint > wmap;
-  std::vector< bool > write_flags;
-  Table< NatMap > rindices;
-  Table< NatMap > windices;
+  Table< NatMap > vbl_indices;
   /// Domains of readable variables.
   Table< uint > doms;
   Table< FlatSet< Xn::ActSymm > > conflicts;
@@ -235,11 +228,14 @@ public:
 
   String vbl_name(uint i) const {
     const String& name = rvbl_symms[i]->spec->name;
-    return name + "[" + rindices[i].expression + "]";
+    return name + "[" + vbl_indices[i].expression + "]";
   }
 
+  bool read_ck(uint ridx) const {
+    return spec->access[ridx].read_ck();
+  }
   bool write_ck(uint ridx) const {
-    return write_flags[ridx];
+    return spec->access[ridx].write_ck();
   }
 
   bool dom_equiv_ck(const PcSymm& b) const;
@@ -267,22 +263,22 @@ inline uint ActSymm::guard(uint vbl_idx) const
 inline uint ActSymm::assign(uint vbl_idx) const
 { return this->vals[this->pc_symm->rvbl_symms.sz() + vbl_idx]; }
 inline uint ActSymm::aguard(uint vbl_idx) const
-{ return this->guard(this->pc_symm->wmap[vbl_idx]); }
+{ return this->guard(this->pc_symm->spec->wmap[vbl_idx]); }
 inline void ActSymm::swap_vals(uint ridx_a, uint ridx_b)
 {
   SwapT( uint, this->vals[ridx_a], this->vals[ridx_b] );
-  if (this->pc_symm->write_flags[ridx_a] ||
-      this->pc_symm->write_flags[ridx_b])
+  if (this->pc_symm->write_ck(ridx_a) ||
+      this->pc_symm->write_ck(ridx_b))
   {
-    Claim( this->pc_symm->write_flags[ridx_a] );
-    Claim( this->pc_symm->write_flags[ridx_b] );
+    Claim( this->pc_symm->write_ck(ridx_a) );
+    Claim( this->pc_symm->write_ck(ridx_b) );
     uint widx_a = 0;
     uint widx_b = 0;
-    for (uint i = 0; i < this->pc_symm->wmap.sz(); ++i) {
-      if (this->pc_symm->wmap[i] == ridx_a) {
+    for (uint i = 0; i < this->pc_symm->wvbl_symms.sz(); ++i) {
+      if (this->pc_symm->spec->wmap[i] == ridx_a) {
         widx_a = this->pc_symm->rvbl_symms.sz() + i;
       }
-      if (this->pc_symm->wmap[i] == ridx_b) {
+      if (this->pc_symm->spec->wmap[i] == ridx_b) {
         widx_b = this->pc_symm->rvbl_symms.sz() + i;
       }
     }
@@ -298,7 +294,7 @@ inline bool ActSymm::puppet_self_loop_ck() const
       continue;
     if (this->aguard(i) != this->assign(i))
       return false;
-    if (this->pc_symm->spec->random_write_flags[this->pc_symm->wmap[i]]) {
+    if (this->pc_symm->spec->waccess(i).random_write_ck()) {
       return false;
     }
   }
@@ -360,19 +356,16 @@ public:
 
   VblSymm*
   add_variables(const String& name, uint nmembs, uint domsz,
-                Vbl::ShadowPuppetRole role = Vbl::Direct);
+                Xn::ShadowPuppetRole role = Xn::Direct);
 private:
   void commit_variable(VblSymm& symm, uint i);
 public:
   void commit_variables();
   PcSymm*
   add_processes(const String& name, const String& idx_name, uint nmembs);
-  void
-  add_read_access (PcSymm* pc_symm, const VblSymm* vbl_symm,
-                   const NatMap& indices);
-  void
-  add_write_access (PcSymm* pc_symm, const VblSymm* vbl_symm,
-                    const NatMap& indices);
+  void add_access (PcSymm* pc_symm, const VblSymm* vbl_symm,
+                   const NatMap& indices,
+                   Xn::VariableAccessType access_type);
 
   uint action_pcsymm_index(uint actidx) const;
   void action(ActSymm& act, uint actidx) const;

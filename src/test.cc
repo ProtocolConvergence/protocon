@@ -389,7 +389,7 @@ TestProtoconFile(bool agreement)
 
   Claim2( topo_f.pcs.sz()  ,==, topo_c.pcs.sz() );
   Claim2( topo_f.vbls.sz() ,==, topo_c.vbls.sz() );
-  Claim2( topo_f.pc_symms[0].wmap ,==, topo_c.pc_symms[0].wmap );
+  Claim2( topo_f.pc_symms[0].spec->wmap ,==, topo_c.pc_symms[0].spec->wmap );
 
   Claim( !sys_f.invariant.equiv_ck(sys_c.invariant) );
 
@@ -417,30 +417,30 @@ SetupSilentShadowRing(Xn::Sys& sys, const uint npcs,
                       const char* shadow_vbl_name, const uint shadow_vbl_domsz)
 {
   Xn::Net& topo = sys.topology;
-  topo.add_variables(puppet_vbl_name, npcs, puppet_vbl_domsz, Xn::Vbl::Puppet);
-  topo.add_variables(shadow_vbl_name, npcs, shadow_vbl_domsz, Xn::Vbl::Shadow);
+  topo.add_variables(puppet_vbl_name, npcs, puppet_vbl_domsz, Xn::Puppet);
+  topo.add_variables(shadow_vbl_name, npcs, shadow_vbl_domsz, Xn::Shadow);
   Xn::PcSymm* pc_symm = topo.add_processes("P", "i", npcs);
   Xn::NatMap indices(npcs);
 
   for (uint i = 0; i < npcs; ++i)
     indices.membs[i] = (int)i - 1;
   indices.expression = "i-1";
-  topo.add_read_access(pc_symm, &topo.vbl_symms[0], indices);
+  topo.add_access(pc_symm, &topo.vbl_symms[0], indices, Xn::ReadAccess);
 
   for (uint i = 0; i < npcs; ++i)
     indices.membs[i] = (int)i;
   indices.expression = "i";
-  topo.add_write_access(pc_symm, &topo.vbl_symms[0], indices);
+  topo.add_access(pc_symm, &topo.vbl_symms[0], indices, Xn::WriteAccess);
 
   for (uint i = 0; i < npcs; ++i)
     indices.membs[i] = (int)i + 1;
   indices.expression = "i+1";
-  topo.add_read_access(pc_symm, &topo.vbl_symms[0], indices);
+  topo.add_access(pc_symm, &topo.vbl_symms[0], indices, Xn::ReadAccess);
 
   for (uint i = 0; i < npcs; ++i)
     indices.membs[i] = (int)i;
   indices.expression = "i";
-  topo.add_write_access(pc_symm, &topo.vbl_symms[1], indices);
+  topo.add_access(pc_symm, &topo.vbl_symms[1], indices, Xn::WriteAccess);
 
   sys.spec->invariant_style = Xn::FutureAndShadow;
   sys.spec->invariant_scope = Xn::ShadowInvariant;

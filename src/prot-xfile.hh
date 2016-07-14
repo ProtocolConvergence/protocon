@@ -36,6 +36,7 @@ struct FinMeta
   union {
     int i;
     const char* s;
+    Xn::VariableAccessType access_type;
   } aux;
   //uint text_lineno;
 };
@@ -104,7 +105,7 @@ public:
   bool update_allgood(bool good);
   void bad_parse(const char* text, const char* reason=0);
   bool add_variables(Sesp vbl_name_sp, Sesp vbl_nmembs_sp, Sesp vbl_dom_sp,
-                     Xn::Vbl::ShadowPuppetRole role);
+                     Xn::ShadowPuppetRole role);
 
   bool add_processes(Sesp pc_name, Sesp idx_name, Sesp npcs, Sesp map_vbl, Sesp map_expr);
 
@@ -118,19 +119,19 @@ public:
 
   void del_scope_let(Sesp name_sp);
 
-  bool add_access(Sesp vbl_sp, Bit write, Bit random);
+  bool add_access(Sesp vbl_sp, Xn::VariableAccessType access_type);
 
   bool add_symmetric_links(Sesp let_names_sp, Sesp let_vals_list_sp);
 
   bool add_symmetric_access(Sesp let_names_sp, Sesp let_vals_list_sp, Sesp vbls_sp,
-                            Bit write, Bit random);
+                            Xn::VariableAccessType access_type);
 
   bool parse_action(X::Fmla& act_xn, uint pcidx, Sesp act_sp,
-                    bool auto_iden, Xn::Vbl::ShadowPuppetRole role);
+                    bool auto_iden, Xn::ShadowPuppetRole role);
   bool parse_action(X::Fmla& act_pf, Table<X::Fmla>& pc_xns, Sesp act_sp,
-                    bool auto_iden, Xn::Vbl::ShadowPuppetRole role);
+                    bool auto_iden, Xn::ShadowPuppetRole role);
 
-  bool add_action(Sesp act_sp, Xn::Vbl::ShadowPuppetRole role);
+  bool add_action(Sesp act_sp, Xn::ShadowPuppetRole role);
 
   bool forbid_action(Sesp act_sp);
   bool permit_action(Sesp act_sp);

@@ -244,7 +244,7 @@ interactive(const Xn::Sys& sys)
         const Xn::Pc& pc = topo.pcs[pcidx];
         of << name_of(pc) << " {";
         for (uint i = 0; i < pc.rvbls.sz(); ++i) {
-          if (pc.symm->write_flags[i])
+          if (pc.symm->spec->access[i].write_ck())
             of << " write: ";
           else
             of << " read: ";

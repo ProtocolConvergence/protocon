@@ -50,7 +50,7 @@ void oput_udp_file(OFile& ofile, const Xn::Sys& sys, const Xn::Net& o_topology)
       Variable v;
       v.vbl_idx = vidx;
       v.domsz = vbl.symm->domsz;
-      v.writing = pc.symm->write_flags[i];
+      v.writing = pc.symm->write_ck(i);
       pcs[pcidx].local_idcs[vidx] = pcs[pcidx].vbls.sz();
       pcs[pcidx].vbls.push(v);
 
@@ -253,7 +253,7 @@ void oput_udp_file(OFile& ofile, const Xn::Sys& sys, const Xn::Net& o_topology)
       if (pc.closed_assume.equiv_ck(pc.closed_assume.smooth_pre(topo.pfmla_vbl(*pc.rvbls[i]))))
         continue;
       uint puppet_i = puppet_sz - 1;
-      if (pc_symm.write_flags[i]) {
+      if (pc_symm.write_ck(i)) {
         writable << puppet_i;
         pfmla_wvbl_idcs << pc.rvbls[i]->pfmla_idx;
       }
@@ -269,7 +269,7 @@ void oput_udp_file(OFile& ofile, const Xn::Sys& sys, const Xn::Net& o_topology)
     {
       P::Fmla img_pf = bad_pf;
       for (uint i = 0; i < pc.rvbls.sz(); ++i) {
-        if (pc_symm.write_flags[i])  continue;
+        if (pc_symm.write_ck(i))  continue;
         img_pf = img_pf.smooth_pre(topo.pfmla_vbl(*pc.rvbls[i]));
       }
       img_pf = ~img_pf;
@@ -352,7 +352,7 @@ void oput_udp_file(OFile& ofile, const Xn::Sys& sys, const Xn::Net& o_topology)
         ofile << "\n    x[" << pfmla_rvbl_idcs.sz()
           << "] = RandomMod(" << vbl_symm.domsz << ");";
       }
-      if (pc_symm.write_flags[i]) {
+      if (pc_symm.write_ck(i)) {
         uint puppet_i = pfmla_rvbl_idcs.sz();
         writable << puppet_i;
         pfmla_wvbl_idcs << pc.rvbls[i]->pfmla_idx;

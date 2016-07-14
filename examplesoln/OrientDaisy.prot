@@ -25,7 +25,7 @@ process End[i <- map tid < 2*Chain : tid * (N-1)]
     (w[ij]!=w[ji] && b[i]==1 && b[j]==1);
 
   puppet action:
-    ( true -=> b[i]:=1; w[ij]:=w[ji]-b[j]; )
+    ( true -=> b[i]:=1; w[ij]:=b[j]-w[ji]; )
     ;
 }
 
@@ -52,9 +52,9 @@ process P[i <- map tid < N-2*Chain : tid + Chain]
 
   puppet action:
     ( w[ji]==0 && w[ki]==0               -=> b[i]:=0; )
-    ( w[ji]==1 && w[ki]==1 && b[j]==b[k] -=> b[i]:=1-b[j]; )
-    ( w[ji]==1 && w[ki]==1 && b[j]!=b[k] -=> b[i]:=1;         w[ij]:=b[k];  w[ik]:=b[j]; )
-    ( w[ji]!=w[ki]                       -=> b[i]:=b[j]*b[k]; w[ij]:=w[ki]; w[ik]:=w[ji]; )
+    ( w[ji]==1 && w[ki]==1 && b[j]==b[k] -=> b[i]:=1-b[j]*b[k]; )
+    ( w[ji]==1 && w[ki]==1 && b[j]!=b[k] -=> b[i]:=1;         w[ij]:=1-b[j];  w[ik]:=1-b[k]; )
+    ( w[ji]!=w[ki]                       -=> b[i]:=b[j]*b[k]; w[ij]:=1-w[ji]; w[ik]:=1-w[ki]; )
     ;
 }
 

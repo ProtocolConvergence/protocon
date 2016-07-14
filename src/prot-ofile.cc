@@ -40,7 +40,7 @@ oput_pla_act (OFile& of, const Xn::ActSymm& act)
 oput_pla_pc_acts (OFile& of, const Xn::PcSymm& pc_symm,
                   const Table<Xn::ActSymm>& acts)
 {
-  Claim2( pc_symm.wvbl_symms.sz() ,==, pc_symm.wmap.sz() );
+  Claim2( pc_symm.wvbl_symms.sz() ,==, pc_symm.spec->wmap.sz() );
 
   uint nrvbls = 0;
   for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
@@ -48,7 +48,7 @@ oput_pla_pc_acts (OFile& of, const Xn::PcSymm& pc_symm,
       nrvbls += 1;
   }
 
-  of << ".mv " << (nrvbls + pc_symm.wmap.sz()) << " 0";
+  of << ".mv " << (nrvbls + pc_symm.spec->wmap.sz()) << " 0";
   for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
     const Xn::VblSymm& vbl_symm = *pc_symm.rvbl_symms[i];
     if (vbl_symm.pure_shadow_ck())
@@ -68,8 +68,8 @@ oput_pla_pc_acts (OFile& of, const Xn::PcSymm& pc_symm,
     of << ' ' << pc_symm.vbl_name(i);
   }
 
-  for (uint i = 0; i < pc_symm.wmap.sz(); ++i)
-    of << ' ' << pc_symm.vbl_name(pc_symm.wmap[i]) << '\'';
+  for (uint i = 0; i < pc_symm.spec->wmap.sz(); ++i)
+    of << ' ' << pc_symm.vbl_name(pc_symm.spec->wmap[i]) << '\'';
   of << '\n';
 
   for (uint i = 0; i < acts.sz(); ++i) {
@@ -122,8 +122,8 @@ static
 oput_protocon_pc_vbl (OFile& ofile, const Xn::PcSymm& pc_symm,
                        uint vidx, const String& idxname)
 {
-  if (pc_symm.write_flags[vidx]) {
-    if (pc_symm.spec->random_write_flags[vidx])
+  if (pc_symm.write_ck(vidx)) {
+    if (pc_symm.spec->access[vidx].random_write_ck())
       ofile << "random ";
     ofile << "write";
   }
@@ -133,7 +133,7 @@ oput_protocon_pc_vbl (OFile& ofile, const Xn::PcSymm& pc_symm,
     }
     ofile << "read";
   }
-  ofile << ": " << pc_symm.spec->rvbl_symms[vidx]->name
+  ofile << ": " << pc_symm.spec->access[vidx].vbl_symm->name
     << "[" << idxname << "];";
 }
 
@@ -164,7 +164,7 @@ oput_protocon_pc_vbls (OFile& ofile, const Xn::PcSymm& pc_symm)
     }
     if (symmetric_link_case)  continue;
     oput_protocon_pc_vbl ((ofile << "\n  "), pc_symm,
-                          i, pc_symm.rindices[i].expression);
+                          i, pc_symm.spec->access[i].index_expression);
   }
 }
 
@@ -255,8 +255,8 @@ oput_protocon_pc_act (OFile& of, const Xn::ActSymm& act)
       continue;
     if (vbl_symm.pure_shadow_ck() && vbl_symm.domsz == act.assign(i))
       continue;
-    of << pc_symm.vbl_name(pc_symm.wmap[i]) << ":=";
-    if (pc_symm.spec->random_write_flags[pc_symm.wmap[i]])
+    of << pc_symm.vbl_name(pc_symm.spec->wmap[i]) << ":=";
+    if (pc_symm.spec->waccess(i).random_write_ck())
       of << "_; ";
     else
       of << act.assign(i) << "; ";
@@ -318,14 +318,14 @@ oput_protocon_pc_acts (OFile& of, const Xn::PcSymm& pc_symm,
 
   // Names for variables.
   Table<String> guard_vbls;
-  Table<String> assign_vbls( pc_symm.wmap.sz() );
+  Table<String> assign_vbls( pc_symm.spec->wmap.sz() );
   for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
     if (pc_symm.rvbl_symms[i]->pure_shadow_ck())
       continue;
     guard_vbls.push(pc_symm.vbl_name(i));
   }
   for (uint i = 0; i < pc_symm.wvbl_symms.sz(); ++i) {
-    assign_vbls[i] = pc_symm.vbl_name(pc_symm.wmap[i]);
+    assign_vbls[i] = pc_symm.vbl_name(pc_symm.spec->wmap[i]);
   }
 
   of << "\n  puppet:";
