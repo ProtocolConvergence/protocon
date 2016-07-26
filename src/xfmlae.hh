@@ -128,6 +128,11 @@ public:
     return *this;
   }
 
+  void self_disable() {
+    for (uint i = 0; i < this->sz(); ++i)
+      fmlas[i] -= fmlas[i].img();
+  }
+
   X::Fmla transitive_closure(const P::Fmla* initial = 0) const;
   bool cycle_ck(P::Fmla* scc,
                 uint* ret_nlayers = 0,

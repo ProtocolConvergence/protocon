@@ -118,23 +118,37 @@ oput_protocon_pc_predicates (OFile& ofile, const Xn::PcSymm& pc_symm)
 }
 
 static
+  const char*
+string_of_access_type (Xn::VariableAccessType type)
+{
+  switch (type) {
+    case Xn::ReadAccess:
+      return "read";
+    case Xn::WriteAccess:
+      return "write";
+    case Xn::YieldAccess:
+      return "yield";
+    case Xn::EffectAccess:
+      return "effect";
+    case Xn::RandomReadAccess:
+      return "random read";
+    case Xn::RandomWriteAccess:
+      return "random write";
+    case Xn::NVariableAccessTypes:
+      Claim( 0 );
+  }
+  return 0;
+}
+
+static
   void
 oput_protocon_pc_vbl (OFile& ofile, const Xn::PcSymm& pc_symm,
                        uint vidx, const String& idxname)
 {
-  if (pc_symm.write_ck(vidx)) {
-    if (pc_symm.spec->access[vidx].random_write_ck())
-      ofile << "random ";
-    ofile << "write";
-  }
-  else {
-    if (pc_symm.membs[0]->rvbls[vidx]->random_ck()) {
-      ofile << "random ";
-    }
-    ofile << "read";
-  }
-  ofile << ": " << pc_symm.spec->access[vidx].vbl_symm->name
-    << "[" << idxname << "];";
+  const Xn::VblSymmAccessSpec& access = pc_symm.spec->access[vidx];
+  ofile
+    << string_of_access_type (access.type) << ": "
+    << access.vbl_symm->name << "[" << idxname << "];";
 }
 
 static
@@ -238,7 +252,7 @@ oput_protocon_pc_act (OFile& of, const Xn::ActSymm& act)
 
   bool need_delim = false;
   for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
-    if (pc_symm.rvbl_symms[i]->pure_shadow_ck())
+    if (!pc_symm.spec->access[i].synt_read_ck())
       continue;
 
     if (need_delim)
@@ -253,7 +267,7 @@ oput_protocon_pc_act (OFile& of, const Xn::ActSymm& act)
     const Xn::VblSymm& vbl_symm = *pc_symm.wvbl_symms[i];
     if (puppet_self_loop && !vbl_symm.pure_shadow_ck())
       continue;
-    if (vbl_symm.pure_shadow_ck() && vbl_symm.domsz == act.assign(i))
+    if (vbl_symm.domsz == act.assign(i))
       continue;
     of << pc_symm.vbl_name(pc_symm.spec->wmap[i]) << ":=";
     if (pc_symm.spec->waccess(i).random_write_ck())

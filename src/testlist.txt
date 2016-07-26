@@ -1,6 +1,11 @@
 ConflictFamily
 IntPFmla
 PFmla
+PcXn_rwr
+PcXn_ryr
+PcXn_ryyr
+PcXn_yerrerr_dizzy
+PcXn_yryr_dizzy
 ProbabilisticLivelock
 ProtoconFileAgreement
 ProtoconFileSumNotTwo

@@ -180,6 +180,7 @@ public:
   uint aguard(uint vbl_idx) const;
   void swap_vals(uint ridx_a, uint ridx_b);
   bool puppet_self_loop_ck() const;
+  bool readable_self_loop_ck() const;
 
   bool operator<(const Xn::ActSymm& b) const {
     return (this->vals < b.vals);
@@ -290,13 +291,34 @@ inline void ActSymm::swap_vals(uint ridx_a, uint ridx_b)
 inline bool ActSymm::puppet_self_loop_ck() const
 {
   for (uint i = 0; i < this->pc_symm->wvbl_symms.sz(); ++i) {
-    if (this->pc_symm->wvbl_symms[i]->pure_shadow_ck())
+    const VblSymmAccessSpec& access = this->pc_symm->spec->waccess(i);
+    if (access.synt_writeonly_ck()) {
+      if (access.vbl_symm->puppet_ck()) {
+        if (this->assign(i) != access.vbl_symm->domsz)
+          return false;
+      }
       continue;
+    }
     if (this->aguard(i) != this->assign(i))
       return false;
-    if (this->pc_symm->spec->waccess(i).random_write_ck()) {
+    if (access.random_write_ck()) {
       return false;
     }
+  }
+  return true;
+}
+
+inline bool ActSymm::readable_self_loop_ck() const
+{
+  for (uint i = 0; i < this->pc_symm->wvbl_symms.sz(); ++i) {
+    const VblSymmAccessSpec& access = this->pc_symm->spec->waccess(i);
+    if (!access.synt_read_ck())
+      continue;
+    if (access.random_write_ck()) {
+      return false;
+    }
+    if (this->aguard(i) != this->assign(i))
+      return false;
   }
   return true;
 }

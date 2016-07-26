@@ -399,6 +399,16 @@ public:
 
   PFmla img_eq(const IntPFmla& b) const;
 
+  PFmla transition(uint b, uint c) const {
+    return (*this==b) & this->img_eq(c);
+  }
+  PFmla identity(uint b) const {
+    return this->transition(b, b);
+  }
+  PFmla identity() const {
+    return this->img_eq(*this);
+  }
+
   bool equiv_ck(const PFmlaVbl& b) const
   {
     return (x == b.x);

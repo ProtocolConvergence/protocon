@@ -47,7 +47,9 @@ list (APPEND HFiles udp.h udp-act.h)
 list (APPEND CCFiles
   pfmla.cc xfmlae.cc xnsys.cc xnspec.cc
   opt.cc search.cc
-  test.cc inst.cc main.cc
+  test.cc
+  test-pcxn.cc
+  inst.cc main.cc
   main-mpi.cc
   promela.cc graphviz.cc udp-ofile.cc
   interactive.cc
@@ -63,6 +65,7 @@ list (APPEND CCFiles
   )
 list (APPEND HHFiles
   pfmla.hh xfmlae.hh xnsys.hh xnspec.hh
+  test-pcxn.hh
   opt.hh search.hh
   inst.hh
   promela.hh graphviz.hh udp-ofile.hh
@@ -119,6 +122,7 @@ link_directories(${GluPath})
 #### Unit Test Executable ####
 addbinexe (test_exe
   test.cc
+  test-pcxn.cc
   search.cc
   ${CxBldPath}/kautz.cc
   ${ProtoconSources}

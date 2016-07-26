@@ -379,6 +379,8 @@ ProtoconFile::parse_action(X::Fmla& act_xn, uint pcidx, Sesp act_sp,
   BitTable wvbl_assigned( pc.wvbls.sz(), 0 );
   BitTable wvbl_randomized( pc.wvbls.sz(), 0 );
 
+  bool remove_self_loops = false;
+
   bool all_wild = false;
   for (Sesp assign_sp = cddr_of_Sesp (act_sp);
        !nil_ck_Sesp (assign_sp);
@@ -432,6 +434,11 @@ ProtoconFile::parse_action(X::Fmla& act_xn, uint pcidx, Sesp act_sp,
           if (wild) {
             wvbl_randomized[i] = 1;
           }
+          else {
+            if (pc_symm->spec->waccess(i).synt_writeonly_ck()) {
+              remove_self_loops = true;
+            }
+          }
           break;
         }
       }
@@ -451,13 +458,14 @@ ProtoconFile::parse_action(X::Fmla& act_xn, uint pcidx, Sesp act_sp,
   }
 
   for (uint i = 0; i < pc.wvbls.sz(); ++i) {
+    const Xn::VblSymmAccessSpec& access = pc_symm->spec->waccess(i);
     if (all_wild) {
       wvbl_assigned[i] = 1;
       wvbl_randomized[i] = 1;
     }
     else if (actto_op) {
       // The {-=>} operator automatically randomizes values.
-      if (pc_symm_spec->waccess(i).random_write_ck()) {
+      if (access.random_write_ck()) {
         if (!wvbl_assigned[i]) {
           wvbl_assigned[i] = 1;
           wvbl_randomized[i] = 1;
@@ -521,7 +529,7 @@ ProtoconFile::parse_action(X::Fmla& act_xn, uint pcidx, Sesp act_sp,
   }
 
   // Strictly remove self-loops when pure shadow variables exist.
-  if (pc_symm->pure_shadow_ck()) {
+  if (remove_self_loops) {
     X::Fmla self_xn( true );
     for (uint i = 0; i < pc.wvbls.sz(); ++i) {
       const PFmlaVbl& pf_vbl = topo.pfmla_vbl(*pc.wvbls[i]);

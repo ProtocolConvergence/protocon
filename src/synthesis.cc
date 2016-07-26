@@ -21,43 +21,43 @@ coexist_ck(const Xn::ActSymm& a, const Xn::ActSymm& b,
   if (a.pc_symm != b.pc_symm)  return true;
   const Xn::PcSymm& pc = *a.pc_symm;
 
-  bool pure_shadow_img_eql = true;
-  bool puppet_adj_eql = true;
+  bool writeonly_img_eql = true;
+  bool readable_adj_eql = true;
   for (uint i = 0; i < pc.rvbl_symms.sz(); ++i) {
-    if (!pc.write_ck(i) && pc.rvbl_symms[i]->puppet_ck()) {
+    if (pc.spec->access[i].synt_read_ck()) {
       if (a.guard(i) != b.guard(i))
-        puppet_adj_eql = false;
+        readable_adj_eql = false;
     }
   }
 
-  bool puppet_img_eql = true;
+  bool readable_img_eql = true;
   bool random_write = false;
   for (uint i = 0; i < pc.wvbl_symms.sz(); ++i) {
     if (pc.spec->waccess(i).random_write_ck())
       random_write = true;
-    if (pc.wvbl_symms[i]->puppet_ck()) {
+    if (pc.spec->waccess(i).synt_read_ck()) {
       if (a.assign(i) != b.assign(i))
-        puppet_img_eql = false;
+        readable_img_eql = false;
     }
     else {
       if (pc.wvbl_symms[i]->domsz != a.assign(i) &&
           pc.wvbl_symms[i]->domsz != b.assign(i) &&
           a.assign(i) != b.assign(i)) {
-        pure_shadow_img_eql = false;
+        writeonly_img_eql = false;
       }
     }
   }
 
-  if (puppet_adj_eql && puppet_img_eql && !pure_shadow_img_eql)
+  if (readable_adj_eql && readable_img_eql && !writeonly_img_eql)
     return false;
 
-  if (pure_actions && puppet_adj_eql && !puppet_img_eql)
+  if (pure_actions && readable_adj_eql && !readable_img_eql)
     return false;
 
   bool enabling = true;
   bool deterministic = false;
   for (uint j = 0; enabling && j < pc.rvbl_symms.sz(); ++j) {
-    if (pc.rvbl_symms[j]->pure_shadow_ck())
+    if (!pc.spec->access[j].synt_read_ck())
       continue;
     if (a.guard(j) != b.guard(j)) {
       deterministic = true;
@@ -71,14 +71,14 @@ coexist_ck(const Xn::ActSymm& a, const Xn::ActSymm& b,
   if (!enabling)  return true;
   if (random_write)  return true;
 
-  bool shadow_exists = false;
+  bool writeonly_exists = false;
   bool a_self_loop = true;
   bool b_self_loop = true;
   bool a_enables = true;
   bool b_enables = true;
   for (uint j = 0; j < pc.wvbl_symms.sz(); ++j) {
-    if (pc.wvbl_symms[j]->pure_shadow_ck()) {
-      shadow_exists = true;
+    if (pc.spec->waccess(j).synt_writeonly_ck()) {
+      writeonly_exists = true;
       continue;
     }
     if (a.assign(j) != a.aguard(j)) {
@@ -95,7 +95,7 @@ coexist_ck(const Xn::ActSymm& a, const Xn::ActSymm& b,
     }
   }
 
-  if (!shadow_exists && (a_self_loop || b_self_loop)) {
+  if (!writeonly_exists && (a_self_loop || b_self_loop)) {
     return false;
   }
   if (a_enables && !b_self_loop) {

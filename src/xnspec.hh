@@ -25,7 +25,7 @@ class Spec;
 enum VariableAccessType {
   ReadAccess,
   WriteAccess,
-  ReturnAccess,
+  YieldAccess,
   EffectAccess,
   RandomReadAccess,
   RandomWriteAccess,
@@ -235,7 +235,7 @@ public:
   bool write_ck() const {
     return
      (   type == Xn::WriteAccess
-      || type == Xn::ReturnAccess
+      || type == Xn::YieldAccess
       || type == Xn::EffectAccess
       || type == Xn::RandomWriteAccess
      );
@@ -249,17 +249,27 @@ public:
      );
   }
 
-  bool puppet_read_ck() const {
-    return vbl_symm->puppet_ck() && read_ck();
+  bool synt_read_ck() const {
+    return read_ck() && vbl_symm->puppet_ck();
   }
+  bool synt_write_ck() const {
+    return write_ck();
+  }
+
+  bool synt_readonly_ck() const {
+    return synt_read_ck() && !synt_write_ck();
+  }
+  bool synt_writeonly_ck() const {
+    return !synt_read_ck() && synt_write_ck();
+  }
+
   bool random_read_ck() const { return (type == Xn::RandomReadAccess); }
   bool random_write_ck() const { return (type == Xn::RandomWriteAccess); }
   bool random_ck() const { return (random_read_ck() || random_write_ck()); }
 
   uint rdomsz() const {
     const uint domsz = vbl_symm->domsz;
-    if (!read_ck())  return 1;
-    if (vbl_symm->pure_shadow_ck())  return 1;
+    if (!synt_read_ck())  return 1;
     return domsz;
   }
   uint wdomsz() const {

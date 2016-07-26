@@ -25,6 +25,8 @@ extern "C" {
 #include "synthesis.hh"
 #include <stdio.h>
 
+#include "test-pcxn.hh"
+
 #include "namespace.hh"
 
 static void

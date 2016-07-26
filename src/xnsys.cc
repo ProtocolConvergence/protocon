@@ -820,9 +820,8 @@ OPut(OFile& of, const Xn::ActSymm& act)
   of << "/*" << pc.spec->name << "[" << pc.spec->idx_name << "]" << "*/ ";
   const char* delim = "";
   for (uint i = 0; i < pc.rvbl_symms.sz(); ++i) {
-    if (pc.rvbl_symms[i]->pure_shadow_ck()) {
+    if (!pc.spec->access[i].synt_read_ck())
       continue;
-    }
     of << delim;
     delim = " && ";
     of << pc.rvbl_symms[i]->spec->name
@@ -832,7 +831,7 @@ OPut(OFile& of, const Xn::ActSymm& act)
   of << " -->";
   for (uint i = 0; i < pc.wvbl_symms.sz(); ++i) {
     const Xn::VblSymm& vbl_symm = *pc.wvbl_symms[i];
-    if (vbl_symm.pure_shadow_ck() && act.assign(i)==vbl_symm.domsz)
+    if (pc.spec->waccess(i).synt_writeonly_ck() && act.assign(i)==vbl_symm.domsz)
       continue;
     of << ' ' << vbl_symm.spec->name
       << "[" << pc.spec->waccess(i).index_expression << "]"
@@ -1018,7 +1017,7 @@ Xn::Net::xn_of_pc(const Xn::ActSymm& act, uint pcidx) const
   // but does make an assignment to the writeable pure shadow variables.
   X::Fmla xn(true);
 
-  bool puppet_self_loop = true;
+  bool readable_self_loop = true;
   bool probabilistic = false;
   for (uint i = 0; i < pc.wvbls.sz(); ++i) {
     const Xn::VblSymm& vbl_symm = *pc_symm.wvbl_symms[i];
@@ -1026,12 +1025,12 @@ Xn::Net::xn_of_pc(const Xn::ActSymm& act, uint pcidx) const
     bool random_write =
       pc_symm.spec->waccess(i).random_write_ck();
 
-    if (vbl_symm.puppet_ck()) {
+    if (pc_symm.spec->waccess(i).synt_read_ck()) {
       if (random_write) {
         probabilistic = true;
       }
       else if (act.aguard(i) != act.assign(i)) {
-        puppet_self_loop = false;
+        readable_self_loop = false;
       }
       xn &= (vbl == act.aguard(i));
     }
@@ -1039,15 +1038,15 @@ Xn::Net::xn_of_pc(const Xn::ActSymm& act, uint pcidx) const
     if (random_write) {
     }
     else if (act.assign(i)==vbl_symm.domsz) {
-      Claim( vbl_symm.pure_shadow_ck() || !pc_symm.spec->waccess(i).read_ck() );
-      xn &= vbl.img_eq(vbl);
+      Claim( pc_symm.spec->waccess(i).synt_writeonly_ck() );
+      xn &= vbl.identity();
     }
     else {
       xn &= vbl.img_eq(act.assign(i));
     }
   }
   if (probabilistic) {
-    puppet_self_loop = false;
+    readable_self_loop = false;
     const uint global_pcidx = pcs.index_of(&pc);
     const uint wvbl_list_id = xfmlae_ctx.wvbl_list_ids[global_pcidx];
 
@@ -1062,21 +1061,23 @@ Xn::Net::xn_of_pc(const Xn::ActSymm& act, uint pcidx) const
   }
 
   // When there is a self-loop on puppet variables,
-  // ensure that some shadow variable changes in the X::Fmla.
-  if (puppet_self_loop) {
-    P::Fmla shadow_guard( false );
+  // ensure that some write-only variable changes in the X::Fmla.
+  if (readable_self_loop) {
+    P::Fmla writeonly_guard( false );
     for (uint i = 0; i < pc.wvbls.sz(); ++i) {
       const PFmlaVbl& vbl = pfmla_vbl(*pc.wvbls[i]);
-      if (!pc_symm.wvbl_symms[i]->puppet_ck()) {
-        shadow_guard |= (vbl != act.assign(i));
+      if (pc_symm.spec->waccess(i).synt_writeonly_ck()
+          && act.assign(i) < pc_symm.wvbl_symms[i]->domsz)
+      {
+        writeonly_guard |= (vbl != act.assign(i));
       }
     }
-    xn &= shadow_guard;
+    xn &= writeonly_guard;
   }
 
   for (uint i = 0; i < pc.rvbls.sz(); ++i) {
     const PFmlaVbl& vbl = pfmla_vbl(*pc.rvbls[i]);
-    if (!pc_symm.write_ck(i) && pc_symm.rvbl_symms[i]->puppet_ck()) {
+    if (pc_symm.spec->access[i].synt_readonly_ck()) {
       xn &= (vbl == act.guard(i));
     }
   }
@@ -1104,6 +1105,8 @@ Xn::Net::represented_xns_of_pc(const Xn::ActSymm& act, uint relative_pcidx) cons
     this->action(tmp_act, reps[i]);
     xn |= this->xn_of_pc(tmp_act, relative_pcidx);
   }
+  //TODO
+  //xn -= xn.img();
   return xn;
 }
 
@@ -1157,6 +1160,8 @@ Xn::Net::cache_action_xfmla(uint actidx)
   else {
     act_xfmlaes[actidx] = false;
     act_xfmlaes[rep_actidx] |= xn;
+    //TODO
+    //act_xfmlaes[rep_actidx].self_disable();
   }
 }
 
@@ -1235,6 +1240,8 @@ candidate_actions(std::vector<uint>& candidates,
     X::Fmla shadow_xn = topo.smooth_puppet_vbls(pc.shadow_xn);
     if (add) {
       for (uint i = 0; i < pc_symm.wvbl_symms.sz(); ++i) {
+        const Xn::VblSymmAccessSpec& access = pc_symm.spec->waccess(i);
+
         const Xn::VblSymm& vbl_symm = *pc_symm.wvbl_symms[i];
         const Xn::Vbl& vbl = *pc.wvbls[i];
         const PFmlaVbl& pf_vbl = topo.pfmla_vbl(vbl);
@@ -1250,8 +1257,13 @@ candidate_actions(std::vector<uint>& candidates,
             shadow_xn = shadow_xn.smooth_pre(pf_vbl);
           }
         }
-        else if (pc_symm.spec->waccess(i).random_write_ck()) {
+        else if (access.random_write_ck()) {
           puppet_selfloop = false;
+        }
+        else if (access.synt_writeonly_ck()) {
+          if (act.assign(i) != vbl_symm.domsz) {
+            puppet_selfloop = false;
+          }
         }
         else if (act.assign(i) != act.aguard(i)) {
           puppet_selfloop = false;

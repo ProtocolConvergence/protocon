@@ -13,4 +13,10 @@ process P[i < N] {    // Processes P[0..N-1].
     (w[ji]==w[ij] && w[ik]==w[ki]);
   (future & silent)   // Eventually 2 of every 3 are matched.
     (w[ij] + w[ik] == 1 || (w[ji-1]==1 && w[ki+1]==1));
+  puppet:
+    ( w[ji]!=w[ki]                       -=> w[ij]:=w[ji];     w[ik]:=w[ki]; )
+    ( w[ji]==w[ki] && w[ji-1]+w[ki+1]!=0 -=> w[ij]:=1-w[ji-1]; w[ik]:=1-w[ki+1]; )
+    ( w[ji]==w[ki] && w[ji-1]+w[ki+1]==0 && w[ij]+w[ik]==0 --> w[ij]:=0;         w[ik]:=1; )
+    ( w[ji]==w[ki] && w[ji-1]+w[ki+1]==0 && w[ij]+w[ik]==0 --> w[ij]:=1;         w[ik]:=0; )
+    ;
 }

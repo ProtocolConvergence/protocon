@@ -53,6 +53,7 @@ set (ExampleSpecs
   ColorUniRing
   DiningCrypto
   DiningPhiloRand
+  MatchRingDizzy
   MatchRingOneBit
   MatchRingThreeState
   OldOrientRing
