@@ -304,6 +304,20 @@ public:
   const VblSymmAccessSpec& waccess(uint i) const {
     return access[wmap[i]];
   }
+
+
+#define ExistsAccess(f) \
+  for (uint i = 0; i < access.sz(); ++i) { \
+    if (access[i].f##_ck())  return true; \
+  } \
+  return false
+
+  bool random_read_ck() const { ExistsAccess(random_read); }
+  bool random_write_ck() const { ExistsAccess(random_write); }
+  bool random_ck() const { ExistsAccess(random); }
+  bool synt_writeonly_ck() const { ExistsAccess(synt_writeonly); }
+
+#undef ExistsAccess
 };
 
 class Spec {

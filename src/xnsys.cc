@@ -13,9 +13,6 @@ namespace Xn {
 /**
  * Commit to the topology represented by the vector of processes.
  *
- * TODO this function needs to go away,
- * or at least we need to initialize on a per-process basis.
- *
  * 1. Find /nPossibleActs/ for each process.
  */
   void
@@ -65,7 +62,7 @@ Net::commit_initialization()
     const Xn::Vbl& vbl = this->vbls[vblidx];
     if (!vbl.random_ck())
       continue;
-    this->random_write_exists = true;
+    this->random_read_exists = true;
 
     const PFmlaVbl& pfmla_vbl = this->pfmla_vbl(vbl);
     this->identity_xn = this->identity_xn.smooth(pfmla_vbl);
@@ -571,6 +568,46 @@ Net::representative_action_index(uint actidx) const
   uint rep_actidx = this->action_index(act);
   Claim2( rep_actidx ,<=, actidx );
   return rep_actidx;
+}
+
+  const X::Fmla
+Net::action_pfmla(uint actidx) const
+{
+  if (!this->lightweight) {
+    return act_xfmlaes[actidx].xfmla();
+  }
+  X::Fmla xn(false);
+  const Table<uint>& actions = represented_actions[actidx];
+  for (uint i = 0; i < actions.sz(); ++i) {
+    X::Fmla tmp_xn;
+    this->make_action_pfmla(&tmp_xn, actions[i]);
+    xn |= tmp_xn;
+  }
+  const Xn::PcSymm& pc_symm = pc_symms[this->action_pcsymm_index(actidx)];
+  if (!pc_symm.spec->random_write_ck()) {
+    xn -= xn.img();
+  }
+  return xn;
+}
+
+  const X::Fmlae
+Net::action_xfmlae(uint actidx) const
+{
+  if (!this->lightweight) {
+    return act_xfmlaes[actidx];
+  }
+  X::Fmlae xn(&this->xfmlae_ctx);
+  const Table<uint>& actions = represented_actions[actidx];
+  for (uint i = 0; i < actions.sz(); ++i) {
+    X::Fmlae tmp_xn;
+    this->make_action_xfmlae(&tmp_xn, actions[i]);
+    xn |= tmp_xn;
+  }
+  const Xn::PcSymm& pc_symm = pc_symms[this->action_pcsymm_index(actidx)];
+  if (!pc_symm.spec->random_write_ck()) {
+    xn.self_disable();
+  }
+  return xn;
 }
 
   bool
@@ -1105,8 +1142,9 @@ Xn::Net::represented_xns_of_pc(const Xn::ActSymm& act, uint relative_pcidx) cons
     this->action(tmp_act, reps[i]);
     xn |= this->xn_of_pc(tmp_act, relative_pcidx);
   }
-  //TODO
-  //xn -= xn.img();
+  if (!act.pc_symm->spec->random_write_ck()) {
+    xn -= xn.img();
+  }
   return xn;
 }
 
@@ -1160,8 +1198,10 @@ Xn::Net::cache_action_xfmla(uint actidx)
   else {
     act_xfmlaes[actidx] = false;
     act_xfmlaes[rep_actidx] |= xn;
-    //TODO
-    //act_xfmlaes[rep_actidx].self_disable();
+  }
+  const Xn::PcSymm& pc_symm = pc_symms[this->action_pcsymm_index(actidx)];
+  if (!pc_symm.spec->random_write_ck()) {
+    act_xfmlaes[rep_actidx].self_disable();
   }
 }
 

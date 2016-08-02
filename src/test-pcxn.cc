@@ -120,8 +120,10 @@ TestPcXn_ryyr()
   void
 TestPcXn_yryr_dizzy()
 {
+  const bool IgnoreCache = false;
   Xn::Sys sys;
   Xn::Net& topo = sys.topology;
+  topo.lightweight = IgnoreCache;
 
   Xn::VblSymm& vbl_symm = *topo.add_variables("x", 4, 3);
 
@@ -155,8 +157,16 @@ TestPcXn_yryr_dizzy()
     Xn::ActSymm act;
     topo.action(act, actid);
     const uint a = act.guard(1), b = act.assign(0), c = act.assign(1), d = act.guard(3);
-    const X::Fmla result_xn = topo.action_pfmla(actid);
-    const X::Fmla expect_xn =
+    X::Fmla result_xn;
+    if (IgnoreCache) {
+      X::Fmlae result_xfmlae = topo.action_xfmlae(actid);
+      result_xfmlae.self_disable();
+      result_xn = result_xfmlae.xfmla();
+    }
+    else {
+      result_xn = topo.action_pfmla(actid);
+    }
+    X::Fmla expect_xn =
       (x_ji.identity(a) && x_ki.identity(d)
        && (x_ij != b || x_ik != c)
        && x_ij.img_eq(b) && x_ik.img_eq(c))
@@ -164,6 +174,7 @@ TestPcXn_yryr_dizzy()
       (x_ji.identity(d) && x_ki.identity(a)
        && (x_ij != c || x_ik != b)
        && x_ij.img_eq(c) && x_ik.img_eq(b));
+    expect_xn -= expect_xn.img();
 
     Claim( result_xn.equiv_ck(expect_xn) );
   }
@@ -225,8 +236,8 @@ TestPcXn_yerrerr_dizzy()
     if ((s_ij < 2 && s_ik == 2) || (s_ij == 2 && s_ik < 2))
       continue;
 
-    const X::Fmla result_xn = topo.action_pfmla(actid);
-    const X::Fmla expect_xn =
+    X::Fmla result_xn = topo.action_pfmla(actid);
+    X::Fmla expect_xn =
       (b_j.identity(s_j) && b_k.identity(s_k)
        && w_ji.identity(s_ji) && w_ki.identity(s_ki)
        && (b_i != s_i
@@ -244,9 +255,47 @@ TestPcXn_yerrerr_dizzy()
        && b_i.img_eq(s_i)
        && (s_ik < 2 ? w_ij.img_eq(s_ik) : w_ij.identity())
        && (s_ij < 2 ? w_ik.img_eq(s_ij) : w_ik.identity()));
+    expect_xn -= expect_xn.img();
 
-    Claim( result_xn.subseteq_ck(expect_xn) );
-    Claim( expect_xn.subseteq_ck(result_xn) );
+    Claim( result_xn.equiv_ck(expect_xn) );
+  }
+}
+
+/** Topology of unidirectional ring coloring that uses a random write.**/
+  void
+TestPcXn_rw_random()
+{
+  Xn::Sys sys;
+  Xn::Net& topo = sys.topology;
+
+  Xn::VblSymm& x_symm = *topo.add_variables("c", 2, 3);
+
+  topo.commit_variables();
+
+  Xn::PcSymm& pc_symm = *topo.add_processes("P", "i", 1);
+
+  topo.add_access(&pc_symm, &x_symm, Xn::NatMap() = 0, Xn::ReadAccess);
+  topo.add_access(&pc_symm, &x_symm, Xn::NatMap() = 1, Xn::RandomWriteAccess);
+
+  sys.commit_initialization();
+
+  PFmlaVbl x_j = topo.pfmla_vbl(*x_symm.membs[0]);
+  PFmlaVbl x_i = topo.pfmla_vbl(*x_symm.membs[1]);
+
+  for (uint actid = 0; actid < topo.n_possible_acts; ++actid) {
+    if (actid != topo.representative_action_index(actid))
+      continue;
+
+    Xn::ActSymm act;
+    topo.action(act, actid);
+
+    // Values used in the guard.
+    const uint s_j = act.guard(0);
+    const uint s_i = act.guard(1);
+
+    const X::Fmla result_xn = topo.action_pfmla(actid);
+    const X::Fmla expect_xn = (x_j.identity(s_j) && x_i == s_i);
+
     Claim( result_xn.equiv_ck(expect_xn) );
   }
 }

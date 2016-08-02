@@ -130,7 +130,7 @@ public:
 
   void self_disable() {
     for (uint i = 0; i < this->sz(); ++i)
-      fmlas[i] -= fmlas[i].img();
+      fmlas[i] -= (fmlas[i] & ctx->act_unchanged_xfmlas[i]).img();
   }
 
   X::Fmla transitive_closure(const P::Fmla* initial = 0) const;

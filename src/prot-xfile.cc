@@ -595,6 +595,12 @@ ProtoconFile::add_action(Sesp act_sp, Xn::ShadowPuppetRole role)
       }
       if (role != Xn::Shadow) {
         pc_symm->membs[i]->puppet_xn |= pc_xns[i];
+        if (pc_symm_spec->synt_writeonly_ck() && !pc_symm_spec->random_write_ck()) {
+          P::Fmla scc(false);
+          const X::Fmla& xn = (pc_symm->membs[i]->puppet_xn & pc_symm->membs[i]->act_unchanged_pfmla);
+          xn.cycle_ck(&scc);
+          pc_symm->membs[i]->puppet_xn -= scc;
+        }
       }
     }
   }

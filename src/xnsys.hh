@@ -343,6 +343,7 @@ public:
   bool featherweight;
   X::Fmla identity_xn;
 
+  bool random_read_exists;
   bool random_write_exists;
   bool pure_shadow_vbl_exists;
   bool pure_puppet_vbl_exists;
@@ -363,6 +364,7 @@ public:
     , lightweight(false)
     , featherweight(false)
     , identity_xn(true)
+    , random_read_exists(false)
     , random_write_exists(false)
     , pure_shadow_vbl_exists(false)
     , pure_puppet_vbl_exists(false)
@@ -398,33 +400,8 @@ public:
 
   uint representative_action_index(uint actidx) const;
 
-  const X::Fmla action_pfmla(uint actidx) const {
-    if (!this->lightweight) {
-      return act_xfmlaes[actidx].xfmla();
-    }
-    X::Fmla xn(false);
-    const Table<uint>& actions = represented_actions[actidx];
-    for (uint i = 0; i < actions.sz(); ++i) {
-      X::Fmla tmp_xn;
-      this->make_action_pfmla(&tmp_xn, actions[i]);
-      xn |= tmp_xn;
-    }
-    return xn;
-  }
-
-  const X::Fmlae action_xfmlae(uint actidx) const {
-    if (!this->lightweight) {
-      return act_xfmlaes[actidx];
-    }
-    X::Fmlae xn(&this->xfmlae_ctx);
-    const Table<uint>& actions = represented_actions[actidx];
-    for (uint i = 0; i < actions.sz(); ++i) {
-      X::Fmlae tmp_xn;
-      this->make_action_xfmlae(&tmp_xn, actions[i]);
-      xn |= tmp_xn;
-    }
-    return xn;
-  }
+  const X::Fmla action_pfmla(uint actidx) const;
+  const X::Fmlae action_xfmlae(uint actidx) const;
 
   PFmlaVbl pfmla_vbl(uint i) const {
     return this->pfmla_ctx.vbl(this->vbls[i].pfmla_idx);
@@ -434,7 +411,7 @@ public:
   }
 
   bool probabilistic_ck() const {
-    return random_write_exists;
+    return (random_read_exists || random_write_exists);
   }
   bool pure_shadow_vbl_ck() const {
     return pure_shadow_vbl_exists;

@@ -162,6 +162,10 @@ add_test (NAME TrySynt5_TokenRingFourState
   COMMAND protocon -test -def M 2 -x ${SpecPath}/TokenRingSuperpos.prot
   -x-try-subset ${SyntPath}/TokenRingFourState.prot -param N 5)
 
+add_test (NAME TrySynt_MatchRingDizzy
+  COMMAND protocon -test -x ${SpecPath}/MatchRingDizzy.prot
+  -x-try-subset ${SolnPath}/MatchRingDizzy.prot -param N 2..6)
+
 set (VerifyBySynthesis
   ColorRing
   OrientDaisy
