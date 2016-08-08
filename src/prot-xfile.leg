@@ -110,48 +110,38 @@ ActionExpr =
    ;
 
 ShadowActionDef =
-  (SHADOW | 'underlying') (WS ACTION | ':') WS? act:ActionExpr
-  {yy->st->add_action (act.sp, Xn::Shadow);}
-  (WS? (',' WS?)? act2:ActionExpr {yy->st->add_action (act2.sp, Xn::Shadow);} )*
+  (SHADOW | 'underlying') (WS ACTION | ':') WS?
+  ( act:ActionExpr WS? (',' WS?)? {yy->st->add_action(act.sp, Xn::Shadow);} )*
   END_STMT
   ;
 
 DirectActionDef =
-  ((DIRECT WS)? ACTION | DIRECT ':') WS? act:ActionExpr
-  {yy->st->add_action (act.sp, Xn::Direct);}
-  (WS? (',' WS?)? act2:ActionExpr {yy->st->add_action (act2.sp, Xn::Direct);} )*
+  ((DIRECT WS)? ACTION | DIRECT ':') WS?
+  ( act:ActionExpr WS? (',' WS?)? {yy->st->add_action(act.sp, Xn::Direct);} )*
   END_STMT
   ;
 
 PuppetActionDef =
-  PUPPET (WS ACTION | ':') WS? act:ActionExpr
-  {yy->st->add_action (act.sp, Xn::Puppet);}
-  (WS? (',' WS?)? act2:ActionExpr {yy->st->add_action (act2.sp, Xn::Puppet);} )*
+  PUPPET (WS ACTION | ':') WS?
+  ( act:ActionExpr WS? (',' WS?)? {yy->st->add_action(act.sp, Xn::Puppet);} )*
   END_STMT
   ;
 
 PermitActionDef =
-  'permit' (WS ACTION | ':')
-  (WS? act:ActionExpr {yy->st->permit_action (act.sp);}
-   (WS? (',' WS?)? act2:ActionExpr {yy->st->permit_action (act2.sp);} )*
-  )?
+  'permit' (WS ACTION | ':') WS?
+  ( act:ActionExpr WS? (',' WS?)? {yy->st->permit_action(act.sp);} )*
   END_STMT
   ;
 
 ForbidActionDef =
-  'forbid' (WS ACTION | ':')
-  (WS? act:ActionExpr {yy->st->forbid_action (act.sp);}
-   (WS? (',' WS?)? act2:ActionExpr {yy->st->forbid_action (act2.sp);} )*
-  )?
+  'forbid' (WS ACTION | ':') WS?
+  ( act:ActionExpr WS? (',' WS?)? {yy->st->forbid_action(act.sp);} )*
   END_STMT
   ;
 
 ConflictActionDef =
-  'conflict:'
-  (WS? act:ActionExpr {yy->st->conflict_action (act.sp);}
-   (WS? (',' WS?)? act2:ActionExpr {yy->st->conflict_action (act2.sp);} )*
-   {yy->st->push_conflict_action();}
-  )?
+  'conflict:' WS?
+  ( act:ActionExpr WS? (',' WS?)? {yy->st->conflict_action(act.sp);} )*
   END_STMT
   ;
 
