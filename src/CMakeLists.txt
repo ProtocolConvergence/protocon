@@ -62,6 +62,7 @@ list (APPEND CCFiles
   biring.cc
   deadfree.cc
   unisyn.cc
+  unidomino.cc
   msat.cc
   main-all.cc
   )
@@ -245,6 +246,11 @@ set_target_properties (unisyn PROPERTIES
   OUTPUT_NAME unisyn
   RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
+#### Aperiodic Unidirectional Ring Protocol ####
+addbinexe (unidomino unidomino.cc)
+set_target_properties (unidomino PROPERTIES
+  OUTPUT_NAME unidomino
+  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
 #### Stand-Alone UDP Executable ####
 # Just for testing.
