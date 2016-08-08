@@ -6,7 +6,7 @@ set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
 include(ExternalProject)
 
 set (GluPfx glu-2.4)
-set (PegPfx peg-0.1.15)
+set (PegPfx peg-0.1.18)
 
 set (TopPath ${CMAKE_CURRENT_SOURCE_DIR})
 set (DepPath ${TopPath}/dep)
@@ -24,6 +24,7 @@ ExternalProject_Add(peg
   SOURCE_DIR ${DepPath}/${PegPfx}
   BUILD_IN_SOURCE 1
   URL http://piumarta.com/software/peg/${PegPfx}.tar.gz
+  URL_HASH MD5=992fc7887afc2a8c92cdb1acb5b935e1
   UPDATE_COMMAND echo "No update."
   CONFIGURE_COMMAND echo "No configure step."
   INSTALL_COMMAND echo "No install step."
@@ -34,6 +35,7 @@ ExternalProject_Add(glu
   SOURCE_DIR ${DepPath}/${GluPfx}
   BUILD_IN_SOURCE 1
   URL ftp://vlsi.colorado.edu/pub/vis/${GluPfx}.tar.gz
+  URL_HASH MD5=11c75f6c8fe996730e70a26d957b68e0
   UPDATE_COMMAND echo "No update."
   CONFIGURE_COMMAND ./configure --enable-gcc
   INSTALL_COMMAND echo "No install step."

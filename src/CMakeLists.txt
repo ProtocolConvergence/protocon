@@ -45,7 +45,8 @@ list (APPEND CFiles udp.c)
 list (APPEND HFiles udp.h udp-act.h)
 
 list (APPEND CCFiles
-  pfmla.cc xfmlae.cc xnsys.cc xnspec.cc
+  pfmla.cc xfmlae.cc
+  xnspec.cc xnpc.cc xnsys.cc
   opt.cc search.cc
   test.cc
   test-pcxn.cc
@@ -64,7 +65,8 @@ list (APPEND CCFiles
   main-all.cc
   )
 list (APPEND HHFiles
-  pfmla.hh xfmlae.hh xnsys.hh xnspec.hh
+  pfmla.hh xfmlae.hh
+  xnspec.hh xnpc.hh xnsys.hh
   test-pcxn.hh
   opt.hh search.hh
   inst.hh
@@ -108,7 +110,7 @@ set_bld_cfile_properties (${BldPath}/prot-xfile.leg.cc)
 list (APPEND ProtoconSources
   pfmla.c pfmla.cc xfmlae.cc
   pfmla-glu.c pfmla-bittable.c
-  xnspec.cc xnsys.cc
+  xnspec.cc xnpc.cc xnsys.cc
   prot-xfile.cc prot-xfile.leg.cc prot-ofile.cc
   opt.cc inst.cc
   stabilization.cc
@@ -202,6 +204,10 @@ if (OPENMP_FOUND)
       APPEND_STRING PROPERTY LINK_FLAGS " ${OpenMP_C_FLAGS}")
   endforeach ()
 endif ()
+
+
+#### Fast Build Rule ####
+add_custom_target(some DEPENDS test_exe protocon)
 
 
 #### Bidirectional Ring Instance Enumeration ####
