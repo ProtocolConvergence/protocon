@@ -57,6 +57,7 @@ list (APPEND CCFiles
   conflictfamily.cc
   stabilization.cc
   synthesis.cc
+  pla.cc
   prot-xfile.cc prot-ofile.cc
   biring.cc
   deadfree.cc
@@ -75,6 +76,7 @@ list (APPEND HHFiles
   conflictfamily.hh
   stabilization.hh
   synthesis.hh
+  pla.hh
   prot-xfile.hh prot-ofile.hh
   namespace.hh
   )
@@ -111,6 +113,7 @@ list (APPEND ProtoconSources
   pfmla.c pfmla.cc xfmlae.cc
   pfmla-glu.c pfmla-bittable.c
   xnspec.cc xnpc.cc xnsys.cc
+  pla.cc
   prot-xfile.cc prot-xfile.leg.cc prot-ofile.cc
   opt.cc inst.cc
   stabilization.cc

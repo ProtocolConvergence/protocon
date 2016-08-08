@@ -182,9 +182,12 @@ Pc::actions(Table<uint>& ret_actions, PFmlaCtx& ctx) const
 
     P::Fmla pre_pf = ctx.pfmla_of_state(pre_state, pfmla_rvbl_idcs);
     for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
-      const Xn::VblSymm& vbl_symm = *pc_symm.rvbl_symms[i];
-      if (!vbl_symm.pure_shadow_ck())
-        continue;
+      const VblSymmAccessSpec& access = pc_symm.spec->access[i];
+#if 0
+      skip_unless (!access.synt_read_ck());
+#else
+      skip_unless (access.pure_shadow_ck());
+#endif
       const PFmlaVbl& v = ctx.vbl(pc.rvbls[i]->pfmla_idx);
       pre_pf = pre_pf.smooth(v);
       pre_state[i] = 0;
@@ -204,9 +207,13 @@ Pc::actions(Table<uint>& ret_actions, PFmlaCtx& ctx) const
       P::Fmla tmp_pf = ctx.pfmla_of_state(img_state, pfmla_wvbl_idcs);
 
       for (uint i = 0; i < pc_symm.wvbl_symms.sz(); ++i) {
+        const VblSymmAccessSpec& access = pc_symm.spec->waccess(i);
+#if 0
+        skip_unless (access.wdomsz() == access.domsz()+1);
+#else
+        skip_unless (access.pure_shadow_ck());
+#endif
         const Xn::VblSymm& vbl_symm = *pc_symm.wvbl_symms[i];
-        if (!vbl_symm.pure_shadow_ck())
-          continue;
         const PFmlaVbl& v = ctx.vbl(pc.wvbls[i]->pfmla_idx);
         const P::Fmla& pf = tmp_pf.smooth(v);
         if (pf.subseteq_ck(img_pf)) {

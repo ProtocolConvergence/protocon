@@ -926,8 +926,7 @@ PartialSynthesis::useless_picks(Map<uint,uint>& changes, Set<uint>& allowed) con
       bool changed = false;
       for (uint vidx = 0; vidx < pc_symm.wvbl_symms.sz(); ++vidx) {
         const Xn::VblSymm& vbl_symm = *pc_symm.wvbl_symms[vidx];
-        if (!vbl_symm.pure_shadow_ck())
-          continue;
+        skip_unless (vbl_symm.pure_shadow_ck());
         if (act.assign(vidx) != vbl_symm.domsz) {
           changed = true;
           act.vals[pc_symm.rvbl_symms.sz() + vidx] = vbl_symm.domsz;
@@ -986,8 +985,7 @@ PartialSynthesis::check_forward(Set<uint>& adds, Set<uint>& dels, Set<uint>& rej
       // do not need to change shadow variables.
       for (uint vidx = 0; vidx < pc_symm.wvbl_symms.sz(); ++vidx) {
         const Xn::VblSymm& vbl_symm = *pc_symm.wvbl_symms[vidx];
-        if (!vbl_symm.pure_shadow_ck())
-          continue;
+        skip_unless (vbl_symm.pure_shadow_ck());
         if (act.assign(vidx) != vbl_symm.domsz) {
           keep = false;
           break;

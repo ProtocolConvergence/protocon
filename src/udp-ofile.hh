@@ -2,7 +2,7 @@
 #ifndef UDP_OFILE_HH_
 #define UDP_OFILE_HH_
 
-#include "cx/ofile.hh"
+#include "cx/synhax.hh"
 
 #include "namespace.hh"
 

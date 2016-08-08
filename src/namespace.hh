@@ -57,6 +57,14 @@ namespace PROJECT_NAMESPACE {
   }
 
   namespace Xn {
+    class VblSymmSpec;
+    class PcSymmSpec;
+    class Spec;
+    class Vbl;
+    class VblSymm;
+    class ActSymm;
+    class Pc;
+    class PcSymm;
     class Net;
     class Sys;
   }

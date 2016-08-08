@@ -210,6 +210,11 @@ add_test (NAME UDP_TokenRingRand
   COMMAND comparispawn ${TestPath}/expect/TokenRingRand.h
   ${protocon_exe} -nop -x ${SolnPath}/TokenRingRand.prot -param N 10 -o-udp-include -)
 
+## PLA file output.
+add_test (NAME PLA_MatchRingThreeState
+  COMMAND comparispawn ${TestPath}/expect/MatchRingThreeState.pla
+  ${protocon_exe} -nop -x ${SolnPath}/MatchRingThreeState.prot -o-pla -)
+
 ## Ensure our tests can actually detect failure.
 add_test (NAME Verif4_OrientRingOdd
   COMMAND protocon -verify -x ${SolnPath}/OrientRingOdd.prot -param N 4)

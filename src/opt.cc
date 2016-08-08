@@ -361,6 +361,10 @@ protocon_options_rec
       exec_opt.udp_ofilepath = argv[argi++];
       exec_opt.only_udp_include = true;
     }
+    else if (eq_cstr (arg, "-o-pla") ||
+             eq_cstr (arg, "-o-espresso")) {
+      exec_opt.pla_ofilepath = argv[argi++];
+    }
     else if (eq_cstr (arg, "-serial")) {
       exec_opt.nparallel = 1;
     }

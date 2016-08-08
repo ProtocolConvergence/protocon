@@ -374,7 +374,7 @@ ProtoconFile::parse_action(X::Fmla& act_xn, uint pcidx, Sesp act_sp,
     eval(guard_pf, cadr_of_Sesp (act_sp));
   if (!good)  return false;
 
-  P::Fmla assign_pf( true );
+  act_xn = guard_pf;
 
   BitTable wvbl_assigned( pc.wvbls.sz(), 0 );
   BitTable wvbl_randomized( pc.wvbls.sz(), 0 );
@@ -428,33 +428,30 @@ ProtoconFile::parse_action(X::Fmla& act_xn, uint pcidx, Sesp act_sp,
     {
       bool found = false;
       for (uint i = 0; i < pc.wvbls.sz(); ++i) {
-        if (pc.wvbls[i] == vbl) {
-          found = true;
-          wvbl_assigned[i] = 1;
-          if (wild) {
-            wvbl_randomized[i] = 1;
-          }
-          else {
-            if (pc_symm->spec->waccess(i).synt_writeonly_ck()) {
-              remove_self_loops = true;
-            }
-          }
-          break;
+        skip_unless (pc.wvbls[i] == vbl);
+        found = true;
+        wvbl_assigned[i] = 1;
+        if (wild) {
+          wvbl_randomized[i] = 1;
         }
+        if (pc_symm->spec->waccess(i).synt_writeonly_ck()) {
+          remove_self_loops = true;
+        }
+        break;
       }
       good = found;
     }
     if (!good)  break;
 
     if (all_wild) {
-      assign_pf = true;
+      // TODO: Why?
+      act_xn = act_xn.pre();
     }
     else if (!wild) {
       const PFmlaVbl& pf_vbl = topo.pfmla_vbl(*vbl);
       val %= vbl->symm->domsz;
-      assign_pf &= pf_vbl.img_eq(val);
+      act_xn &= pf_vbl.img_eq(val);
     }
-
   }
 
   for (uint i = 0; i < pc.wvbls.sz(); ++i) {
@@ -472,22 +469,20 @@ ProtoconFile::parse_action(X::Fmla& act_xn, uint pcidx, Sesp act_sp,
         }
       }
     }
-    if (!auto_iden || wvbl_assigned[i]) {
-      continue;
-    }
+    skip_unless (auto_iden && !wvbl_assigned[i]);
+
     const PFmlaVbl& pf_vbl = topo.pfmla_vbl(*pc.wvbls[i]);
-    assign_pf &= pf_vbl.img_eq(pf_vbl);
+    act_xn &= pf_vbl.img_eq(pf_vbl);
   }
 
-  act_xn = guard_pf & assign_pf;
 
   // Smooth the 'random read' variables that are allowed by
   // this action's guard to make the action nondeterministic,
   // rather than having a unique action for every readable state.
   for (uint i = 0; i < pc.rvbls.sz(); ++i) {
     const Xn::Vbl& vbl = *pc.rvbls[i];
-    if (!vbl.random_ck())
-      continue;
+    skip_unless (vbl.random_ck());
+
     const PFmlaVbl& pfmla_vbl = topo.pfmla_vbl(vbl);
     act_xn = guard_pf & act_xn.smooth_pre(pfmla_vbl);
   }
@@ -511,7 +506,7 @@ ProtoconFile::parse_action(X::Fmla& act_xn, uint pcidx, Sesp act_sp,
         ;
     }
     for (uint i = 0; i < pc_symm->rvbl_symms.sz(); ++i) {
-      if (changing[i])  continue;
+      skip_unless (!changing[i]);
       const PFmlaVbl& pfmla_vbl = topo.pfmla_vbl(*pc.rvbls[i]);
       pc_xn &= pfmla_vbl.img_eq(pfmla_vbl);
     }
@@ -520,7 +515,7 @@ ProtoconFile::parse_action(X::Fmla& act_xn, uint pcidx, Sesp act_sp,
     if (pc_xn.cycle_ck(&scc)) {
       X::Fmla self_xn = pc_xn & scc.cross(scc);
       for (uint i = 0; i < pc_symm->rvbl_symms.sz(); ++i) {
-        if (changing[i])  continue;
+        skip_unless (!changing[i]);
         const PFmlaVbl& pfmla_vbl = topo.pfmla_vbl(*pc.rvbls[i]);
         self_xn = self_xn.smooth_img(pfmla_vbl);
       }

@@ -3,6 +3,7 @@
 
 #include "graphviz.hh"
 #include "udp-ofile.hh"
+#include "pla.hh"
 #include "interactive.hh"
 
 #include "namespace.hh"
@@ -128,6 +129,11 @@ int main(int argc, char** argv)
           oput_udp_file (ofile, sys, *o_topology);
         }
       }
+    }
+    if (!exec_opt.pla_ofilepath.empty_ck()) {
+      Claim2( exec_opt.task ,==, ProtoconOpt::NoTask );
+      DoLegit( 0 )
+        oput_pla_file(exec_opt.pla_ofilepath, sys);
     }
     if (!exec_opt.ofilepath.empty_ck())
     {

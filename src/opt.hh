@@ -64,6 +64,7 @@ public:
   String graphviz_ofilepath;
   String udp_ofilepath;
   bool only_udp_include;
+  String pla_ofilepath;
   String conflicts_xfilepath;
   String conflicts_ofilepath;
   String stats_ofilepath;

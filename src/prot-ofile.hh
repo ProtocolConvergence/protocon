@@ -2,8 +2,7 @@
 #ifndef PROT_OFILE_HH_
 #define PROT_OFILE_HH_
 
-#include "cx/ofile.hh"
-#include "xnsys.hh"
+#include "cx/synhax.hh"
 
 #include "namespace.hh"
 

@@ -1,86 +1,11 @@
 
-extern "C" {
-#include "cx/syscx.h"
-}
 #include "prot-ofile.hh"
-#include "cx/fileb.hh"
 
-extern "C" {
-#include "cx/ospc.h"
-}
+#include "cx/fileb.hh"
+#include "pla.hh"
+#include "xnsys.hh"
 
 #include "namespace.hh"
-
-  void
-oput_pla_val (OFile& of, uint j, uint n)
-{
-  for (uint i = 0; i < n; ++i)
-    of << (i == j ? 1 : 0);
-}
-
-  void
-oput_pla_act (OFile& of, const Xn::ActSymm& act)
-{
-  const Xn::PcSymm& pc_symm = *act.pc_symm;
-  for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
-    const Xn::VblSymm& vbl_symm = *pc_symm.rvbl_symms[i];
-    if (vbl_symm.pure_shadow_ck())
-      continue;
-    of << ' ';
-    oput_pla_val (of, act.guard(i), vbl_symm.domsz);
-  }
-  for (uint i = 0; i < pc_symm.wvbl_symms.sz(); ++i) {
-    const Xn::VblSymm& vbl_symm = *pc_symm.wvbl_symms[i];
-    of << ' ';
-    oput_pla_val (of, act.assign(i), vbl_symm.domsz);
-  }
-}
-
-  void
-oput_pla_pc_acts (OFile& of, const Xn::PcSymm& pc_symm,
-                  const Table<Xn::ActSymm>& acts)
-{
-  Claim2( pc_symm.wvbl_symms.sz() ,==, pc_symm.spec->wmap.sz() );
-
-  uint nrvbls = 0;
-  for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
-    if (!pc_symm.rvbl_symms[i]->pure_shadow_ck())
-      nrvbls += 1;
-  }
-
-  of << ".mv " << (nrvbls + pc_symm.spec->wmap.sz()) << " 0";
-  for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
-    const Xn::VblSymm& vbl_symm = *pc_symm.rvbl_symms[i];
-    if (vbl_symm.pure_shadow_ck())
-      continue;
-    of << ' ' << vbl_symm.domsz;
-  }
-  for (uint i = 0; i < pc_symm.wvbl_symms.sz(); ++i) {
-    const Xn::VblSymm& vbl_symm = *pc_symm.wvbl_symms[i];
-    of << ' ' << vbl_symm.domsz;
-  }
-  of << '\n';
-
-  of << '#';
-  for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
-    if (pc_symm.rvbl_symms[i]->pure_shadow_ck())
-      continue;
-    of << ' ' << pc_symm.vbl_name(i);
-  }
-
-  for (uint i = 0; i < pc_symm.spec->wmap.sz(); ++i)
-    of << ' ' << pc_symm.vbl_name(pc_symm.spec->wmap[i]) << '\'';
-  of << '\n';
-
-  for (uint i = 0; i < acts.sz(); ++i) {
-    const Xn::ActSymm& act = acts[i];
-    if (act.pc_symm == &pc_symm) {
-      oput_pla_act (of, act);
-      of << '\n';
-    }
-  }
-  of << ".e\n";
-}
 
 static
   void
@@ -281,7 +206,6 @@ oput_protocon_pc_act (OFile& of, const Xn::ActSymm& act)
   bool
 oput_protocon_pc_acts (OFile& of, const Xn::PcSymm& pc_symm,
                        const Table<Xn::ActSymm>& acts,
-                       OSPc* ospc,
                        bool use_espresso)
 {
   DeclLegit( good );
@@ -330,62 +254,21 @@ oput_protocon_pc_acts (OFile& of, const Xn::PcSymm& pc_symm,
       return true;
   }
 
-  // Names for variables.
-  Table<String> guard_vbls;
-  Table<String> assign_vbls( pc_symm.spec->wmap.sz() );
-  for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
-    if (pc_symm.rvbl_symms[i]->pure_shadow_ck())
-      continue;
-    guard_vbls.push(pc_symm.vbl_name(i));
-  }
-  for (uint i = 0; i < pc_symm.wvbl_symms.sz(); ++i) {
-    assign_vbls[i] = pc_symm.vbl_name(pc_symm.spec->wmap[i]);
-  }
-
   of << "\n  puppet:";
-  if (!use_espresso) {
+
+  if (use_espresso) {
+    DoLegitLine( "" )
+      oput_protocon_pc_acts_espresso (of, pc_symm, acts);
+  }
+  else {
     for (uint i = 0; i < acts.sz(); ++i) {
       if (acts[i].pc_symm == &pc_symm) {
         oput_protocon_pc_act (of, acts[i]);
       }
     }
-    of << "\n    ;";
-    return true;
   }
 
-  DoLegitLine( "spawn espresso" )
-    spawn_OSPc (ospc);
-
-  if (good) {
-    OFile espresso_xf(ospc->of);
-    oput_pla_pc_acts (espresso_xf, pc_symm, acts);
-    close_OFile (ospc->of);
-  }
-
-  while (good && !skip_cstr_XFile (ospc->xf, ".p"))
-  {
-    DoLegitLine("get line")
-      !!getline_XFile (ospc->xf);
-  }
-
-  uint n = 0;
-  DoLegitLine("read number of lines from espresso")
-    xget_uint_XFile (ospc->xf, &n);
-
-  getline_XFile (ospc->xf);
-
-  for (uint i = 0; good && i < n; ++i) {
-    ::XFile olay[1];
-
-    DoLegitLine("get line from espresso")
-      getlined_olay_XFile (olay, ospc->xf, "\n");
-
-    DoLegitLine(0)
-      oput_protocon_pc_act (of, olay, guard_vbls, assign_vbls);
-  }
   of << "\n    ;";
-
-  close_OSPc (ospc);
   return good;
 }
 
@@ -484,21 +367,6 @@ oput_protocon_file (OFile& of, const Xn::Sys& sys,
                     const char* comment)
 {
   DeclLegit( good );
-  OSPc ospc[1];
-  *ospc = dflt_OSPc ();
-
-  stdxpipe_OSPc (ospc);
-  stdopipe_OSPc (ospc);
-  ospc->cmd = cons1_AlphaTab ("espresso");
-  /* Using -Dexact can take a long time.*/
-  //PushTable( ospc->args, cons1_AlphaTab ("-Dexact") );
-
-  if (false) {
-    // Use this to capture espresso input/output.
-    ospc->cmd = cons1_AlphaTab ("sh");
-    PushTable( ospc->args, cons1_AlphaTab ("-c") );
-    PushTable( ospc->args, cons1_AlphaTab ("tee in.pla | espresso | tee out.pla") );
-  }
 
   const Xn::Net& topo = sys.topology;
   if (comment) {
@@ -547,6 +415,7 @@ oput_protocon_file (OFile& of, const Xn::Sys& sys,
       sys.topology.action(acts.grow1(), sys.topology.represented_actions[actions[i]][j]);
     }
   }
+  std::sort(acts.begin(), acts.end());
 
   for (uint i = 0; i < sys.topology.pc_symms.sz(); ++i) {
     const Xn::PcSymm& pc_symm = sys.topology.pc_symms[i];
@@ -572,11 +441,10 @@ oput_protocon_file (OFile& of, const Xn::Sys& sys,
     DoLegitLine("output invariant")
       oput_protocon_pc_invariant (of, pc_symm, style_str);
     DoLegitLine("output actions")
-      oput_protocon_pc_acts (of, pc_symm, acts, ospc, use_espresso);
+      oput_protocon_pc_acts (of, pc_symm, acts, use_espresso);
     of << "\n}\n";
   }
 
-  lose_OSPc (ospc);
   return good;
 }
 

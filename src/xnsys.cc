@@ -323,13 +323,13 @@ Net::representative_action_index(uint actidx) const
   Xn::ActSymm act;
   this->action(act, actidx);
   const Xn::PcSymm& pc_symm = *act.pc_symm;
-  const Xn::PcSymmSpec& pc_symm_spec = *pc_symm.spec;
+  const Xn::PcSymmSpec& pc_spec = *pc_symm.spec;
 
   bool changed = true;
   while (changed) {
     changed = false;
-    for (uint linksymm_idx = 0; linksymm_idx < pc_symm_spec.link_symmetries.sz(); ++linksymm_idx) {
-      const LinkSymmetry& ob = pc_symm_spec.link_symmetries[linksymm_idx];
+    for (uint linksymm_idx = 0; linksymm_idx < pc_spec.link_symmetries.sz(); ++linksymm_idx) {
+      const LinkSymmetry& ob = pc_spec.link_symmetries[linksymm_idx];
 
       for (uint link_idx = 0; link_idx < ob.nlinks-1; ++link_idx) {
         Xn::ActSymm act_tmp( act );
@@ -347,7 +347,9 @@ Net::representative_action_index(uint actidx) const
   for (uint vbl_idx = 0; vbl_idx < pc_symm.rvbl_symms.sz(); ++vbl_idx) {
     const Xn::VblSymm& vbl_symm = *pc_symm.rvbl_symms[vbl_idx];
     if (vbl_symm.pure_shadow_ck()) {
-      act.vals[vbl_idx] = 0;
+      // TODO: If this hasn't failed in a few months, remove it.
+      // This used to be an assignment statement, but it seems unnecessary.
+      Claim2( act.guard(vbl_idx) ,==, 0 );
     }
   }
 
@@ -437,8 +439,8 @@ Net::unroll_action(Table<Xn::ActSymm>& dst, uint actid, bool include_shadow) con
   for (uint ridx = 0; ridx < pc_spec.access.sz(); ++ridx) {
     const VblSymmAccessSpec& access = pc_spec.access[ridx];
     act.guard(ridx) = 0;
-    if (!include_shadow && access.pure_shadow_ck())  continue;
-    if (!access.synt_read_ck() && !access.synt_writeonly_ck())  continue;
+    skip_unless (!access.pure_shadow_ck() || include_shadow);
+    skip_unless (access.synt_read_ck() || access.synt_writeonly_ck());
     rvbl_idcs << ridx;
     pfmla_rvbl_idcs << pc.rvbls[ridx]->pfmla_idx;
   }
@@ -448,9 +450,9 @@ Net::unroll_action(Table<Xn::ActSymm>& dst, uint actid, bool include_shadow) con
   for (uint widx = 0; widx < pc_spec.wmap.sz(); ++widx) {
     const VblSymmAccessSpec& access = pc_spec.waccess(widx);
     act.assign(widx) = 0;
-    if (access.random_ck())  continue;
-    if (!access.write_ck())  continue;
-    if (!include_shadow && access.pure_shadow_ck())  continue;
+    skip_unless (!access.random_ck());
+    skip_unless (access.write_ck());
+    skip_unless (!access.pure_shadow_ck() || include_shadow);
     wvbl_idcs << widx;
     pfmla_wvbl_idcs << pc.wvbls[widx]->pfmla_idx;
   }

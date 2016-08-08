@@ -1,8 +1,9 @@
 
 #include "udp-ofile.hh"
 
-#include "cx/table.hh"
 #include "cx/map.hh"
+#include "cx/ofile.hh"
+#include "cx/table.hh"
 #include "xnsys.hh"
 
 #include "namespace.hh"
@@ -40,7 +41,7 @@ void oput_udp_include_file(OFile& ofile, const Xn::Sys& sys, const Xn::Net& o_to
     const Xn::Pc& pc = o_topology.pcs[pcidx];
     for (uint i = 0; i < pc.rvbls.sz(); ++i) {
       const Xn::Vbl& vbl = *pc.rvbls[i];
-      if (vbl.symm->pure_shadow_ck())  continue;
+      skip_unless (vbl.symm->puppet_ck());
       const uint vidx =  o_topology.vbls.index_of(&vbl);
       Variable v;
       v.vbl_idx = vidx;
@@ -196,9 +197,7 @@ void oput_udp_include_file(OFile& ofile, const Xn::Sys& sys, const Xn::Net& o_to
 
     uint puppet_i = 0;
     for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
-      if (pc_symm.rvbl_symms[i]->pure_shadow_ck()) {
-        continue;
-      }
+      skip_unless (pc_symm.rvbl_symms[i]->puppet_ck());
       ofile << "\n    if (vbl_idx==" << puppet_i << ")  return "
         << pc_symm.rvbl_symms[i]->domsz
         << ";";
@@ -243,7 +242,7 @@ void oput_udp_include_file(OFile& ofile, const Xn::Sys& sys, const Xn::Net& o_to
 
     for (uint i = 0, puppet_sz = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
       const Xn::VblSymm& vbl_symm = *pc_symm.rvbl_symms[i];
-      if (vbl_symm.pure_shadow_ck())  continue;
+      skip_unless (vbl_symm.puppet_ck());
       puppet_sz += 1;
       if (pc.closed_assume.equiv_ck(pc.closed_assume.smooth_pre(topo.pfmla_vbl(*pc.rvbls[i]))))
         continue;
@@ -342,7 +341,7 @@ void oput_udp_include_file(OFile& ofile, const Xn::Sys& sys, const Xn::Net& o_to
 
     for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
       const Xn::VblSymm& vbl_symm = *pc_symm.rvbl_symms[i];
-      if (vbl_symm.pure_shadow_ck())  continue;
+      skip_unless (vbl_symm.puppet_ck());
       if (pc.rvbls[i]->random_ck()) {
         ofile << "\n    x[" << pfmla_rvbl_idcs.sz()
           << "] = RandomMod(" << vbl_symm.domsz << ");";
