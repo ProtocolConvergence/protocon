@@ -120,8 +120,14 @@ int main(int argc, char** argv)
       OFile ofile;
       DoLegitLineP( ofile, "Open UDP file" )
         ofb.uopen(exec_opt.udp_ofilepath);
-      DoLegit( 0 )
-        oput_udp_file (ofile, sys, *o_topology);
+      DoLegit( 0 ) {
+        if (exec_opt.only_udp_include) {
+          oput_udp_include_file (ofile, sys, *o_topology);
+        }
+        else {
+          oput_udp_file (ofile, sys, *o_topology);
+        }
+      }
     }
     if (!exec_opt.ofilepath.empty_ck())
     {

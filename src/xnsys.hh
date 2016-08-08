@@ -167,6 +167,8 @@ public:
   X::Fmla semisync_xn(const Table<uint>& actidcs) const;
   X::Fmla xn_of_pc(const Xn::ActSymm& act, uint pcidx) const;
   X::Fmla represented_xns_of_pc(const Xn::ActSymm& act, uint relative_pcidx) const;
+  void unroll_action(Table<Xn::ActSymm>& dst, uint actid, bool include_shadow=false) const;
+
   void make_action_pfmla(X::Fmla* ret_xn, uint actid) const;
   void make_action_xfmlae(X::Fmlae* ret_xn, uint actidx) const;
 private:

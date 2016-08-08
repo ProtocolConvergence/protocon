@@ -357,6 +357,10 @@ protocon_options_rec
     else if (eq_cstr (arg, "-o-udp")) {
       exec_opt.udp_ofilepath = argv[argi++];
     }
+    else if (eq_cstr (arg, "-o-udp-include")) {
+      exec_opt.udp_ofilepath = argv[argi++];
+      exec_opt.only_udp_include = true;
+    }
     else if (eq_cstr (arg, "-serial")) {
       exec_opt.nparallel = 1;
     }

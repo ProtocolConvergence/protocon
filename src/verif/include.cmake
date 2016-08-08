@@ -205,6 +205,11 @@ add_test (NAME Promela_OrientDaisy
   COMMAND comparispawn ${TestPath}/expect/OrientDaisy.pml
   ${protocon_exe} -nop -x ${SolnPath}/OrientDaisy.prot -param N 5 -o-pml -)
 
+## UDP file output.
+add_test (NAME UDP_TokenRingRand
+  COMMAND comparispawn ${TestPath}/expect/TokenRingRand.h
+  ${protocon_exe} -nop -x ${SolnPath}/TokenRingRand.prot -param N 10 -o-udp-include -)
+
 ## Ensure our tests can actually detect failure.
 add_test (NAME Verif4_OrientRingOdd
   COMMAND protocon -verify -x ${SolnPath}/OrientRingOdd.prot -param N 4)

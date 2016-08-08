@@ -25,14 +25,9 @@ struct Process {
 };
 }
 
-void oput_udp_file(OFile& ofile, const Xn::Sys& sys, const Xn::Net& o_topology)
+void oput_udp_include_file(OFile& ofile, const Xn::Sys& sys, const Xn::Net& o_topology)
 {
-#include "udp-dep/embed.h"
   const Xn::Net& topo = sys.topology;
-
-  for (uint i = 0; i < nfiles-1; ++i) {
-    ofile.write((char*) files_bytes[i], files_nbytes[i]);
-  }
 
   Table<uint> owning(o_topology.vbls.sz());
   Table<Process> pcs(o_topology.pcs.sz());
@@ -423,6 +418,16 @@ void oput_udp_file(OFile& ofile, const Xn::Sys& sys, const Xn::Net& o_topology)
     << "\n}"
     << "\n"
     ;
+}
+
+void oput_udp_file(OFile& ofile, const Xn::Sys& sys, const Xn::Net& o_topology)
+{
+#include "udp-dep/embed.h"
+  for (uint i = 0; i < nfiles-1; ++i) {
+    ofile.write((char*) files_bytes[i], files_nbytes[i]);
+  }
+
+  oput_udp_include_file(ofile, sys, o_topology);
 
   ofile.write((char*) files_bytes[nfiles-1], files_nbytes[nfiles-1]);
 }

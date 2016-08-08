@@ -416,6 +416,72 @@ Net::safe_ck(const Xn::ActSymm& act) const
   return true;
 }
 
+  void
+Net::unroll_action(Table<Xn::ActSymm>& dst, uint actid, bool include_shadow) const
+{
+  Xn::ActSymm act;
+  this->action(act, actid);
+  const Xn::PcSymm& pc_symm = *act.pc_symm;
+  const Xn::PcSymmSpec& pc_spec = *pc_symm.spec;
+  uint pcidx = 0;
+  if (!pc_symm.representative(&pcidx)) {
+    DBog0("Cannot find a process with unique variable accesses!");
+    return;
+  }
+  const Xn::Pc& pc = *pc_symm.membs[pcidx];
+  X::Fmla pc_xn = represented_xns_of_pc(act, pcidx);
+  pc_xn &= pc.closed_assume;
+
+  Table<uint> rvbl_idcs;
+  Table<uint> pfmla_rvbl_idcs;
+  for (uint ridx = 0; ridx < pc_spec.access.sz(); ++ridx) {
+    const VblSymmAccessSpec& access = pc_spec.access[ridx];
+    act.guard(ridx) = 0;
+    if (!include_shadow && access.pure_shadow_ck())  continue;
+    if (!access.synt_read_ck() && !access.synt_writeonly_ck())  continue;
+    rvbl_idcs << ridx;
+    pfmla_rvbl_idcs << pc.rvbls[ridx]->pfmla_idx;
+  }
+
+  Table<uint> wvbl_idcs;
+  Table<uint> pfmla_wvbl_idcs;
+  for (uint widx = 0; widx < pc_spec.wmap.sz(); ++widx) {
+    const VblSymmAccessSpec& access = pc_spec.waccess(widx);
+    act.assign(widx) = 0;
+    if (access.random_ck())  continue;
+    if (!access.write_ck())  continue;
+    if (!include_shadow && access.pure_shadow_ck())  continue;
+    wvbl_idcs << widx;
+    pfmla_wvbl_idcs << pc.wvbls[widx]->pfmla_idx;
+  }
+
+
+  Table<uint> pre_state( rvbl_idcs.sz() );
+  Table<uint> img_state( wvbl_idcs.sz() );
+
+  while (pc_xn.sat_ck()) {
+    pc_xn.state(&pre_state[0], pfmla_rvbl_idcs);
+    P::Fmla pre_pf = pfmla_ctx.pfmla_of_state(&pre_state[0], pfmla_rvbl_idcs);
+    P::Fmla img_pf = pc_xn.img(pre_pf);
+    pc_xn -= pre_pf;
+
+    for (uint i = 0; i < pre_state.sz(); ++i) {
+      act.guard(rvbl_idcs[i]) = pre_state[i];
+    }
+
+    while (img_pf.sat_ck()) {
+      img_pf.state(&img_state[0], pfmla_wvbl_idcs);
+      img_pf -= pfmla_ctx.pfmla_of_state(&img_state[0], pfmla_wvbl_idcs);
+
+      for (uint i = 0; i < img_state.sz(); ++i) {
+        act.assign(wvbl_idcs[i]) = img_state[i];
+      }
+      dst << act;
+    }
+  }
+}
+
+
   ostream&
 Net::oput(ostream& of,
           const P::Fmla& pf,
@@ -915,8 +981,8 @@ Xn::Net::xn_of_pc(const Xn::ActSymm& act, uint pcidx) const
 Xn::Net::represented_xns_of_pc(const Xn::ActSymm& act, uint relative_pcidx) const
 {
   uint actidx = this->action_index(act);
+  const Xn::Pc* pc = act.pc_symm->membs[relative_pcidx];
   if (!this->lightweight) {
-    const Xn::Pc* pc = act.pc_symm->membs[relative_pcidx];
     uint real_pcidx = this->pcs.index_of(pc);
     return act_xfmlaes[actidx][real_pcidx];
   }
@@ -929,7 +995,7 @@ Xn::Net::represented_xns_of_pc(const Xn::ActSymm& act, uint relative_pcidx) cons
     xn |= this->xn_of_pc(tmp_act, relative_pcidx);
   }
   if (!act.pc_symm->spec->random_write_ck()) {
-    xn -= xn.img();
+    xn -= (xn & pc->global_mask_xn).img();
   }
   return xn;
 }

@@ -63,6 +63,7 @@ public:
   String model_ofilepath;
   String graphviz_ofilepath;
   String udp_ofilepath;
+  bool only_udp_include;
   String conflicts_xfilepath;
   String conflicts_ofilepath;
   String stats_ofilepath;
@@ -74,6 +75,7 @@ public:
     : task(SearchTask)
     , nparallel( 1 )
     , use_espresso( false )
+    , only_udp_include( false )
     , conflict_order( HiLoOrder )
   {}
 };

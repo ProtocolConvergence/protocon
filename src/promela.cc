@@ -202,10 +202,9 @@ OPutPromelaModel(OFile& ofile, const Xn::Sys& sys, const Xn::Net& otopology)
   Table<Xn::ActSymm> acts;
   const vector<uint>& actions = sys.actions;
   for (uint i = 0; i < actions.size(); ++i) {
-    for (uint j = 0; j < topo.represented_actions[actions[i]].sz(); ++j) {
-      topo.action(acts.grow1(), topo.represented_actions[actions[i]][j]);
-    }
+    topo.unroll_action(acts, actions[i]);
   }
+  std::sort(acts.begin(), acts.end());
   uint pcidx_offset = 1;
   for (uint i = 0; i < topo.pc_symms.sz(); ++i) {
     OPutPromelaPc(ofile, topo.pc_symms[i], acts, otopology.pc_symms[i], pcidx_offset);

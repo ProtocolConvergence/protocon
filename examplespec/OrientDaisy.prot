@@ -11,12 +11,12 @@ variable w[2*N] < 2;
 
 process End[i <- map tid < 2*Chain : tid * (N-1)]
 {
-  let ij := if (i==0) then (2*i+1) else (2*i);
   let j  := if (i==0) then (i+1) else (i-1);
+  let ij := if (i==0) then (2*i+1) else (2*i);
   let ji := if (i==0) then (2*j) else (2*j+1);
 
   write: b[i], w[ij];
-  read:  b[j], w[ji];
+  read:  w[ji], b[j];
 
   (future & future silent)
     (w[ji]!=w[ij]);
@@ -24,25 +24,23 @@ process End[i <- map tid < 2*Chain : tid * (N-1)]
 
 process P[i <- map tid < N-2*Chain : tid + Chain]
 {
-  let ij := 2*i;    let j := i-1;  let ji := 2*j+1;
-  let ik := 2*i+1;  let k := i+1;  let ki := 2*k;
+  let j := i-1;  let ij := 2*i;    let ji := 2*j+1;
+  let k := i+1;  let ik := 2*i+1;  let ki := 2*k;
 
   write: b[i];
   // P[i] is disoriented and therefore treats P[j] and P[k] identically.
-  symmetric (to, adj, from) <- {# (ij, j, ji), (ik, k, ki) #} {
-    write: w[to];  read: b[adj], w[from];
+  symmetric (to, from, adj) <- {# (ij, ji, j), (ik, ki, k) #} {
+    write: w[to];  read: w[from], b[adj];
   }
 
   predicate OneWay := w[ij]!=w[ik];
 
   // Assume this process points in exactly one direction.
   (assume & closed)
-    (OneWay);
-
-  predicate RightWay := w[ji]!=w[ij] && w[ik]!=w[ki];
+    (w[ij]!=w[ik]);
 
   // Eventually point the same way as both neighbors.
   (future & future silent)
-    (RightWay);
+    (w[ji]!=w[ij] && w[ik]!=w[ki]);
 }
 

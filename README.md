@@ -21,7 +21,7 @@ mkdir tmp
 
 Besides Qt, all essential dependencies are automatically downloaded when running `make`.
 
-* peg >=0.1.11
+* peg
   * http://piumarta.com/software/peg/
   * Parser.
 * glu 2.4
