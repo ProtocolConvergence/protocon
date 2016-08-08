@@ -69,10 +69,10 @@ Net::commit_initialization()
     for (uint pcidx = 0; pcidx < this->pcs.sz(); ++pcidx) {
       pfmla_ctx.add_to_vbl_list(xfmlae_ctx.wvbl_list_ids[pcidx],
                                 id_of(pfmla_vbl));
-      this->xfmlae_ctx.act_unchanged_xfmlas[pcidx] =
-        this->xfmlae_ctx.act_unchanged_xfmlas[pcidx].smooth(pfmla_vbl);
-      this->pcs[pcidx].act_unchanged_pfmla =
-        this->pcs[pcidx].act_unchanged_pfmla.smooth(pfmla_vbl);
+      this->xfmlae_ctx.global_mask_xns[pcidx] =
+        this->xfmlae_ctx.global_mask_xns[pcidx].smooth(pfmla_vbl);
+      this->pcs[pcidx].global_mask_xn =
+        this->pcs[pcidx].global_mask_xn.smooth(pfmla_vbl);
     }
   }
 
@@ -219,8 +219,8 @@ Net::add_processes(const String& name, const String& idx_name, uint nmembs)
     symm.membs.push(&pc);
     symm.mapped_indices.membs.push(i);
     if (this->featherweight)  continue;
-    pc.act_unchanged_pfmla = this->identity_xn;
-    xfmlae_ctx.act_unchanged_xfmlas.push(this->identity_xn);
+    pc.global_mask_xn = this->identity_xn;
+    xfmlae_ctx.global_mask_xns.push(this->identity_xn);
   }
   return &symm;
 }
@@ -259,14 +259,14 @@ Net::add_access (PcSymm* pc_symm, const VblSymm* vbl_symm,
 
     if (this->featherweight)  continue;
 
-    pc.act_unchanged_pfmla =
-      pc.act_unchanged_pfmla.smooth(pfmla_vbl(vbl));
+    pc.global_mask_xn =
+      pc.global_mask_xn.smooth(pfmla_vbl(vbl));
 
     const uint pcidx = this->pcs.index_of(&pc);
     pfmla_ctx.add_to_vbl_list(xfmlae_ctx.wvbl_list_ids[pcidx],
                               vbl.pfmla_idx);
-    xfmlae_ctx.act_unchanged_xfmlas[pcidx] =
-      xfmlae_ctx.act_unchanged_xfmlas[pcidx].smooth(pfmla_vbl(vbl));
+    xfmlae_ctx.global_mask_xns[pcidx] =
+      xfmlae_ctx.global_mask_xns[pcidx].smooth(pfmla_vbl(vbl));
   }
 }
 
@@ -547,7 +547,7 @@ Sys::commit_initialization()
       pc_symm.direct_pfmla |=
         pc.puppet_xn
         & pc.closed_assume
-        & pc.act_unchanged_pfmla;
+        & pc.global_mask_xn;
     }
     this->direct_pfmla |= pc_symm.direct_pfmla;
   }

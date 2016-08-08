@@ -557,7 +557,7 @@ ProtoconFile::parse_action(X::Fmla& act_pf, Table<X::Fmla>& pc_xns, Sesp act_sp,
     DoLegitLine( "parse action" )
       parse_action(pc_xns[pcidx], pcidx, act_sp, auto_iden, role);
     if (good)
-      act_pf |= pc_xns[pcidx] & pc_symm->membs[pcidx]->act_unchanged_pfmla;
+      act_pf |= pc_xns[pcidx] & pc_symm->membs[pcidx]->global_mask_xn;
   }
   return update_allgood (good);
 }
@@ -597,7 +597,7 @@ ProtoconFile::add_action(Sesp act_sp, Xn::ShadowPuppetRole role)
         pc_symm->membs[i]->puppet_xn |= pc_xns[i];
         if (pc_symm_spec->synt_writeonly_ck() && !pc_symm_spec->random_write_ck()) {
           P::Fmla scc(false);
-          const X::Fmla& xn = (pc_symm->membs[i]->puppet_xn & pc_symm->membs[i]->act_unchanged_pfmla);
+          const X::Fmla& xn = (pc_symm->membs[i]->puppet_xn & pc_symm->membs[i]->global_mask_xn);
           xn.cycle_ck(&scc);
           pc_symm->membs[i]->puppet_xn -= scc;
         }

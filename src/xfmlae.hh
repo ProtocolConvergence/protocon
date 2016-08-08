@@ -18,7 +18,7 @@ class FmlaeCtx
 public:
   Table<uint> wvbl_list_ids;
   X::Fmla identity_xn;
-  Table<X::Fmla> act_unchanged_xfmlas;
+  Table<X::Fmla> global_mask_xns;
 
   FmlaeCtx(PFmlaCtx& _ctx)
     : ctx(&_ctx)
@@ -52,7 +52,7 @@ public:
     X::Fmla ret(false);
     for (uint i = 0; i < this->sz(); ++i) {
       if ((*this)[i].sat_ck()) {
-        ret |= (*this)[i] & ctx->act_unchanged_xfmlas[i];
+        ret |= (*this)[i] & ctx->global_mask_xns[i];
       }
     }
     return ret;
@@ -130,7 +130,7 @@ public:
 
   void self_disable() {
     for (uint i = 0; i < this->sz(); ++i)
-      fmlas[i] -= (fmlas[i] & ctx->act_unchanged_xfmlas[i]).img();
+      fmlas[i] -= (fmlas[i] & ctx->global_mask_xns[i]).img();
   }
 
   X::Fmla transitive_closure(const P::Fmla* initial = 0) const;

@@ -219,8 +219,8 @@ TestXnSys()
 
   Xn::Net& topo = sys.topology;
 
-  Claim( topo.pcs[1].act_unchanged_pfmla <= (topo.pfmla_vbl(0).img_eq(topo.pfmla_vbl(0)) ));
-  Claim( topo.pcs[1].act_unchanged_pfmla <= (topo.pfmla_vbl(2).img_eq(topo.pfmla_vbl(2)) ));
+  Claim( topo.pcs[1].global_mask_xn <= (topo.pfmla_vbl(0).img_eq(topo.pfmla_vbl(0)) ));
+  Claim( topo.pcs[1].global_mask_xn <= (topo.pfmla_vbl(2).img_eq(topo.pfmla_vbl(2)) ));
 
 
   Xn::ActSymm act;
@@ -243,7 +243,7 @@ TestXnSys()
   }
 
   X::Fmla actPF =
-    topo.pcs[1].act_unchanged_pfmla &
+    topo.pcs[1].global_mask_xn &
     ((topo.pfmla_vbl(0) == 1) &
      (topo.pfmla_vbl(1) == 2) &
      (topo.pfmla_vbl(2) == 2) &
@@ -296,7 +296,7 @@ TestXnSys()
        (topo.pfmla_vbl(2) == 2) &
        (topo.pfmla_vbl(1) == 1) &
        (topo.pfmla_vbl(0).img_eq(1)));
-    cyclePF &= topo.pcs[0].act_unchanged_pfmla;
+    cyclePF &= topo.pcs[0].global_mask_xn;
     Claim( !cyclePF.cycle_ck(~sys.invariant) );
 
     Claim( !SCC_Find(0, cyclePF, ~sys.invariant) );
@@ -306,7 +306,7 @@ TestXnSys()
        (topo.pfmla_vbl(2) == 2) &
        (topo.pfmla_vbl(1) == 1) &
        (topo.pfmla_vbl(0).img_eq(2)))
-      & topo.pcs[0].act_unchanged_pfmla;
+      & topo.pcs[0].global_mask_xn;
     // All states in the cycle are illegitimate,
     // it should be found.
     Claim( cyclePF.cycle_ck(~sys.invariant) );
@@ -331,14 +331,14 @@ TestTokenRingClosure()
 
     if (me == npcs-1) {
       topo.pc_symms[1].shadow_pfmla |=
-        pc.act_unchanged_pfmla &&
+        pc.global_mask_xn &&
         topo.pfmla_vbl(pd) == topo.pfmla_vbl(me) &&
         topo.pfmla_vbl(me).img_eq(IntPFmla(1) - topo.pfmla_vbl(me));
       token_pfmlas[me] = (topo.pfmla_vbl(pd) == topo.pfmla_vbl(me));
     }
     else {
       topo.pc_symms[0].shadow_pfmla |=
-        pc.act_unchanged_pfmla &&
+        pc.global_mask_xn &&
         topo.pfmla_vbl(pd) != topo.pfmla_vbl(me) &&
         topo.pfmla_vbl(me).img_eq(IntPFmla(1) - topo.pfmla_vbl(me));
       token_pfmlas[me] = (topo.pfmla_vbl(pd) != topo.pfmla_vbl(me));

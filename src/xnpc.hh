@@ -166,7 +166,7 @@ public:
   /// The rvbls should include wvbls.
   Table< const Vbl* > rvbls;
   Table< const Vbl* > wvbls;
-  P::Fmla act_unchanged_pfmla;
+  P::Fmla global_mask_xn;
   P::Fmla closed_assume;
   P::Fmla invariant;
   P::Fmla puppet_xn;

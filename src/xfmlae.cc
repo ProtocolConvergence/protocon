@@ -12,7 +12,7 @@ X::Fmlae::transitive_closure(const P::Fmla* initial) const
   X::Fmla reach( false );
   X::Fmla next( false );
 
-  Table<X::Fmla> xns = ctx->act_unchanged_xfmlas;
+  Table<X::Fmla> xns = ctx->global_mask_xns;
   for (bool first = true; first || !reach.equiv_ck(next); first = false)
   {
     reach = next;
@@ -126,7 +126,7 @@ bool
     // For each process...
     for (uint i = 0; i < this->sz(); ++i) {
       const X::Fmla& pc_progress_xn =
-        (ctx->act_unchanged_xfmlas[i] & progress);
+        (ctx->global_mask_xns[i] & progress);
 
       // This process resolves livelock states
       // where it is enabled to make a progress transition
@@ -221,10 +221,10 @@ X::Fmlae::uniring_cycle_ck(P::Fmla* scc, uint* ret_nlayers,
                            const P::Fmla* invariant, const P::Fmla* assumed) const
 {
 #if 0
-  X::Fmla xn((*this)[0] & this->ctx->act_unchanged_xfmlas[0]);
+  X::Fmla xn((*this)[0] & this->ctx->global_mask_xns[0]);
 
   for (uint i = 1; i < this->sz(); ++i) {
-    const X::Fmla& pc_xn = (*this)[i] & this->ctx->act_unchanged_xfmlas[i];
+    const X::Fmla& pc_xn = (*this)[i] & this->ctx->global_mask_xns[i];
     X::Fmla tmp_xn(false);
     tmp_xn |= pc_xn - xn.img();
     tmp_xn |= xn - pc_xn.pre().as_img();
