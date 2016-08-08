@@ -124,24 +124,24 @@ ReduceToActionTiles (Cx::Table< Cx::Tuple<uint,3> >& ret_acts, const Cx::Table< 
     Cx::Table<uint> sym;
 
     sym << tile[0] << tile[1] << tile[2] << tile[3];
-    const uint actcolor = LookupSymId (idmap, sym);
+    const uint abcd = LookupSymId (idmap, sym);
 
     sym.flush() << tile[0] << 0;
-    const uint a_ri = LookupSymId (idmap, sym);
+    const uint a0 = LookupSymId (idmap, sym);
 
     sym.flush() << tile[1] << 1;
-    const uint b_up = LookupSymId (idmap, sym);
+    const uint b1 = LookupSymId (idmap, sym);
 
     sym.flush() << tile[2] << 1;
-    const uint c_up = LookupSymId (idmap, sym);
+    const uint c1 = LookupSymId (idmap, sym);
 
     sym.flush() << tile[3] << 0;
-    const uint d_ri = LookupSymId (idmap, sym);
+    const uint d0 = LookupSymId (idmap, sym);
 
-    acts << mk_Tuple(a_ri, b_up, actcolor);
-    acts << mk_Tuple(blank, actcolor, c_up);
-    acts << mk_Tuple(actcolor, blank, d_ri);
-    acts << mk_Tuple(c_up, d_ri, blank);
+    acts << mk_Tuple( a0    , b1    , abcd  );
+    acts << mk_Tuple( blank , abcd  , c1    );
+    acts << mk_Tuple( abcd  , blank , d0    );
+    acts << mk_Tuple( c1    , d0    , blank );
   }
   acts.fill(ret_acts);
   return idmap.sz();
