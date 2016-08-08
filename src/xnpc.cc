@@ -5,6 +5,68 @@
 namespace Xn {
 
   bool
+ActSymm::puppet_self_loop_ck() const
+{
+  for (uint i = 0; i < this->pc_symm->wvbl_symms.sz(); ++i) {
+    const VblSymmAccessSpec& access = this->pc_symm->spec->waccess(i);
+    if (access.synt_writeonly_ck()) {
+      if (access.vbl_symm->puppet_ck()) {
+        if (this->assign(i) != access.vbl_symm->domsz)
+          return false;
+      }
+      continue;
+    }
+    if (this->aguard(i) != this->assign(i))
+      return false;
+    if (access.random_write_ck()) {
+      return false;
+    }
+  }
+  return true;
+}
+
+  bool
+ActSymm::readable_self_loop_ck() const
+{
+  for (uint i = 0; i < this->pc_symm->wvbl_symms.sz(); ++i) {
+    const VblSymmAccessSpec& access = this->pc_symm->spec->waccess(i);
+    if (!access.synt_read_ck())
+      continue;
+    if (access.random_write_ck()) {
+      return false;
+    }
+    if (this->aguard(i) != this->assign(i))
+      return false;
+  }
+  return true;
+}
+
+  void
+ActSymm::swap_vals(uint ridx_a, uint ridx_b)
+{
+  SwapT( uint, this->vals[ridx_a], this->vals[ridx_b] );
+  if (this->pc_symm->write_ck(ridx_a) ||
+      this->pc_symm->write_ck(ridx_b))
+  {
+    Claim( this->pc_symm->write_ck(ridx_a) );
+    Claim( this->pc_symm->write_ck(ridx_b) );
+    uint widx_a = 0;
+    uint widx_b = 0;
+    for (uint i = 0; i < this->pc_symm->wvbl_symms.sz(); ++i) {
+      if (this->pc_symm->spec->wmap[i] == ridx_a) {
+        widx_a = this->pc_symm->rvbl_symms.sz() + i;
+      }
+      if (this->pc_symm->spec->wmap[i] == ridx_b) {
+        widx_b = this->pc_symm->rvbl_symms.sz() + i;
+      }
+    }
+    Claim2( widx_a ,!=, 0 );
+    Claim2( widx_b ,!=, 0 );
+    SwapT( uint, this->vals[widx_a], this->vals[widx_b] );
+  }
+}
+
+  bool
 PcSymm::dom_equiv_ck(const PcSymm& b) const
 {
   const PcSymm& a = *this;

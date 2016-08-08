@@ -133,6 +133,32 @@ inline String name_of(const Vbl& vbl) {
   return vbl.symm->spec->name + "[" + vbl.symm_idx + "]";
 }
 
+class ActSymm {
+public:
+  const PcSymm* pc_symm;
+  // TODO: Use PcSymmSpec instead of PcSymm if possible.
+  //const PcSymmSpec* pc_spec;
+  Table< uint > vals;
+  uint pre_idx;
+  uint img_idx;
+  uint pre_idx_of_img;
+
+  bool operator< (const Xn::ActSymm& b) const { return (this->vals < b.vals); }
+  bool operator==(const Xn::ActSymm& b) const { return (this->vals == b.vals); }
+  bool operator!=(const Xn::ActSymm& b) const { return !(*this == b); }
+
+  uint guard(uint vbl_idx) const;
+  uint assign(uint vbl_idx) const;
+  uint aguard(uint vbl_idx) const;
+  uint& guard(uint vbl_idx);
+  uint& assign(uint vbl_idx);
+  uint& aguard(uint vbl_idx);
+
+  bool puppet_self_loop_ck() const;
+  bool readable_self_loop_ck() const;
+  void swap_vals(uint ridx_a, uint ridx_b);
+};
+
 class Pc {
 public:
   const PcSymm* symm;
@@ -159,32 +185,6 @@ public:
     , forbid_xn(false)
   {}
   void actions(Table<uint>& ret_actions, PFmlaCtx& ctx) const;
-};
-
-class ActSymm {
-public:
-  const PcSymm* pc_symm;
-  Table< uint > vals;
-  uint pre_idx;
-  uint img_idx;
-  uint pre_idx_of_img;
-
-  uint guard(uint vbl_idx) const;
-  uint assign(uint vbl_idx) const;
-  uint aguard(uint vbl_idx) const;
-  void swap_vals(uint ridx_a, uint ridx_b);
-  bool puppet_self_loop_ck() const;
-  bool readable_self_loop_ck() const;
-
-  bool operator<(const Xn::ActSymm& b) const {
-    return (this->vals < b.vals);
-  }
-  bool operator==(const Xn::ActSymm& b) const {
-    return (this->vals == b.vals);
-  }
-  bool operator!=(const Xn::ActSymm& b) const {
-    return !(*this == b);
-  }
 };
 
 class PcSymm {
@@ -253,69 +253,13 @@ inline String name_of(const Pc& pc) {
   return pc.symm->spec->name + "[" + pc.symm->mapped_indices.eval(pc.symm_idx) + "]";
 }
 
-inline uint ActSymm::guard(uint vbl_idx) const
-{ return this->vals[vbl_idx]; }
-inline uint ActSymm::assign(uint vbl_idx) const
-{ return this->vals[this->pc_symm->rvbl_symms.sz() + vbl_idx]; }
-inline uint ActSymm::aguard(uint vbl_idx) const
-{ return this->guard(this->pc_symm->spec->wmap[vbl_idx]); }
-inline void ActSymm::swap_vals(uint ridx_a, uint ridx_b)
-{
-  SwapT( uint, this->vals[ridx_a], this->vals[ridx_b] );
-  if (this->pc_symm->write_ck(ridx_a) ||
-      this->pc_symm->write_ck(ridx_b))
-  {
-    Claim( this->pc_symm->write_ck(ridx_a) );
-    Claim( this->pc_symm->write_ck(ridx_b) );
-    uint widx_a = 0;
-    uint widx_b = 0;
-    for (uint i = 0; i < this->pc_symm->wvbl_symms.sz(); ++i) {
-      if (this->pc_symm->spec->wmap[i] == ridx_a) {
-        widx_a = this->pc_symm->rvbl_symms.sz() + i;
-      }
-      if (this->pc_symm->spec->wmap[i] == ridx_b) {
-        widx_b = this->pc_symm->rvbl_symms.sz() + i;
-      }
-    }
-    Claim2( widx_a ,!=, 0 );
-    Claim2( widx_b ,!=, 0 );
-    SwapT( uint, this->vals[widx_a], this->vals[widx_b] );
-  }
-}
-inline bool ActSymm::puppet_self_loop_ck() const
-{
-  for (uint i = 0; i < this->pc_symm->wvbl_symms.sz(); ++i) {
-    const VblSymmAccessSpec& access = this->pc_symm->spec->waccess(i);
-    if (access.synt_writeonly_ck()) {
-      if (access.vbl_symm->puppet_ck()) {
-        if (this->assign(i) != access.vbl_symm->domsz)
-          return false;
-      }
-      continue;
-    }
-    if (this->aguard(i) != this->assign(i))
-      return false;
-    if (access.random_write_ck()) {
-      return false;
-    }
-  }
-  return true;
-}
+inline uint ActSymm::guard (uint vidx) const { return vals[vidx]; }
+inline uint ActSymm::assign(uint vidx) const { return vals[pc_symm->rvbl_symms.sz() + vidx]; }
+inline uint ActSymm::aguard(uint vidx) const { return vals[pc_symm->spec->wmap[vidx]]; }
 
-inline bool ActSymm::readable_self_loop_ck() const
-{
-  for (uint i = 0; i < this->pc_symm->wvbl_symms.sz(); ++i) {
-    const VblSymmAccessSpec& access = this->pc_symm->spec->waccess(i);
-    if (!access.synt_read_ck())
-      continue;
-    if (access.random_write_ck()) {
-      return false;
-    }
-    if (this->aguard(i) != this->assign(i))
-      return false;
-  }
-  return true;
-}
+inline uint& ActSymm::guard (uint vidx) { return vals[vidx]; }
+inline uint& ActSymm::assign(uint vidx) { return vals[pc_symm->rvbl_symms.sz() + vidx]; }
+inline uint& ActSymm::aguard(uint vidx) { return vals[pc_symm->spec->wmap[vidx]]; }
 
 }
 END_NAMESPACE

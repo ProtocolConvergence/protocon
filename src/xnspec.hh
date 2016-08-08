@@ -267,18 +267,25 @@ public:
   bool random_write_ck() const { return (type == Xn::RandomWriteAccess); }
   bool random_ck() const { return (random_read_ck() || random_write_ck()); }
 
+  bool direct_ck()      const { return vbl_symm->direct_ck(); }
+  bool pure_shadow_ck() const { return vbl_symm->pure_shadow_ck(); }
+  bool pure_puppet_ck() const { return vbl_symm->pure_puppet_ck(); }
+  bool shadow_ck()      const { return vbl_symm->shadow_ck(); }
+  bool puppet_ck()      const { return vbl_symm->puppet_ck(); }
+
+  uint domsz() const {
+    return vbl_symm->domsz;
+  }
   uint rdomsz() const {
-    const uint domsz = vbl_symm->domsz;
     if (!synt_read_ck())  return 1;
-    return domsz;
+    return domsz();
   }
   uint wdomsz() const {
-    const uint domsz = vbl_symm->domsz;
     if (!write_ck())  return 0;
     if (random_write_ck())  return 1;
-    if (vbl_symm->pure_shadow_ck())  return domsz+1;
-    if (type == Xn::EffectAccess)  return domsz+1;
-    return domsz;
+    if (vbl_symm->pure_shadow_ck())  return domsz()+1;
+    if (type == Xn::EffectAccess)  return domsz()+1;
+    return domsz();
   }
 };
 
