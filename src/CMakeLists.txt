@@ -61,8 +61,8 @@ list (APPEND CCFiles
   prot-xfile.cc prot-ofile.cc
   biring.cc
   deadfree.cc
-  unisyn.cc
-  unidomino.cc
+  uni/aperiodic.cc
+  uni/synthesize.cc
   msat.cc
   main-all.cc
   )
@@ -95,6 +95,7 @@ addbinexe (satsyn satsyn/satsyn.c satsyn/xnsys.c)
 
 file (MAKE_DIRECTORY ${BldPath}/satsyn)
 file (MAKE_DIRECTORY ${BldPath}/udp-dep)
+file (MAKE_DIRECTORY ${BldPath}/uni)
 
 #### Parser Generation ####
 if (NOT DEFINED peg_exe)
@@ -231,26 +232,9 @@ set_target_properties (deadfree PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
 
-#### Unidirectional Ring Synthesis ####
-addbinexe (unisyn unisyn.cc ${ProtoconSources})
-set_property (TARGET unisyn
-  APPEND PROPERTY INCLUDE_DIRECTORIES ${GluIncludePath})
-set_property (TARGET unisyn
-  PROPERTY COMPILE_FLAGS "-Wextra -std=c++11")
-set_property (TARGET unisyn
-  PROPERTY LINK_FLAGS "-Wextra -std=c++11")
-#set_source_files_properties (${BldPath}/unisyn.cc
-#  PROPERTIES COMPILE_FLAGS "-Wextra -std=c++11")
-target_link_libraries (unisyn cu glu cal ${M_LIB})
-set_target_properties (unisyn PROPERTIES
-  OUTPUT_NAME unisyn
-  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+#### Simple Unidirectional Ring Programs ####
+add_subdirectory (uni)
 
-#### Aperiodic Unidirectional Ring Protocol ####
-addbinexe (unidomino unidomino.cc)
-set_target_properties (unidomino PROPERTIES
-  OUTPUT_NAME unidomino
-  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
 #### Stand-Alone UDP Executable ####
 # Just for testing.
