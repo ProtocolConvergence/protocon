@@ -32,7 +32,8 @@ extern "C" {
 #include "cx/ofile.hh"
 #include "cx/set.hh"
 #include "cx/table.hh"
-#include "cx/tuple.hh"
+
+#include "uniact.hh"
 
 using Cx::mk_Tuple;
 
@@ -91,10 +92,10 @@ LookupSymId (Cx::Map< Cx::Table<uint>, uint >& idmap, const Cx::Table<uint>& key
  **/
 static
   uint
-ReduceToActionTiles (Cx::Table< Cx::Tuple<uint,3> >& ret_acts, const Cx::Table< Cx::Tuple<uint,4> >& tiles)
+ReduceToActionTiles (Cx::Table<UniAct>& ret_acts, const Cx::Table< Cx::Tuple<uint,4> >& tiles)
 {
   Cx::Map< Cx::Table<uint>, uint > idmap;
-  Cx::Set< Cx::Tuple<uint,3> > acts;
+  Cx::Set<UniAct> acts;
 
   // This is the $ symbol.
   const uint blank = LookupSymId (idmap, Cx::Table<uint>());
@@ -138,10 +139,10 @@ ReduceToActionTiles (Cx::Table< Cx::Tuple<uint,3> >& ret_acts, const Cx::Table< 
     sym.flush() << tile[3] << 0;
     const uint d0 = LookupSymId (idmap, sym);
 
-    acts << mk_Tuple( a0    , b1    , abcd  );
-    acts << mk_Tuple( blank , abcd  , c1    );
-    acts << mk_Tuple( abcd  , blank , d0    );
-    acts << mk_Tuple( c1    , d0    , blank );
+    acts << UniAct( a0    , b1    , abcd  );
+    acts << UniAct( blank , abcd  , c1    );
+    acts << UniAct( abcd  , blank , d0    );
+    acts << UniAct( c1    , d0    , blank );
   }
   acts.fill(ret_acts);
   return idmap.sz();
@@ -165,7 +166,7 @@ int main (int argc, char** argv)
   }
 
   // Compute equivalent action tiles.
-  Cx::Table< Cx::Tuple<uint,3> > acts;
+  Cx::Table<UniAct> acts;
   const uint domsz = ReduceToActionTiles(acts, wtiles);
 
   Cx::OFile ofile(stdout_OFile ());

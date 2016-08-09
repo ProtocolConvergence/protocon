@@ -5,6 +5,12 @@ set_target_properties (uni_aperiodic PROPERTIES
   OUTPUT_NAME aperiodic
   RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
+#### Generate Unidirectional Ring Protocols ####
+addbinexe (uni_generate uni/generate.cc)
+set_target_properties (uni_generate PROPERTIES
+  OUTPUT_NAME generate
+  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+
 #### Unidirectional Ring Synthesis ####
 addbinexe (uni_synthesize uni/synthesize ${ProtoconSources})
 set_property (TARGET uni_synthesize

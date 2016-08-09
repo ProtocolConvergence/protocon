@@ -62,6 +62,7 @@ list (APPEND CCFiles
   biring.cc
   deadfree.cc
   uni/aperiodic.cc
+  uni/generate.cc
   uni/synthesize.cc
   msat.cc
   main-all.cc
@@ -80,6 +81,7 @@ list (APPEND HHFiles
   pla.hh
   prot-xfile.hh prot-ofile.hh
   namespace.hh
+  uni/uniact.hh
   )
 
 include (${CxTopPath}/src/include.cmake)

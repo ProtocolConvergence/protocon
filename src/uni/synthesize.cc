@@ -2,15 +2,17 @@
 extern "C" {
 #include "cx/syscx.h"
 }
+
+#include <array>
+#include <vector>
+#include <queue>
+#include <stdio.h>
 #include "cx/fileb.hh"
 #include "cx/tuple.hh"
 #include "prot-ofile.hh"
 #include "prot-xfile.hh"
 #include "xnsys.hh"
-#include <array>
-#include <vector>
-#include <queue>
-#include <stdio.h>
+#include "uniact.hh"
 
 #include "namespace.hh"
 
@@ -55,12 +57,12 @@ void freeSquareMatrix(size_t **toFree, size_t M){
 }
 
 
-vector< array<PcState,3> > unidirectionalRingProtocolGenerator(vector< array<PcState,2> > legits, size_t M){
+vector<UniAct> unidirectionalRingProtocolGenerator(vector< array<PcState,2> > legits, size_t M){
   size_t gamma = 0;
   bool gammaExists = false;
   size_t **L = NULL;
   size_t **Lprime = NULL;
-  vector< array<PcState,3> > actions;
+  vector<UniAct> actions;
 
   L = allocSquareMatrix(M);
   //first diamention is the x-1 vertex value, second is x vertex valid value
@@ -142,7 +144,7 @@ vector< array<PcState,3> > unidirectionalRingProtocolGenerator(vector< array<PcS
   for (uint i = 0; i < M; i++)
     for (uint k = 0; k < M; k++)
       if (!Lprime[i][k] && tau[i] != k)
-        actions.push_back(array<PcState, 3>{i, k, tau[i]});
+        actions.push_back(UniAct(i, k, tau[i]));
 
   freeSquareMatrix(L, M); L = NULL;
   freeSquareMatrix(Lprime, M); Lprime = NULL;
@@ -153,7 +155,7 @@ vector< array<PcState,3> > unidirectionalRingProtocolGenerator(vector< array<PcS
 uint
 ReadUniRing(const char* filepath, Xn::Sys& sys, vector< array<PcState,2> >& legits);
 bool
-WriteUniRing(const char* filepath, const Xn::Sys& sys, const vector< array<PcState,3> >& actions);
+WriteUniRing(const char* filepath, const Xn::Sys& sys, const vector<UniAct>& actions);
 
 /** Execute me now!**/
 int main(int argc, char** argv) {
@@ -175,7 +177,7 @@ int main(int argc, char** argv) {
     printf("x[i-1]==%u && x[i]==%u\n", legits[i][0], legits[i][1]);
   }
 
-  vector< array<PcState,3> > actions;
+  vector<UniAct> actions;
 ////////////////////////////////////////////////////////////////////////
   actions = unidirectionalRingProtocolGenerator(legits, domsz);
 ////////////////////////////////////////////////////////////////////////
@@ -264,7 +266,7 @@ ReadUniRing(const char* filepath, Xn::Sys& sys, vector< array<PcState,2> >& legi
 
 /** Write a unidirectional ring protocol file.**/
   bool
-WriteUniRing(const char* filepath, const Xn::Sys& sys, const vector< array<PcState,3> >& actions)
+WriteUniRing(const char* filepath, const Xn::Sys& sys, const vector<UniAct>& actions)
 {
   const Xn::Net& topo = sys.topology;
   const Xn::PcSymm& pc_symm = topo.pc_symms[0];

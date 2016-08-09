@@ -10,10 +10,7 @@ extern "C" {
 #include "cx/table.hh"
 #include "cx/bittable.hh"
 #include "cx/set.hh"
-#include "cx/tuple.hh"
-
-//#include "biring-ext.cc"
-#define UseBitTableDB
+#include "uniact.hh"
 
 using Cx::mk_Tuple;
 
@@ -21,32 +18,24 @@ struct FilterOpt
 {
   uint domsz;
   uint minsz;
-  bool pair;
   bool trivial;
   bool echo_bits;
   bool echo_subsets;
   bool count_ones;
-  bool subck_known;
-  bool subck_match;
   bool ppgck;
   bool xlate_invariant;
-  bool grow_domsz;
   const char* spec_ofilename;
   const char* graphviz_ofilename;
 
   FilterOpt()
     : domsz( 3 )
     , minsz( 3 )
-    , pair( false )
     , trivial( false )
     , echo_bits( false )
     , echo_subsets( false )
     , count_ones( false )
-    , subck_known( false )
-    , subck_match( false )
     , ppgck( false )
     , xlate_invariant( false )
-    , grow_domsz( false )
     , spec_ofilename( 0 )
     , graphviz_ofilename( 0 )
   {}
@@ -67,19 +56,18 @@ Cx::OFile& operator<<(Cx::OFile& of, const Cx::BitTable& bt)
 }
 
   void
-permute_pc_config (Cx::BitTable& bt, const BitTable set, const Cx::Table<uint>& perm_map)
+permute_pc_act (Cx::BitTable& bt, const BitTable set, const Cx::Table<uint>& perm_map)
 {
-  uint doms[3];
-  doms[0] = doms[1] = doms[2] = perm_map.sz();
+  const UniAct doms( perm_map.sz() );
   bt.wipe(0);
   for (zuint i = 0; i < set.sz; ++i) {
-    uint vals[3];
+    UniAct vals;
     if (ck_BitTable (set, i)) {
-      state_of_index (vals, i, doms, 3);
+      state_of_index(&vals[0], i, &doms[0], 3);
       for (uint j = 0; j < 3; ++j) {
         vals[j] = perm_map[vals[j]];
       }
-      bt[index_of_state (vals, doms, 3)] = 1;
+      bt[index_of_state(&vals[0], &doms[0], 3)] = 1;
     }
   }
 }
@@ -102,57 +90,35 @@ minimal_unique_ck (const uint* a, uint n)
 
 
 static inline
-  void
-pc_config_of_enum_idx (uint* config, uint config_enum_idx, const uint domsz)
+  UniAct
+pc_act_of_enum_idx(uint act_enum_idx, const uint domsz)
 {
-  uint tmp[3];
-  uint doms[3];
-  doms[0] = doms[1] = doms[2] = domsz;
-  state_of_index (tmp, config_enum_idx, doms, 3);
-  config[0] = tmp[1];
-  config[1] = tmp[0];
-  config[2] = tmp[2];
+  UniAct doms( domsz );
+  UniAct tmp;
+  state_of_index(&tmp[0], act_enum_idx, &doms[0], 3);
+  return UniAct( tmp[1], tmp[0], tmp[2] );
 }
 
 static inline
   uint
-enum_idx_of_pc_config (const uint* config, const uint domsz)
+enum_idx_of_pc_act(const UniAct& act, const uint domsz)
 {
-  uint tmp[3];
-  uint doms[3];
-  doms[0] = doms[1] = doms[2] = domsz;
-  tmp[0] = config[1];
-  tmp[1] = config[0];
-  tmp[2] = config[2];
-  return index_of_state (tmp, doms, 3);
+  UniAct tmp(act[1], act[0], act[2]);
+  UniAct doms;
+  doms.wipe(domsz);
+  return index_of_state(&tmp[0], &doms[0], 3);
 }
+
+// TODO: Remove.
+#define enum_idx_of_pc_config enum_idx_of_pc_act
 
 static inline
   bool
-ck_pc_config (const BitTable set, const uint domsz,
-              const uint x_pd, const uint x_id, const uint x_sc)
+ck_pc_act(const BitTable set, const uint domsz,
+          const uint x_pd, const uint x_id, const uint x_sc)
 {
-  uint config[3];
-  config[0] = x_pd;
-  config[1] = x_id;
-  config[2] = x_sc;
-  return ck_BitTable (set, enum_idx_of_pc_config (config, domsz));
-}
-
-static inline
-  void
-biring_initials (Cx::Table<uint>& initials, uint config_enum_idx, const BitTable set, const uint domsz)
-{
-  initials.flush();
-  uint config[3];
-  pc_config_of_enum_idx (config, config_enum_idx, domsz);
-  for (uint i = 0; i < domsz; ++i) {
-    config[2] = i;
-    uint idx = enum_idx_of_pc_config (config, domsz);
-    if (ck_BitTable (set, idx)) {
-      initials << idx;
-    }
-  }
+  const UniAct act(x_pd, x_id, x_sc);
+  return ck_BitTable(set, enum_idx_of_pc_act(act, domsz));
 }
 
 static inline
@@ -160,8 +126,7 @@ static inline
 direct_biring_continuations (uint* conts, uint config_enum_idx, const BitTable set, const uint domsz)
 {
   uint n = 0;
-  uint config[3];
-  pc_config_of_enum_idx (config, config_enum_idx, domsz);
+  UniAct config = pc_act_of_enum_idx(config_enum_idx, domsz);
 
   config[0] = config[1];
   config[1] = config[2];
@@ -213,46 +178,9 @@ biring_legit_enum_idx (const BitTable set, uint config_enum_idx, uint domsz,
   return found;
 }
 
-#if 0
-  void
-biring_fixpoint(BitTable img_set, uint domsz)
-{
-  Cx::Table<uint> conts(domsz);
-  BitTable pre_set = cons1_BitTable (img_set.sz);
-
-  do
-  {
-    op_BitTable (pre_set, BitOp_IDEN1, img_set);
-    wipe_BitTable (img_set, 0);
-    for (uint config_enum_idx = begidx_BitTable (pre_set);
-         config_enum_idx < pre_set.sz;
-         config_enum_idx = nextidx_BitTable (pre_set, config_enum_idx))
-    {
-      uint n = biring_continuations(&conts[0], config_enum_idx, pre_set, domsz);
-      for (uint i = 0; i < n; ++i) {
-        set1_BitTable (img_set, conts[i]);
-      }
-    }
-  } while (0 != cmp_BitTable (pre_set, img_set));
-  lose_BitTable (&pre_set);
-
-  bool done = false;
-  while (!done)
-  {
-    done = true;
-    for (uint config_enum_idx = begidx_BitTable (img_set);
-         config_enum_idx < img_set.sz;
-         config_enum_idx = nextidx_BitTable (img_set, config_enum_idx))
-    {
-      uint n = biring_continuations(&conts[0], config_enum_idx, img_set, domsz);
-      if (n == 0) {
-        set0_BitTable (img_set, config_enum_idx);
-        done = false;
-      }
-    }
-  }
-}
-#else
+/** Trim out all actions that are not involved in any periodic propagations.
+ * These are trivial to detect.
+ **/
   void
 biring_fixpoint(BitTable set, uint domsz)
 {
@@ -269,64 +197,6 @@ biring_fixpoint(BitTable set, uint domsz)
   lose_BitTable (&cache);
   lose_BitTable (&frontier);
 }
-#endif
-
-/** Not actually better.**/
-  bool
-better_biring_sat_ck (const BitTable set, const uint domsz, const uint N_0)
-{
-  Cx::BitTable reach_pre( set.sz, 0 );
-  Cx::BitTable reach_img( set.sz, 0 );
-  Cx::Table<uint> conts;
-
-  for (zuint config_enum_idx = begidx_BitTable (set);
-       config_enum_idx < set.sz;
-       config_enum_idx = nextidx_BitTable (set, config_enum_idx))
-  {
-    uint min_cycle = 0;
-    uint nconsec = 0;
-    reach_img.wipe(0);
-
-    biring_initials(conts, config_enum_idx, set, domsz);
-    for (uint i = 0; i < conts.sz(); ++i) {
-      reach_img[conts[i]] = 1;
-    }
-
-    for (uint step_idx = 0; step_idx < N_0 + nconsec; ++step_idx)
-    {
-      /* DBog_luint( step_idx ); */
-      reach_pre = reach_img;
-      reach_img.wipe(0);
-      for (zuint idx = reach_pre.begidx(); idx < reach_pre.sz(); idx = reach_pre.nextidx(idx))
-      {
-        /* DBog_luint( idx ); */
-        biring_continuations(conts, idx, set, domsz);
-        for (uint i = 0; i < conts.sz(); ++i) {
-          /* DBog_luint( conts[i] ); */
-          reach_img[conts[i]] = 1;
-        }
-      }
-
-      if (reach_img[config_enum_idx]) {
-        if (min_cycle == 0)
-          min_cycle = step_idx+1;
-
-        nconsec += 1;
-        if (nconsec == min_cycle)
-          break;
-      }
-      else {
-        nconsec = 0;
-      }
-    }
-
-    if (nconsec != 0) {
-      Claim2( nconsec ,==, min_cycle );
-      return true;
-    }
-  }
-  return false;
-}
 
 static void
 img(Cx::BitTable& img_pf, const BitTable xn, const Cx::BitTable& pre_pf, uint domsz)
@@ -336,8 +206,7 @@ img(Cx::BitTable& img_pf, const BitTable xn, const Cx::BitTable& pre_pf, uint do
        enum_idx < pre_pf.sz();
        enum_idx = pre_pf.nextidx(enum_idx))
   {
-    uint config[3];
-    pc_config_of_enum_idx (config, enum_idx, domsz);
+    UniAct config = pc_act_of_enum_idx(enum_idx, domsz);
 
     config[0] = config[1];
     config[1] = config[2];
@@ -391,9 +260,6 @@ true_biring_sat_ck (const BitTable xn, const uint domsz, uint* nsteps)
   bool
 biring_sat_ck (const BitTable set, const uint domsz, const uint N_0)
 {
-#if 0
-  return better_biring_sat_ck (set, domsz, N_0);
-#endif
   uint N = 0;
 
   if (!true_biring_sat_ck (set, domsz, &N)) {
@@ -443,11 +309,10 @@ local_propagation_syn(const BitTable set, const uint domsz)
   BitTable tmp_set = cons1_BitTable (set.sz);
   bool livesyn = true;
   for (uint config_enum_idx = 0; livesyn && config_enum_idx < set.sz; ++config_enum_idx) {
-    uint config[3];
     if (ck_BitTable (set, config_enum_idx))
       continue;
 
-    pc_config_of_enum_idx (config, config_enum_idx, domsz);
+    UniAct config = pc_act_of_enum_idx(config_enum_idx, domsz);
 
     livesyn = false;
     for (uint c = 0; c < domsz; ++c) {
@@ -498,7 +363,7 @@ canonical_set(Cx::BitTable& min_bt, const BitTable set, const uint domsz)
       SwapT( uint, perm_map[i], perm_map[i+perm_vals[i]] );
     }
     //Claim( minimal_unique_ck(&perm_map[0], perm_map.sz()) );
-    permute_pc_config (bt, set, perm_map);
+    permute_pc_act (bt, set, perm_map);
     if (bt > min_bt) {
       min_bt = bt;
     }
@@ -526,7 +391,7 @@ subgraph_isomorphism_ck(const BitTable sub_a, const Cx::BitTable& b, uint domsz)
     for (uint i = 0; i < perm_vals.sz(); ++i) {
       SwapT( uint, perm_map[i], perm_map[i+perm_vals[i]] );
     }
-    permute_pc_config (a, sub_a, perm_map);
+    permute_pc_act(a, sub_a, perm_map);
     if (a.subseteq_ck(b)) {
       return true;
     }
@@ -535,53 +400,43 @@ subgraph_isomorphism_ck(const BitTable sub_a, const Cx::BitTable& b, uint domsz)
 }
 
   void
-oput_biring_invariant (Cx::OFile& ofile, const Cx::BitTable& legit, const uint domsz,
-                       const char* pfx = "", const char* delim = " || ",
-                       const bool pair = false,
-                       const bool print_own = true)
+oput_uniring_invariant(Cx::OFile& ofile, const Cx::BitTable& actset, const uint domsz,
+                       const char* pfx = "", const char* delim = " || ")
 {
+  UniAct prev( domsz );
   if (!delim)
     delim = pfx;
 
   Cx::Set< Cx::Tuple<uint, 2> > cache;
-  for (zuint config_enum_idx = legit.begidx();
-       config_enum_idx < legit.sz();
-       config_enum_idx = legit.nextidx(config_enum_idx))
+  for (zuint act_enum_idx = actset.begidx();
+       act_enum_idx < actset.sz();
+       act_enum_idx = actset.nextidx(act_enum_idx))
   {
-    uint config[3];
-    pc_config_of_enum_idx (config, config_enum_idx, domsz);
-    if (pair) {
-      Cx::Tuple<uint,2> tup = mk_Tuple(config[0], config[1]);
-      if (cache.elem_ck(tup))  continue;
-      cache << tup;
-    }
-
-    ofile << pfx;
+    UniAct act = pc_act_of_enum_idx(act_enum_idx, domsz);
+    act[2] = domsz;
+    skip_unless (act != prev);
+    ofile
+      << pfx
+      << "(x[i-1]==" << act[0]
+      << " && x[i]==" << act[1] << ")"
+      ;
     pfx = delim;
-
-    ofile << "(x[i-1]==" << config[0];
-    if (print_own) {
-      ofile << " && x[i]==" << config[1];
-    }
-    if (!pair) {
-      ofile << " && x[i+1]==" << config[2];
-    }
-   ofile << ")";
+    prev = act;
   }
 }
 
   void
-oput_biring_protocon_spec (const Cx::String& ofilepath, const Cx::String& ofilename,
-                           const Cx::BitTable& legit, const FilterOpt& opt)
+oput_uniring_protocon_file(const Cx::String& ofilepath, const Cx::String& ofilename,
+                           const Cx::BitTable& actset, const FilterOpt& opt)
 {
   const uint domsz = opt.domsz;
   Cx::OFileB ofb;
   Cx::OFile ofile( ofb.uopen(ofilepath, ofilename) );
 
   ofile
-    << "// " << legit
+    << "// " << actset
     << "\nconstant N := 3;"
-    << "\nconstant M := " << (domsz + OneIf(opt.grow_domsz)) << ";"
+    << "\nconstant M := " << domsz << ";"
     << "\nvariable x[Nat % N] <- Nat % M;"
     << "\nprocess P[i <- Nat % N]"
     << "\n{"
@@ -591,32 +446,14 @@ oput_biring_protocon_spec (const Cx::String& ofilepath, const Cx::String& ofilen
     << "\n  (future & silent)"
     << "\n    (0!=0"
     ;
-  oput_biring_invariant (ofile, legit, domsz, "\n     || ", 0, opt.pair, true);
+  oput_uniring_invariant(ofile, actset, domsz, "\n     || ", 0);
   ofile << "\n    );";
-  if (opt.grow_domsz) {
-    ofile
-      << "\n  puppet:"
-      << "\n    (   x[i-1]!=" << domsz
-      << "\n     && x[i]!=" << domsz
-      << "\n     && x[i+1]!=" << domsz
-      ;
-    oput_biring_invariant (ofile, legit, domsz, "\n     && !", 0, false, false);
-    ofile
-      << "\n     -->"
-      << "\n     x[i]:=" << domsz << ";"
-      << "\n    );"
-      ;
-  }
   ofile << "\n}\n";
 }
 
   void
 recurse(BitTable set, uint q,
-#ifdef UseBitTableDB
         Cx::Set<Cx::BitTable>& db,
-#else
-        Cx::Set<FlatDigraph>& db,
-#endif
         const FilterOpt& opt, Cx::OFile& ofile)
 {
   biring_fixpoint (set, opt.domsz);
@@ -654,12 +491,7 @@ recurse(BitTable set, uint q,
     canonical_set(min_bt, set, opt.domsz);
 #endif
 
-#ifdef UseBitTableDB
     Cx::BitTable& db_elem = min_bt;
-#else
-    FlatDigraph& db_elem = digraph;
-    flat_canonical_hack(digraph, min_bt);
-#endif
 
     if (db.elem_ck(db_elem))
     {
@@ -686,15 +518,6 @@ recurse(BitTable set, uint q,
     op_BitTable (bt, BitOp_IDEN1, set);
     set0_BitTable (bt, q);
 
-    if (opt.pair) {
-      uint config[3];
-      pc_config_of_enum_idx (config, q, opt.domsz);
-      for (uint i = 0; i < opt.domsz; ++i) {
-        config[2] = i;
-        set0_BitTable (bt, enum_idx_of_pc_config (config, opt.domsz));
-      }
-    }
-
     recurse(bt, q, db, opt, ofile);
   }
   lose_BitTable (&bt);
@@ -707,70 +530,29 @@ searchit(const FilterOpt& opt, Cx::OFile& ofile)
   BitTable set = cons2_BitTable (domsz*domsz*domsz, 1);
   if (!opt.trivial) {
     for (uint val = 0; val < domsz; ++val) {
-      uint config[3];
-      config[0] = config[1] = config[2] = val;
-      if (!opt.pair) {
-        set0_BitTable (set, enum_idx_of_pc_config (config, domsz));
-      }
-      else {
-        for (uint i = 0; i < domsz; ++i) {
-          config[2] = i;
-          set0_BitTable (set, enum_idx_of_pc_config (config, domsz));
-        }
-      }
+      UniAct act( val );
+      set0_BitTable(set, enum_idx_of_pc_act(act, domsz));
     }
   }
 
-#ifdef UseBitTableDB
   Cx::Set<Cx::BitTable> db;
-#else
-  Cx::Set<FlatDigraph> db;
-#endif
   recurse(set, set.sz, db, opt, ofile);
   lose_BitTable (&set);
 }
 
 static void
-oput_graphviz(Cx::OFile& ofile, const BitTable set, uint domsz, bool pair)
+oput_graphviz(Cx::OFile& ofile, const BitTable set, uint domsz)
 {
 #define NiceLooking
   ofile << "digraph G {\n"
     << " margin=0;\n"
     << " edge [weight=5];\n\n";
 
-  if (pair) {
-
-    for (uint i = 0; i < domsz; ++i) {
-      ofile << "  config_" << i << " [label=\"" << i << "\"];\n";
-    }
-
-    Cx::Set< Cx::Tuple<uint, 2> > cache;
-    for (uint config_enum_idx = begidx_BitTable (set);
-         config_enum_idx < set.sz;
-         config_enum_idx = nextidx_BitTable (set, config_enum_idx))
-    {
-      uint config[3];
-      pc_config_of_enum_idx (config, config_enum_idx, domsz);
-
-      Cx::Tuple<uint,2> tup = mk_Tuple(config[0], config[1]);
-
-      if (cache.elem_ck(tup))  continue;
-      cache << tup;
-
-      ofile << "  "
-        << "config_" << config[0] << " -> "
-        << "config_" << config[1] << "\n";
-    }
-    ofile << "}\n";
-    return;
-  }
-
   for (zuint config_enum_idx = begidx_BitTable (set);
        config_enum_idx < set.sz;
        config_enum_idx = nextidx_BitTable (set, config_enum_idx))
   {
-    uint config[3];
-    pc_config_of_enum_idx (config, config_enum_idx, domsz);
+    UniAct config = pc_act_of_enum_idx(config_enum_idx, domsz);
 #ifdef NiceLooking
     ofile << "  config_" << config[0] << '_' << config[1]
       << " [label=\"" << config[1] << "\"];\n";
@@ -787,15 +569,13 @@ oput_graphviz(Cx::OFile& ofile, const BitTable set, uint domsz, bool pair)
        config_enum_idx < set.sz;
        config_enum_idx = nextidx_BitTable (set, config_enum_idx))
   {
-    uint config_src[3];
-    pc_config_of_enum_idx (config_src, config_enum_idx, domsz);
+    UniAct config_src = pc_act_of_enum_idx(config_enum_idx, domsz);
     biring_continuations(conts, config_enum_idx, set, domsz);
 
     Cx::Set< Cx::Tuple<uint, 2> > cache;
     for (uint i = 0; i < conts.sz(); ++i) {
 #ifdef NiceLooking
-      uint config_dst[3];
-      pc_config_of_enum_idx (config_dst, conts[i], domsz);
+      UniAct config_dst = pc_act_of_enum_idx(conts[i], domsz);
       Cx::Tuple<uint,2> dst_tup = mk_Tuple(config_dst[0], config_dst[1]);
       if (cache.elem_ck(dst_tup))  continue;
       cache << dst_tup;
@@ -840,146 +620,6 @@ xget_BitTable (XFile* xfile, BitTable set)
   return true;
 }
 
-
-/** Test whether there exists some a,b,c,d such that
- *   (a!=b && a!=c && a!=d) || (a==b && a==c && a==d)
- * and the following are all legitimate states for (x[i-1],x[i],x[i+1]):
- *   (a,b,a)
- *   (a,c,d)
- *   (b,a,b)
- *   (b,a,c)
- *   (c,d,a)
- *   (d,a,b)
- *   (d,a,c)
- **/
-static bool
-subck_match(const BitTable set, const uint domsz)
-{
-  for (uint a = 0; a < domsz; ++a) {
-    for (uint b = 0; b < domsz; ++b) {
-
-      if (!ck_pc_config (set, domsz, a, b, a))  continue;
-      if (!ck_pc_config (set, domsz, b, a, b))  continue;
-
-      if (a == b)  return true;
-
-      for (uint c = 0; c < domsz; ++c) {
-        if (c == a)  continue;
-        if (!ck_pc_config (set, domsz, b, a, c))  continue;
-        for (uint d = 0; d < domsz; ++d) {
-          if (d == a)  continue;
-          if (!ck_pc_config (set, domsz, a, c, d))  continue;
-          if (!ck_pc_config (set, domsz, c, d, a))  continue;
-          if (!ck_pc_config (set, domsz, d, a, b))  continue;
-          if (!ck_pc_config (set, domsz, d, a, c))  continue;
-          return true;
-        }
-      }
-    }
-  }
-  return false;
-}
-
-static bool
-subck_2match(const BitTable set, const uint domsz) {
-  uint pc_configs[][3] = {
-    { 0, 0, 1 },
-    { 1, 0, 1 },
-    { 0, 1, 0 },
-    { 1, 0, 0 }
-  };
-  BitTable matching_set = cons2_BitTable (domsz*domsz*domsz, 0);
-  for (uint i = 0; i < ArraySz(pc_configs); ++i) {
-    uint enum_idx =
-      enum_idx_of_pc_config (pc_configs[i], domsz);
-    set1_BitTable (matching_set, enum_idx);
-  }
-
-  bool ret = subgraph_isomorphism_ck (matching_set, set, domsz);
-  lose_BitTable (&matching_set);
-  return ret;
-}
-
-static bool
-subck_3match(const BitTable set, const uint domsz) {
-  uint pc_configs[][3] = {
-    { 0, 1, 0 },
-    { 0, 1, 2 },
-    { 1, 0, 1 },
-    { 1, 2, 0 },
-    { 2, 0, 1 }
-  };
-  BitTable matching_set = cons2_BitTable (domsz*domsz*domsz, 0);
-  for (uint i = 0; i < ArraySz(pc_configs); ++i) {
-    uint enum_idx =
-      enum_idx_of_pc_config (pc_configs[i], domsz);
-    set1_BitTable (matching_set, enum_idx);
-  }
-
-  bool ret = subgraph_isomorphism_ck (matching_set, set, domsz);
-  lose_BitTable (&matching_set);
-  return ret;
-}
-
-static bool
-subck_next7(const BitTable set, const uint domsz) {
-  uint pc_configs[][3] = {
-    { 0, 0, 1 },
-    { 0, 1, 0 },
-    { 0, 1, 2 },
-    { 1, 0, 0 },
-    { 1, 2, 1 },
-    { 2, 1, 0 },
-    { 2, 1, 2 }
-  };
-  // 010100000101000101000010000
-  BitTable matching_set = cons2_BitTable (domsz*domsz*domsz, 0);
-  for (uint i = 0; i < ArraySz(pc_configs); ++i) {
-    uint enum_idx =
-      enum_idx_of_pc_config (pc_configs[i], domsz);
-    set1_BitTable (matching_set, enum_idx);
-  }
-
-  bool ret = subgraph_isomorphism_ck (matching_set, set, domsz);
-  lose_BitTable (&matching_set);
-  return ret;
-}
-
-static bool
-subck_next10(const BitTable set, const uint domsz) {
-  Cx::Table<const char*> legit_strings;
-  legit_strings
-    << "010100110101000001000011100"
-    << "010101101100000100101000010"
-    << "010101111100000001100010000"
-    << "011100011101000000100001100"
-    << "011101000100000101001010010"
-    << "011101011100000001100010000"
-    << "010101101101000100100110000"
-    << "010101111101000100100010000"
-    << "011101011101000100100010000"
-    << "011100011101000100110010000"
-    << "010111110011100011100010000"
-    << "011111010010101101100010000"
-    << "010111101011100011101001010"
-    << "011110011010101101100001110"
-    ;
-  BitTable matching_set = cons2_BitTable (domsz*domsz*domsz, 0);
-  bool ret = false;
-  for (uint known_idx = 0; known_idx < legit_strings.sz(); ++known_idx) {
-    wipe_BitTable (matching_set, 0);
-    for (uint i = 0; i < matching_set.sz; ++i) {
-      if (legit_strings[known_idx][i] == '1') {
-        set1_BitTable (matching_set, i);
-      }
-    }
-    ret = subgraph_isomorphism_ck (matching_set, set, domsz);
-    if (ret)  break;
-  }
-  lose_BitTable (&matching_set);
-  return ret;
-}
-
 static void
 echo_subsets (const BitTable bt, const FilterOpt& opt, Cx::OFile& ofile)
 {
@@ -1018,15 +658,6 @@ filter_stdin (const FilterOpt& opt, Cx::OFile& ofile)
       if (opt.count_ones) {
         ofile << ' ' << count_BitTable (set);
       }
-      if (opt.subck_known) {
-        ofile << " 2match:" << (subck_2match (set, domsz) ? 'Y' : 'N');
-        ofile << " 3match:" << (subck_3match (set, domsz) ? 'Y' : 'N');
-        ofile << " next7:" << (subck_next7 (set, domsz) ? 'Y' : 'N');
-        ofile << " next10:" << (subck_next10 (set, domsz) ? 'Y' : 'N');
-      }
-      if (opt.subck_match) {
-        ofile << " match:" << (subck_match (set, domsz) ? 'Y' : 'N');
-      }
       if (opt.ppgck) {
         ofile << " ppg:" << (local_propagation_syn (set, domsz) ? 'Y' : 'N');
       }
@@ -1038,16 +669,16 @@ filter_stdin (const FilterOpt& opt, Cx::OFile& ofile)
     }
 
     if (opt.xlate_invariant) {
-      oput_biring_invariant (ofile, set, domsz, "", " || ", opt.pair);
+      oput_uniring_invariant (ofile, set, domsz, "", " || ");
       ofile << '\n';
     }
     if (opt.spec_ofilename) {
-      oput_biring_protocon_spec ("", opt.spec_ofilename, set, opt);
+      oput_uniring_protocon_file("", opt.spec_ofilename, set, opt);
     }
     if (opt.graphviz_ofilename) {
       Cx::OFileB graphviz_ofileb;
       Cx::OFile graphviz_ofile( graphviz_ofileb.uopen(0, opt.graphviz_ofilename) );
-      oput_graphviz (graphviz_ofile, set, domsz, opt.pair);
+      oput_graphviz(graphviz_ofile, set, domsz);
     }
   }
 
@@ -1060,6 +691,8 @@ int main(int argc, char** argv)
   bool filter = false;
   FilterOpt opt;
 
+  (void) subgraph_isomorphism_ck;
+
   while (argi < argc) {
     const char* arg = argv[argi++];
     if (eq_cstr ("-domsz", arg)) {
@@ -1069,9 +702,6 @@ int main(int argc, char** argv)
     else if (eq_cstr ("-minsz", arg)) {
       if (!xget_uint_cstr (&opt.minsz, argv[argi++]))
         failout_sysCx("Argument Usage: -minsz n\nWhere n is an unsigned integer!");
-    }
-    else if (eq_cstr ("-pair", arg)) {
-      opt.pair = true;
     }
     else if (eq_cstr ("-all", arg)) {
       opt.trivial = true;
@@ -1087,14 +717,6 @@ int main(int argc, char** argv)
     else if (eq_cstr ("-count-ones", arg)) {
       filter = true;
       opt.count_ones = true;
-    }
-    else if (eq_cstr ("-subck-known", arg)) {
-      filter = true;
-      opt.subck_known = true;
-    }
-    else if (eq_cstr ("-subck-match", arg)) {
-      filter = true;
-      opt.subck_match = true;
     }
     else if (eq_cstr ("-ppgck", arg)) {
       filter = true;
@@ -1116,9 +738,6 @@ int main(int argc, char** argv)
       opt.spec_ofilename = argv[argi++];
       if (!opt.spec_ofilename)
         failout_sysCx("Argument Usage: -o-spec file");
-    }
-    else if (eq_cstr ("-grow-domsz", arg)) {
-      opt.grow_domsz = true;
     }
     else  {
       DBog1( "Unrecognized option: %s", arg );
