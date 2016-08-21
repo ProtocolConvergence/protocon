@@ -284,6 +284,9 @@ livelock_ck(const Table< Tuple<uint,2> >& acts, const Table<uint>& ppgfun,
 cycle_ck_from(uint initial_node, const AdjList<uint>& digraph, Table< Tuple<uint,2> >& stack,
               BitTable& visited)
 {
+  if (digraph.degree(initial_node) == 0) {
+    return false;
+  }
   stack.flush();
   visited.wipe(0);
 
@@ -368,6 +371,46 @@ periodic_leads_semick(const BitTable& delegates,
     }
   }
 
+  const BitTable& candidates = candidates_stack[depth];
+  mask = delegates;
+  mask |= candidates;
+
+  AdjList<uint> overapprox_digraph( digraph.nnodes() );
+  DoTwice(overapprox_digraph.commit_degrees()) {
+    for each_in_BitTable(actid , mask) {
+      const UniAct mid_act = act_of_id(actid, domsz);
+      const PcState a = mid_act[0], b = mid_act[1], c = mid_act[2];
+
+      for (PcState d = 0; d < domsz; ++d) {
+        const UniAct bot_mask_act(domsz, b, d);
+        skip_unless (action_mask_overlap_ck(bot_mask_act, mask, domsz));
+        const Triple<PcState> node(a, b, d);
+        const uint node_id = id_of(node, domsz);
+
+        for (PcState e = 0; e < domsz; ++e) {
+          // Ensure next top tile exists.
+          const UniAct next_top_mask_act = UniAct(b, domsz, e);
+          skip_unless (action_mask_overlap_ck(next_top_mask_act, mask, domsz));
+
+          for (PcState f = 0; f < domsz; ++f) {
+            // Ensure next middle tile exists.
+            skip_unless (mask.ck(id_of3(c, e, f, domsz)));
+
+            for (PcState g = 0; g < domsz; ++g) {
+              // Ensure next bottom tile exists.
+              skip_unless (mask.ck(id_of3(d, f, g, domsz)));
+
+              // Add arc from this node to the next.
+              const Triple<PcState> next(c, e, g);
+              const uint next_id = id_of(next, domsz);
+              overapprox_digraph.add_arc(node_id, next_id);
+            }
+          }
+        }
+      }
+    }
+  }
+
   BitTable pending = delegates;
   Table< Tuple<uint,2> > stack;
 
@@ -378,7 +421,6 @@ periodic_leads_semick(const BitTable& delegates,
     // Find all starting nodes.
     for (PcState d = 0; d < domsz; ++d) {
       const uint node_id = id_of3(act[0], act[1], d, domsz);
-      skip_unless (digraph.degree(node_id) > 0);
       skip_unless (cycle_ck_from(node_id, digraph, stack, mask));
       found = true;
       break;
@@ -386,6 +428,15 @@ periodic_leads_semick(const BitTable& delegates,
 
     if (!found) {
       all = false;
+      for (PcState d = 0; d < domsz; ++d) {
+        const uint node_id = id_of3(act[0], act[1], d, domsz);
+        skip_unless (cycle_ck_from(node_id, overapprox_digraph, stack, mask));
+        found = true;
+        break;
+      }
+      if (!found) {
+        return Nil;
+      }
       continue;
     }
 
