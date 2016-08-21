@@ -20,8 +20,6 @@ using std::queue;
 using std::array;
 using std::vector;
 
-typedef uint PcState;
-
 #ifdef DEBUG
 void printSquareMatrix(int** matrix, int length){
   for(int i = 0; i < length; i++){

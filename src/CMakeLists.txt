@@ -82,6 +82,7 @@ list (APPEND HHFiles
   prot-xfile.hh prot-ofile.hh
   namespace.hh
   uni/uniact.hh
+  uni/adjlist.hh
   )
 
 include (${CxTopPath}/src/include.cmake)
