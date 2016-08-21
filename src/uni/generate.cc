@@ -17,6 +17,8 @@ extern "C" {
 #define each_in_BitTable(i , bt) \
   (zuint i = bt.begidx(); i < bt.sz(); bt.nextidx(&i))
 
+#define UseNaturalOrder
+
 namespace C {
   using Cx::C::OFile;
   using Cx::C::XFile;
@@ -73,14 +75,36 @@ minimal_unique_ck (const uint* a, uint n)
   return true;
 }
 
+static inline
+  uint
+addmod (uint a, uint b, uint n)
+{
+  return (a + b) % n;
+}
+
+static inline
+  uint
+submod (uint a, uint b, uint n)
+{
+  return (a + n - b) % n;
+}
 
 static inline
   UniAct
 act_of_id(uint actid, const uint domsz)
 {
+#ifdef UseNaturalOrder
   const div_t lo = div(actid, domsz);
   const div_t hi = div(lo.quot, domsz);
   return UniAct(hi.quot, hi.rem, lo.rem);
+#else
+  const div_t lo = div(actid, domsz);
+  const div_t hi = div(lo.quot, domsz);
+  const uint c = lo.rem;
+  const uint b = submod(hi.rem, c, domsz);
+  const uint a = submod(hi.quot, b, domsz);
+  return UniAct(a, b, c);
+#endif
 }
 
 static inline
@@ -99,7 +123,11 @@ id_of3(uint a, uint b, uint c, uint domsz)
   Claim( a < domsz );
   Claim( b < domsz );
   Claim( c < domsz );
+#ifdef UseNaturalOrder
   return (a * domsz + b) * domsz + c;
+#else
+  return (addmod(a, b, domsz) * domsz + addmod(b, c, domsz)) * domsz + c;
+#endif
 }
 
 static inline uint id_of(const Tuple<uint,2>& u, const uint domsz)
@@ -142,13 +170,12 @@ del_node(AdjList<uint>& digraph, AdjList<uint>& rdigraph, uint node_id)
 
 static
   void
-action_mask(BitTable& mask, const UniAct& mask_act, uint domsz)
+subtract_action_mask(BitTable& mask, const UniAct& mask_act, uint domsz)
 {
-  mask.wipe(0);
   UniAct beg( 0, 0, 0 );
   UniAct inc( 1, 1, 1 );
 
-  for (uint i = 0; i < domsz; ++i) {
+  for (uint i = 0; i < 3; ++i) {
     skip_unless (mask_act[i] != domsz);
     beg[i] = mask_act[i];
     inc[i] = domsz;
@@ -157,8 +184,7 @@ action_mask(BitTable& mask, const UniAct& mask_act, uint domsz)
   for (uint a = beg[0]; a < domsz; a += inc[0]) {
     for (uint b = beg[1]; b < domsz; b += inc[1]) {
       for (uint c = beg[2]; c < domsz; c += inc[2]) {
-        UniAct act( a, b, c );
-        mask.set1(id_of(act, domsz));
+        mask.set0(id_of3(a, b, c, domsz));
       }
     }
   }
@@ -171,7 +197,7 @@ action_mask_overlap_ck(const UniAct& mask_act, const BitTable& actset, uint doms
   UniAct beg( 0, 0, 0 );
   UniAct inc( 1, 1, 1 );
 
-  for (uint i = 0; i < domsz; ++i) {
+  for (uint i = 0; i < 3; ++i) {
     skip_unless (mask_act[i] != domsz);
     beg[i] = mask_act[i];
     inc[i] = domsz;
@@ -507,34 +533,32 @@ canonical_ck(const BitTable& set, const uint domsz, BitTable& bt)
 }
 
   void
-trim_coexist (BitTable& actset, uint actid, uint domsz, BitTable& mask)
+trim_coexist (BitTable& actset, uint actid, uint domsz)
 {
-  UniAct act = act_of_id(actid, domsz);
+  UniAct act( act_of_id(actid, domsz) );
+
   // Trivial livelock.
   if (act[0]==act[1]) {
-    action_mask(mask, UniAct(act[2], act[2], act[0]), domsz);
-    actset -= mask;
+    subtract_action_mask(actset, UniAct(act[2], act[2], act[0]), domsz);
   }
 
   // Trivial livelock.
   if (act[0]==act[2]) {
-    action_mask(mask, UniAct(act[1], act[0], act[1]), domsz);
-    actset -= mask;
+    subtract_action_mask(actset, UniAct(act[1], act[0], act[1]), domsz);
   }
 
   // Enforce determinism.
-  action_mask(mask, UniAct(act[0], act[1], domsz), domsz);
-  mask.set0(actid);
-  actset -= mask;
+  subtract_action_mask(actset, UniAct(act[0], act[1], domsz), domsz);
+  //mask.set0(actid);
 
   // Enforce W-disabling.
-  action_mask(mask, UniAct(act[0], act[2], domsz), domsz);
-  actset -= mask;
+  subtract_action_mask(actset, UniAct(act[0], act[2], domsz), domsz);
+  subtract_action_mask(actset, UniAct(act[0], domsz, act[1]), domsz);
 
 #if 0
   // Enforce N-disabling?
-  action_mask(mask, UniAct(act[2], act[1], domsz), domsz);
-  actset -= mask;
+  subtract_action_mask(actset, UniAct(act[2], act[1], domsz), domsz);
+  subtract_action_mask(actset, UniAct(domsz, act[1], act[0]), domsz);
 #endif
 }
 
@@ -558,8 +582,7 @@ recurse(Table<BitTable>& delegates_stack,
   Claim( candidates.ck(actid) );
   delegates.set1(actid);
   candidates.set0(actid);
-
-  trim_coexist(candidates, actid, domsz, mask);
+  trim_coexist(candidates, actid, domsz);
 
   bool print_delegates = true;
   switch (periodic_leads_semick(delegates, domsz, mask, candidates_stack, depth)) {
@@ -617,6 +640,7 @@ searchit(const FilterOpt& opt, OFile& ofile)
 #define RECURSE \
   recurse(delegates_stack, candidates_stack, actid, opt, ofile, 1, max_depth, mask)
 
+#ifdef UseNaturalOrder
   actid = id_of3(0, 0, 1, domsz);
   RECURSE;
 
@@ -639,6 +663,12 @@ searchit(const FilterOpt& opt, OFile& ofile)
 
   actid = id_of3(0, 1, 2, domsz);
   RECURSE;
+#else
+  for (actid = 0; actid < candidates.sz(); ++actid) {
+    skip_unless( candidates.ck(actid) );
+    RECURSE;
+  }
+#endif
 
 #undef RECURSE
 }
@@ -681,13 +711,22 @@ oput_uniring_protocon_file(const String& ofilepath, const String& ofilename,
     << "\nvariable x[N] < M;"
     << "\nprocess P[i < N]"
     << "\n{"
-    << "\n  write: x[i];"
     << "\n  read: x[i-1];"
+    << "\n  write: x[i];"
     << "\n  (future & silent)"
     << "\n    (1==1"
     ;
   oput_uniring_invariant(ofile, actset, domsz, "\n     && ", 0);
   ofile << "\n    );";
+  ofile << "\n  puppet:";
+  for each_in_BitTable(actid , actset) {
+    UniAct act = act_of_id(actid, opt.domsz);
+    ofile << "\n    "
+      << "( x[i-1]==" << act[0]
+      << " && x[i]==" << act[1]
+      << " --> x[i]:=" << act[2] << "; )";
+  }
+  ofile << "\n    ;";
   ofile << "\n}\n";
 }
 
