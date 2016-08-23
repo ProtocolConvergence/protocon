@@ -142,7 +142,7 @@ permute_pc_act (BitTable& bt, const BitTable& set, const Table<uint>& perm_map)
   const uint domsz = perm_map.sz();
   bt.wipe(0);
   for each_in_BitTable(actid , set) {
-    UniAct act = act_of_id(actid, domsz);;
+    UniAct act = act_of_id(actid, domsz);
     for (uint j = 0; j < 3; ++j) {
       act[j] = perm_map[act[j]];
     }
@@ -343,7 +343,8 @@ cycle_ck_from(uint initial_node, const AdjList<uint>& digraph, Table< Tuple<uint
 periodic_leads_semick(const BitTable& delegates,
                       uint domsz, BitTable& mask,
                       Table<BitTable>& candidates_stack,
-                      const uint depth)
+                      const uint depth,
+                      const bool check_overapprox=true)
 {
   Table<PcState> ppgfun;
   ppgfun.affysz(domsz*domsz, domsz);
@@ -373,7 +374,7 @@ periodic_leads_semick(const BitTable& delegates,
       const PcState a = mid_act[0], b = mid_act[1], c = mid_act[2];
 
       for (PcState d = 0; d < domsz; ++d) {
-        const UniAct bot_mask_act(domsz, b, d);
+        const UniAct bot_mask_act(domsz, c, d);
         skip_unless (action_mask_overlap_ck(bot_mask_act, delegates, domsz));
         const Triple<PcState> node(a, b, d);
         const uint node_id = id_of(node, domsz);
@@ -403,12 +404,13 @@ periodic_leads_semick(const BitTable& delegates,
 
   AdjList<uint> overapprox_digraph( digraph.nnodes() );
   DoTwice(overapprox_digraph.commit_degrees()) {
+    skip_unless (check_overapprox);
     for each_in_BitTable(actid , mask) {
       const UniAct mid_act = act_of_id(actid, domsz);
       const PcState a = mid_act[0], b = mid_act[1], c = mid_act[2];
 
       for (PcState d = 0; d < domsz; ++d) {
-        const UniAct bot_mask_act(domsz, b, d);
+        const UniAct bot_mask_act(domsz, c, d);
         skip_unless (action_mask_overlap_ck(bot_mask_act, mask, domsz));
         const Triple<PcState> node(a, b, d);
         const uint node_id = id_of(node, domsz);
@@ -454,14 +456,16 @@ periodic_leads_semick(const BitTable& delegates,
 
     if (!found) {
       all = false;
-      for (PcState d = 0; d < domsz; ++d) {
-        const uint node_id = id_of3(act[0], act[1], d, domsz);
-        skip_unless (cycle_ck_from(node_id, overapprox_digraph, stack, mask));
-        found = true;
-        break;
-      }
-      if (!found) {
-        return Nil;
+      if (check_overapprox) {
+        for (PcState d = 0; d < domsz; ++d) {
+          const uint node_id = id_of3(act[0], act[1], d, domsz);
+          skip_unless (cycle_ck_from(node_id, overapprox_digraph, stack, mask));
+          found = true;
+          break;
+        }
+        if (!found) {
+          return Nil;
+        }
       }
       continue;
     }
@@ -720,7 +724,7 @@ oput_uniring_protocon_file(const String& ofilepath, const String& ofilename,
   ofile << "\n    );";
   ofile << "\n  puppet:";
   for each_in_BitTable(actid , actset) {
-    UniAct act = act_of_id(actid, opt.domsz);
+    UniAct act = act_of_id(actid, domsz);
     ofile << "\n    "
       << "( x[i-1]==" << act[0]
       << " && x[i]==" << act[1]
@@ -810,6 +814,8 @@ filter_stdin (const FilterOpt& opt, OFile& ofile)
   }
 }
 
+static bool TestKnownAperiodic();
+
 int main(int argc, char** argv)
 {
   int argi = init_sysCx (&argc, &argv);
@@ -829,6 +835,17 @@ int main(int argc, char** argv)
     else if (eq_cstr ("-minsz", arg)) {
       if (!xget_uint_cstr (&opt.minsz, argv[argi++]))
         failout_sysCx("Argument Usage: -minsz n\nWhere n is an unsigned integer!");
+    }
+    else if (eq_cstr ("-test", arg)) {
+      bool passed = TestKnownAperiodic();
+      if (passed) {
+        DBog0("PASS");
+      }
+      else {
+        DBog0("FAIL");
+      }
+      lose_sysCx();
+      return (passed ? 0 : 1);
     }
     else if (eq_cstr ("-xlate-invariant", arg)) {
       filter = true;
@@ -870,6 +887,62 @@ int main(int argc, char** argv)
   lose_sysCx ();
   return 0;
 }
+
+  bool
+TestKnownAperiodic()
+{
+  const uint domsz = 29;
+  static const uint AperiodicTileset[][3] = {
+    {  0, 13,  8 }, {  0, 14, 10 }, {  0, 15, 12 }, {  0, 16, 12 },
+    {  0, 17,  9 }, {  0, 18,  8 }, {  0, 19, 10 }, {  0, 20, 10 },
+    {  0, 21, 10 }, {  0, 22,  7 }, {  0, 23, 11 }, {  0, 24, 11 },
+    {  0, 25,  7 }, {  0, 26,  7 }, {  0, 27,  9 }, {  0, 28,  9 },
+    {  1,  7, 13 }, {  1, 11, 14 },
+    {  2,  9, 15 }, {  2, 10, 16 }, {  2, 11, 17 },
+    {  3,  8, 18 }, {  3,  9, 19 }, {  3, 10, 20 }, {  3, 12, 21 },
+    {  4,  8, 22 }, {  4,  9, 23 }, {  4, 10, 24 },
+    {  5,  7, 25 }, {  5,  8, 26 },
+    {  6,  9, 27 }, {  6, 12, 28 },
+    {  7,  3,  0 }, {  7,  4,  0 }, {  7,  6,  0 },
+    {  8,  2,  0 }, {  8,  6,  0 },
+    {  9,  1,  0 }, {  9,  3,  0 }, {  9,  4,  0 },
+    { 10,  1,  0 }, { 10,  3,  0 }, { 10,  4,  0 }, { 10,  5,  0 },
+    { 11,  4,  0 }, { 11,  5,  0 },
+    { 12,  1,  0 }, { 12,  2,  0 },
+    { 13,  0,  2 },
+    { 14,  0,  1 },
+    { 15,  0,  2 },
+    { 16,  0,  1 },
+    { 17,  0,  1 },
+    { 18,  0,  6 },
+    { 19,  0,  4 },
+    { 20,  0,  5 },
+    { 21,  0,  3 },
+    { 22,  0,  6 },
+    { 23,  0,  4 },
+    { 24,  0,  5 },
+    { 25,  0,  4 },
+    { 26,  0,  3 },
+    { 27,  0,  4 },
+    { 28,  0,  3 }
+  };
+  const uint depth = ArraySz(AperiodicTileset);
+  BitTable mask( domsz*domsz*domsz, 0 );
+  BitTable delegates( mask );
+  Table<BitTable> candidates_stack(depth+1, mask);
+
+  for (uint i = 0; i < ArraySz(AperiodicTileset); ++i) {
+    const uint* tile = AperiodicTileset[i];
+    delegates.set1(id_of3(tile[0], tile[1], tile[2], domsz));
+  }
+  switch (periodic_leads_semick(delegates, domsz, mask, candidates_stack, depth, false)) {
+    case Nil: DBog0("Nil"); break;
+    case May: DBog0("May"); break;
+    case Yes: return true;
+  }
+  return false;
+}
+
 
 END_NAMESPACE
 

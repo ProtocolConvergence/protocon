@@ -23,7 +23,10 @@ else
   exit 1
 fi
 
+shift 3
+
 domsz=$(calc_domsz "$key")
+echo "domsz=$domsz"
 
 if [ -z "$maxsz" ]
 then
@@ -32,7 +35,7 @@ fi
 
 protfile="/tmp/${key}.prot"
 echo "$key" | "$gen_exe" -domsz $domsz -o-prot "$protfile"
-"${proj_path}/s/verifn.sh" "$minsz" "$maxsz" "$protfile"
+"${proj_path}/s/verifn.sh" "$minsz" "$maxsz" "$protfile" "$@"
 
 ret=$?
 rm "$protfile"
