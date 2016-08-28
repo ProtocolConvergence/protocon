@@ -32,23 +32,38 @@ struct FilterOpt
 {
   uint domsz;
   uint max_depth;
-  uint minsz;
-  bool echo_bits;
+  uint max_period;
+  uint max_propagations;
+  bool check_ppg_overapprox;
+  bool self_disabling_tiles;
   bool count_ones;
-  bool xlate_invariant;
+  bool verify;
   const char* prot_ofilename;
   const char* graphviz_ofilename;
+  const char* record_sep;
 
   FilterOpt()
     : domsz( 3 )
     , max_depth( 0 )
-    , minsz( 3 )
-    , echo_bits( false )
+    , max_period( 0 )
+    , max_propagations( 0 )
+    , check_ppg_overapprox( true )
+    , self_disabling_tiles( false )
     , count_ones( false )
-    , xlate_invariant( false )
+    , verify( false )
     , prot_ofilename( 0 )
     , graphviz_ofilename( 0 )
+    , record_sep( 0 )
   {}
+
+  void commit_domsz() {
+    if (max_depth == 0)
+      max_depth = domsz*domsz;
+    if (max_period == 0)
+      max_period = 2*domsz+2;
+    if (max_propagations == 0)
+      max_propagations = domsz*domsz;
+  }
 };
 
 
@@ -215,14 +230,133 @@ action_mask_overlap_ck(const UniAct& mask_act, const BitTable& actset, uint doms
   return false;
 }
 
+static
+  void
+init_ppgfun(Table<PcState>& ppgfun, const BitTable& delegates, const uint domsz)
+{
+  ppgfun.affysz(domsz*domsz, domsz);
+  for each_in_BitTable(actid , delegates) {
+    UniAct act = act_of_id(actid, domsz);
+    ppgfun[id_of2(act[0], act[1], domsz)] = act[2];
+  }
+}
+
+bool fill_livelock_ck(const Table<PcState>& top,
+                      const Table<PcState>& col,
+                      const uint top_rowidx,
+                      const Table<PcState>& ppgfun,
+                      const uint domsz,
+                      BitTable* livelockset,
+                      Table<PcState>& row)
+{
+  const uint n = top.sz() - 1;
+  Claim( top[0] == top[n] );
+  Claim( top[0] == col[col.sz()-1] );
+  Claim( top[0] == col[top_rowidx] );
+  if (livelockset)
+    livelockset->wipe(0);
+  row.ensize(n+1);
+  for (uint j = 0; j < n+1; ++j) {
+    row[j] = top[j];
+  }
+  for (uint i = top_rowidx+1; i < col.sz(); ++i) {
+    row[0] = col[i];
+    for (uint j = 1; j < n+1; ++j) {
+      const PcState a = row[j-1];
+      const PcState b = row[j];
+      const PcState c = ppgfun[id_of2(a, b, domsz)];
+      if (c == domsz)  return false;
+      row[j] = c;
+      skip_unless (livelockset);
+      livelockset->set1(id_of3(a, b, c, domsz));
+    }
+    if (row[0] != row[n])  return false;
+  }
+  for (uint j = 0; j < n+1; ++j) {
+    if (row[j] != top[j])  return false;
+  }
+  return true;
+}
+
   Trit
-livelock_semick_rec(const Table<uint>& top_row,
-                    uint mid_west,
-                    const Table< Tuple<uint,2> >& match_row,
+livelock_semick_rec(const Table<PcState>& old_bot,
+                    const Table<PcState>& old_col,
                     uint limit,
-                    const Table<uint>& ppgfun,
-                    uint domsz,
-                    BitTable& livelockset)
+                    const Table<PcState>& ppgfun,
+                    const uint domsz,
+                    BitTable* livelockset,
+                    Table<PcState>& tmp_row)
+{
+  const uint n = old_bot.sz();
+  Table<PcState> bot, col;
+  bot.affysz(n+1);  col.affysz(n+1);
+  for (uint i = 0; i < n; ++i) {
+    bot[i] = old_bot[i];
+  }
+  bool may_exist = false;
+  // Build the diagonal up and to the right.
+  for (PcState diag_val = 0; diag_val < domsz; ++diag_val) {
+    col[0] = diag_val;
+    bool col_exists = true;
+    for (uint i = 1; i < n+1; ++i) {
+      col[i] = ppgfun[id_of2(old_col[i-1], col[i-1], domsz)];
+      if (col[i] == domsz) {
+        col_exists = false;
+        break;
+      }
+    }
+    skip_unless (col_exists);
+    bot[n] = col[n];
+    if (bot[0]==bot[n]) {
+      for (uint i = 0; i < n; ++i) {
+        skip_unless (col[i] == col[n]);
+        if (fill_livelock_ck(bot, col, i, ppgfun,
+                             domsz, livelockset, tmp_row)) {
+          return Yes;
+        }
+      }
+    }
+    if (n == limit) {
+      may_exist = true;
+      continue;
+    }
+    Trit found =
+      livelock_semick_rec(bot, col, limit, ppgfun,
+                          domsz, livelockset, tmp_row);
+    if (found == Yes)  return Yes;
+    may_exist = (may_exist || (found == May));
+  }
+  return (may_exist ? May : Nil);
+}
+
+  Trit
+livelock_semick(const uint limit,
+                const Table<PcState>& ppgfun,
+                const uint domsz,
+                BitTable* livelockset = 0)
+{
+  Table<PcState> bot, col, tmp_row;
+  bot.affysz(1);  col.affysz(1);
+  bool may_exist = false;
+  for (uint c = 0; c < domsz; ++c) {
+    bot[0] = col[0] = c;
+    Trit found = livelock_semick_rec(bot, col, limit, ppgfun,
+                                     domsz, livelockset, tmp_row);
+    if (found == Yes)
+      return Yes;
+    may_exist = (may_exist || (found == May));
+  }
+  return (may_exist ? May : Nil);
+}
+
+  Trit
+guided_livelock_semick_rec(const Table<uint>& top_row,
+                           uint mid_west,
+                           const Table< Tuple<uint,2> >& match_row,
+                           uint limit,
+                           const Table<PcState>& ppgfun,
+                           uint domsz,
+                           BitTable& livelockset)
 {
   Table<uint> mid_row;
   {
@@ -261,7 +395,7 @@ livelock_semick_rec(const Table<uint>& top_row,
   bool impossible = true;
   for (uint bot_west = 0; bot_west < domsz; ++bot_west) {
     const Trit livelock_exists =
-      livelock_semick_rec(mid_row, bot_west,
+      guided_livelock_semick_rec(mid_row, bot_west,
                           match_row, limit-1,
                           ppgfun, domsz, livelockset);
     if (livelock_exists == Yes) {
@@ -280,11 +414,13 @@ livelock_semick_rec(const Table<uint>& top_row,
 }
 
   bool
-livelock_ck(const Table< Tuple<uint,2> >& acts, const Table<uint>& ppgfun,
-            const uint domsz, BitTable& livelockset)
+guided_livelock_ck(const Table< Tuple<uint,2> >& acts,
+                   const Table<PcState>& ppgfun,
+                   const uint domsz,
+                   BitTable& livelockset,
+                   const uint limit)
 {
   livelockset.wipe(0);
-  const uint limit = domsz * domsz;
   Table<uint> top_row;
   top_row.affysz(acts.sz());
   for (uint i = 0; i < acts.sz(); ++i) {
@@ -297,7 +433,7 @@ livelock_ck(const Table< Tuple<uint,2> >& acts, const Table<uint>& ppgfun,
 
   for (uint mid_west = 0; mid_west < domsz; ++mid_west) {
     const Trit livelock_exists =
-      livelock_semick_rec(top_row, mid_west,
+      guided_livelock_semick_rec(top_row, mid_west,
                           acts, limit-1,
                           ppgfun, domsz, livelockset);
     if (livelock_exists == Yes)
@@ -341,17 +477,43 @@ cycle_ck_from(uint initial_node, const AdjList<uint>& digraph, Table< Tuple<uint
 
   Trit
 periodic_leads_semick(const BitTable& delegates,
-                      uint domsz, BitTable& mask,
+                      BitTable& mask,
                       Table<BitTable>& candidates_stack,
                       const uint depth,
-                      const bool check_overapprox=true)
+                      const FilterOpt& opt)
 {
+  const uint domsz = opt.domsz;
   Table<PcState> ppgfun;
-  ppgfun.affysz(domsz*domsz, domsz);
+  init_ppgfun(ppgfun, delegates, domsz);
+  const bool detect_livelocks_well = true;
 
-  for each_in_BitTable(actid , delegates) {
-    UniAct act = act_of_id(actid, domsz);
-    ppgfun[id_of2(act[0], act[1], domsz)] = act[2];
+  bool maybe_livelock = true;
+  if (detect_livelocks_well) {
+    Trit livelock_found =
+      livelock_semick(opt.max_period, ppgfun, domsz, &mask);
+    if (livelock_found == Nil) {
+      maybe_livelock = false;
+    }
+    else if (livelock_found == Yes) {
+      uint max_livelock_actids[2] = { 0, 0 };
+      for each_in_BitTable( livelock_actid , mask ) {
+        max_livelock_actids[0] = max_livelock_actids[1];
+        max_livelock_actids[1] = livelock_actid;
+      }
+      // We should never have a self-loop livelock.
+      Claim( max_livelock_actids[0] > 0 );
+      for (uint i = 0; i < depth; ++i) {
+        if (!candidates_stack[i].ck(max_livelock_actids[1])) {
+          candidates_stack[i].wipe(0);
+        }
+        else if (!candidates_stack[i].ck(max_livelock_actids[0])) {
+          // If the penultimate livelock action is picked,
+          // forbid the maximal livelock action.
+          candidates_stack[i].set0(max_livelock_actids[1]);
+        }
+      }
+      return Nil;
+    }
   }
 
   AdjList<uint> digraph( domsz*domsz*domsz );
@@ -404,7 +566,7 @@ periodic_leads_semick(const BitTable& delegates,
 
   AdjList<uint> overapprox_digraph( digraph.nnodes() );
   DoTwice(overapprox_digraph.commit_degrees()) {
-    skip_unless (check_overapprox);
+    skip_unless (opt.check_ppg_overapprox);
     for each_in_BitTable(actid , mask) {
       const UniAct mid_act = act_of_id(actid, domsz);
       const PcState a = mid_act[0], b = mid_act[1], c = mid_act[2];
@@ -442,7 +604,6 @@ periodic_leads_semick(const BitTable& delegates,
   BitTable pending = delegates;
   Table< Tuple<uint,2> > stack;
 
-  bool all = true;
   for each_in_BitTable(actid , pending) {
     const UniAct act = act_of_id(actid, domsz);
     bool found = false;
@@ -455,8 +616,8 @@ periodic_leads_semick(const BitTable& delegates,
     }
 
     if (!found) {
-      all = false;
-      if (check_overapprox) {
+      maybe_livelock = false;
+      if (opt.check_ppg_overapprox) {
         for (PcState d = 0; d < domsz; ++d) {
           const uint node_id = id_of3(act[0], act[1], d, domsz);
           skip_unless (cycle_ck_from(node_id, overapprox_digraph, stack, mask));
@@ -482,7 +643,9 @@ periodic_leads_semick(const BitTable& delegates,
       stack[i][0] = a;
       stack[i][1] = b;
     }
-    if (livelock_ck(stack, ppgfun, domsz, mask)) {
+    if (stack.sz() <= opt.max_period &&
+        guided_livelock_ck(stack, ppgfun, domsz, mask,
+                           opt.max_propagations)) {
       uint max_livelock_actids[2] = { 0, 0 };
       for each_in_BitTable( livelock_actid , mask ) {
         max_livelock_actids[0] = max_livelock_actids[1];
@@ -504,7 +667,7 @@ periodic_leads_semick(const BitTable& delegates,
     }
   }
 
-  return (all ? Yes : May);
+  return (maybe_livelock ? Yes : May);
 }
 
   bool
@@ -537,7 +700,8 @@ canonical_ck(const BitTable& set, const uint domsz, BitTable& bt)
 }
 
   void
-trim_coexist (BitTable& actset, uint actid, uint domsz)
+trim_coexist (BitTable& actset, uint actid, uint domsz,
+              bool self_disabling_tiles)
 {
   UniAct act( act_of_id(actid, domsz) );
 
@@ -559,11 +723,10 @@ trim_coexist (BitTable& actset, uint actid, uint domsz)
   subtract_action_mask(actset, UniAct(act[0], act[2], domsz), domsz);
   subtract_action_mask(actset, UniAct(act[0], domsz, act[1]), domsz);
 
-#if 0
-  // Enforce N-disabling?
+  if (!self_disabling_tiles)  return;
+  // Enforce N-disabling.
   subtract_action_mask(actset, UniAct(act[2], act[1], domsz), domsz);
   subtract_action_mask(actset, UniAct(domsz, act[1], act[0]), domsz);
-#endif
 }
 
   void
@@ -572,7 +735,6 @@ recurse(Table<BitTable>& delegates_stack,
         uint actid,
         const FilterOpt& opt, OFile& ofile,
         uint depth,
-        uint max_depth,
         BitTable& mask)
 {
   const uint domsz = opt.domsz;
@@ -586,10 +748,11 @@ recurse(Table<BitTable>& delegates_stack,
   Claim( candidates.ck(actid) );
   delegates.set1(actid);
   candidates.set0(actid);
-  trim_coexist(candidates, actid, domsz);
+  trim_coexist(candidates, actid, domsz, opt.self_disabling_tiles);
 
   bool print_delegates = true;
-  switch (periodic_leads_semick(delegates, domsz, mask, candidates_stack, depth)) {
+  switch (periodic_leads_semick(delegates, mask,
+                                candidates_stack, depth, opt)) {
     case Nil: return;
     case May: print_delegates = false;
     case Yes: break;
@@ -601,13 +764,13 @@ recurse(Table<BitTable>& delegates_stack,
     ofile << delegates << '\n';
     ofile.flush();
   }
-  if (depth == max_depth)
+  if (depth == opt.max_depth)
     return;
 
   for (uint next_actid = actid+1; next_actid < candidates.sz(); ++next_actid) {
     skip_unless (candidates.ck(next_actid));
     recurse(delegates_stack, candidates_stack,
-            next_actid, opt, ofile, depth+1, max_depth, mask);
+            next_actid, opt, ofile, depth+1, mask);
 
     // This must be after recurse() so that the livelock
     // detection doesn't remove valid candidates.
@@ -619,8 +782,7 @@ recurse(Table<BitTable>& delegates_stack,
 searchit(const FilterOpt& opt, OFile& ofile)
 {
   const uint domsz = opt.domsz;
-  const uint max_depth =
-    (opt.max_depth > 0 ? opt.max_depth : domsz*domsz);
+  const uint max_depth = opt.max_depth;
 
   Table<BitTable> delegates_stack;
   Table<BitTable> candidates_stack;
@@ -642,7 +804,7 @@ searchit(const FilterOpt& opt, OFile& ofile)
   }
 
 #define RECURSE \
-  recurse(delegates_stack, candidates_stack, actid, opt, ofile, 1, max_depth, mask)
+  recurse(delegates_stack, candidates_stack, actid, opt, ofile, 1, mask)
 
 #ifdef UseNaturalOrder
   actid = id_of3(0, 0, 1, domsz);
@@ -765,19 +927,25 @@ xget_BitTable (C::XFile* xfile, BitTable& set)
     return false;
   skipds_XFile (olay, 0);
   set.wipe(0);
+  char c;
   for (uint i = 0; i < set.sz(); ++i) {
-    char c;
-    if (!xget_char_XFile (olay, &c)) {
-      if (i == 0) {
-        return false;
+    if (xget_char_XFile (olay, &c)) {
+      if (c != '0' && c != '1') {
+        failout_sysCx ("unknown char!");
       }
-      else {
-        failout_sysCx ("not enough characters!");
-      }
+      if (c == '1')
+        set.set1(i);
     }
-    if (c == '1') {
-      set.set1(i);
+    else if (i == 0) {
+      return false;
     }
+    else {
+      failout_sysCx ("not enough bits!");
+    }
+  }
+  // TODO: This read call should just fail, not return the NUL character.
+  if (xget_char_XFile (olay, &c) && c != '\0') {
+    failout_sysCx ("too many bits!");
   }
   return true;
 }
@@ -786,30 +954,36 @@ static void
 filter_stdin (const FilterOpt& opt, OFile& ofile)
 {
   const uint domsz = opt.domsz;
-  BitTable set( domsz*domsz*domsz, 0 );
+  BitTable actset( domsz*domsz*domsz, 0 );
   C::XFile* xfile = stdin_XFile ();
-  while (xget_BitTable (xfile, set)) {
-    if (opt.echo_bits) {
-      ofile << set;
+  const char* record_sep = 0;
+  while (xget_BitTable (xfile, actset)) {
+    if (opt.count_ones) {
+      ofile << ' ' << actset.count() << '\n';
+    }
+    if (record_sep)
+      ofile << record_sep << '\n';
+    else
+      record_sep = opt.record_sep;
 
-      if (opt.count_ones) {
-        ofile << ' ' << set.count();
+    if (opt.verify) {
+      Table<PcState> ppgfun;
+      init_ppgfun(ppgfun, actset, domsz);
+      switch (livelock_semick(opt.max_period, ppgfun, domsz)) {
+        case Nil: ofile << "silent\n";  break;
+        case May: ofile << "unknown\n";  break;
+        case Yes: ofile << "livelock\n";  break;
       }
-
-      ofile << '\n';
     }
 
-    if (opt.xlate_invariant) {
-      oput_uniring_invariant (ofile, set, domsz, "", " && ");
-      ofile << '\n';
-    }
     if (opt.prot_ofilename) {
-      oput_uniring_protocon_file("", opt.prot_ofilename, set, opt);
+      oput_uniring_protocon_file("", opt.prot_ofilename, actset, opt);
     }
+
     if (opt.graphviz_ofilename) {
       OFileB graphviz_ofileb;
       OFile graphviz_ofile( graphviz_ofileb.uopen(0, opt.graphviz_ofilename) );
-      oput_graphviz(graphviz_ofile, set, domsz);
+      oput_graphviz(graphviz_ofile, actset, domsz);
     }
   }
 }
@@ -826,15 +1000,23 @@ int main(int argc, char** argv)
     const char* arg = argv[argi++];
     if (eq_cstr ("-domsz", arg)) {
       if (!xget_uint_cstr (&opt.domsz, argv[argi++]))
-        failout_sysCx("Argument Usage: -domsz n\nWhere n is an unsigned integer!");
+        failout_sysCx("Argument Usage: -domsz <M>\nWhere <M> is an unsigned integer!");
     }
     else if (eq_cstr ("-max-depth", arg)) {
       if (!xget_uint_cstr (&opt.max_depth, argv[argi++]))
-        failout_sysCx("Argument Usage: -max-depth n\nWhere n is an unsigned integer!");
+        failout_sysCx("Argument Usage: -max-depth <limit>\nWhere <limit> is an unsigned integer!");
     }
-    else if (eq_cstr ("-minsz", arg)) {
-      if (!xget_uint_cstr (&opt.minsz, argv[argi++]))
-        failout_sysCx("Argument Usage: -minsz n\nWhere n is an unsigned integer!");
+    else if (eq_cstr ("-max-period", arg)) {
+      if (!xget_uint_cstr (&opt.max_period, argv[argi++]))
+        failout_sysCx("Argument Usage: -max-period <limit>\nWhere <limit> is an unsigned integer!");
+    }
+    else if (eq_cstr ("-max-ppgs", arg) ||
+             eq_cstr ("-max-propagations", arg)) {
+      if (!xget_uint_cstr (&opt.max_propagations, argv[argi++]))
+        failout_sysCx("Argument Usage: -max-ppgs <limit>\nWhere <limit> is an unsigned integer!");
+    }
+    else if (eq_cstr ("-self-disabling-tiles", arg)) {
+      opt.self_disabling_tiles = true;
     }
     else if (eq_cstr ("-test", arg)) {
       bool passed = TestKnownAperiodic();
@@ -847,29 +1029,31 @@ int main(int argc, char** argv)
       lose_sysCx();
       return (passed ? 0 : 1);
     }
-    else if (eq_cstr ("-xlate-invariant", arg)) {
-      filter = true;
-      opt.xlate_invariant = true;
-    }
-    else if (eq_cstr ("-echo", arg)) {
-      filter = true;
-      opt.echo_bits = true;
-    }
     else if (eq_cstr ("-count-ones", arg)) {
       filter = true;
       opt.count_ones = true;
+    }
+    else if (eq_cstr ("-verify", arg)) {
+      filter = true;
+      opt.verify = true;
     }
     else if (eq_cstr ("-o-graphviz", arg)) {
       filter = true;
       opt.graphviz_ofilename = argv[argi++];
       if (!opt.graphviz_ofilename)
-        failout_sysCx("Argument Usage: -o-graphviz file");
+        failout_sysCx("Argument Usage: -o-graphviz <file>");
     }
     else if (eq_cstr ("-o-prot", arg)) {
       filter = true;
       opt.prot_ofilename = argv[argi++];
       if (!opt.prot_ofilename)
-        failout_sysCx("Argument Usage: -o-spec file");
+        failout_sysCx("Argument Usage: -o-spec <file>");
+    }
+    else if (eq_cstr ("-RS", arg)) {
+      filter = true;
+      opt.record_sep = argv[argi++];
+      if (!opt.record_sep)
+        failout_sysCx("Argument Usage: -RS <separator>");
     }
     else  {
       DBog1( "Unrecognized option: %s", arg );
@@ -877,6 +1061,8 @@ int main(int argc, char** argv)
     }
   }
   OFile ofile( stdout_OFile () );
+
+  opt.commit_domsz();
 
   if (filter) {
     filter_stdin (opt, ofile);
@@ -927,20 +1113,36 @@ TestKnownAperiodic()
     { 28,  0,  3 }
   };
   const uint depth = ArraySz(AperiodicTileset);
-  BitTable mask( domsz*domsz*domsz, 0 );
-  BitTable delegates( mask );
-  Table<BitTable> candidates_stack(depth+1, mask);
 
+  BitTable delegates( domsz*domsz*domsz, 0 );
   for (uint i = 0; i < ArraySz(AperiodicTileset); ++i) {
     const uint* tile = AperiodicTileset[i];
     delegates.set1(id_of3(tile[0], tile[1], tile[2], domsz));
   }
-  switch (periodic_leads_semick(delegates, domsz, mask, candidates_stack, depth, false)) {
-    case Nil: DBog0("Nil"); break;
-    case May: DBog0("May"); break;
-    case Yes: return true;
+
+  Table<PcState> ppgfun;
+  init_ppgfun(ppgfun, delegates, domsz);
+
+  switch (livelock_semick(15, ppgfun, domsz)) {
+    case Nil: DBog0("livelock: Nil");  return false;
+    case May: break;
+    case Yes: DBog0("livelock: Yes");  return false;
   }
-  return false;
+
+  BitTable mask( domsz*domsz*domsz, 0 );
+  Table<BitTable> candidates_stack(depth+1, mask);
+  FilterOpt opt;
+  opt.domsz = domsz;
+  opt.max_period = 10;
+  opt.check_ppg_overapprox = false;
+  opt.commit_domsz();
+  switch (periodic_leads_semick(delegates, mask,
+                                candidates_stack, depth, opt)) {
+    case Nil: DBog0("hard: Nil");  return false;
+    case May: DBog0("hard: May");  return false;
+    case Yes: break;
+  }
+  return true;
 }
 
 

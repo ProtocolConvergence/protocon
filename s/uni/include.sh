@@ -7,9 +7,9 @@ function calc_domsz()
   local domsz btsz
   domsz=2
   btsz=$(printf '%s' "$1" | wc -c)
-  while expr $domsz '*' $domsz '*' $domsz '<' $btsz >/dev/null
+  while [ $(($domsz * $domsz * $domsz)) -lt $btsz ]
   do
-    domsz=$(expr $domsz '+' 1)
+    domsz=$(($domsz + 1))
   done
   printf '%s' $domsz
 }
