@@ -397,6 +397,13 @@ public:
     return pf;
   }
 
+  PFmla img_eq_img(const PFmlaVbl& b) const
+  {
+    PFmla pf;
+    img_eq_img_PFmlaVbl (&pf.g, x, b.x);
+    return pf;
+  }
+
   PFmla img_eq(const IntPFmla& b) const;
 
   PFmla transition(uint b, uint c) const {

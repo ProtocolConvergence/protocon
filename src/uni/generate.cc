@@ -40,6 +40,7 @@ struct FilterOpt
   const char* prot_ofilename;
   const char* graphviz_ofilename;
   const char* svg_livelock_ofilename;
+  const char* list_ofilename;
 
   FilterOpt()
     : domsz( 3 )
@@ -54,6 +55,7 @@ struct FilterOpt
     , prot_ofilename( 0 )
     , graphviz_ofilename( 0 )
     , svg_livelock_ofilename( 0 )
+    , list_ofilename( 0 )
   {}
 
   void commit_domsz() {
@@ -1049,6 +1051,15 @@ filter_stdin (const FilterOpt& opt, OFile& ofile)
       OFile graphviz_ofile( graphviz_ofileb.uopen(0, opt.graphviz_ofilename) );
       oput_graphviz(graphviz_ofile, actset, domsz);
     }
+
+    if (opt.list_ofilename) {
+      OFileB list_ofileb;
+      OFile list_ofile( list_ofileb.uopen(0, opt.list_ofilename) );
+      for each_in_BitTable( actid, actset ) {
+        const UniAct act = UniAct::of_id(actid, domsz);
+        list_ofile << act[0] << '\t' << act[1] << '\t' << act[2] << '\n';
+      }
+    }
   }
 }
 
@@ -1119,6 +1130,12 @@ int main(int argc, char** argv)
       opt.svg_livelock_ofilename = argv[argi++];
       if (!opt.svg_livelock_ofilename)
         failout_sysCx("Argument Usage: -o-svg-livelock <file>");
+    }
+    else if (eq_cstr ("-o-list", arg)) {
+      filter = true;
+      opt.list_ofilename = argv[argi++];
+      if (!opt.list_ofilename)
+        failout_sysCx("Argument Usage: -o-list <file>");
     }
     else if (eq_cstr ("-RS", arg)) {
       filter = true;

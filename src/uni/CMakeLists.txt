@@ -11,6 +11,16 @@ set_target_properties (uni_generate PROPERTIES
   OUTPUT_NAME generate
   RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
+#### Classify Unidirectional Ring Protocols ####
+addbinexe (uni_classify uni/classify.cc
+  pfmla-glu.c pfmla.c pfmla.cc)
+set_property (TARGET uni_classify
+  APPEND PROPERTY INCLUDE_DIRECTORIES ${GluIncludePath})
+target_link_libraries (uni_classify cu glu cal ${M_LIB})
+set_target_properties (uni_classify PROPERTIES
+  OUTPUT_NAME classify
+  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+
 #### Unidirectional Ring Synthesis ####
 addbinexe (uni_synthesize uni/synthesize ${ProtoconSources})
 set_property (TARGET uni_synthesize

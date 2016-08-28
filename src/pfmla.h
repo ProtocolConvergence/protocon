@@ -153,6 +153,8 @@ void
 img_eq_PFmlaVbl (PFmla* dst, const PFmlaVbl* a, const PFmlaVbl* b);
 void
 img_eqc_PFmlaVbl (PFmla* dst, const PFmlaVbl* a, uint x);
+void
+img_eq_img_PFmlaVbl (PFmla* dst, const PFmlaVbl* a, const PFmlaVbl* b);
 
 uint
 add_vbl_PFmlaCtx (PFmlaCtx* ctx, const char* name, uint domsz);

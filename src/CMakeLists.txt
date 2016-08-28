@@ -62,6 +62,7 @@ list (APPEND CCFiles
   biring.cc
   deadfree.cc
   uni/aperiodic.cc
+  uni/classify.cc
   uni/generate.cc
   uni/synthesize.cc
   msat.cc

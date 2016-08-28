@@ -751,13 +751,14 @@ img_eq_PFmlaVbl (PFmla* dst, const PFmlaVbl* a, const PFmlaVbl* b)
     a->ctx->vt->vbl_img_eq_fn (a->ctx, dst, a->id, b->id);
   }
   else {
-    // n is the domain size of RHS since img_eqc_PFmla() does mod.
-    const uint n = b->domsz;
+    // Use the RHS domain size rather than the minimum in order to be
+    // consistent with img_eqc_PFmla(), which computes equality mod the RHS.
+    const uint domsz = b->domsz;
     PFmla tmp_a = default;
     PFmla tmp_b = default;
 
     wipe1_PFmla (dst, false);
-    for (uint i = 0; i < n; ++i) {
+    for (uint i = 0; i < domsz; ++i) {
       img_eqc_PFmlaVbl (&tmp_a, a, i);
       eqc_PFmlaVbl (&tmp_b, b, i);
       and_PFmla (&tmp_a, tmp_a, tmp_b);
@@ -776,6 +777,31 @@ img_eqc_PFmlaVbl (PFmla* dst, const PFmlaVbl* a, uint x)
   }
   pre_op_ctx_PFmla (dst, a->ctx);
   a->ctx->vt->vbl_img_eqc_fn (a->ctx, dst, a->id, x);
+}
+
+  void
+img_eq_img_PFmlaVbl (PFmla* dst, const PFmlaVbl* a, const PFmlaVbl* b)
+{
+  Claim2( a->ctx ,==, b->ctx );
+  pre_op_ctx_PFmla (dst, a->ctx);
+
+  {
+    // Use the RHS domain size rather than the minimum in order to be
+    // consistent with img_eqc_PFmla(), which computes equality mod the RHS.
+    const uint domsz = b->domsz;
+    PFmla tmp_a = default;
+    PFmla tmp_b = default;
+
+    wipe1_PFmla (dst, false);
+    for (uint i = 0; i < domsz; ++i) {
+      img_eqc_PFmlaVbl (&tmp_a, a, i);
+      img_eqc_PFmlaVbl (&tmp_b, b, i);
+      and_PFmla (&tmp_a, tmp_a, tmp_b);
+      or_PFmla (dst, *dst, tmp_a);
+    }
+    lose_PFmla (&tmp_a);
+    lose_PFmla (&tmp_b);
+  }
 }
 
   uint
