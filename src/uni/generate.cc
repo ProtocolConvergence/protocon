@@ -919,6 +919,61 @@ oput_graphviz(OFile& ofile, const BitTable& set, uint domsz)
   ofile << "}\n";
 }
 
+static void
+oput_svg_tile(OFile& ofile, const UniAct& act, uint y, uint x, uint d)
+{
+  const char rect_style[] = " fill=\"none\" stroke=\"black\" stroke-width=\"4\"";
+  const char line_style[] = " stroke=\"black\" stroke-width=\"2\"";
+  const char text_style[] = " fill=\"black\" font-family=\"Latin Modern, sans\" text-anchor=\"middle\"";
+  //" dominant-baseline=\"middle\"";
+  const char text_nw_style[] = " font-size=\"24\"";
+  const char text_se_style[] = " font-size=\"32\"";
+#define LOC(x,p)  (x+p*d/100)
+  ofile
+    << "<rect x=\"" << x << "\" y=\"" << y
+    << "\" width=\"" << d << "\" height=\"" << d << "\"" << rect_style << " />"
+    << "<line x1=\"" << x << "\" y1=\"" << (y+d)
+    << "\" x2=\"" << LOC(x,100) << "\" y2=\"" << y << "\"" << line_style << " />"
+    << "<line x1=\"" << x << "\" y1=\"" << y
+    << "\" x2=\"" << LOC(x,50) << "\" y2=\"" << LOC(y,50) << "\"" << line_style << " />"
+    << "<text x=\"" << LOC(x,20) << "\" y=\"" << LOC(y,57) << "\""
+    << text_style << text_nw_style << ">" << act[0] << "</text>"
+    << "<text x=\"" << LOC(x,50) << "\" y=\"" << LOC(y,27) << "\""
+    << text_style << text_nw_style << ">" << act[1] << "</text>"
+    << "<text x=\"" << LOC(x,70) << "\" y=\"" << LOC(y,85) << "\""
+    << text_style << text_se_style << ">" << act[2] << "</text>"
+    ;
+#undef LOC
+}
+
+
+static void
+oput_svg(OFile& ofile)
+{
+  const uint m = 6;
+  const uint n = 20;
+  const uint d = 100;
+  const uint border = 3;
+  ofile << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+    << "\n<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1 Basic//EN\""
+    << " \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11-basic.dtd\">"
+    << "\n<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\""
+    << " version=\"1.1\" baseProfile=\"basic\" id=\"svg-root\""
+    << " width=\"" << (n*d + 2*border) << "\" height=\"" << (m*d + 2*border) << "\">"
+    << "\n<rect x=\"0\" y=\"0\""
+    << " width=\""  << (n*d + 2*border) << "\""
+    << " height=\"" << (m*d + 2*border) << "\""
+    << " fill=\"white\" stroke=\"white\" stroke-width=\"0\" />"
+    ;
+  for (uint i = 0; i < m; ++i) {
+    for (uint j = 0; j < n; ++j) {
+      oput_svg_tile (ofile, UniAct(i,j,j), i*d+border, j*d+border, d);
+    }
+  }
+
+  ofile << "\n</svg>";
+}
+
 static bool
 xget_BitTable (C::XFile* xfile, BitTable& set)
 {
@@ -1048,6 +1103,20 @@ int main(int argc, char** argv)
       opt.prot_ofilename = argv[argi++];
       if (!opt.prot_ofilename)
         failout_sysCx("Argument Usage: -o-spec <file>");
+    }
+    else if (eq_cstr ("-o-svg", arg)) {
+      const char* filename = argv[argi++];
+      if (!filename)
+        failout_sysCx("Argument Usage: -o-svg <file>");
+
+      {
+        OFileB ofileb;
+        OFile ofile( ofileb.uopen(0, filename) );
+        oput_svg(ofile);
+      }
+
+      lose_sysCx();
+      return 0;
     }
     else if (eq_cstr ("-RS", arg)) {
       filter = true;
