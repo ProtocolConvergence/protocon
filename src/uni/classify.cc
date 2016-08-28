@@ -15,14 +15,19 @@ namespace C {
   using Cx::C::XFile;
 }
 
+/** Given a list of actions and variables x[j-1] and x[j],
+ * compute the tiling constraints for column j
+ * in the form of a transition formula.
+ **/
 static
   X::Fmla
-column_xfmla(const Table<UniAct>& acts, const PFmlaVbl& x_p, const PFmlaVbl& x_i)
+column_xfmla(const Table<UniAct>& acts, const PFmlaVbl& x_p, const PFmlaVbl& x_j)
 {
   X::Fmla xn( false );
   for (uint i = 0; i < acts.sz(); ++i) {
     const UniAct& act = acts[i];
-    xn |= x_p.img_eq(act[0]) && x_i==act[1] && x_i.img_eq(act[2]);
+    //    x'[j-1]==a         && x[j]==b     && x'[j]==c
+    xn |= x_p.img_eq(act[0]) && x_j==act[1] && x_j.img_eq(act[2]);
   }
   return xn;
 }
@@ -94,6 +99,7 @@ int main(int argc, char** argv) {
   const uint domsz =
     xget_actions(stdin_XFile (), acts);
 
+  // Initialize formula variables.
   PFmlaCtx pfmla_ctx;
   Table<PFmlaVbl> vbls(1+max_period);
   for (uint i = 0; i < 1+max_period; ++i) {
@@ -103,6 +109,7 @@ int main(int argc, char** argv) {
 
   OFile ofile( stdout_OFile () );
 
+  // Search for livelocks.
   bool livelock_found = false;
   X::Fmla xn(true);
   for (uint j = 1; j < 1+max_period; ++j) {
@@ -111,19 +118,17 @@ int main(int argc, char** argv) {
     const X::Fmla periodic_xn =
       xn & (vbls[0]==vbls[j]) & (vbls[0].img_eq_img(vbls[j]));
 
-    P::Fmla scc(false);
-    uint nlayers = 0;
-    if (periodic_xn.cycle_ck(&scc, &nlayers)) {
+    if (periodic_xn.cycle_ck(0)) {
       livelock_found = true;
       ofile << "livelock"
         << "\tperiod:" << j
-        << "\theight:" << nlayers
         << ofile.endl();
       break;
     }
   }
 
   if (!livelock_found) {
+    // No livelocks found? Are they even a possibility?
     if (!xn.cycle_ck(0)) {
       ofile << "silent" << ofile.endl();
     }
