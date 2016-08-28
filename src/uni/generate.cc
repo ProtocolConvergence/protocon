@@ -17,8 +17,6 @@ extern "C" {
 #define each_in_BitTable(i , bt) \
   (zuint i = bt.begidx(); i < bt.sz(); bt.nextidx(&i))
 
-#define UseNaturalOrder
-
 namespace C {
   using Cx::C::OFile;
   using Cx::C::XFile;
@@ -92,74 +90,13 @@ minimal_unique_ck (const uint* a, uint n)
   return true;
 }
 
-static inline
-  uint
-addmod (uint a, uint b, uint n)
-{
-  return (a + b) % n;
-}
-
-static inline
-  uint
-submod (uint a, uint b, uint n)
-{
-  return (a + n - b) % n;
-}
-
-static inline
-  UniAct
-act_of_id(uint actid, const uint domsz)
-{
-#ifdef UseNaturalOrder
-  const div_t lo = div(actid, domsz);
-  const div_t hi = div(lo.quot, domsz);
-  return UniAct(hi.quot, hi.rem, lo.rem);
-#else
-  const div_t lo = div(actid, domsz);
-  const div_t hi = div(lo.quot, domsz);
-  const uint c = lo.rem;
-  const uint b = submod(hi.rem, c, domsz);
-  const uint a = submod(hi.quot, b, domsz);
-  return UniAct(a, b, c);
-#endif
-}
-
-static inline
-  uint
-id_of2(uint a, uint b, uint domsz)
-{
-  Claim( a < domsz );
-  Claim( b < domsz );
-  return a * domsz + b;
-}
-
-static inline
-  uint
-id_of3(uint a, uint b, uint c, uint domsz)
-{
-  Claim( a < domsz );
-  Claim( b < domsz );
-  Claim( c < domsz );
-#ifdef UseNaturalOrder
-  return (a * domsz + b) * domsz + c;
-#else
-  return (addmod(a, b, domsz) * domsz + addmod(b, c, domsz)) * domsz + c;
-#endif
-}
-
-static inline uint id_of(const Tuple<uint,2>& u, const uint domsz)
-{ return id_of2(u[0], u[1], domsz); }
-
-static inline uint id_of(const Tuple<uint,3>& u, const uint domsz)
-{ return id_of3(u[0], u[1], u[2], domsz); }
-
   void
 permute_pc_act (BitTable& bt, const BitTable& set, const Table<uint>& perm_map)
 {
   const uint domsz = perm_map.sz();
   bt.wipe(0);
   for each_in_BitTable(actid , set) {
-    UniAct act = act_of_id(actid, domsz);
+    UniAct act = UniAct::of_id(actid, domsz);
     for (uint j = 0; j < 3; ++j) {
       act[j] = perm_map[act[j]];
     }
@@ -238,7 +175,7 @@ init_ppgfun(Table<PcState>& ppgfun, const BitTable& delegates, const uint domsz)
 {
   ppgfun.affysz(domsz*domsz, domsz);
   for each_in_BitTable(actid , delegates) {
-    UniAct act = act_of_id(actid, domsz);
+    UniAct act = UniAct::of_id(actid, domsz);
     ppgfun[id_of2(act[0], act[1], domsz)] = act[2];
   }
 }
@@ -579,7 +516,7 @@ periodic_leads_semick(const BitTable& delegates,
   // but we do check for (*,c,d) because it makes the graph cleaner.
   DoTwice(digraph.commit_degrees()) {
     for each_in_BitTable(actid , delegates) {
-      const UniAct mid_act = act_of_id(actid, domsz);
+      const UniAct mid_act = UniAct::of_id(actid, domsz);
       const PcState a = mid_act[0], b = mid_act[1], c = mid_act[2];
 
       for (PcState d = 0; d < domsz; ++d) {
@@ -615,7 +552,7 @@ periodic_leads_semick(const BitTable& delegates,
   DoTwice(overapprox_digraph.commit_degrees()) {
     skip_unless (opt.check_ppg_overapprox);
     for each_in_BitTable(actid , mask) {
-      const UniAct mid_act = act_of_id(actid, domsz);
+      const UniAct mid_act = UniAct::of_id(actid, domsz);
       const PcState a = mid_act[0], b = mid_act[1], c = mid_act[2];
 
       for (PcState d = 0; d < domsz; ++d) {
@@ -652,7 +589,7 @@ periodic_leads_semick(const BitTable& delegates,
   Table< Tuple<uint,2> > stack;
 
   for each_in_BitTable(actid , pending) {
-    const UniAct act = act_of_id(actid, domsz);
+    const UniAct act = UniAct::of_id(actid, domsz);
     bool found = false;
     // Find all starting nodes.
     for (PcState d = 0; d < domsz; ++d) {
@@ -679,7 +616,7 @@ periodic_leads_semick(const BitTable& delegates,
     }
 
     for (uint i = 0; i < stack.sz(); ++i) {
-      Triple<uint> node = act_of_id(stack[i][0], domsz);
+      Triple<uint> node = UniAct::of_id(stack[i][0], domsz);
       const PcState a = node[0];
       const PcState b = node[1];
       const PcState c = ppgfun[id_of2(a, b, domsz)];
@@ -750,7 +687,7 @@ canonical_ck(const BitTable& set, const uint domsz, BitTable& bt)
 trim_coexist (BitTable& actset, uint actid, uint domsz,
               bool self_disabling_tiles)
 {
-  UniAct act( act_of_id(actid, domsz) );
+  UniAct act( UniAct::of_id(actid, domsz) );
 
   // Trivial livelock.
   if (act[0]==act[1]) {
@@ -896,7 +833,7 @@ oput_uniring_invariant(OFile& ofile, const BitTable& set, const uint domsz,
 
   Set< Tuple<uint, 2> > cache;
   for each_in_BitTable(actid , set) {
-    UniAct act = act_of_id(actid, domsz);
+    UniAct act = UniAct::of_id(actid, domsz);
     act[2] = domsz;
     skip_unless (act != prev);
     ofile
@@ -933,7 +870,7 @@ oput_uniring_protocon_file(const String& ofilepath, const String& ofilename,
   ofile << "\n    );";
   ofile << "\n  puppet:";
   for each_in_BitTable(actid , actset) {
-    UniAct act = act_of_id(actid, domsz);
+    UniAct act = UniAct::of_id(actid, domsz);
     ofile << "\n    "
       << "( x[i-1]==" << act[0]
       << " && x[i]==" << act[1]
@@ -957,7 +894,7 @@ oput_graphviz(OFile& ofile, const BitTable& set, uint domsz)
   }
 
   for each_in_BitTable(actid , set) {
-    UniAct act = act_of_id(actid, domsz);
+    UniAct act = UniAct::of_id(actid, domsz);
 
     ofile << "  "
       << "s_" << act[0] << " -> " << "s_" << act[2]
