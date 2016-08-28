@@ -38,9 +38,10 @@ struct FilterOpt
   bool self_disabling_tiles;
   bool count_ones;
   bool verify;
+  const char* record_sep;
   const char* prot_ofilename;
   const char* graphviz_ofilename;
-  const char* record_sep;
+  const char* svg_livelock_ofilename;
 
   FilterOpt()
     : domsz( 3 )
@@ -51,9 +52,10 @@ struct FilterOpt
     , self_disabling_tiles( false )
     , count_ones( false )
     , verify( false )
+    , record_sep( 0 )
     , prot_ofilename( 0 )
     , graphviz_ofilename( 0 )
-    , record_sep( 0 )
+    , svg_livelock_ofilename( 0 )
   {}
 
   void commit_domsz() {
@@ -241,20 +243,48 @@ init_ppgfun(Table<PcState>& ppgfun, const BitTable& delegates, const uint domsz)
   }
 }
 
+  void
+map_livelock_ppgs(void (*f) (void**, const UniAct&, uint, uint),
+                  void** ctx,
+                  const Table<PcState>& bot,
+                  const Table<PcState>& col,
+                  const Table<PcState>& ppgfun,
+                  const uint domsz)
+{
+  const uint n = bot.sz() - 1;
+  const uint m = col.sz() - 1;
+  Claim( bot[0] == bot[n] );
+  Claim( bot[0] == col[m] );
+  Claim( bot[0] == col[0] );
+  Table<PcState> row;
+  row.affysz(n+1);
+  for (uint j = 1; j < n+1; ++j) {
+    row[j] = bot[j];
+  }
+  for (uint i = 1; i < m+1; ++i) {
+    row[0] = col[i];
+    for (uint j = 1; j < n+1; ++j) {
+      const PcState a = row[j-1];
+      const PcState b = row[j];
+      const PcState c = ppgfun[id_of2(a, b, domsz)];
+      Claim( c < domsz );
+      row[j] = c;
+      f(ctx, UniAct(a, b, c), i-1, j-1);
+    }
+  }
+}
+
 bool fill_livelock_ck(const Table<PcState>& top,
                       const Table<PcState>& col,
                       const uint top_rowidx,
                       const Table<PcState>& ppgfun,
                       const uint domsz,
-                      BitTable* livelockset,
                       Table<PcState>& row)
 {
   const uint n = top.sz() - 1;
   Claim( top[0] == top[n] );
   Claim( top[0] == col[col.sz()-1] );
   Claim( top[0] == col[top_rowidx] );
-  if (livelockset)
-    livelockset->wipe(0);
   row.ensize(n+1);
   for (uint j = 0; j < n+1; ++j) {
     row[j] = top[j];
@@ -262,13 +292,8 @@ bool fill_livelock_ck(const Table<PcState>& top,
   for (uint i = top_rowidx+1; i < col.sz(); ++i) {
     row[0] = col[i];
     for (uint j = 1; j < n+1; ++j) {
-      const PcState a = row[j-1];
-      const PcState b = row[j];
-      const PcState c = ppgfun[id_of2(a, b, domsz)];
-      if (c == domsz)  return false;
-      row[j] = c;
-      skip_unless (livelockset);
-      livelockset->set1(id_of3(a, b, c, domsz));
+      row[j] = ppgfun[id_of2(row[j-1], row[j], domsz)];
+      if (row[j] == domsz)  return false;
     }
     if (row[0] != row[n])  return false;
   }
@@ -284,8 +309,8 @@ livelock_semick_rec(const Table<PcState>& old_bot,
                     uint limit,
                     const Table<PcState>& ppgfun,
                     const uint domsz,
-                    BitTable* livelockset,
-                    Table<PcState>& tmp_row)
+                    Table<PcState>& ret_row,
+                    Table<PcState>& ret_col)
 {
   const uint n = old_bot.sz();
   Table<PcState> bot, col;
@@ -308,10 +333,13 @@ livelock_semick_rec(const Table<PcState>& old_bot,
     skip_unless (col_exists);
     bot[n] = col[n];
     if (bot[0]==bot[n]) {
-      for (uint i = 0; i < n; ++i) {
+      for (uint i = n; i-- > 0;) {
         skip_unless (col[i] == col[n]);
-        if (fill_livelock_ck(bot, col, i, ppgfun,
-                             domsz, livelockset, tmp_row)) {
+        if (fill_livelock_ck(bot, col, i, ppgfun, domsz, ret_row)) {
+          ret_col.ensize(n+1-i);
+          for (uint j = 0; j < ret_col.sz(); ++j) {
+            ret_col[j] = col[i+j];
+          }
           return Yes;
         }
       }
@@ -322,7 +350,7 @@ livelock_semick_rec(const Table<PcState>& old_bot,
     }
     Trit found =
       livelock_semick_rec(bot, col, limit, ppgfun,
-                          domsz, livelockset, tmp_row);
+                          domsz, ret_row, ret_col);
     if (found == Yes)  return Yes;
     may_exist = (may_exist || (found == May));
   }
@@ -333,17 +361,21 @@ livelock_semick_rec(const Table<PcState>& old_bot,
 livelock_semick(const uint limit,
                 const Table<PcState>& ppgfun,
                 const uint domsz,
-                BitTable* livelockset = 0)
+                Table<PcState>* ret_row=0,
+                Table<PcState>* ret_col=0)
 {
-  Table<PcState> bot, col, tmp_row;
+  Table<PcState> bot, col, tmp_row, tmp_col;
   bot.affysz(1);  col.affysz(1);
   bool may_exist = false;
   for (uint c = 0; c < domsz; ++c) {
     bot[0] = col[0] = c;
     Trit found = livelock_semick_rec(bot, col, limit, ppgfun,
-                                     domsz, livelockset, tmp_row);
-    if (found == Yes)
+                                     domsz, tmp_row, tmp_col);
+    if (found == Yes) {
+      if (ret_row)  *ret_row = tmp_row;
+      if (ret_col)  *ret_col = tmp_col;
       return Yes;
+    }
     may_exist = (may_exist || (found == May));
   }
   return (may_exist ? May : Nil);
@@ -475,6 +507,13 @@ cycle_ck_from(uint initial_node, const AdjList<uint>& digraph, Table< Tuple<uint
   return !stack.empty_ck();
 }
 
+  void
+fill_livelock_actions_fn(void** data, const UniAct& act, uint rowidx, uint colidx) {
+  (void) rowidx;
+  (void) colidx;
+  ((BitTable*) data[0])->set1(id_of(act, *(PcState*) data[1]));
+}
+
   Trit
 periodic_leads_semick(const BitTable& delegates,
                       BitTable& mask,
@@ -489,12 +528,20 @@ periodic_leads_semick(const BitTable& delegates,
 
   bool maybe_livelock = true;
   if (detect_livelocks_well) {
+    Table<PcState> live_row, live_col;
     Trit livelock_found =
-      livelock_semick(opt.max_period, ppgfun, domsz, &mask);
+      livelock_semick(opt.max_period, ppgfun, domsz, &live_row, &live_col);
     if (livelock_found == Nil) {
       maybe_livelock = false;
     }
     else if (livelock_found == Yes) {
+      {
+        PcState tmp_domsz = domsz;
+        mask.wipe(0);
+        void* data[2] = { &mask, &tmp_domsz };
+        map_livelock_ppgs(fill_livelock_actions_fn, data, live_row, live_col,
+                          ppgfun, domsz);
+      }
       uint max_livelock_actids[2] = { 0, 0 };
       for each_in_BitTable( livelock_actid , mask ) {
         max_livelock_actids[0] = max_livelock_actids[1];
@@ -930,28 +977,39 @@ oput_svg_tile(OFile& ofile, const UniAct& act, uint y, uint x, uint d)
   const char text_se_style[] = " font-size=\"32\"";
 #define LOC(x,p)  (x+p*d/100)
   ofile
-    << "<rect x=\"" << x << "\" y=\"" << y
+    << "\n<rect x=\"" << x << "\" y=\"" << y
     << "\" width=\"" << d << "\" height=\"" << d << "\"" << rect_style << " />"
-    << "<line x1=\"" << x << "\" y1=\"" << (y+d)
+    << "\n<line x1=\"" << x << "\" y1=\"" << (y+d)
     << "\" x2=\"" << LOC(x,100) << "\" y2=\"" << y << "\"" << line_style << " />"
     << "<line x1=\"" << x << "\" y1=\"" << y
     << "\" x2=\"" << LOC(x,50) << "\" y2=\"" << LOC(y,50) << "\"" << line_style << " />"
-    << "<text x=\"" << LOC(x,20) << "\" y=\"" << LOC(y,57) << "\""
+    << "\n<text x=\"" << LOC(x,20) << "\" y=\"" << LOC(y,57) << "\""
     << text_style << text_nw_style << ">" << act[0] << "</text>"
-    << "<text x=\"" << LOC(x,50) << "\" y=\"" << LOC(y,27) << "\""
+    << "\n<text x=\"" << LOC(x,50) << "\" y=\"" << LOC(y,27) << "\""
     << text_style << text_nw_style << ">" << act[1] << "</text>"
-    << "<text x=\"" << LOC(x,70) << "\" y=\"" << LOC(y,85) << "\""
+    << "\n<text x=\"" << LOC(x,70) << "\" y=\"" << LOC(y,85) << "\""
     << text_style << text_se_style << ">" << act[2] << "</text>"
     ;
 #undef LOC
 }
 
+static void
+oput_svg_tile_callback(void** data, const UniAct& act, uint i, uint j)
+{
+  const uint d = *(uint*)data[1];
+  const uint border = *(uint*)data[2];
+  oput_svg_tile(*(OFile*)data[0], act, i*d+border, j*d+border, d);
+}
+
 
 static void
-oput_svg(OFile& ofile)
+oput_svg_livelock(OFile& ofile, const Table<PcState>& ppgfun,
+                  const Table<PcState>& bot,
+                  const Table<PcState>& col,
+                  const PcState domsz)
 {
-  const uint m = 6;
-  const uint n = 20;
+  const uint n = bot.sz()-1;
+  const uint m = col.sz()-1;
   const uint d = 100;
   const uint border = 3;
   ofile << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
@@ -965,10 +1023,13 @@ oput_svg(OFile& ofile)
     << " height=\"" << (m*d + 2*border) << "\""
     << " fill=\"white\" stroke=\"white\" stroke-width=\"0\" />"
     ;
-  for (uint i = 0; i < m; ++i) {
-    for (uint j = 0; j < n; ++j) {
-      oput_svg_tile (ofile, UniAct(i,j,j), i*d+border, j*d+border, d);
-    }
+
+  {
+    uint tmp_d = d;
+    uint tmp_border = border;
+    void* data[3] = { &ofile, &tmp_d, &tmp_border };
+    map_livelock_ppgs(oput_svg_tile_callback, data,
+                      bot, col, ppgfun, domsz);
   }
 
   ofile << "\n</svg>";
@@ -1021,13 +1082,24 @@ filter_stdin (const FilterOpt& opt, OFile& ofile)
     else
       record_sep = opt.record_sep;
 
-    if (opt.verify) {
-      Table<PcState> ppgfun;
+    if (opt.verify || opt.svg_livelock_ofilename) {
+      Table<PcState> ppgfun, top, col;
       init_ppgfun(ppgfun, actset, domsz);
-      switch (livelock_semick(opt.max_period, ppgfun, domsz)) {
-        case Nil: ofile << "silent\n";  break;
-        case May: ofile << "unknown\n";  break;
-        case Yes: ofile << "livelock\n";  break;
+      Trit livelock_exists =
+        livelock_semick(opt.max_period, ppgfun, domsz, &top, &col);
+
+      if (opt.verify) {
+        switch (livelock_exists) {
+          case Nil: ofile << "silent\n";  break;
+          case May: ofile << "unknown\n";  break;
+          case Yes: ofile << "livelock\n";  break;
+        }
+      }
+
+      if (opt.svg_livelock_ofilename) {
+        OFileB svg_ofileb;
+        OFile svg_ofile( svg_ofileb.uopen(0, opt.svg_livelock_ofilename) );
+        oput_svg_livelock(svg_ofile, ppgfun, top, col, domsz);
       }
     }
 
@@ -1102,21 +1174,14 @@ int main(int argc, char** argv)
       filter = true;
       opt.prot_ofilename = argv[argi++];
       if (!opt.prot_ofilename)
-        failout_sysCx("Argument Usage: -o-spec <file>");
+        failout_sysCx("Argument Usage: -o-prot <file>");
     }
-    else if (eq_cstr ("-o-svg", arg)) {
-      const char* filename = argv[argi++];
-      if (!filename)
-        failout_sysCx("Argument Usage: -o-svg <file>");
-
-      {
-        OFileB ofileb;
-        OFile ofile( ofileb.uopen(0, filename) );
-        oput_svg(ofile);
-      }
-
-      lose_sysCx();
-      return 0;
+    else if (eq_cstr ("-o-svg-livelock", arg) ||
+             eq_cstr ("-o-svg", arg)) {
+      filter = true;
+      opt.svg_livelock_ofilename = argv[argi++];
+      if (!opt.svg_livelock_ofilename)
+        failout_sysCx("Argument Usage: -o-svg-livelock <file>");
     }
     else if (eq_cstr ("-RS", arg)) {
       filter = true;
