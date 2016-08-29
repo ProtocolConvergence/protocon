@@ -6,7 +6,11 @@ set_target_properties (uni_aperiodic PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
 #### Generate Unidirectional Ring Protocols ####
-addbinexe (uni_generate uni/generate.cc)
+addbinexe (uni_generate uni/generate.cc
+  pfmla-glu.c pfmla.c pfmla.cc)
+set_property (TARGET uni_generate
+  APPEND PROPERTY INCLUDE_DIRECTORIES ${GluIncludePath})
+target_link_libraries (uni_generate cu glu cal ${M_LIB})
 set_target_properties (uni_generate PROPERTIES
   OUTPUT_NAME generate
   RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})

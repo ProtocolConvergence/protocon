@@ -11,7 +11,6 @@ extern "C" {
 #include "../namespace.hh"
 
 namespace C {
-  using Cx::C::OFile;
   using Cx::C::XFile;
 }
 

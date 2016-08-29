@@ -11,6 +11,7 @@ extern "C" {
 #include "cx/set.hh"
 #include "uniact.hh"
 #include "adjlist.hh"
+#include "../pfmla.hh"
 
 #include "../namespace.hh"
 
@@ -36,11 +37,16 @@ struct FilterOpt
   bool self_disabling_tiles;
   bool count_ones;
   bool verify;
+  bool use_bdds;
   const char* record_sep;
   const char* prot_ofilename;
   const char* graphviz_ofilename;
   const char* svg_livelock_ofilename;
   const char* list_ofilename;
+
+  PFmlaCtx pfmla_ctx;
+  Table<PFmlaVbl> pfmla_vbls;
+  uint allbut2_pfmla_list_id;
 
   FilterOpt()
     : domsz( 3 )
@@ -51,6 +57,7 @@ struct FilterOpt
     , self_disabling_tiles( false )
     , count_ones( false )
     , verify( false )
+    , use_bdds( false )
     , record_sep( 0 )
     , prot_ofilename( 0 )
     , graphviz_ofilename( 0 )
@@ -65,6 +72,19 @@ struct FilterOpt
       max_period = 2*domsz+2;
     if (max_propagations == 0)
       max_propagations = domsz*domsz;
+
+    if (use_bdds) {
+      pfmla_vbls.affysz(1+max_period);
+      for (uint i = 0; i < 1+max_period; ++i) {
+        uint vbl_id = pfmla_ctx.add_vbl((String("x") << i), domsz);
+        pfmla_vbls[i] = pfmla_ctx.vbl(vbl_id);
+      }
+      allbut2_pfmla_list_id = pfmla_ctx.add_vbl_list();
+      for (uint i = 0; i+2 < 1+max_period; ++i) {
+        pfmla_ctx.add_to_vbl_list(allbut2_pfmla_list_id,
+                                  id_of(pfmla_vbls[i]));
+      }
+    }
   }
 };
 
@@ -453,6 +473,23 @@ fill_livelock_actions_fn(void** data, const UniAct& act, uint rowidx, uint colid
   ((BitTable*) data[0])->set1(id_of(act, *(PcState*) data[1]));
 }
 
+/** Given a list of actions and variables x[j-1] and x[j],
+ * compute the tiling constraints for column j
+ * in the form of a transition formula.
+ **/
+static
+  X::Fmla
+column_xfmla(const BitTable& actset, const PFmlaVbl& x_p, const PFmlaVbl& x_j, uint domsz)
+{
+  X::Fmla xn( false );
+  for each_in_BitTable( actid, actset ) {
+    const UniAct act = UniAct::of_id(actid, domsz);
+    //    x'[j-1]==a         && x[j]==b     && x'[j]==c
+    xn |= x_p.img_eq(act[0]) && x_j==act[1] && x_j.img_eq(act[2]);
+  }
+  return xn;
+}
+
   Trit
 periodic_leads_semick(const BitTable& delegates,
                       BitTable& mask,
@@ -461,6 +498,66 @@ periodic_leads_semick(const BitTable& delegates,
                       const FilterOpt& opt)
 {
   const uint domsz = opt.domsz;
+  BitTable& candidates = candidates_stack[depth];
+
+  if (opt.use_bdds) {
+    bool livelock_found = false;
+    X::Fmla lo_xn(true);
+    X::Fmla hi_xn(true);
+    X::Fmla lo_col_xn;
+    X::Fmla hi_col_xn;
+    const Table<PFmlaVbl>& vbls = opt.pfmla_vbls;
+    Claim( vbls.sz() == 1+opt.max_period );
+    for (uint j = 1; j < 1+opt.max_period; ++j) {
+      lo_col_xn =
+        column_xfmla(delegates, vbls[j-1], vbls[j], domsz);
+      lo_xn &= lo_col_xn;
+
+      if (opt.check_ppg_overapprox) {
+        hi_col_xn = lo_col_xn |
+          column_xfmla(candidates, vbls[j-1], vbls[j], domsz);
+        hi_xn &= hi_col_xn;
+      }
+
+      const X::Fmla periodic_xn = lo_xn &
+        (vbls[0]==vbls[j]) & vbls[0].img_eq_img(vbls[j]);
+
+      if (periodic_xn.cycle_ck(0)) {
+        livelock_found = true;
+        break;
+      }
+    }
+    if (livelock_found)
+      return Nil;
+
+    P::Fmla scc(false);
+    if (lo_xn.cycle_ck(&scc)) {
+      X::Fmla last_tile = (scc & lo_xn);
+      last_tile = last_tile.smooth(opt.allbut2_pfmla_list_id);
+      last_tile = last_tile.smooth_pre(opt.pfmla_vbls[opt.max_period-1]);
+      if (lo_col_xn.equiv_ck(last_tile)) {
+        return Yes;
+      }
+    }
+
+    if (!opt.check_ppg_overapprox) {
+      return May;
+    }
+
+    if (!hi_xn.cycle_ck(&scc)) {
+      return Nil;
+    }
+    else {
+      X::Fmla last_tile = (scc & hi_xn);
+      last_tile = last_tile.smooth(opt.allbut2_pfmla_list_id);
+      last_tile = last_tile.smooth_pre(opt.pfmla_vbls[opt.max_period-1]);
+      if (!lo_col_xn.subseteq_ck(last_tile)) {
+        return Nil;
+      }
+    }
+    return May;
+  }
+
   Table<PcState> ppgfun;
   init_ppgfun(ppgfun, delegates, domsz);
   const bool detect_livelocks_well = true;
@@ -546,7 +643,6 @@ periodic_leads_semick(const BitTable& delegates,
     }
   }
 
-  const BitTable& candidates = candidates_stack[depth];
   mask = delegates;
   mask |= candidates;
 
