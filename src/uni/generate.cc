@@ -44,6 +44,8 @@ struct FilterOpt
   Table<PFmlaVbl> pfmla_vbls;
   uint allbut2_pfmla_list_id;
 
+  Table<UniAct> assumed_acts;
+
   FilterOpt()
     : domsz( 3 )
     , max_depth( 0 )
@@ -455,6 +457,7 @@ periodic_leads_semick(const BitTable& delegates,
                       const uint depth,
                       const FilterOpt& opt)
 {
+#define PruneLivelocks
   const uint domsz = opt.domsz;
   BitTable& candidates = candidates_stack[depth];
 
@@ -529,6 +532,7 @@ periodic_leads_semick(const BitTable& delegates,
       maybe_livelock = false;
     }
     else if (livelock_found == Yes) {
+#ifdef PruneLivelocks
       {
         PcState tmp_domsz = domsz;
         mask.wipe(0);
@@ -553,6 +557,7 @@ periodic_leads_semick(const BitTable& delegates,
           candidates_stack[i].set0(max_livelock_actids[1]);
         }
       }
+#endif
       return Nil;
     }
   }
@@ -686,6 +691,7 @@ periodic_leads_semick(const BitTable& delegates,
     if (stack.sz() <= opt.max_period &&
         guided_livelock_ck(stack, ppgfun, domsz, mask,
                            opt.max_propagations)) {
+#ifdef PruneLivelocks
       uint max_livelock_actids[2] = { 0, 0 };
       for each_in_BitTable( livelock_actid , mask ) {
         max_livelock_actids[0] = max_livelock_actids[1];
@@ -703,6 +709,8 @@ periodic_leads_semick(const BitTable& delegates,
           candidates_stack[i].set0(max_livelock_actids[1]);
         }
       }
+#undef PruneLivelocks
+#endif
       return Nil;
     }
   }
@@ -824,58 +832,89 @@ searchit(const FilterOpt& opt, OFile& ofile)
   const uint domsz = opt.domsz;
   const uint max_depth = opt.max_depth;
 
-  Table<BitTable> delegates_stack;
-  Table<BitTable> candidates_stack;
-
   BitTable mask( domsz*domsz*domsz, 0 );
+  Table<BitTable> delegates_stack;
   delegates_stack.affysz( max_depth+1, mask );
+  BitTable& delegates = delegates_stack[0];
 
   mask.wipe(1);
+  Table<BitTable> candidates_stack;
   candidates_stack.affysz( max_depth+1, mask );
-
   BitTable& candidates = candidates_stack[0];
   uint actid;
 
   // Remove self-loops.
-  for (uint a = 0; a < domsz; ++a) {
-    for (uint b = 0; b < domsz; ++b) {
-      candidates.set0(id_of3(a, b, b, domsz));
-    }
-  }
+#define REMOVE_ABB \
+  for (uint a = 0; a < domsz; ++a) \
+    for (uint b = 0; b < domsz; ++b) \
+      candidates.set0(id_of3(a, b, b, domsz))
+
+  // Remove all (a, a, b) actions.
+#define REMOVE_AAB \
+  for (uint a = 0; a < domsz; ++a) \
+    for (uint b = 0; b < domsz; ++b) \
+      candidates.set0(id_of3(a, a, b, domsz))
+
+  // Remove all (a, b, a) actions.
+#define REMOVE_ABA \
+  for (uint a = 0; a < domsz; ++a) \
+    for (uint b = 0; b < domsz; ++b) \
+      candidates.set0(id_of3(a, b, a, domsz))
 
 #define RECURSE \
   recurse(delegates_stack, candidates_stack, actid, opt, ofile, 1, mask)
 
-#ifdef UseNaturalOrder
+  // Never need self-loops.
+  REMOVE_ABB;
+
+  if (!opt.assumed_acts.empty_ck()) {
+    uint hi_id = 0;
+    for (uint i = 0; i < opt.assumed_acts.sz(); ++i) {
+      const UniAct& act = opt.assumed_acts[i];
+      const uint actid = id_of(act, domsz);
+      if (actid > hi_id) {
+        hi_id = actid;
+      }
+      delegates.set1(actid);
+      candidates.set0(actid);
+      trim_coexist(candidates, actid, domsz, opt.self_disabling_tiles);
+    }
+    if (!canonical_ck(delegates, domsz, mask)) {
+      failout_sysCx("Assumed a non-canonical set of actions!");
+    }
+
+    Claim( delegates.ck(id_of3(0, 0, 1, domsz)) ||
+           delegates.ck(id_of3(0, 1, 0, domsz)) ||
+           delegates.ck(id_of3(0, 1, 2, domsz)) );
+
+    if (!delegates.ck(id_of3(0, 0, 1, domsz))) {
+      REMOVE_AAB;
+      if (!delegates.ck(id_of3(0, 1, 0, domsz))) {
+        REMOVE_ABA;
+      }
+    }
+
+    for (actid = hi_id+1; actid < candidates.sz(); ++actid) {
+      skip_unless( candidates.ck(actid) );
+      RECURSE;
+    }
+    return;
+  }
+
   actid = id_of3(0, 0, 1, domsz);
   RECURSE;
-
-  // Remove all (a, a, b) actions.
-  for (uint a = 0; a < domsz; ++a) {
-    for (uint b = 0; b < domsz; ++b) {
-      candidates.set0(id_of3(a, a, b, domsz));
-    }
-  }
+  REMOVE_AAB;
 
   actid = id_of3(0, 1, 0, domsz);
   RECURSE;
-
-  // Remove all (a, b, a) actions.
-  for (uint a = 0; a < domsz; ++a) {
-    for (uint b = 0; b < domsz; ++b) {
-      candidates.set0(id_of3(a, b, a, domsz));
-    }
-  }
+  REMOVE_ABA;
 
   actid = id_of3(0, 1, 2, domsz);
   RECURSE;
-#else
-  for (actid = 0; actid < candidates.sz(); ++actid) {
-    skip_unless( candidates.ck(actid) );
-    RECURSE;
-  }
-#endif
 
+#undef REMOVE_ABB
+#undef REMOVE_ABA
+#undef REMOVE_AAB_ABA
 #undef RECURSE
 }
 
@@ -1007,6 +1046,15 @@ int main(int argc, char** argv)
       opt.list_ofilename = argv[argi++];
       if (!opt.list_ofilename)
         failout_sysCx("Argument Usage: -o-list <file>");
+    }
+    else if (eq_cstr ("-x-assume", arg)) {
+      String fname = argv[argi++];
+      if (!fname)
+        failout_sysCx("Argument Usage: -x-assume <file>");
+
+      XFileB xfileb;
+      C::XFile* xfile = xfileb.uopen(0, fname);
+      xget_list(xfile, opt.assumed_acts);
     }
     else if (eq_cstr ("-RS", arg)) {
       filter = true;
