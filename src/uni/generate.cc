@@ -23,7 +23,7 @@ extern "C" {
 using Cx::Triple;
 
 #include "canonical.cc"
-#include "livelock.cc"
+//#include "livelock.cc" // Farther down.
 
 struct FilterOpt
 {
@@ -153,6 +153,8 @@ action_mask_overlap_ck(const UniAct& mask_act, const BitTable& actset, uint doms
   }
   return false;
 }
+
+#include "livelock.cc"
 
 static
   void
@@ -302,87 +304,16 @@ periodic_leads_semick(const BitTable& delegates,
   }
 
   AdjList<uint> digraph( domsz*domsz*domsz );
-  // Create an arc from node (a,b,d) to node (c,e,g)
-  // whenever the following action tiles exist:
-  //
-  //  * *
-  // *+b+e  top:    (*,*,b), (b,*,e)
-  //  b e
-  // a+c+f  middle: (a,b,c), (c,e,f)
-  //  c f
-  // *+d+g  bottom: (*,c,d), (d,f,g)
-  //  d g
-  //
-  // No existence check is needed for (*,*,b) or (*,c,d),
-  // but we do check for (*,c,d) because it makes the graph cleaner.
-  DoTwice(digraph.commit_degrees()) {
-    for each_in_BitTable(actid , delegates) {
-      const UniAct mid_act = UniAct::of_id(actid, domsz);
-      const PcState a = mid_act[0], b = mid_act[1], c = mid_act[2];
-
-      for (PcState d = 0; d < domsz; ++d) {
-        const UniAct bot_mask_act(domsz, c, d);
-        skip_unless (action_mask_overlap_ck(bot_mask_act, delegates, domsz));
-        const Triple<PcState> node(a, b, d);
-        const uint node_id = id_of(node, domsz);
-
-        for (PcState e = 0; e < domsz; ++e) {
-          // Ensure next middle tile exists.
-          const PcState f = ppgfun[id_of2(c, e, domsz)];
-          skip_unless (f < domsz);
-          // Ensure next bottom tile exists.
-          const PcState g = ppgfun[id_of2(d, f, domsz)];
-          skip_unless (g < domsz);
-          // Ensure next top tile exists.
-          const UniAct next_top_mask_act = UniAct(b, domsz, e);
-          skip_unless (action_mask_overlap_ck(next_top_mask_act, delegates, domsz));
-          // Add arc from this node to the next.
-          const Triple<PcState> next(c, e, g);
-          const uint next_id = id_of(next, domsz);
-          digraph.add_arc(node_id, next_id);
-        }
-      }
-    }
-  }
-
-  mask = delegates;
-  mask |= candidates;
+  make_tile_cont_digraph(digraph, delegates, ppgfun, domsz);
 
   AdjList<uint> overapprox_digraph( digraph.nnodes() );
-  DoTwice(overapprox_digraph.commit_degrees()) {
-    skip_unless (opt.check_ppg_overapprox);
-    for each_in_BitTable(actid , mask) {
-      const UniAct mid_act = UniAct::of_id(actid, domsz);
-      const PcState a = mid_act[0], b = mid_act[1], c = mid_act[2];
-
-      for (PcState d = 0; d < domsz; ++d) {
-        const UniAct bot_mask_act(domsz, c, d);
-        skip_unless (action_mask_overlap_ck(bot_mask_act, mask, domsz));
-        const Triple<PcState> node(a, b, d);
-        const uint node_id = id_of(node, domsz);
-
-        for (PcState e = 0; e < domsz; ++e) {
-          // Ensure next top tile exists.
-          const UniAct next_top_mask_act = UniAct(b, domsz, e);
-          skip_unless (action_mask_overlap_ck(next_top_mask_act, mask, domsz));
-
-          for (PcState f = 0; f < domsz; ++f) {
-            // Ensure next middle tile exists.
-            skip_unless (mask.ck(id_of3(c, e, f, domsz)));
-
-            for (PcState g = 0; g < domsz; ++g) {
-              // Ensure next bottom tile exists.
-              skip_unless (mask.ck(id_of3(d, f, g, domsz)));
-
-              // Add arc from this node to the next.
-              const Triple<PcState> next(c, e, g);
-              const uint next_id = id_of(next, domsz);
-              overapprox_digraph.add_arc(node_id, next_id);
-            }
-          }
-        }
-      }
-    }
+  if (opt.check_ppg_overapprox) {
+    mask = delegates;
+    mask |= candidates;
+    make_overapprox_tile_cont_digraph(overapprox_digraph, mask, domsz);
+  }
+  else {
+    overapprox_digraph.commit_degrees();
   }
 
   BitTable pending = delegates;
