@@ -19,6 +19,49 @@ OFile& operator<<(OFile& of, const BitTable& bt)
   return of;
 }
 
+static
+  bool
+xget_triple(C::XFile* xfile, UniAct& act)
+{
+  C::XFile olay[1];
+  if (!getlined_olay_XFile (olay, xfile, "\n"))
+    return false;
+  uint a, b, c;
+  if (xget_uint_XFile (olay, &a)) {
+    if (xget_uint_XFile (olay, &b) &&
+        xget_uint_XFile (olay, &c)) {
+      act = UniAct(a, b, c);
+      return true;
+    }
+    else {
+      failout_sysCx("I didn't read a full triple. Malformed input?");
+    }
+  }
+  return false;
+}
+
+static
+  uint
+xget_actions(C::XFile* xfile, Table<UniAct>& acts)
+{
+  UniAct act;
+  while (xget_triple(xfile, act)) {
+    acts << act;
+  }
+  if (acts.sz()==0) {
+    failout_sysCx("No actions given! Please provide triples on standard input.");
+  }
+  uint domsz = 0;
+  for (uint i = 0; i < acts.sz(); ++i) {
+    for (uint j = 0; j < 3; ++j) {
+      if (acts[i][j]+1 > domsz) {
+        domsz = acts[i][j]+1;
+      }
+    }
+  }
+  return domsz;
+}
+
   void
 map_livelock_ppgs(void (*f) (void**, const UniAct&, uint, uint),
                   void** ctx,
