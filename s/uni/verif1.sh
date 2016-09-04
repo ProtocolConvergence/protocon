@@ -15,27 +15,13 @@ then
   maxsz=$1
   key=$2
   shift 2
-elif [ -n "$1" ]
-then
-  minsz=2
-  maxsz=""
-  key=$1
-  shift 1
 else
-  echo 'Need at least one argument.' >&2
+  echo 'Need at least 2 arguments.' >&2
   exit 1
 fi
 
-domsz=$(calc_domsz "$key")
-echo "domsz=$domsz"
-
-if [ -z "$maxsz" ]
-then
-  maxsz=$(($domsz + 1))
-fi
-
 protfile="/tmp/${key}.prot"
-printf '%s' "$key" | "$gen_exe" -domsz $domsz -o-prot "$protfile"
+printf '%s' "$key" | "$gen_exe" -o-prot "$protfile"
 "${proj_path}/s/verifn.sh" "$minsz" "$maxsz" "$protfile" "$@"
 
 ret=$?

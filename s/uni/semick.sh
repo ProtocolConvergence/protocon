@@ -21,8 +21,7 @@ grep 'unknown' \
 | \
 while read bt
 do
-  domsz=$(calc_domsz "${bt}")
-  result=$(printf '%s' "$bt" | "${gen_exe}" -domsz $domsz -verify -max-period "$max_period")
+  result=$(printf '%s' "$bt" | "${gen_exe}" -verify -max-period "$max_period")
   printf '%s\t%s\n' "$result" "$bt"
 done
 

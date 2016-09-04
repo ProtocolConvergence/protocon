@@ -13,15 +13,15 @@ then
   exit 1
 fi
 
-tail -fn+0 "$filename" |
+tail -fn+0 "$filename" \
+| \
 while read line
 do
-  domsz=$(calc_domsz "$line")
-  echo $line |
-  "${proj_path}/bld/uni/generate" -domsz $domsz -o-list - |
-  "${proj_path}/bld/uni/classify" $threshold |
-  tee /dev/stderr |
-  grep unknown |
-  sed "s/.*/$line/"
+  echo "$line" \
+  | "${proj_path}/bld/uni/generate" -o-list - \
+  | "${proj_path}/bld/uni/classify" $threshold \
+  | tee /dev/stderr \
+  | grep unknown \
+  | sed "s/.*/$line/"
 done
 
