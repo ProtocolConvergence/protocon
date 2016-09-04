@@ -27,14 +27,17 @@ extern "C" {
 }
 #include "cx/synhax.hh"
 
+#include "uniact.hh"
+#include "unifile.hh"
+
 #include "cx/alphatab.hh"
 #include "cx/map.hh"
 #include "cx/ofile.hh"
 #include "cx/set.hh"
 #include "cx/table.hh"
 
-#include "uniact.hh"
 
+#include "../namespace.hh"
 using Cx::mk_Tuple;
 
 // Tile set originally from:
@@ -176,88 +179,21 @@ int main (int argc, char** argv)
     }
   }
   else if (eq_cstr ("-gv", arg)) {
-    Cx::Map<Cx::Tuple<uint,2>, Cx::String> edges;
-    for (uint i = 0; i < acts.sz(); ++i) {
-      edges[mk_Tuple(acts[i][0], acts[i][2])].push_delim("|") << acts[i][1];
-    }
-
-    ofile << "digraph {";
-    Cx::Map<Cx::Tuple<uint,2>, Cx::String>::const_iterator it;
-    for (it = edges.begin(); it != edges.end(); ++it) {
-      const Cx::Tuple<uint,2> edge = it->first;
-      const Cx::String label = it->second;
-      ofile.printf ("\n  %3u -> %3u [label = \"%s\"];", edge[0], edge[1], label.ccstr());
-    }
-    ofile << "\n}\n";
+    oput_graphviz(ofile, acts);
   }
   else if (eq_cstr ("-pml", arg)) {
-    ofile
-      << "// Promela file. For better quality, use Protocon to create this."
-      << "\n#define N 4"
-      << "\nbyte x[N];"
-      << "\nbyte initializing = N;"
-      << "\n#define x_sc x[(_pid+N-1)%N]"
-      << "\n#define x_id x[_pid]"
-      << "\n#define UniAct(a,b,c)  atomic { (x_sc == a) && (x_id == b) -> x_id = c; }"
-      << "\nactive[N] proctype P()"
-      << "\n{"
-      << "\n  atomic {"
-      << "\n    byte tmp;"
-      ;
-    ofile.printf("\n    select(tmp : 0..%u);", domsz-1);
-    ofile
-      << "\n    x_id = tmp;"
-      << "\n    initializing --;"
-      << "\n  }"
-      << "\n  (initializing==0);"
-      << "\nend_P:"
-      << "\n  do"
-      ;
-
-    for (uint i = 0; i < acts.sz(); ++i) {
-      ofile.printf ("\n  :: UniAct( %3u, %3u, %3u )",
-                    acts[i][0], acts[i][1], acts[i][2]);
-    }
-    ofile
-      << "\n  od;"
-      << "\n}\n"
-      ;
+    oput_promela(ofile, acts, domsz);
   }
   else if (eq_cstr ("-prot", arg)) {
-    ofile
-      << "// Protocon file."
-      << "\nconstant N := 3;"
-      ;
-    ofile.printf ("\nconstant M := %u;", domsz);
-    ofile.printf ("\nconstant NActs := %u;", acts.sz());
-    for (uint abc = 0; abc < 3; ++abc) {
-      ofile << "\nconstant " << (char)('a' + abc) << " := ( ";
-      for (uint i = 0; i < acts.sz(); ++i) {
-        if (i > 0)  ofile << ", ";
-        ofile << acts[i][abc];
-      }
-      ofile << " );";
-    }
-
-    ofile
-      << "\nvariable x[Nat % N] <- Nat % M;"
-      << "\nprocess P[i <- Nat % N]"
-      << "\n{"
-      << "\n  read: x[i-1];"
-      << "\n  write: x[i];"
-      << "\n  (future & silent)"
-      << "\n    (forall j <- Nat % NActs : !(x[i-1]==a[j] && x[i]==b[j]));"
-      << "\n  puppet:"
-      ;
-    for (uint i = 0; i < acts.sz(); ++i) {
-      ofile.printf ("\n    ( x[i-1]==a[%u] && x[i]==b[%u] --> x[i]:=c[%u]; )", i, i, i);
-    }
-    ofile
-      << "\n    ;"
-      << "\n}\n";
+    oput_protocon(ofile, acts, domsz);
   }
 
   lose_sysCx ();
   return 0;
 }
 
+END_NAMESPACE
+
+int main(int argc, char** argv) {
+  return PROJECT_NAMESPACE::main(argc, argv);
+}

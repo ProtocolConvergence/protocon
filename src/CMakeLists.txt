@@ -65,6 +65,7 @@ list (APPEND CCFiles
   uni/classify.cc
   uni/generate.cc
   uni/synthesize.cc
+  uni/unifile.cc
   msat.cc
   main-all.cc
   )
@@ -82,8 +83,9 @@ list (APPEND HHFiles
   pla.hh
   prot-xfile.hh prot-ofile.hh
   namespace.hh
-  uni/uniact.hh
   uni/adjlist.hh
+  uni/uniact.hh
+  uni/unifile.hh
   )
 
 include (${CxTopPath}/src/include.cmake)

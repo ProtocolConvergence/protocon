@@ -3,18 +3,20 @@ extern "C" {
 #include "cx/syscx.h"
 }
 
+#include "uniact.hh"
+#include "unifile.hh"
+#include "../prot-ofile.hh"
+#include "../prot-xfile.hh"
+#include "../xnsys.hh"
+
+#include "cx/fileb.hh"
+#include "cx/tuple.hh"
 #include <array>
 #include <vector>
 #include <queue>
 #include <stdio.h>
-#include "cx/fileb.hh"
-#include "cx/tuple.hh"
-#include "prot-ofile.hh"
-#include "prot-xfile.hh"
-#include "xnsys.hh"
-#include "uniact.hh"
 
-#include "namespace.hh"
+#include "../namespace.hh"
 
 using std::queue;
 using std::array;
@@ -152,8 +154,6 @@ vector<UniAct> unidirectionalRingProtocolGenerator(vector< array<PcState,2> > le
 
 uint
 ReadUniRing(const char* filepath, Xn::Sys& sys, vector< array<PcState,2> >& legits);
-bool
-WriteUniRing(const char* filepath, const Xn::Sys& sys, const vector<UniAct>& actions);
 
 /** Execute me now!**/
 int main(int argc, char** argv) {
@@ -190,7 +190,7 @@ int main(int argc, char** argv) {
   const char* out_filepath = argv[argi];
   if (out_filepath) {
     ++ argi;
-    WriteUniRing(out_filepath, sys, actions);
+    oput_protocon(out_filepath, Table<UniAct>(actions));
   }
 
   lose_sysCx();
@@ -260,26 +260,6 @@ ReadUniRing(const char* filepath, Xn::Sys& sys, vector< array<PcState,2> >& legi
   }
 
   return topo.vbl_symms[0].domsz;
-}
-
-/** Write a unidirectional ring protocol file.**/
-  bool
-WriteUniRing(const char* filepath, const Xn::Sys& sys, const vector<UniAct>& actions)
-{
-  const Xn::Net& topo = sys.topology;
-  const Xn::PcSymm& pc_symm = topo.pc_symms[0];
-
-  vector<uint> enum_actions;
-  for (uint i = 0; i < actions.size(); ++i) {
-    Xn::ActSymm act;
-    act.pc_symm = &pc_symm;
-    act.vals << actions[i][0] << actions[i][1] << actions[i][2];
-
-    if (pc_symm.spec->wmap[0]==0)
-      SwapT(uint, act.vals[0], act.vals[1]);
-    enum_actions.push_back(topo.action_index(act));
-  }
-  return oput_protocon_file (filepath, sys, topo, enum_actions, false, 0);
 }
 
 END_NAMESPACE

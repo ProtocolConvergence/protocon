@@ -3,14 +3,53 @@ extern "C" {
 #include "cx/syscx.h"
 }
 
+#include "unifile.hh"
 
+#include "cx/bittable.hh"
 #include "cx/fileb.hh"
 #include "cx/map.hh"
 #include "cx/table.hh"
-#include "cx/bittable.hh"
 
 #include "../namespace.hh"
 
+  PcState
+uniring_domsz_of(const Table<UniAct>& acts)
+{
+  uint domsz = 0;
+  for (uint i = 0; i < acts.sz(); ++i) {
+    for (uint j = 0; j < 3; ++j) {
+      if (acts[i][j]+1 > domsz) {
+        domsz = acts[i][j]+1;
+      }
+    }
+  }
+  return domsz;
+}
+
+  PcState
+uniring_domsz_of(const BitTable& actset)
+{
+  uint domsz = 0;
+  while (domsz * domsz * domsz < actset.sz()) {
+    domsz += 1;
+  }
+  if (actset.sz() != domsz * domsz * domsz) {
+    return 0;
+  }
+  return domsz;
+}
+
+  Table<UniAct>
+uniring_actions_of(const BitTable& actset)
+{
+  const PcState domsz = uniring_domsz_of(actset);
+  Claim( domsz != 0 );
+  Table<UniAct> acts;
+  for (zuint id = actset.begidx(); id < actset.sz(); actset.nextidx(&id)) {
+    acts << UniAct::of_id(id, domsz);
+  }
+  return acts;
+}
 
 OFile& operator<<(OFile& of, const BitTable& bt)
 {
@@ -40,9 +79,8 @@ xget_triple(C::XFile* xfile, UniAct& act)
   return false;
 }
 
-static
   uint
-xget_actions(C::XFile* xfile, Table<UniAct>& acts)
+xget_list(C::XFile* xfile, Table<UniAct>& acts)
 {
   UniAct act;
   while (xget_triple(xfile, act)) {
@@ -59,6 +97,45 @@ xget_actions(C::XFile* xfile, Table<UniAct>& acts)
       }
     }
   }
+  return domsz;
+}
+
+  void
+oput_list(OFile& ofile, const Table<UniAct>& acts)
+{
+  for (uint i = 0; i < acts.sz(); ++i) {
+    ofile
+      << acts[i][0] << '\t'
+      << acts[i][1] << '\t'
+      << acts[i][2] << '\n';
+  }
+}
+
+  uint
+xget_actions(C::XFile* xfile, BitTable& actset)
+{
+  const char* line = getline_XFile(xfile);
+  if (!line)
+    return 0;
+
+  actset.resize(strlen(line));
+  actset.wipe(0);
+
+  UniAct act;
+  for (uint i = 0; i < actset.size(); ++i) {
+    if (line[i] == '1') {
+      actset.set1(i);
+    }
+    else if (line[i] != '0') {
+      failout_sysCx("Only ones and zeros please.");
+    }
+  }
+
+  const uint domsz = uniring_domsz_of(actset);
+  if (domsz == 0) {
+    failout_sysCx("Incorrect bitstring size!");
+  }
+
   return domsz;
 }
 
@@ -95,15 +172,14 @@ map_livelock_ppgs(void (*f) (void**, const UniAct&, uint, uint),
 
   void
 oput_uniring_invariant(OFile& ofile, const BitTable& set, const uint domsz,
-                       const char* pfx = "", const char* delim = " || ")
+                       const char* pfx, const char* delim)
 {
   UniAct prev( domsz );
   if (!delim)
     delim = pfx;
 
-  Set< Tuple<uint, 2> > cache;
-  for each_in_BitTable(actid , set) {
-    UniAct act = UniAct::of_id(actid, domsz);
+  for (zuint id = set.begidx(); id < set.sz(); set.nextidx(&id)) {
+    UniAct act = UniAct::of_id(id, domsz);
     act[2] = domsz;
     skip_unless (act != prev);
     ofile
@@ -117,30 +193,25 @@ oput_uniring_invariant(OFile& ofile, const BitTable& set, const uint domsz,
 }
 
   void
-oput_uniring_protocon_file(const String& ofilepath, const String& ofilename,
-                           const BitTable& actset, const FilterOpt& opt)
+oput_protocon(OFile& ofile, const Table<UniAct>& acts, uint domsz)
 {
-  const uint domsz = opt.domsz;
-  OFileB ofb;
-  OFile ofile( ofb.uopen(ofilepath, ofilename) );
+  if (domsz == 0) {
+    domsz = uniring_domsz_of(acts);
+  }
 
   ofile
-    << "// " << actset
-    << "\nconstant N := 3;"
+    << "constant N := 2;"
     << "\nconstant M := " << domsz << ";"
     << "\nvariable x[N] < M;"
     << "\nprocess P[i < N]"
     << "\n{"
     << "\n  read: x[i-1];"
     << "\n  write: x[i];"
-    << "\n  (future & silent)"
-    << "\n    (1==1"
+    << "\n  (future & future silent) (true);"
     ;
-  oput_uniring_invariant(ofile, actset, domsz, "\n     && ", 0);
-  ofile << "\n    );";
   ofile << "\n  puppet:";
-  for each_in_BitTable(actid , actset) {
-    UniAct act = UniAct::of_id(actid, domsz);
+  for (uint i = 0; i < acts.sz(); ++i) {
+    const UniAct& act = acts[i];
     ofile << "\n    "
       << "( x[i-1]==" << act[0]
       << " && x[i]==" << act[1]
@@ -150,27 +221,81 @@ oput_uniring_protocon_file(const String& ofilepath, const String& ofilename,
   ofile << "\n}\n";
 }
 
-
-static void
-oput_graphviz(OFile& ofile, const BitTable& set, uint domsz)
+  void
+oput_protocon(const String& ofilename, const Table<UniAct>& acts, uint domsz)
 {
-  ofile << "digraph G {\n"
-    << " margin=0;\n"
-    << " edge [weight=5];\n\n";
+  OFileB ofb;
+  OFile ofile( ofb.uopen(0, ofilename) );
+  oput_protocon(ofile, acts, domsz);
+}
 
+  void
+oput_promela(OFile& ofile, const Table<UniAct>& acts, uint domsz)
+{
+  ofile
+    << "\n#define N 4"
+    << "\nbyte x[N];"
+    << "\nbyte initializing = N;"
+    << "\n#define x_p x[(_pid+N-1)%N]"
+    << "\n#define x_i x[_pid]"
+    << "\n#define UniAct(a,b,c)  atomic { (x_p == a) && (x_i == b) -> x_i = c; }"
+    << "\nactive[N] proctype P()"
+    << "\n{"
+    << "\n  atomic {"
+    << "\n    if"
+    ;
+  for (uint i = 0; i < domsz; ++i) {
+    ofile << "\n    :: x_i = " << i << ';';
+  }
+  ofile.printf("\n    select(tmp : 0..%u);", domsz-1);
+  ofile
+    << "\n    fi;"
+    << "\n    initializing --;"
+    << "\n  }"
+    << "\n  (initializing==0);"
+    << "\nend_P:"
+    << "\n  do"
+    ;
+
+  for (uint i = 0; i < acts.sz(); ++i) {
+    ofile << "\n  :: UniAct( "
+      << acts[i][0] << ", "
+      << acts[i][1] << ", "
+      << acts[i][2] << " )";
+  }
+  ofile
+    << "\n  od;"
+    << "\n}\n"
+    ;
+}
+
+  void
+oput_graphviz(OFile& ofile, const Table<UniAct>& acts)
+{
+  ofile << "digraph G {"
+    << "\n  margin=0;"
+    << "\n  edge [weight=5];\n";
+
+  const uint domsz = uniring_domsz_of(acts);
   for (PcState a = 0; a < domsz; ++a) {
-    ofile << "  s_" << a
-      << " [label=\"" << a << "\"];\n";
+    ofile << "\n  " << a
+      << " [label=\"" << a << "\"];";
   }
 
-  for each_in_BitTable(actid , set) {
-    UniAct act = UniAct::of_id(actid, domsz);
-
-    ofile << "  "
-      << "s_" << act[0] << " -> " << "s_" << act[2]
-      << "[label=\"" << act[1] << "\"];\n";
+  Map<UniStep,String> edges;
+  for (uint i = 0; i < acts.sz(); ++i) {
+    edges[UniStep(acts[i][0], acts[i][2])].push_delim("|") << acts[i][1];
   }
-  ofile << "}\n";
+
+  Map<UniStep, String>::const_iterator it;
+  for (it = edges.begin(); it != edges.end(); ++it) {
+    const UniStep& edge = it->first;
+    const String& label = it->second;
+    ofile << "\n  "
+      << edge[0] << " -> " << edge[1]
+      << " [label=\"" << label.ccstr() << "\"];";
+  }
+  ofile << "\n}\n";
 }
 
 static void
@@ -208,8 +333,7 @@ oput_svg_tile_callback(void** data, const UniAct& act, uint i, uint j)
   oput_svg_tile(*(OFile*)data[0], act, i*d+border, j*d+border, d);
 }
 
-
-static void
+  void
 oput_svg_livelock(OFile& ofile, const Table<PcState>& ppgfun,
                   const Table<PcState>& bot,
                   const Table<PcState>& col,
@@ -242,38 +366,8 @@ oput_svg_livelock(OFile& ofile, const Table<PcState>& ppgfun,
   ofile << "\n</svg>";
 }
 
-static bool
-xget_BitTable (C::XFile* xfile, BitTable& set)
-{
-  C::XFile olay[1];
-  if (!getlined_olay_XFile (olay, xfile, "\n"))
-    return false;
-  skipds_XFile (olay, 0);
-  set.wipe(0);
-  char c;
-  for (uint i = 0; i < set.sz(); ++i) {
-    if (xget_char_XFile (olay, &c)) {
-      if (c != '0' && c != '1') {
-        failout_sysCx ("unknown char!");
-      }
-      if (c == '1')
-        set.set1(i);
-    }
-    else if (i == 0) {
-      return false;
-    }
-    else {
-      failout_sysCx ("not enough bits!");
-    }
-  }
-  if (xget_char_XFile (olay, &c)) {
-    failout_sysCx ("too many bits!");
-  }
-  return true;
-}
-
-  bool
-TestKnownAperiodic()
+  PcState
+tilings_and_patterns_aperiodic_uniring(Table<UniAct>& acts)
 {
   const uint domsz = 29;
   static const uint AperiodicTileset[][3] = {
@@ -310,14 +404,12 @@ TestKnownAperiodic()
     { 27,  0,  4 },
     { 28,  0,  3 }
   };
-  const uint depth = ArraySz(AperiodicTileset);
-
-  BitTable delegates( domsz*domsz*domsz, 0 );
+  acts.affysz(ArraySz(AperiodicTileset));
   for (uint i = 0; i < ArraySz(AperiodicTileset); ++i) {
     const uint* tile = AperiodicTileset[i];
-    delegates.set1(id_of3(tile[0], tile[1], tile[2], domsz));
+    acts[i] = UniAct(tile[0], tile[1], tile[2]);
   }
-  return true;
+  return domsz;
 }
 
 END_NAMESPACE

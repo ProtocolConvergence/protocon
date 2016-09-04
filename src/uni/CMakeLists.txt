@@ -2,13 +2,13 @@
 set (UniringBinPath ${CMAKE_CURRENT_BINARY_DIR}/uni)
 
 #### Aperiodic Unidirectional Ring Protocol ####
-addbinexe (uni_aperiodic uni/aperiodic.cc)
+addbinexe (uni_aperiodic uni/aperiodic.cc uni/unifile.cc)
 set_target_properties (uni_aperiodic PROPERTIES
   OUTPUT_NAME aperiodic
   RUNTIME_OUTPUT_DIRECTORY ${UniringBinPath})
 
 #### Generate Unidirectional Ring Protocols ####
-addbinexe (uni_generate uni/generate.cc
+addbinexe (uni_generate uni/generate.cc uni/unifile.cc
   pfmla-glu.c pfmla.c pfmla.cc)
 set_property (TARGET uni_generate
   APPEND PROPERTY INCLUDE_DIRECTORIES ${GluIncludePath})
@@ -18,7 +18,7 @@ set_target_properties (uni_generate PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY ${UniringBinPath})
 
 #### Classify Unidirectional Ring Protocols ####
-addbinexe (uni_classify uni/classify.cc
+addbinexe (uni_classify uni/classify.cc uni/unifile.cc
   pfmla-glu.c pfmla.c pfmla.cc)
 set_property (TARGET uni_classify
   APPEND PROPERTY INCLUDE_DIRECTORIES ${GluIncludePath})
@@ -28,11 +28,9 @@ set_target_properties (uni_classify PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY ${UniringBinPath})
 
 #### Unidirectional Ring Synthesis ####
-addbinexe (uni_synthesize uni/synthesize.cc ${ProtoconSources})
+addbinexe (uni_synthesize uni/synthesize.cc uni/unifile.cc ${ProtoconSources})
 set_property (TARGET uni_synthesize
   APPEND PROPERTY INCLUDE_DIRECTORIES ${GluIncludePath})
-set_property (TARGET uni_synthesize
-  APPEND PROPERTY INCLUDE_DIRECTORIES ${BldPath})
 set_property (TARGET uni_synthesize
   PROPERTY COMPILE_FLAGS "-Wextra -std=c++11")
 set_property (TARGET uni_synthesize

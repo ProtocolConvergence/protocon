@@ -3,10 +3,12 @@ extern "C" {
 #include "cx/syscx.h"
 }
 
-#include <algorithm>
-#include "cx/fileb.hh"
-#include "../pfmla.hh"
 #include "uniact.hh"
+#include "unifile.hh"
+#include "../pfmla.hh"
+
+#include "cx/fileb.hh"
+#include <algorithm>
 
 #include "../namespace.hh"
 
@@ -31,49 +33,6 @@ column_xfmla(const Table<UniAct>& acts, const PFmlaVbl& x_p, const PFmlaVbl& x_j
   return xn;
 }
 
-static
-  bool
-xget_triple(C::XFile* xfile, UniAct& act)
-{
-  C::XFile olay[1];
-  if (!getlined_olay_XFile (olay, xfile, "\n"))
-    return false;
-  uint a, b, c;
-  if (xget_uint_XFile (olay, &a)) {
-    if (xget_uint_XFile (olay, &b) &&
-        xget_uint_XFile (olay, &c)) {
-      act = UniAct(a, b, c);
-      return true;
-    }
-    else {
-      failout_sysCx("I didn't read a full triple. Malformed input?");
-    }
-  }
-  return false;
-}
-
-static
-  uint
-xget_actions(C::XFile* xfile, Table<UniAct>& acts)
-{
-  UniAct act;
-  while (xget_triple(xfile, act)) {
-    acts << act;
-  }
-  if (acts.sz()==0) {
-    failout_sysCx("No actions given! Please provide triples on standard input.");
-  }
-  uint domsz = 0;
-  for (uint i = 0; i < acts.sz(); ++i) {
-    for (uint j = 0; j < 3; ++j) {
-      if (acts[i][j]+1 > domsz) {
-        domsz = acts[i][j]+1;
-      }
-    }
-  }
-  return domsz;
-}
-
 /** Execute me now!**/
 int main(int argc, char** argv) {
   int argi = init_sysCx(&argc, &argv);
@@ -96,7 +55,7 @@ int main(int argc, char** argv) {
 
   Table<UniAct> acts;
   const uint domsz =
-    xget_actions(stdin_XFile (), acts);
+    xget_list(stdin_XFile (), acts);
 
   // Initialize formula variables.
   PFmlaCtx pfmla_ctx;
