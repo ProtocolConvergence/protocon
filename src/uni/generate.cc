@@ -1094,8 +1094,7 @@ xget_BitTable (C::XFile* xfile, BitTable& set)
       failout_sysCx ("not enough bits!");
     }
   }
-  // TODO: This read call should just fail, not return the NUL character.
-  if (xget_char_XFile (olay, &c) && c != '\0') {
+  if (xget_char_XFile (olay, &c)) {
     failout_sysCx ("too many bits!");
   }
   return true;
