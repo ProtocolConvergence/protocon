@@ -62,8 +62,10 @@ list (APPEND CCFiles
   biring.cc
   deadfree.cc
   uni/aperiodic.cc
+  uni/canonical.cc
   uni/classify.cc
   uni/generate.cc
+  uni/livelock.cc
   uni/synthesize.cc
   uni/unifile.cc
   msat.cc
