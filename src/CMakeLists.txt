@@ -237,7 +237,7 @@ set_target_properties (deadfree PROPERTIES
 
 
 #### Simple Unidirectional Ring Programs ####
-add_subdirectory (uni)
+include (uni/CMakeLists.txt)
 
 
 #### Stand-Alone UDP Executable ####

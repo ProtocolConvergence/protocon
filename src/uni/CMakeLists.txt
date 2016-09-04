@@ -26,7 +26,7 @@ set_target_properties (uni_classify PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
 #### Unidirectional Ring Synthesis ####
-addbinexe (uni_synthesize uni/synthesize ${ProtoconSources})
+addbinexe (uni_synthesize uni/synthesize.cc ${ProtoconSources})
 set_property (TARGET uni_synthesize
   APPEND PROPERTY INCLUDE_DIRECTORIES ${GluIncludePath})
 set_property (TARGET uni_synthesize
