@@ -3,15 +3,16 @@ extern "C" {
 #include "cx/syscx.h"
 }
 
+#include "uniact.hh"
+#include "adjlist.hh"
+#include "../pfmla.hh"
+
 #include <algorithm>
 #include "cx/fileb.hh"
 #include "cx/map.hh"
 #include "cx/table.hh"
 #include "cx/bittable.hh"
 #include "cx/set.hh"
-#include "uniact.hh"
-#include "adjlist.hh"
-#include "../pfmla.hh"
 
 #include "../namespace.hh"
 

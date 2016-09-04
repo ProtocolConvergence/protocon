@@ -2,6 +2,7 @@
 #define UniAct_HH_
 
 #include "cx/tuple.hh"
+#include <stdlib.h>
 
 typedef uint PcState;
 
