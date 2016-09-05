@@ -28,6 +28,8 @@ public:
     (*this)[0] = a;
     (*this)[1] = c;
   }
+
+  static UniStep of_id(uint stepid, const uint domsz);
 };
 
 
@@ -38,6 +40,14 @@ UniAct::of_id(uint actid, const uint domsz)
   const div_t lo = div(actid, domsz);
   const div_t hi = div(lo.quot, domsz);
   return UniAct(hi.quot, hi.rem, lo.rem);
+}
+
+inline
+  UniStep
+UniStep::of_id(uint stepid, const uint domsz)
+{
+  const div_t d = div(stepid, domsz);
+  return UniStep(d.quot, d.rem);
 }
 
 inline

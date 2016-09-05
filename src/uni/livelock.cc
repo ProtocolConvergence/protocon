@@ -1,21 +1,21 @@
 
 
-bool fill_livelock_ck(const Table<PcState>& top,
-                      const Table<PcState>& col,
-                      const uint top_rowidx,
+bool fill_livelock_ck(const PcState top[],
+                      const uint n,
+                      const PcState col[],
+                      const uint m,
                       const Table<PcState>& ppgfun,
                       const uint domsz,
                       Table<PcState>& row)
 {
-  const uint n = top.sz() - 1;
+  Claim( top[0] == col[0] );
+  Claim( top[0] == col[m] );
   Claim( top[0] == top[n] );
-  Claim( top[0] == col[col.sz()-1] );
-  Claim( top[0] == col[top_rowidx] );
   row.ensize(n+1);
   for (uint j = 0; j < n+1; ++j) {
     row[j] = top[j];
   }
-  for (uint i = top_rowidx+1; i < col.sz(); ++i) {
+  for (uint i = 1; i < m+1; ++i) {
     row[0] = col[i];
     for (uint j = 1; j < n+1; ++j) {
       row[j] = ppgfun[id_of2(row[j-1], row[j], domsz)];
@@ -46,7 +46,7 @@ livelock_semick_rec(const Table<PcState>& old_bot,
   }
   bool may_exist = false;
   // Build the diagonal up and to the right.
-  for (PcState diag_val = 0; diag_val < domsz; ++diag_val) {
+  for (PcState diag_val = bot[0]; diag_val < domsz; ++diag_val) {
     col[0] = diag_val;
     bool col_exists = true;
     for (uint i = 1; i < n+1; ++i) {
@@ -58,10 +58,13 @@ livelock_semick_rec(const Table<PcState>& old_bot,
     }
     skip_unless (col_exists);
     bot[n] = col[n];
-    if (bot[0]==bot[n]) {
+    for (uint j = n; j-- > 0;) {
+      skip_unless (bot[j] == bot[n]);
       for (uint i = n; i-- > 0;) {
         skip_unless (col[i] == col[n]);
-        if (fill_livelock_ck(bot, col, i, ppgfun, domsz, ret_row)) {
+        if (fill_livelock_ck(&bot[j], bot.sz()-1-j,
+                             &col[i], col.sz()-1-i,
+                             ppgfun, domsz, ret_row)) {
           ret_col.ensize(n+1-i);
           for (uint j = 0; j < ret_col.sz(); ++j) {
             ret_col[j] = col[i+j];
@@ -83,9 +86,11 @@ livelock_semick_rec(const Table<PcState>& old_bot,
   return (may_exist ? May : Nil);
 }
 
+/** Search for a livelock whose periodic block's width and height are bounded.
+ **/
   Trit
 livelock_semick(const uint limit,
-                const Table<PcState>& ppgfun,
+                Table<PcState> ppgfun,
                 const uint domsz,
                 Table<PcState>* ret_row=0,
                 Table<PcState>* ret_col=0)
@@ -103,6 +108,16 @@ livelock_semick(const uint limit,
       return Yes;
     }
     may_exist = (may_exist || (found == May));
+
+    // Remove this value from the next check.
+    for (uint a = c; a < domsz; ++a) {
+      for (uint b = c; b < domsz; ++b) {
+        const uint idx = id_of2(a, b, domsz);
+        if (a == c || b == c || ppgfun[idx] == c) {
+          ppgfun[idx] = domsz;
+        }
+      }
+    }
   }
   return (may_exist ? May : Nil);
 }
