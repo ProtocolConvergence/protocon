@@ -31,10 +31,10 @@ set_target_properties (uni_classify PROPERTIES
 addbinexe (uni_synthesize uni/synthesize.cc uni/unifile.cc ${ProtoconSources})
 set_property (TARGET uni_synthesize
   APPEND PROPERTY INCLUDE_DIRECTORIES ${GluIncludePath})
-set_property (TARGET uni_synthesize
-  PROPERTY COMPILE_FLAGS "-Wextra -std=c++11")
-set_property (TARGET uni_synthesize
-  PROPERTY LINK_FLAGS "-Wextra -std=c++11")
+#set_property (TARGET uni_synthesize
+#  PROPERTY COMPILE_FLAGS "-Wextra -std=c++11")
+#set_property (TARGET uni_synthesize
+#  PROPERTY LINK_FLAGS "-Wextra -std=c++11")
 #set_source_files_properties (${BldPath}/uni/synthesize.cc
 #  PROPERTIES COMPILE_FLAGS "-Wextra -std=c++11")
 target_link_libraries (uni_synthesize cu glu cal ${M_LIB})

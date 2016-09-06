@@ -11,7 +11,6 @@ extern "C" {
 
 #include "cx/fileb.hh"
 #include "cx/tuple.hh"
-#include <array>
 #include <vector>
 #include <queue>
 #include <stdio.h>
@@ -19,7 +18,6 @@ extern "C" {
 #include "../namespace.hh"
 
 using std::queue;
-using std::array;
 using std::vector;
 
 #ifdef DEBUG
@@ -57,7 +55,7 @@ void freeSquareMatrix(size_t **toFree, size_t M){
 }
 
 
-vector<UniAct> unidirectionalRingProtocolGenerator(vector< array<PcState,2> > legits, size_t M){
+vector<UniAct> unidirectionalRingProtocolGenerator(vector<UniStep> legits, size_t M){
   size_t gamma = 0;
   bool gammaExists = false;
   size_t **L = NULL;
@@ -153,7 +151,7 @@ vector<UniAct> unidirectionalRingProtocolGenerator(vector< array<PcState,2> > le
 }
 
 uint
-ReadUniRing(const char* filepath, Xn::Sys& sys, vector< array<PcState,2> >& legits);
+ReadUniRing(const char* filepath, Xn::Sys& sys, vector<UniStep>& legits);
 
 /** Execute me now!**/
 int main(int argc, char** argv) {
@@ -164,7 +162,7 @@ int main(int argc, char** argv) {
 
   const char* in_filepath = argv[argi++];
   Xn::Sys sys; /// For I/O only.
-  vector< array<PcState,2> > legits;
+  vector<UniStep> legits;
   uint domsz = ReadUniRing(in_filepath, sys, legits);
   if (domsz == 0)
     failout_sysCx(in_filepath);
@@ -199,7 +197,7 @@ int main(int argc, char** argv) {
 
 /** Read a unidirectional ring specification.**/
   uint
-ReadUniRing(const char* filepath, Xn::Sys& sys, vector< array<PcState,2> >& legits)
+ReadUniRing(const char* filepath, Xn::Sys& sys, vector<UniStep>& legits)
 {
   legits.clear();
   sys.topology.lightweight = true;
@@ -256,7 +254,7 @@ ReadUniRing(const char* filepath, Xn::Sys& sys, vector< array<PcState,2> >& legi
     // Remove the corresponding predicate formula from {legit_pf}.
     legit_pf -= topo.pfmla_ctx.pfmla_of_state(&state[0], rvbl_indices);
 
-    legits.push_back(array<PcState,2>{state[0], state[1]});
+    legits.push_back(UniStep(state[0], state[1]));
   }
 
   return topo.vbl_symms[0].domsz;

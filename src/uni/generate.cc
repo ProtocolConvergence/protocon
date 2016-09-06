@@ -429,13 +429,12 @@ recurse(Table<BitTable>& delegates_stack,
   const uint domsz = opt.domsz;
 
   BitTable& delegates = delegates_stack[depth];
-  BitTable& candidates = candidates_stack[depth];
-
   delegates = delegates_stack[depth-1];
-  candidates = candidates_stack[depth-1];
-
-  Claim( candidates.ck(actid) );
   delegates.set1(actid);
+
+  BitTable& candidates = candidates_stack[depth];
+  candidates = candidates_stack[depth-1];
+  Claim( candidates.ck(actid) );
   candidates.set0(actid);
   trim_coexist(candidates, actid, domsz, opt.self_disabling_tiles);
 
@@ -517,10 +516,15 @@ searchit(const FilterOpt& opt, OFile& ofile)
         hi_id = actid;
       }
       delegates.set1(actid);
-      candidates.set0(actid);
+      if (!candidates.set0(actid)) {
+        DBog1("Action #%u was trimmed already!", i+1);
+        failout_sysCx("");
+      }
       trim_coexist(candidates, actid, domsz, opt.self_disabling_tiles);
     }
     if (!canonical_ck(delegates, domsz, mask)) {
+      OFile ofile( stderr_OFile () );
+      oput_list(ofile, uniring_actions_of(mask));
       failout_sysCx("Assumed a non-canonical set of actions!");
     }
 
@@ -632,7 +636,8 @@ int main(int argc, char** argv)
       if (!xget_uint_cstr (&opt.max_depth, argv[argi++]))
         failout_sysCx("Argument Usage: -max-depth <limit>\nWhere <limit> is an unsigned integer!");
     }
-    else if (eq_cstr ("-max-period", arg)) {
+    else if (eq_cstr ("-max-period", arg) ||
+             eq_cstr("-bound", arg)) {
       if (!xget_uint_cstr (&opt.max_period, argv[argi++]))
         failout_sysCx("Argument Usage: -max-period <limit>\nWhere <limit> is an unsigned integer!");
     }

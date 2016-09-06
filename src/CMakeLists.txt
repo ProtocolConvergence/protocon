@@ -246,7 +246,7 @@ include (uni/CMakeLists.txt)
 
 #### Stand-Alone UDP Executable ####
 # Just for testing.
-if (UNIX)
+if (UNIX AND NOT APPLE)
   addbinexe (udp udp.c)
   target_link_libraries (udp rt)
   set_property (TARGET udp
@@ -317,7 +317,9 @@ if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/verif/include.cmake)
 endif ()
 
 
-install (TARGETS protocon protocon-mpi DESTINATION bin)
+if (MPI_FOUND)
+  install (TARGETS protocon protocon-mpi DESTINATION bin)
+endif()
 
 cat_parenthesized (DistribSpecs ${MetaPath}/examplespec.files)
 foreach (f ${DistribSpecs})

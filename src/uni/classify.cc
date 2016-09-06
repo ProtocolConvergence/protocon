@@ -12,9 +12,6 @@ extern "C" {
 
 #include "../namespace.hh"
 
-namespace C {
-  using Cx::C::XFile;
-}
 
 /** Given a list of actions and variables x[j-1] and x[j],
  * compute the tiling constraints for column j

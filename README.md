@@ -17,6 +17,34 @@ mkdir tmp
 ./bin/protocon -x examplespec/ColorRing.prot -o tmp/solution.prot
 ```
 
+### Full Instructions
+
+```
+git clone https://github.com/grencez/protocon.git protocon
+cd protocon
+git submodule init
+git submodule update
+mkdir -p bld/ext
+cd bld/ext
+cmake ../..
+make
+```
+
+If you're on a Mac, read on.
+Was CMake not found?
+If so, make sure it's installed and launch its GUI.
+Specify its source directory as `/path/to/protocon/` and the build directory as `/path/to/protocon/bld/ext/`.
+Hit the `Generate` button.
+
+Now there should be a makefile in `bld/ext/`, so in the terminal type `make`.
+This will fail due to a missing `malloc.h` include.
+Run the following to strip that line out and proceed:
+
+```
+sed -i.bak -e 's/^#include "malloc\.h"//' ../../dep/glu-2.4/src/calBdd/calMemoryManagement.c
+make
+```
+
 ## Dependencies:
 
 Besides Qt, all essential dependencies are automatically downloaded when running `make`.

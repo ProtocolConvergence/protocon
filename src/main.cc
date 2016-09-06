@@ -14,13 +14,15 @@ int main(int argc, char** argv)
   using namespace PROJECT_NAMESPACE;
   int argi = init_sysCx (&argc, &argv);
   DeclLegit( good );
-  struct timespec begtime, endtime;
   AddConvergenceOpt opt;
   ProtoconFileOpt infile_opt;
   ProtoconOpt exec_opt;
   Xn::Sys sys;
 
+#ifndef __APPLE__
+  struct timespec begtime, endtime;
   clock_gettime(CLOCK_MONOTONIC, &begtime);
+#endif
 
   sys.topology.lightweight = true;
   DoLegitLine( "" )
@@ -84,7 +86,9 @@ int main(int argc, char** argv)
   else {
     DBog0("No solution found...");
   }
+#ifndef __APPLE__
   clock_gettime(CLOCK_MONOTONIC, &endtime);
+#endif
 
   if (found || exec_opt.task == ProtoconOpt::NoTask) {
     Xn::Sys osys;
@@ -146,11 +150,13 @@ int main(int argc, char** argv)
   }
   DBogOF.flush();
 
+#ifndef __APPLE__
   if (!exec_opt.stats_ofilepath.empty_ck() ||
       exec_opt.task == ProtoconOpt::SearchTask) {
     unsigned long peak = peak_memory_use_sysCx ();
     oput_stats (exec_opt, begtime, endtime, peak);
   }
+#endif
 
   lose_sysCx ();
 
