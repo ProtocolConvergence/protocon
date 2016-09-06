@@ -636,8 +636,12 @@ int main(int argc, char** argv)
       if (!xget_uint_cstr (&opt.max_depth, argv[argi++]))
         failout_sysCx("Argument Usage: -max-depth <limit>\nWhere <limit> is an unsigned integer!");
     }
-    else if (eq_cstr ("-max-period", arg) ||
-             eq_cstr("-bound", arg)) {
+    else if (eq_cstr("-bound", arg)) {
+      if (!xget_uint_cstr (&opt.max_period, argv[argi++]))
+        failout_sysCx("Argument Usage: -bound <limit>\nWhere <limit> is an unsigned integer!");
+      opt.max_propagations = opt.max_period;
+    }
+    else if (eq_cstr ("-max-period", arg)) {
       if (!xget_uint_cstr (&opt.max_period, argv[argi++]))
         failout_sysCx("Argument Usage: -max-period <limit>\nWhere <limit> is an unsigned integer!");
     }
