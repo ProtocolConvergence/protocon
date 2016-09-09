@@ -46,7 +46,7 @@ struct FilterOpt
   Table<PFmlaVbl> pfmla_vbls;
   uint allbut2_pfmla_list_id;
 
-  Table<UniAct> assumed_acts;
+  Table<UniAct> given_acts;
 
   FilterOpt()
     : domsz( 3 )
@@ -58,7 +58,7 @@ struct FilterOpt
     , count_ones( false )
     , verify( false )
     , use_bdds( false )
-    , record_sep( 0 )
+    , record_sep( "" )
     , prot_ofilename( 0 )
     , graphviz_ofilename( 0 )
     , svg_livelock_ofilename( 0 )
@@ -358,7 +358,8 @@ periodic_leads_semick(const BitTable& delegates,
       stack[i][0] = a;
       stack[i][1] = b;
     }
-    if (stack.sz() <= opt.max_period &&
+    if (opt.max_propagations > opt.max_period &&
+        stack.sz() <= opt.max_period &&
         guided_livelock_ck(stack, ppgfun, domsz, mask,
                            opt.max_propagations)) {
 #ifdef PruneLivelocks
@@ -507,10 +508,10 @@ searchit(const FilterOpt& opt, OFile& ofile)
   // Never need self-loops.
   REMOVE_ABB;
 
-  if (!opt.assumed_acts.empty_ck()) {
+  if (!opt.given_acts.empty_ck()) {
     uint hi_id = 0;
-    for (uint i = 0; i < opt.assumed_acts.sz(); ++i) {
-      const UniAct& act = opt.assumed_acts[i];
+    for (uint i = 0; i < opt.given_acts.sz(); ++i) {
+      const UniAct& act = opt.given_acts[i];
       const uint actid = id_of(act, domsz);
       if (actid > hi_id) {
         hi_id = actid;
@@ -636,9 +637,10 @@ int main(int argc, char** argv)
       if (!xget_uint_cstr (&opt.max_depth, argv[argi++]))
         failout_sysCx("Argument Usage: -max-depth <limit>\nWhere <limit> is an unsigned integer!");
     }
-    else if (eq_cstr("-bound", arg)) {
+    else if (eq_cstr("-bound", arg) ||
+             eq_cstr("-cutoff", arg)) {
       if (!xget_uint_cstr (&opt.max_period, argv[argi++]))
-        failout_sysCx("Argument Usage: -bound <limit>\nWhere <limit> is an unsigned integer!");
+        failout_sysCx("Argument Usage: -cutoff <limit>\nWhere <limit> is an unsigned integer!");
       opt.max_propagations = opt.max_period;
     }
     else if (eq_cstr ("-max-period", arg)) {
@@ -697,14 +699,15 @@ int main(int argc, char** argv)
       if (!opt.list_ofilename)
         failout_sysCx("Argument Usage: -o-list <file>");
     }
-    else if (eq_cstr ("-x-assume", arg)) {
+    else if (eq_cstr ("-x-assume", arg) ||
+             eq_cstr ("-x-list", arg)) {
       String fname = argv[argi++];
       if (!fname)
-        failout_sysCx("Argument Usage: -x-assume <file>");
+        failout_sysCx("Argument Usage: -x-list <file>");
 
       XFileB xfileb;
       C::XFile* xfile = xfileb.uopen(0, fname);
-      xget_list(xfile, opt.assumed_acts);
+      xget_list(xfile, opt.given_acts);
     }
     else if (eq_cstr ("-RS", arg)) {
       filter = true;
