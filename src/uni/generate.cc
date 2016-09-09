@@ -630,27 +630,29 @@ int main(int argc, char** argv)
   while (argi < argc) {
     const char* arg = argv[argi++];
     if (eq_cstr ("-domsz", arg)) {
-      if (!xget_uint_cstr (&opt.domsz, argv[argi++]))
-        failout_sysCx("Argument Usage: -domsz <M>\nWhere <M> is an unsigned integer!");
+      if (!xget_uint_cstr (&opt.domsz, argv[argi++]) || opt.domsz == 0)
+        failout_sysCx("Argument Usage: -domsz <M>\nWhere <M> is a positive integer!");
     }
     else if (eq_cstr ("-max-depth", arg)) {
-      if (!xget_uint_cstr (&opt.max_depth, argv[argi++]))
-        failout_sysCx("Argument Usage: -max-depth <limit>\nWhere <limit> is an unsigned integer!");
+      if (!xget_uint_cstr (&opt.max_depth, argv[argi++]) || opt.max_depth == 0)
+        failout_sysCx("Argument Usage: -max-depth <limit>\nWhere <limit> is a positive integer!");
     }
     else if (eq_cstr("-bound", arg) ||
              eq_cstr("-cutoff", arg)) {
-      if (!xget_uint_cstr (&opt.max_period, argv[argi++]))
-        failout_sysCx("Argument Usage: -cutoff <limit>\nWhere <limit> is an unsigned integer!");
-      opt.max_propagations = opt.max_period;
+      uint cutoff = 0;
+      if (!xget_uint_cstr (&cutoff, argv[argi++]) || cutoff == 0)
+        failout_sysCx("Argument Usage: -cutoff <limit>\nWhere <limit> is a positive integer!");
+      opt.max_period = cutoff;
+      opt.max_propagations = cutoff;
     }
     else if (eq_cstr ("-max-period", arg)) {
-      if (!xget_uint_cstr (&opt.max_period, argv[argi++]))
-        failout_sysCx("Argument Usage: -max-period <limit>\nWhere <limit> is an unsigned integer!");
+      if (!xget_uint_cstr (&opt.max_period, argv[argi++]) || opt.max_period == 0)
+        failout_sysCx("Argument Usage: -max-period <limit>\nWhere <limit> is a positive integer!");
     }
     else if (eq_cstr ("-max-ppgs", arg) ||
              eq_cstr ("-max-propagations", arg)) {
-      if (!xget_uint_cstr (&opt.max_propagations, argv[argi++]))
-        failout_sysCx("Argument Usage: -max-ppgs <limit>\nWhere <limit> is an unsigned integer!");
+      if (!xget_uint_cstr (&opt.max_propagations, argv[argi++]) || opt.max_propagations == 0)
+        failout_sysCx("Argument Usage: -max-ppgs <limit>\nWhere <limit> is a positive integer!");
     }
     else if (eq_cstr ("-self-disabling-tiles", arg)) {
       opt.self_disabling_tiles = true;
