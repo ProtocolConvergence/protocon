@@ -115,6 +115,8 @@ add_custom_command (
   COMMAND ${peg_exe} -o ${BldPath}/prot-xfile.leg.cc ${CMAKE_CURRENT_SOURCE_DIR}/prot-xfile.leg
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/prot-xfile.leg)
 set_bld_cfile_properties (${BldPath}/prot-xfile.leg.cc)
+set_property (SOURCE ${BldPath}/prot-xfile.leg.cc
+  APPEND PROPERTY COMPILE_FLAGS "-Wno-unused -Wno-unused-parameter")
 
 
 #### Common Files ####
