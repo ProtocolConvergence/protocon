@@ -134,6 +134,7 @@ column_xfmla(const BitTable& actset, const PFmlaVbl& x_p, const PFmlaVbl& x_j, u
 
   Trit
 periodic_leads_semick(const BitTable& delegates,
+                      const Table<PcState>& ppgfun,
                       BitTable& mask,
                       Table<BitTable>& candidates_stack,
                       const uint depth,
@@ -201,8 +202,6 @@ periodic_leads_semick(const BitTable& delegates,
     return May;
   }
 
-  Table<PcState> ppgfun;
-  init_ppgfun(ppgfun, delegates, domsz);
   const bool detect_livelocks_well = true;
 
   bool maybe_livelock = true;
@@ -381,23 +380,25 @@ recurse(Table<BitTable>& delegates_stack,
   candidates.set0(actid);
   trim_coexist(candidates, actid, domsz, opt.self_disabling_tiles);
 
+  Table<PcState> ppgfun;
+  init_ppgfun(ppgfun, delegates, domsz);
   bool print_delegates = true;
-  switch (periodic_leads_semick(delegates, mask,
+  switch (periodic_leads_semick(delegates, ppgfun, mask,
                                 candidates_stack, depth, opt)) {
     case Nil: return;
     case May: print_delegates = false;
     case Yes: break;
   }
-  if (!canonical_ck(delegates, domsz, mask)) {
+  if (!canonical_ck(ppgfun, domsz)) {
     return;
   }
   if (print_delegates) {
-    oput_b64_ppgfun(opt.id_ofile, uniring_ppgfun_of(delegates, domsz), domsz);
+    oput_b64_ppgfun(opt.id_ofile, ppgfun, domsz);
     opt.id_ofile << opt.id_ofile.endl();
   }
   if (depth == opt.max_depth) {
     if (!!opt.bfs_ofile) {
-      oput_b64_ppgfun(opt.bfs_ofile, uniring_ppgfun_of(delegates, domsz), domsz);
+      oput_b64_ppgfun(opt.bfs_ofile, ppgfun, domsz);
       opt.bfs_ofile << opt.bfs_ofile.endl();
     }
     return;
@@ -470,7 +471,7 @@ searchit(const SearchOpt& opt)
       }
       trim_coexist(candidates, actid, domsz, opt.self_disabling_tiles);
     }
-    if (!canonical_ck(delegates, domsz, mask)) {
+    if (!canonical_ck(uniring_ppgfun_of(delegates, domsz), domsz)) {
       OFile ofile( stderr_OFile () );
       oput_list(ofile, uniring_actions_of(mask, domsz));
       failout_sysCx("Assumed a non-canonical set of actions!");
@@ -654,7 +655,7 @@ TestKnownAperiodic()
   opt.max_period = 10;
   opt.check_ppg_overapprox = false;
   opt.commit_domsz();
-  switch (periodic_leads_semick(delegates, mask,
+  switch (periodic_leads_semick(delegates, ppgfun, mask,
                                 candidates_stack, depth, opt)) {
     case Nil: DBog0("hard: Nil");  return false;
     case May: DBog0("hard: May");  return false;

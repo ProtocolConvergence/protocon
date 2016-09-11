@@ -1,4 +1,5 @@
 
+static
   bool
 minimal_unique_ck (const uint* a, uint n)
 {
@@ -15,22 +16,23 @@ minimal_unique_ck (const uint* a, uint n)
   return true;
 }
 
+static
   void
-permute_pc_act (BitTable& bt, const BitTable& set, const Table<uint>& perm_map)
+permute_pc_act (Table<PcState>& ppgfun, const Table<PcState>& choice, const Table<uint>& perm_map)
 {
   const uint domsz = perm_map.sz();
-  bt.wipe(0);
-  for each_in_BitTable(actid , set) {
-    UniAct act = UniAct::of_id(actid, domsz);
-    for (uint j = 0; j < 3; ++j) {
-      act[j] = perm_map[act[j]];
+  ppgfun.wipe(domsz);
+  for (uint a = 0; a < domsz; ++a) {
+    for (uint b = 0; b < domsz; ++b) {
+      uint c = choice[id_of2(a, b, domsz)];
+      skip_unless (c < domsz);
+      ppgfun[id_of2(perm_map[a], perm_map[b], domsz)] = perm_map[c];
     }
-    bt.set1(id_of(act, domsz));
   }
 }
 
   bool
-canonical_ck(const BitTable& set, const uint domsz, BitTable& bt)
+canonical_ck(const Table<PcState>& choice, const uint domsz)
 {
   Table<uint> perm_doms(domsz-1);
   luint nperms = 1;
@@ -41,6 +43,8 @@ canonical_ck(const BitTable& set, const uint domsz, BitTable& bt)
   Table<uint> perm_vals(domsz-1);
   Table<uint> perm_map(domsz);
 
+  Table<PcState> ppgfun(domsz*domsz, domsz);
+
   for (luint perm_idx = 0; perm_idx < nperms; ++perm_idx) {
     state_of_index (&perm_vals[0], perm_idx, perm_doms);
     for (uint i = 0; i < domsz; ++i) {
@@ -49,9 +53,13 @@ canonical_ck(const BitTable& set, const uint domsz, BitTable& bt)
     for (uint i = 0; i < perm_vals.sz(); ++i) {
       SwapT( uint, perm_map[i], perm_map[perm_vals[i]] );
     }
+#if 0
     Claim( minimal_unique_ck(&perm_map[0], perm_map.sz()) );
-    permute_pc_act (bt, set, perm_map);
-    if (bt > set) {
+#else
+    (void) minimal_unique_ck;
+#endif
+    permute_pc_act (ppgfun, choice, perm_map);
+    if (ppgfun < choice) {
       return false;
     }
   }
