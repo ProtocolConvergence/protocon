@@ -18,15 +18,28 @@ using Cx::OFileB;
 using Cx::XFileB;
 
 PcState
+uniring_domsz_of(const Table<PcState>& ppgfun);
+PcState
 uniring_domsz_of(const Table<UniAct>& acts);
 PcState
 uniring_domsz_of(const BitTable& actset);
-Table<UniAct>
-uniring_actions_of(const BitTable& actset);
 Table<PcState>
 uniring_ppgfun_of(const Table<UniAct>& acts, uint domsz=0);
+Table<PcState>
+uniring_ppgfun_of(const BitTable& actset, uint domsz=0);
+Table<UniAct>
+uniring_actions_of(const Table<PcState>& ppgfun, uint domsz=0);
+Table<UniAct>
+uniring_actions_of(const BitTable& actset, uint domsz=0);
+BitTable
+uniring_actset_of(const Table<PcState>& ppgfun, uint domsz=0);
 
 OFile& operator<<(OFile& of, const BitTable& bt);
+
+void
+oput_b64_ppgfun(OFile& ofile, const Table<PcState>& ppgfun, uint domsz=0);
+PcState
+xget_b64_ppgfun(C::XFile* xfile, Table<PcState>& ppgfun);
 
 PcState
 xget_list(C::XFile* xfile, Table<UniAct>& acts);

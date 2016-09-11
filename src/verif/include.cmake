@@ -205,7 +205,7 @@ add_test (NAME Verif4_Sync_OrientRing
   COMMAND protocon -verify -synchronous -x ${SolnPath}/OrientRing.prot -param N 4)
 
 ## Unidirectional ring sanity check.
-add_test (NAME Uniring_Generate COMMAND uni_generate -test)
+add_test (NAME Uniring_Generate COMMAND uni-generate -test)
 
 ## Promela file output.
 add_test (NAME Promela_OrientDaisy

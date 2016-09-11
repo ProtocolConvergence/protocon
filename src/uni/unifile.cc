@@ -13,6 +13,19 @@ extern "C" {
 #include "../namespace.hh"
 
   PcState
+uniring_domsz_of(const Table<PcState>& ppgfun)
+{
+  uint domsz = 0;
+  while (domsz * domsz < ppgfun.sz()) {
+    domsz += 1;
+  }
+  if (ppgfun.sz() != domsz * domsz) {
+    return 0;
+  }
+  return domsz;
+}
+
+  PcState
 uniring_domsz_of(const Table<UniAct>& acts)
 {
   uint domsz = 0;
@@ -39,18 +52,6 @@ uniring_domsz_of(const BitTable& actset)
   return domsz;
 }
 
-  Table<UniAct>
-uniring_actions_of(const BitTable& actset)
-{
-  const PcState domsz = uniring_domsz_of(actset);
-  Claim( domsz != 0 );
-  Table<UniAct> acts;
-  for (zuint id = actset.begidx(); id < actset.sz(); actset.nextidx(&id)) {
-    acts << UniAct::of_id(id, domsz);
-  }
-  return acts;
-}
-
   Table<PcState>
 uniring_ppgfun_of(const Table<UniAct>& acts, uint domsz)
 {
@@ -64,6 +65,69 @@ uniring_ppgfun_of(const Table<UniAct>& acts, uint domsz)
     ppgfun[id_of2(act[0], act[1], domsz)] = act[2];
   }
   return ppgfun;
+}
+
+  Table<PcState>
+uniring_ppgfun_of(const BitTable& actset, uint domsz)
+{
+  if (domsz == 0)
+    domsz = uniring_domsz_of(actset);
+
+  Table<PcState> ppgfun;
+  ppgfun.affysz(domsz*domsz, domsz);
+  for (zuint i = actset.begidx(); i < actset.sz(); actset.nextidx(&i)) {
+    const UniAct& act = UniAct::of_id(i, domsz);
+    ppgfun[id_of2(act[0], act[1], domsz)] = act[2];
+  }
+  return ppgfun;
+}
+
+
+  Table<UniAct>
+uniring_actions_of(const Table<PcState>& ppgfun, uint domsz)
+{
+  if (domsz == 0)
+    domsz = uniring_domsz_of(ppgfun);
+  Table<UniAct> acts;
+  for (uint a = 0; a < domsz; ++a) {
+    for (uint b = 0; b < domsz; ++b) {
+      uint c = ppgfun[id_of2(a, b, domsz)];
+      if (c < domsz) {
+        acts << UniAct(a, b, c);
+      }
+    }
+  }
+  return acts;
+}
+
+  Table<UniAct>
+uniring_actions_of(const BitTable& actset, uint domsz)
+{
+  if (domsz == 0)
+    domsz = uniring_domsz_of(actset);
+  Claim( domsz != 0 );
+  Table<UniAct> acts;
+  for (zuint id = actset.begidx(); id < actset.sz(); actset.nextidx(&id)) {
+    acts << UniAct::of_id(id, domsz);
+  }
+  return acts;
+}
+
+  BitTable
+uniring_actset_of(const Table<PcState>& ppgfun, uint domsz)
+{
+  if (domsz == 0)
+    domsz = uniring_domsz_of(ppgfun);
+  BitTable actset(domsz*domsz*domsz, 0);
+  for (uint a = 0; a < domsz; ++a) {
+    for (uint b = 0; b < domsz; ++b) {
+      uint c = ppgfun[id_of2(a, b, domsz)];
+      if (c < domsz) {
+        actset.set1(id_of3(a, b, c, domsz));
+      }
+    }
+  }
+  return actset;
 }
 
 OFile& operator<<(OFile& of, const BitTable& bt)
@@ -92,6 +156,75 @@ xget_triple(C::XFile* xfile, UniAct& act)
     }
   }
   return false;
+}
+
+  void
+oput_b64_ppgfun(OFile& ofile, const Table<PcState>& ppgfun, uint domsz)
+{
+  if (domsz == 0)
+    domsz = uniring_domsz_of(ppgfun);
+  Claim( domsz > 0 );
+  const uint elgsz = 1+lg_luint(domsz);
+  BitTable bt(domsz * domsz * elgsz, 0);
+  for (zuint i = 0; i < ppgfun.sz(); ++i) {
+    bt.set(i * elgsz, elgsz, ppgfun[i]);
+  }
+
+  for (zuint i = 0; i < bt.sz(); i+=6) {
+    const uint w = bt.get(i, 6);
+    const char c
+      = w < 26 ? 'A'+(char)w
+      : w < 52 ? 'a'+(char)(w-26)
+      : w < 62 ? '0'+(char)(w-52)
+      : w < 63 ? '-' : '_';
+    ofile << c;
+  }
+}
+
+  PcState
+xget_b64_ppgfun(C::XFile* xfile, Table<PcState>& ppgfun)
+{
+  const char* s = nextok_XFile(xfile, 0, 0);
+  if (!s)  return 0;
+  const zuint n = strlen(s);
+  zuint domsz = 1;
+  uint elgsz = 1;
+  while (domsz * domsz * elgsz + 5 < 6 * n) {
+    domsz += 1;
+    elgsz = 1+lg_luint(domsz);
+  }
+  if ((domsz * domsz * elgsz + 5) / 6 != n) {
+    DBog2("B64 encoding has %zu bits, which is not close to %s.",
+          6*n, "a valid length (domsz^2*lg(domsz+1))");
+    return 0;
+  }
+  BitTable bt(domsz*domsz*elgsz, 0);
+  for (zuint i = 0; i < n; ++i) {
+    const char c = s[i];
+    const uint w
+      = ('A' <= c && c <= 'Z') ? (uint) (c-'A')
+      : ('a' <= c && c <= 'z') ? (uint) (c-'a') + 26
+      : ('0' <= c && c <= '9') ? (uint) (c-'0') + 52
+      : ('-' == c) ? 62
+      : ('_' == c) ? 63
+      : 64;
+    if (w >= 64) {
+      DBog1( "Error reading B64 encoding, get char '%c'.", c );
+      return 0;
+    }
+    bt.set(6*i, 6, w);
+  }
+
+  ppgfun.resize(domsz*domsz);
+  for (zuint i = 0; i < ppgfun.sz(); ++i) {
+    ppgfun[i] = bt.get(elgsz*i, elgsz);
+    if (ppgfun[i] > domsz) {
+      DBog1( "Error reading B64 encoding, got a value larger than %u.",
+             domsz );
+      return 0;
+    }
+  }
+  return (PcState) domsz;
 }
 
   uint

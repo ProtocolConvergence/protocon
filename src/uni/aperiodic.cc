@@ -158,8 +158,7 @@ int main (int argc, char** argv)
   const char* arg = argv[argi];
 
   if (argi+1 != argc || eq_cstr("-h", arg)) {
-    failout_sysCx ("Expect one argument of: -gv, -list, -pml, -prot");
-    return 1;
+    failout_sysCx ("Expect one argument of: -id, -gv, -list, -pml, -prot");
   }
 
   Cx::Table< Cx::Tuple<uint,4> > wtiles;
@@ -173,18 +172,22 @@ int main (int argc, char** argv)
   const uint domsz = ReduceToActionTiles(acts, wtiles);
 
   Cx::OFile ofile(stdout_OFile ());
-  if (eq_cstr ("-list", arg)) {
+  if (eq_cstr ("-id", arg) || eq_cstr ("-o-id", arg)) {
+    oput_b64_ppgfun(ofile, uniring_ppgfun_of(acts, domsz), domsz);
+    ofile << ofile.endl();
+  }
+  else if (eq_cstr ("-list", arg) || eq_cstr ("-o-list", arg)) {
     for (uint i = 0; i < acts.sz(); ++i) {
       ofile.printf ("%3u %3u %3u\n", acts[i][0], acts[i][1], acts[i][2]);
     }
   }
-  else if (eq_cstr ("-gv", arg)) {
+  else if (eq_cstr ("-gv", arg) || eq_cstr ("-o-graphviz", arg) || eq_cstr ("-o-gv", arg)) {
     oput_graphviz(ofile, acts);
   }
-  else if (eq_cstr ("-pml", arg)) {
+  else if (eq_cstr ("-pml", arg) || eq_cstr ("-o-pml", arg)) {
     oput_promela(ofile, acts, domsz);
   }
-  else if (eq_cstr ("-prot", arg)) {
+  else if (eq_cstr ("-prot", arg) || eq_cstr ("-o-prot", arg)) {
     oput_protocon(ofile, acts, domsz);
   }
 

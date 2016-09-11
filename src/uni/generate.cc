@@ -20,7 +20,7 @@ extern "C" {
 
 #include "canonical.cc"
 
-struct FilterOpt
+struct SearchOpt
 {
   uint domsz;
   uint max_depth;
@@ -36,7 +36,7 @@ struct FilterOpt
 
   Table<UniAct> given_acts;
 
-  FilterOpt()
+  SearchOpt()
     : domsz( 3 )
     , max_depth( 0 )
     , max_period( 0 )
@@ -128,7 +128,7 @@ periodic_leads_semick(const BitTable& delegates,
                       BitTable& mask,
                       Table<BitTable>& candidates_stack,
                       const uint depth,
-                      const FilterOpt& opt)
+                      const SearchOpt& opt)
 {
 #define PruneLivelocks
   const uint domsz = opt.domsz;
@@ -355,7 +355,7 @@ trim_coexist (BitTable& actset, uint actid, uint domsz,
 recurse(Table<BitTable>& delegates_stack,
         Table<BitTable>& candidates_stack,
         uint actid,
-        const FilterOpt& opt, OFile& ofile,
+        const SearchOpt& opt, OFile& ofile,
         uint depth,
         BitTable& mask)
 {
@@ -382,8 +382,8 @@ recurse(Table<BitTable>& delegates_stack,
     return;
   }
   if (print_delegates) {
-    ofile << delegates << '\n';
-    ofile.flush();
+    oput_b64_ppgfun(ofile, uniring_ppgfun_of(delegates, domsz), domsz);
+    ofile << ofile.endl();
   }
   if (depth == opt.max_depth)
     return;
@@ -400,7 +400,7 @@ recurse(Table<BitTable>& delegates_stack,
 }
 
   void
-searchit(const FilterOpt& opt, OFile& ofile)
+searchit(const SearchOpt& opt, OFile& ofile)
 {
   const uint domsz = opt.domsz;
   const uint max_depth = opt.max_depth;
@@ -434,8 +434,8 @@ searchit(const FilterOpt& opt, OFile& ofile)
     for (uint b = 0; b < domsz; ++b) \
       candidates.set0(id_of3(a, b, a, domsz))
 
-#define RECURSE \
-  recurse(delegates_stack, candidates_stack, actid, opt, ofile, 1, mask)
+#define RECURSE(depth) \
+  recurse(delegates_stack, candidates_stack, actid, opt, ofile, depth, mask)
 
   // Never need self-loops.
   REMOVE_ABB;
@@ -457,7 +457,7 @@ searchit(const FilterOpt& opt, OFile& ofile)
     }
     if (!canonical_ck(delegates, domsz, mask)) {
       OFile ofile( stderr_OFile () );
-      oput_list(ofile, uniring_actions_of(mask));
+      oput_list(ofile, uniring_actions_of(mask, domsz));
       failout_sysCx("Assumed a non-canonical set of actions!");
     }
 
@@ -472,23 +472,23 @@ searchit(const FilterOpt& opt, OFile& ofile)
       }
     }
 
-    for (actid = hi_id+1; actid < candidates.sz(); ++actid) {
-      skip_unless( candidates.ck(actid) );
-      RECURSE;
-    }
+    delegates.set0(hi_id);
+    candidates.set1(hi_id);
+    actid = hi_id;
+    RECURSE(0);
     return;
   }
 
   actid = id_of3(0, 0, 1, domsz);
-  RECURSE;
+  RECURSE(1);
   REMOVE_AAB;
 
   actid = id_of3(0, 1, 0, domsz);
-  RECURSE;
+  RECURSE(1);
   REMOVE_ABA;
 
   actid = id_of3(0, 1, 2, domsz);
-  RECURSE;
+  RECURSE(1);
 
 #undef REMOVE_ABB
 #undef REMOVE_ABA
@@ -501,7 +501,7 @@ static bool TestKnownAperiodic();
 int main(int argc, char** argv)
 {
   int argi = init_sysCx (&argc, &argv);
-  FilterOpt opt;
+  SearchOpt opt;
 
   while (argi < argc) {
     const char* arg = argv[argi++];
@@ -544,8 +544,21 @@ int main(int argc, char** argv)
       lose_sysCx();
       return (passed ? 0 : 1);
     }
-    else if (eq_cstr ("-x-assume", arg) ||
-             eq_cstr ("-x-init-list", arg)) {
+    else if (eq_cstr ("-x-init", arg)) {
+      String fname = argv[argi++];
+      if (!fname)
+        failout_sysCx("Argument Usage: -x-init <file>");
+
+      XFileB xfileb;
+      C::XFile* xfile = xfileb.uopen(0, fname);
+      Table<PcState> ppgfun;
+      opt.domsz = xget_b64_ppgfun(xfile, ppgfun);
+      if (opt.domsz == 0) {
+        failout_sysCx (0);
+      }
+      opt.given_acts = uniring_actions_of(ppgfun, opt.domsz);
+    }
+    else if (eq_cstr ("-x-init-list", arg)) {
       String fname = argv[argi++];
       if (!fname)
         failout_sysCx("Argument Usage: -x-init-list <file>");
@@ -591,7 +604,7 @@ TestKnownAperiodic()
   BitTable mask( domsz*domsz*domsz, 0 );
   const uint depth = acts.sz();
   Table<BitTable> candidates_stack(depth+1, mask);
-  FilterOpt opt;
+  SearchOpt opt;
   opt.domsz = domsz;
   opt.max_period = 10;
   opt.check_ppg_overapprox = false;

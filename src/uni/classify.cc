@@ -76,7 +76,7 @@ tile_classify(const Table<UniAct>& acts, uint max_period)
   const Trit exists =
     livelock_semick(max_period, ppgfun, domsz, &row);
   if (exists == Nil)  return 0;
-  if (exists == Yes)  return row.sz();
+  if (exists == Yes)  return row.sz()-1;
   return max_period + 1;
 }
 
@@ -89,14 +89,17 @@ int main(int argc, char** argv) {
 
   bool use_bdds = true;
   bool use_bits = false;
+  bool use_list = false;
 
   while (argi < argc) {
     const char* arg = argv[argi++];
     if (eq_cstr ("-list", arg)) {
       use_bits = false;
+      use_list = true;
     }
     else if (eq_cstr ("-bits", arg)) {
       use_bits = true;
+      use_list = false;
     }
     else if (eq_cstr ("-nobdd", arg)) {
       use_bdds = false;
@@ -138,10 +141,17 @@ int main(int argc, char** argv) {
       if (domsz == 0)  break;
       acts = uniring_actions_of(actset);
     }
-    else {
+    else if (use_list) {
       domsz = xget_list(xfile, acts);
       if (domsz == 0)  break;
     }
+    else {
+      Table<PcState> ppgfun;
+      domsz = xget_b64_ppgfun(xfile, ppgfun);
+      if (domsz == 0)  break;
+      acts = uniring_actions_of(ppgfun);
+    }
+
      uint period = 0;
      if (use_bdds)
        period = bdd_classify(acts, min_period, max_period);
@@ -157,7 +167,7 @@ int main(int argc, char** argv) {
      ofile << ofile.endl();
 
      // Keep looping only if we're reading bitstrings.
-     if (!use_bits)  break;
+     if (use_list)  break;
   }
 
   lose_sysCx();

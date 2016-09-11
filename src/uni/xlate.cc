@@ -28,7 +28,8 @@ int main(int argc, char** argv)
       if (!xget_uint_cstr (&cutoff, argv[argi++]) || cutoff == 0)
         failout_sysCx("Argument Usage: -cutoff <limit>\nWhere <limit> is a positive integer!");
     }
-    else if (eq_cstr ("-o-graphviz", arg)) {
+    else if (eq_cstr ("-o-graphviz", arg) ||
+             eq_cstr ("-o-gv", arg)) {
       graphviz_ofilename = argv[argi++];
       if (!graphviz_ofilename)
         graphviz_ofilename = "-";
@@ -56,16 +57,15 @@ int main(int argc, char** argv)
   }
 
   C::XFile* xfile = stdin_XFile ();
-  BitTable actset;
-  uint domsz = xget_actions(xfile, actset);
+  Table<PcState> ppgfun;
+  uint domsz = xget_b64_ppgfun(xfile, ppgfun);
   if (domsz == 0) {
     failout_sysCx (0);
   }
-  const Table<UniAct> acts = uniring_actions_of(actset);
+  const Table<UniAct> acts = uniring_actions_of(ppgfun);
 
   if (svg_livelock_ofilename) {
-    Table<PcState> ppgfun, top, col;
-    ppgfun = uniring_ppgfun_of(acts, domsz);
+    Table<PcState> top, col;
     Trit livelock_exists =
       livelock_semick(cutoff, ppgfun, domsz, &top, &col);
 

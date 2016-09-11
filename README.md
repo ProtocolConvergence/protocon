@@ -63,6 +63,6 @@ Besides Qt, all essential dependencies are automatically downloaded when running
 
 ## Thanks
 
-* This work is sponsored by the NSF grant CCF-1116546.
+* This work was sponsored by the NSF grant CCF-1116546.
 * **Superior**, a high performance computing cluster at Michigan Technological University, was used in obtaining benchmarks and some results.
 

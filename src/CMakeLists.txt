@@ -321,8 +321,9 @@ if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/verif/include.cmake)
 endif ()
 
 
+install (TARGETS protocon DESTINATION bin)
 if (MPI_FOUND)
-  install (TARGETS protocon protocon-mpi DESTINATION bin)
+  install (TARGETS protocon-mpi DESTINATION bin)
 endif()
 
 cat_parenthesized (DistribSpecs ${MetaPath}/examplespec.files)
