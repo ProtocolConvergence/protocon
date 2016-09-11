@@ -30,6 +30,14 @@ struct SearchOpt
   bool self_disabling_tiles;
   bool use_bdds;
 
+  // Ehh... mutable is okay because this is a single-use
+  // class for recursion parameters.
+  mutable OFile id_ofile;
+  mutable OFile bfs_ofile;
+
+  OFileB id_ofileb;
+  OFileB bfs_ofileb;
+
   PFmlaCtx pfmla_ctx;
   Table<PFmlaVbl> pfmla_vbls;
   uint allbut2_pfmla_list_id;
@@ -44,6 +52,7 @@ struct SearchOpt
     , check_ppg_overapprox( true )
     , self_disabling_tiles( false )
     , use_bdds( false )
+    , id_ofile( stdout_OFile() )
   {}
 
   void commit_domsz() {
@@ -351,11 +360,12 @@ trim_coexist (BitTable& actset, uint actid, uint domsz,
   subtract_action_mask(actset, UniAct(domsz, act[1], act[0]), domsz);
 }
 
+static
   void
 recurse(Table<BitTable>& delegates_stack,
         Table<BitTable>& candidates_stack,
         uint actid,
-        const SearchOpt& opt, OFile& ofile,
+        const SearchOpt& opt,
         uint depth,
         BitTable& mask)
 {
@@ -382,16 +392,21 @@ recurse(Table<BitTable>& delegates_stack,
     return;
   }
   if (print_delegates) {
-    oput_b64_ppgfun(ofile, uniring_ppgfun_of(delegates, domsz), domsz);
-    ofile << ofile.endl();
+    oput_b64_ppgfun(opt.id_ofile, uniring_ppgfun_of(delegates, domsz), domsz);
+    opt.id_ofile << opt.id_ofile.endl();
   }
-  if (depth == opt.max_depth)
+  if (depth == opt.max_depth) {
+    if (!!opt.bfs_ofile) {
+      oput_b64_ppgfun(opt.bfs_ofile, uniring_ppgfun_of(delegates, domsz), domsz);
+      opt.bfs_ofile << opt.bfs_ofile.endl();
+    }
     return;
+  }
 
   for (uint next_actid = actid+1; next_actid < candidates.sz(); ++next_actid) {
     skip_unless (candidates.ck(next_actid));
     recurse(delegates_stack, candidates_stack,
-            next_actid, opt, ofile, depth+1, mask);
+            next_actid, opt, depth+1, mask);
 
     // This must be after recurse() so that the livelock
     // detection doesn't remove valid candidates.
@@ -400,7 +415,7 @@ recurse(Table<BitTable>& delegates_stack,
 }
 
   void
-searchit(const SearchOpt& opt, OFile& ofile)
+searchit(const SearchOpt& opt)
 {
   const uint domsz = opt.domsz;
   const uint max_depth = opt.max_depth;
@@ -434,8 +449,8 @@ searchit(const SearchOpt& opt, OFile& ofile)
     for (uint b = 0; b < domsz; ++b) \
       candidates.set0(id_of3(a, b, a, domsz))
 
-#define RECURSE(depth) \
-  recurse(delegates_stack, candidates_stack, actid, opt, ofile, depth, mask)
+#define RECURSE \
+  recurse(delegates_stack, candidates_stack, actid, opt, 1, mask)
 
   // Never need self-loops.
   REMOVE_ABB;
@@ -475,20 +490,20 @@ searchit(const SearchOpt& opt, OFile& ofile)
     delegates.set0(hi_id);
     candidates.set1(hi_id);
     actid = hi_id;
-    RECURSE(0);
+    RECURSE;
     return;
   }
 
   actid = id_of3(0, 0, 1, domsz);
-  RECURSE(1);
+  RECURSE;
   REMOVE_AAB;
 
   actid = id_of3(0, 1, 0, domsz);
-  RECURSE(1);
+  RECURSE;
   REMOVE_ABA;
 
   actid = id_of3(0, 1, 2, domsz);
-  RECURSE(1);
+  RECURSE;
 
 #undef REMOVE_ABB
 #undef REMOVE_ABA
@@ -508,6 +523,17 @@ int main(int argc, char** argv)
     if (eq_cstr ("-domsz", arg)) {
       if (!xget_uint_cstr (&opt.domsz, argv[argi++]) || opt.domsz == 0)
         failout_sysCx("Argument Usage: -domsz <M>\nWhere <M> is a positive integer!");
+    }
+    else if (eq_cstr ("-bfs", arg)) {
+      opt.bfs_ofile = stdout_OFile ();
+      if (!xget_uint_cstr (&opt.max_depth, argv[argi++]) || opt.max_depth == 0)
+        failout_sysCx("Argument Usage: -bfs <limit>\nWhere <limit> is a positive integer!");
+    }
+    else if (eq_cstr ("-o", arg)) {
+      arg = argv[argi++];
+      opt.id_ofile = opt.id_ofileb.uopen(0, arg);
+      if (!opt.id_ofile)
+        failout_sysCx("Argument Usage: -o <file>\nFailed to open the <file>!");
     }
     else if (eq_cstr ("-max-depth", arg)) {
       if (!xget_uint_cstr (&opt.max_depth, argv[argi++]) || opt.max_depth == 0)
@@ -544,6 +570,20 @@ int main(int argc, char** argv)
       lose_sysCx();
       return (passed ? 0 : 1);
     }
+    else if (eq_cstr ("-init", arg)) {
+      if (!argv[argi])
+        failout_sysCx("Argument Usage: -init <id>");
+
+      C::XFile xfile[1];
+      init_XFile_olay_cstr (xfile, argv[argi++]);
+
+      Table<PcState> ppgfun;
+      opt.domsz = xget_b64_ppgfun(xfile, ppgfun);
+      if (opt.domsz == 0) {
+        failout_sysCx (0);
+      }
+      opt.given_acts = uniring_actions_of(ppgfun, opt.domsz);
+    }
     else if (eq_cstr ("-x-init", arg)) {
       String fname = argv[argi++];
       if (!fname)
@@ -572,11 +612,16 @@ int main(int argc, char** argv)
       failout_sysCx (0);
     }
   }
-  OFile ofile( stdout_OFile () );
 
   opt.commit_domsz();
 
-  searchit(opt, ofile);
+  if (opt.given_acts.sz() > 0) {
+    if (opt.max_depth > 0) {
+      opt.max_depth += 1;
+    }
+  }
+
+  searchit(opt);
   lose_sysCx ();
   return 0;
 }
