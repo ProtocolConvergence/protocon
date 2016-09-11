@@ -1137,7 +1137,7 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
   }
 
   if (adds.overlap_ck(dels)) {
-    if ((adds & dels) <= this->mcv_deadlocks[1].candidates)
+    if ((adds & dels).subseteq_ck(this->mcv_deadlocks[1].candidates))
     {
       *this->log << "Conflicting add from MRV." << this->log->endl();
     }

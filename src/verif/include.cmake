@@ -53,6 +53,7 @@ set (ExampleSpecs
   ColorUniRing
   DiningCrypto
   DiningPhiloRand
+  LogicalIncrement
   MatchRingDizzy
   MatchRingOneBit
   MatchRingThreeState
@@ -153,6 +154,10 @@ foreach (f ${ExampleSynts})
     -P ${VerifPath}/overify.cmake
     )
 endforeach ()
+
+add_test (NAME TrySynt3_LogicalIncrement
+  COMMAND protocon -test -x ${SpecPath}/LogicalIncrement.prot
+  -x-try-subset ${SolnPath}/LogicalIncrement.prot -param N 3)
 
 add_test (NAME TrySynt2_TokenChainDijkstra
   COMMAND protocon -test -x ${SpecPath}/TokenChainDijkstra.prot

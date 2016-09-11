@@ -66,6 +66,13 @@ ActSymm::swap_vals(uint ridx_a, uint ridx_b)
   }
 }
 
+uint id_of(const ActSymm& act) {
+  const Xn::PcSymm& pc = *act.pc_symm;
+  return pc.act_idx_offset +
+    Cx::index_of_state (&act.vals[0], pc.doms);
+}
+
+
   bool
 PcSymm::dom_equiv_ck(const PcSymm& b) const
 {
@@ -138,9 +145,10 @@ swap_pre_img (uint* vals, const Xn::PcSymm& pc_symm)
   }
 }
 
-  void
-PcSymm::action(ActSymm& act, uint actidx) const
+  ActSymm
+PcSymm::act_of(uint actidx) const
 {
+  ActSymm act;
   act.pc_symm = this;
   const Xn::PcSymm& pc = *this;
 
@@ -154,6 +162,7 @@ PcSymm::action(ActSymm& act, uint actidx) const
   act.pre_idx_of_img =
     index_of_state (&act.vals[0], &pc.doms[0], pc.rvbl_symms.sz());
   swap_pre_img (&act.vals[0], pc);
+  return act;
 }
 
   void
@@ -183,7 +192,7 @@ Pc::actions(Table<uint>& ret_actions, PFmlaCtx& ctx) const
     P::Fmla pre_pf = ctx.pfmla_of_state(pre_state, pfmla_rvbl_idcs);
     for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
       const VblSymmAccessSpec& access = pc_symm.spec->access[i];
-#if 0
+#if 1
       skip_unless (!access.synt_read_ck());
 #else
       skip_unless (access.pure_shadow_ck());
@@ -208,7 +217,7 @@ Pc::actions(Table<uint>& ret_actions, PFmlaCtx& ctx) const
 
       for (uint i = 0; i < pc_symm.wvbl_symms.sz(); ++i) {
         const VblSymmAccessSpec& access = pc_symm.spec->waccess(i);
-#if 0
+#if 1
         skip_unless (access.wdomsz() == access.domsz()+1);
 #else
         skip_unless (access.pure_shadow_ck());

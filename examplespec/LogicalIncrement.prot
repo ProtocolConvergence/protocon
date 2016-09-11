@@ -1,0 +1,23 @@
+constant N := 2;
+
+variable x[N]   < 2;  // Input bits.
+variable c[N+1] < 2;  // Carry bits.
+variable y[N]   < 2;  // Output bits.
+
+// We increment by setting the first carry bit.
+(assume & closed)
+  (c[0]==1);
+
+// Increment usually doesn't affect most bits because the
+// carry only propagates as long as all x[j] bits equal 1.
+// Thus, y[i]==x[i] if some x[j<i]==0, otherwise y[i]!=x[i] due to a carry.
+(future & future silent)
+  (forall i < N :
+   (y[i]==x[i] <=> (i > 0 && exists j < i : x[j]==0))
+  );
+
+process P[i < N]
+{
+  read: x[i], c[i];
+  yield: y[i], c[i+1];
+}

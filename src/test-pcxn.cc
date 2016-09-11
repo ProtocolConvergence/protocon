@@ -1,10 +1,14 @@
 
 extern "C" {
-#include "cx/syscx.h"
+#include "cx/def.h"
 }
 
-#include "cx/synhax.hh"
+#include "test-pcxn.hh"
+
+#include "prot-xfile.hh"
 #include "xnsys.hh"
+
+#include "cx/fileb.hh"
 
 #include "namespace.hh"
 
@@ -79,6 +83,99 @@ TestPcXn_ryr()
   }
 }
 
+static
+  X::Fmla
+xfmla_rryy(const Xn::Net& topo, uint a, uint b, uint c, uint d)
+{
+#define V(j)  topo.pfv(0,0,j)
+  return
+    (V(0).identity(a) && V(1).identity(b)
+     && (V(2) != c || V(3) != d)
+     && V(2).img_eq(c) && V(3).img_eq(d));
+#undef V
+}
+
+  void
+TestPcXn_rryy()
+{
+  Xn::Sys sys;
+  Xn::Net& topo = sys.topology;
+
+  Xn::VblSymm& x_symm = *topo.add_variables("x", 1, 2);
+  Xn::VblSymm& c_symm = *topo.add_variables("c", 2, 2);
+  Xn::VblSymm& y_symm = *topo.add_variables("y", 1, 2);
+
+  topo.commit_variables();
+
+  Xn::PcSymm& pc_symm = *topo.add_processes("P", "i", 1);
+
+  topo.add_access(&pc_symm, &x_symm, Xn::NatMap() = 0, Xn::ReadAccess);
+  topo.add_access(&pc_symm, &c_symm, Xn::NatMap() = 0, Xn::ReadAccess);
+  topo.add_access(&pc_symm, &y_symm, Xn::NatMap() = 0, Xn::YieldAccess);
+  topo.add_access(&pc_symm, &c_symm, Xn::NatMap() = 1, Xn::YieldAccess);
+
+  sys.commit_initialization();
+
+  for (uint actid = 0; actid < topo.n_possible_acts; ++actid) {
+    const Xn::ActSymm& act = topo.act_of(actid);
+    const X::Fmla result_xn = topo.action_pfmla(actid);
+    const X::Fmla expect_xn = xfmla_rryy(topo, act.guard(0), act.guard(1),
+                                         act.assign(0), act.assign(1));
+    Claim( result_xn.equiv_ck(expect_xn) );
+  }
+}
+
+  void
+TestPcXn_rryy_file()
+{
+  Xn::Sys sys;
+  sys.topology.lightweight = true;
+  ProtoconFileOpt infile_opt;
+  infile_opt.constant_map["N"] = 1;
+#define WL << '\n' <<
+  infile_opt.text
+    << "variable x[N]   < 2;"
+    WL "variable c[N+1] < 2;"
+    WL "variable y[N]   < 2;"
+    WL "(future & future silent) (true);"
+    WL "process P[i < N] {"
+    WL "  read: x[i], c[i];"
+    WL "  yield: y[i], c[i+1];"
+    WL "  action: ( x[i]==0 && c[i]==0 --> y[i]:=0; c[i+1]:=0; );"
+    WL "  action: ( x[i]==0 && c[i]==1 --> y[i]:=1; c[i+1]:=0; );"
+    WL "  action: ( x[i]==1 && c[i]==0 --> y[i]:=1; c[i+1]:=0; );"
+    WL "  action: ( x[i]==1 && c[i]==1 --> y[i]:=0; c[i+1]:=1; );"
+    WL "}";
+#undef WL
+
+  if (!ReadProtoconFile(sys, infile_opt)) {
+    Claim( 0 && "Can't parse file" );
+  }
+
+  const Xn::Pc& pc = sys.topology.pcs[0];
+  const X::Fmla& result_xn = (pc.puppet_xn & pc.global_mask_xn);
+  const X::Fmla& expect_xn
+    = xfmla_rryy(sys.topology, 0, 0, 0, 0)
+    | xfmla_rryy(sys.topology, 0, 1, 1, 0)
+    | xfmla_rryy(sys.topology, 1, 0, 1, 0)
+    | xfmla_rryy(sys.topology, 1, 1, 0, 1)
+    ;
+  Claim( result_xn.equiv_ck(expect_xn) );
+  Claim2_uint( sys.actions.size() ,==, 4 );
+}
+
+static
+  X::Fmla
+xfmla_ryyr(const Xn::Net& topo, uint a, uint b, uint c, uint d)
+{
+#define V(j)  topo.pfv(0,0,j)
+  return
+    (V(0).identity(a) && V(3).identity(d)
+     && (V(1) != b || V(2) != c)
+     && V(1).img_eq(b) && V(2).img_eq(c));
+#undef V
+}
+
   void
 TestPcXn_ryyr()
 {
@@ -98,23 +195,25 @@ TestPcXn_ryyr()
 
   sys.commit_initialization();
 
-  PFmlaVbl x_ji = topo.pfmla_vbl(*vbl_symm.membs[0]);
-  PFmlaVbl x_ij = topo.pfmla_vbl(*vbl_symm.membs[1]);
-  PFmlaVbl x_ik = topo.pfmla_vbl(*vbl_symm.membs[2]);
-  PFmlaVbl x_ki = topo.pfmla_vbl(*vbl_symm.membs[3]);
-
   for (uint actid = 0; actid < topo.n_possible_acts; ++actid) {
-    Xn::ActSymm act;
-    topo.action(act, actid);
-    const uint a = act.guard(0), b = act.assign(0), c = act.assign(1), d = act.guard(3);
+    const Xn::ActSymm& act = topo.act_of(actid);
     const X::Fmla result_xn = topo.action_pfmla(actid);
-    const X::Fmla expect_xn
-      =  x_ji.identity(a)
-      && x_ki.identity(d)
-      && (x_ij != b || x_ik != c)
-      && x_ij.img_eq(b) && x_ik.img_eq(c);
+    const X::Fmla expect_xn = xfmla_ryyr(topo, act.guard(0), act.assign(0),
+                                         act.assign(1), act.guard(3));
     Claim( result_xn.equiv_ck(expect_xn) );
   }
+}
+
+static
+  X::Fmla
+xfmla_yryr(const Xn::Net& topo, uint a, uint b, uint c, uint d)
+{
+#define V(j)  topo.pfv(0,0,j)
+  return
+    (V(1).identity(b) && V(3).identity(d)
+     && (V(0) != a || V(2) != c)
+     && V(0).img_eq(a) && V(2).img_eq(c));
+#undef V
 }
 
   void
@@ -145,18 +244,11 @@ TestPcXn_yryr_dizzy()
 
   sys.commit_initialization();
 
-  PFmlaVbl x_ji = topo.pfmla_vbl(*vbl_symm.membs[0]);
-  PFmlaVbl x_ij = topo.pfmla_vbl(*vbl_symm.membs[1]);
-  PFmlaVbl x_ik = topo.pfmla_vbl(*vbl_symm.membs[2]);
-  PFmlaVbl x_ki = topo.pfmla_vbl(*vbl_symm.membs[3]);
-
   for (uint actid = 0; actid < topo.n_possible_acts; ++actid) {
     if (actid != topo.representative_action_index(actid))
       continue;
 
-    Xn::ActSymm act;
-    topo.action(act, actid);
-    const uint a = act.guard(1), b = act.assign(0), c = act.assign(1), d = act.guard(3);
+    const Xn::ActSymm& act = topo.act_of(actid);
     X::Fmla result_xn;
     if (IgnoreCache) {
       X::Fmlae result_xfmlae = topo.action_xfmlae(actid);
@@ -166,14 +258,11 @@ TestPcXn_yryr_dizzy()
     else {
       result_xn = topo.action_pfmla(actid);
     }
-    X::Fmla expect_xn =
-      (x_ji.identity(a) && x_ki.identity(d)
-       && (x_ij != b || x_ik != c)
-       && x_ij.img_eq(b) && x_ik.img_eq(c))
-      ||
-      (x_ji.identity(d) && x_ki.identity(a)
-       && (x_ij != c || x_ik != b)
-       && x_ij.img_eq(c) && x_ik.img_eq(b));
+    //                       x'_ij          x_ji          x'_ik          x_ki
+    X::Fmla expect_xn
+      = xfmla_yryr(topo, act.assign(0), act.guard(1), act.assign(1), act.guard(3))
+      | xfmla_yryr(topo, act.assign(1), act.guard(3), act.assign(0), act.guard(1))
+      ;
     expect_xn -= expect_xn.img();
 
     Claim( result_xn.equiv_ck(expect_xn) );
@@ -301,4 +390,3 @@ TestPcXn_rw_random()
 }
 
 END_NAMESPACE
-

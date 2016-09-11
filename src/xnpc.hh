@@ -159,6 +159,9 @@ public:
   void swap_vals(uint ridx_a, uint ridx_b);
 };
 
+uint id_of(const ActSymm& act);
+
+
 class Pc {
 public:
   const PcSymm* symm;
@@ -236,7 +239,8 @@ public:
   bool dom_equiv_ck(const PcSymm& b) const;
   bool init_representative();
   bool representative(uint* ret_pcidx) const;
-  void action(ActSymm& act, uint actidx) const;
+  ActSymm act_of(uint actidx) const;
+  void action(ActSymm& act, uint actidx) const { act = act_of(actidx); }
   void actions(Table<uint>& ret_actions, PFmlaCtx& ctx) const;
 
   bool pure_shadow_ck() const {

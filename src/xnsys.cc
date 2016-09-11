@@ -226,9 +226,9 @@ Net::add_processes(const String& name, const String& idx_name, uint nmembs)
 }
 
   void
-Net::add_access (PcSymm* pc_symm, const VblSymm* vbl_symm,
-                 const NatMap& indices,
-                 Xn::VariableAccessType access_type)
+Net::add_access(PcSymm* pc_symm, const VblSymm* vbl_symm,
+                const NatMap& indices,
+                Xn::VariableAccessType access_type)
 {
   Xn::PcSymmSpec* spec = +pc_symm->spec;
   pc_symm->rvbl_symms.push(vbl_symm);
@@ -281,21 +281,14 @@ Net::action_pcsymm_index(uint actidx) const
   return pc_symms.sz() - 1;
 }
 
-  void
-Net::action(ActSymm& act, uint actidx) const
+  ActSymm
+Net::act_of(uint actidx) const
 {
+  Xn::ActSymm act;
   const Xn::PcSymm& pc =
     this->pc_symms[this->action_pcsymm_index(actidx)];
   pc.action(act, actidx - pc.act_idx_offset);
-}
-
-  uint
-Net::action_index(const Xn::ActSymm& act) const
-{
-  const Xn::PcSymm& pc = *act.pc_symm;
-  return pc.act_idx_offset +
-    Cx::index_of_state (&act.vals[0], pc.doms);
-
+  return act;
 }
 
   uint

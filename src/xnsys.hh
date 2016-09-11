@@ -85,8 +85,10 @@ public:
                    Xn::VariableAccessType access_type);
 
   uint action_pcsymm_index(uint actidx) const;
-  void action(ActSymm& act, uint actidx) const;
-  uint action_index(const ActSymm& act) const;
+  ActSymm act_of(uint actidx) const;
+
+  void action(ActSymm& act, uint actid) const { act = act_of(actid); }
+  uint action_index(const ActSymm& act) const { return id_of(act); }
 
   uint action_pre_index(uint actidx) const;
   uint action_img_index(uint actidx) const;
@@ -101,6 +103,11 @@ public:
   }
   PFmlaVbl pfmla_vbl(const Vbl& x) const {
     return this->pfmla_ctx.vbl(x.pfmla_idx);
+  }
+
+  PFmlaVbl pfv(uint pc_symm_idx, uint pc_idx, uint vbl_idx) const {
+    const Xn::Vbl& vbl = *pc_symms[pc_symm_idx].membs[pc_idx]->rvbls[vbl_idx];
+    return pfmla_ctx.vbl(vbl.pfmla_idx);
   }
 
   bool probabilistic_ck() const {

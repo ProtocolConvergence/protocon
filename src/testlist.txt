@@ -1,6 +1,8 @@
 ConflictFamily
 IntPFmla
 PFmla
+PcXn_rryy
+PcXn_rryy_file
 PcXn_rw_random
 PcXn_rwr
 PcXn_ryr
