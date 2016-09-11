@@ -8,7 +8,8 @@ set_target_properties (uni_aperiodic PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY ${UniringBinPath})
 
 #### Generate Unidirectional Ring Protocols ####
-addbinexe (uni_generate uni/generate.cc uni/unifile.cc
+addbinexe (uni_generate uni/generate.cc
+  uni/livelock.cc uni/unifile.cc
   pfmla-glu.c pfmla.c pfmla.cc)
 set_property (TARGET uni_generate
   APPEND PROPERTY INCLUDE_DIRECTORIES ${GluIncludePath})

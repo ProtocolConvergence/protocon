@@ -1,12 +1,65 @@
+#include "livelock.hh"
 
+#include "adjlist.hh"
+#include "cx/bittable.hh"
+#include "cx/table.hh"
+#include "cx/tuple.hh"
 
-bool fill_livelock_ck(const PcState top[],
-                      const uint n,
-                      const PcState col[],
-                      const uint m,
-                      const Table<PcState>& ppgfun,
-                      const uint domsz,
-                      Table<PcState>& row)
+#include "../namespace.hh"
+  void
+subtract_action_mask(BitTable& mask, const UniAct& mask_act, uint domsz)
+{
+  UniAct beg( 0, 0, 0 );
+  UniAct inc( 1, 1, 1 );
+
+  for (uint i = 0; i < 3; ++i) {
+    skip_unless (mask_act[i] != domsz);
+    beg[i] = mask_act[i];
+    inc[i] = domsz;
+  }
+
+  for (uint a = beg[0]; a < domsz; a += inc[0]) {
+    for (uint b = beg[1]; b < domsz; b += inc[1]) {
+      for (uint c = beg[2]; c < domsz; c += inc[2]) {
+        mask.set0(id_of3(a, b, c, domsz));
+      }
+    }
+  }
+}
+
+  bool
+action_mask_overlap_ck(const UniAct& mask_act, const BitTable& actset, uint domsz)
+{
+  UniAct beg( 0, 0, 0 );
+  UniAct inc( 1, 1, 1 );
+
+  for (uint i = 0; i < 3; ++i) {
+    skip_unless (mask_act[i] != domsz);
+    beg[i] = mask_act[i];
+    inc[i] = domsz;
+  }
+
+  for (uint a = beg[0]; a < domsz; a += inc[0]) {
+    for (uint b = beg[1]; b < domsz; b += inc[1]) {
+      for (uint c = beg[2]; c < domsz; c += inc[2]) {
+        if (actset.ck(id_of(UniAct(a, b, c), domsz))) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+static
+  bool
+fill_livelock_ck(const PcState top[],
+                 const uint n,
+                 const PcState col[],
+                 const uint m,
+                 const Table<PcState>& ppgfun,
+                 const uint domsz,
+                 Table<PcState>& row)
 {
   Claim( top[0] == col[0] );
   Claim( top[0] == col[m] );
@@ -29,6 +82,7 @@ bool fill_livelock_ck(const PcState top[],
   return true;
 }
 
+static
   Trit
 livelock_semick_rec(const Table<PcState>& old_bot,
                     const Table<PcState>& old_col,
@@ -92,8 +146,8 @@ livelock_semick_rec(const Table<PcState>& old_bot,
 livelock_semick(const uint limit,
                 Table<PcState> ppgfun,
                 const uint domsz,
-                Table<PcState>* ret_row=0,
-                Table<PcState>* ret_col=0)
+                Table<PcState>* ret_row,
+                Table<PcState>* ret_col)
 {
   Table<PcState> bot, col, tmp_row, tmp_col;
   bot.affysz(1);  col.affysz(1);
@@ -122,6 +176,7 @@ livelock_semick(const uint limit,
   return (may_exist ? May : Nil);
 }
 
+static
   Trit
 guided_livelock_semick_rec(const Table<uint>& top_row,
                            uint mid_west,
@@ -338,3 +393,4 @@ make_overapprox_tile_cont_digraph(AdjList<PcState>& digraph,
   }
 }
 
+END_NAMESPACE

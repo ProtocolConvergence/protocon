@@ -4,6 +4,7 @@ extern "C" {
 }
 
 #include "adjlist.hh"
+#include "livelock.hh"
 #include "uniact.hh"
 #include "unifile.hh"
 
@@ -17,13 +18,7 @@ extern "C" {
 
 #include "../namespace.hh"
 
-#define each_in_BitTable(i , bt) \
-  (zuint i = bt.begidx(); i < bt.sz(); bt.nextidx(&i))
-
-using Cx::Triple;
-
 #include "canonical.cc"
-//#include "livelock.cc" // Farther down.
 
 struct FilterOpt
 {
@@ -33,7 +28,6 @@ struct FilterOpt
   uint max_propagations;
   bool check_ppg_overapprox;
   bool self_disabling_tiles;
-  bool count_ones;
   bool verify;
   bool use_bdds;
   const char* record_sep;
@@ -55,7 +49,6 @@ struct FilterOpt
     , max_propagations( 0 )
     , check_ppg_overapprox( true )
     , self_disabling_tiles( false )
-    , count_ones( false )
     , verify( false )
     , use_bdds( false )
     , record_sep( "" )
@@ -106,55 +99,6 @@ del_node(AdjList<uint>& digraph, AdjList<uint>& rdigraph, uint node_id)
   }
   digraph.del_arcs_from(node_id);
 }
-
-static
-  void
-subtract_action_mask(BitTable& mask, const UniAct& mask_act, uint domsz)
-{
-  UniAct beg( 0, 0, 0 );
-  UniAct inc( 1, 1, 1 );
-
-  for (uint i = 0; i < 3; ++i) {
-    skip_unless (mask_act[i] != domsz);
-    beg[i] = mask_act[i];
-    inc[i] = domsz;
-  }
-
-  for (uint a = beg[0]; a < domsz; a += inc[0]) {
-    for (uint b = beg[1]; b < domsz; b += inc[1]) {
-      for (uint c = beg[2]; c < domsz; c += inc[2]) {
-        mask.set0(id_of3(a, b, c, domsz));
-      }
-    }
-  }
-}
-
-inline
-  bool
-action_mask_overlap_ck(const UniAct& mask_act, const BitTable& actset, uint domsz)
-{
-  UniAct beg( 0, 0, 0 );
-  UniAct inc( 1, 1, 1 );
-
-  for (uint i = 0; i < 3; ++i) {
-    skip_unless (mask_act[i] != domsz);
-    beg[i] = mask_act[i];
-    inc[i] = domsz;
-  }
-
-  for (uint a = beg[0]; a < domsz; a += inc[0]) {
-    for (uint b = beg[1]; b < domsz; b += inc[1]) {
-      for (uint c = beg[2]; c < domsz; c += inc[2]) {
-        if (actset.ck(id_of(UniAct(a, b, c), domsz))) {
-          return true;
-        }
-      }
-    }
-  }
-  return false;
-}
-
-#include "livelock.cc"
 
 static
   void
@@ -572,9 +516,6 @@ filter_stdin (const FilterOpt& opt, OFile& ofile)
   const char* record_sep = 0;
   uint domsz;
   while (0 != (domsz = xget_actions(xfile, actset))) {
-    if (opt.count_ones) {
-      ofile << ' ' << actset.count() << '\n';
-    }
     if (record_sep)
       ofile << record_sep << '\n';
     else
@@ -668,10 +609,6 @@ int main(int argc, char** argv)
       lose_sysCx();
       return (passed ? 0 : 1);
     }
-    else if (eq_cstr ("-count-ones", arg)) {
-      filter = true;
-      opt.count_ones = true;
-    }
     else if (eq_cstr ("-verify", arg)) {
       filter = true;
       opt.verify = true;
@@ -702,10 +639,10 @@ int main(int argc, char** argv)
         failout_sysCx("Argument Usage: -o-list <file>");
     }
     else if (eq_cstr ("-x-assume", arg) ||
-             eq_cstr ("-x-list", arg)) {
+             eq_cstr ("-x-init-list", arg)) {
       String fname = argv[argi++];
       if (!fname)
-        failout_sysCx("Argument Usage: -x-list <file>");
+        failout_sysCx("Argument Usage: -x-init-list <file>");
 
       XFileB xfileb;
       C::XFile* xfile = xfileb.uopen(0, fname);

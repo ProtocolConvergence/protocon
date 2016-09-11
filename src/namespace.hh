@@ -19,6 +19,7 @@ namespace Cx {
   template <class T> class Set;
   template <class T> class Table;
   template <class T, uint N> class Tuple;
+  template <class T> class Triple;
   class URandom;
   class XFile;
 
@@ -41,6 +42,8 @@ namespace PROJECT_NAMESPACE {
   using Cx::Set;
   using Cx::Table;
   using Cx::Tuple;
+  using Cx::Triple;
+
   using Cx::URandom;
   using Cx::XFile;
 
