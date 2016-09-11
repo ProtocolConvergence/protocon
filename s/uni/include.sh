@@ -1,6 +1,8 @@
 
 proj_path=$(dirname $(dirname "${this_exe_path}"))
+classify_exe="${proj_path}/bld/uni/classify"
 gen_exe="${proj_path}/bld/uni/generate"
+xlate_exe="${proj_path}/bld/uni/xlate"
 
 function calc_domsz()
 {

@@ -21,7 +21,7 @@ grep 'unknown' \
 | \
 while read bt
 do
-  result=$(printf '%s' "$bt" | "${gen_exe}" -verify -max-period "$max_period")
+  result=$(echo "$bt" | "${classify_exe}" "$max_period" | cut -f 1)
   printf '%s\t%s\n' "$result" "$bt"
 done
 

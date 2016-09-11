@@ -8,7 +8,7 @@ shift
 
 path=/tmp
 echo "$key" \
-| "${gen_exe}" -o-graphviz "${path}/${key}.dot"
+| "${xlate_exe}" -o-graphviz "${path}/${key}.dot"
 
 dot -Tpng < "${path}/${key}.dot" > "${path}/${key}.png"
 

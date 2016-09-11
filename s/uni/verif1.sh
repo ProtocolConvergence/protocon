@@ -21,7 +21,7 @@ else
 fi
 
 protfile="/tmp/${key}.prot"
-printf '%s' "$key" | "$gen_exe" -o-prot "$protfile"
+printf '%s' "$key" | "$xlate_exe" -o-prot "$protfile"
 "${proj_path}/s/verifn.sh" "$minsz" "$maxsz" "$protfile" "$@"
 
 ret=$?

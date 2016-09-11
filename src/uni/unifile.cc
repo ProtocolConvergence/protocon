@@ -51,6 +51,21 @@ uniring_actions_of(const BitTable& actset)
   return acts;
 }
 
+  Table<PcState>
+uniring_ppgfun_of(const Table<UniAct>& acts, uint domsz)
+{
+  if (domsz == 0)
+    domsz = uniring_domsz_of(acts);
+
+  Table<PcState> ppgfun;
+  ppgfun.affysz(domsz*domsz, domsz);
+  for (uint i = 0; i < acts.sz(); ++i) {
+    const UniAct& act = acts[i];
+    ppgfun[id_of2(act[0], act[1], domsz)] = act[2];
+  }
+  return ppgfun;
+}
+
 OFile& operator<<(OFile& of, const BitTable& bt)
 {
   for (zuint i = 0; i < bt.sz(); ++i)

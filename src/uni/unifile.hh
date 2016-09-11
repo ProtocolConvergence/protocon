@@ -23,6 +23,8 @@ PcState
 uniring_domsz_of(const BitTable& actset);
 Table<UniAct>
 uniring_actions_of(const BitTable& actset);
+Table<PcState>
+uniring_ppgfun_of(const Table<UniAct>& acts, uint domsz=0);
 
 OFile& operator<<(OFile& of, const BitTable& bt);
 

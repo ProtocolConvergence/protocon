@@ -18,7 +18,7 @@ tail -fn+0 "$filename" \
 while read line
 do
   echo "$line" \
-  | "${proj_path}/bld/uni/generate" -o-list - \
+  | "${proj_path}/bld/uni/xlate" -o-list - \
   | "${proj_path}/bld/uni/classify" $threshold \
   | tee /dev/stderr \
   | grep unknown \

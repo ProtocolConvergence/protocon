@@ -7,8 +7,11 @@ extern "C" {
 #include "unifile.hh"
 #include "../pfmla.hh"
 
+#include "cx/bittable.hh"
 #include "cx/fileb.hh"
 #include <algorithm>
+
+#include "livelock.hh"
 
 #include "../namespace.hh"
 
@@ -30,29 +33,11 @@ column_xfmla(const Table<UniAct>& acts, const PFmlaVbl& x_p, const PFmlaVbl& x_j
   return xn;
 }
 
-/** Execute me now!**/
-int main(int argc, char** argv) {
-  int argi = init_sysCx(&argc, &argv);
-
-  uint min_period = 1;
-  uint max_period = 0;
-  if (argi >= argc)
-    failout_sysCx("Please provide a maximum period.");
-
-  if (argi + 1 < argc) {
-    if (!xget_uint_cstr (&min_period, argv[argi++]))
-      failout_sysCx("Failed to parse min period.");
-  }
-
-  if (!xget_uint_cstr (&max_period, argv[argi++]))
-    failout_sysCx("Failed to parse max period.");
-
-  if (argi < argc)
-    failout_sysCx("Too many arguments!");
-
-  Table<UniAct> acts;
-  const uint domsz =
-    xget_list(stdin_XFile (), acts);
+static
+  uint
+bdd_classify(const Table<UniAct>& acts, uint min_period, uint max_period)
+{
+  const uint domsz = uniring_domsz_of(acts);
 
   // Initialize formula variables.
   PFmlaCtx pfmla_ctx;
@@ -62,10 +47,6 @@ int main(int argc, char** argv) {
     vbls[i] = pfmla_ctx.vbl(vbl_id);
   }
 
-  OFile ofile( stdout_OFile () );
-
-  // Search for livelocks.
-  bool livelock_found = false;
   X::Fmla xn(true);
   for (uint j = 1; j < 1+max_period; ++j) {
     xn &= column_xfmla(acts, vbls[j-1], vbls[j]);
@@ -74,22 +55,109 @@ int main(int argc, char** argv) {
       xn & (vbls[0]==vbls[j]) & (vbls[0].img_eq_img(vbls[j]));
 
     if (periodic_xn.cycle_ck(0)) {
-      livelock_found = true;
-      ofile << "livelock"
-        << "\tperiod:" << j
-        << ofile.endl();
-      break;
+      return j;
     }
   }
 
-  if (!livelock_found) {
-    // No livelocks found? Are they even a possibility?
-    if (!xn.cycle_ck(0)) {
-      ofile << "silent" << ofile.endl();
+  // No livelocks found? Are they even a possibility?
+  if (!xn.cycle_ck(0)) {
+    return 0;
+  }
+  return max_period+1;
+}
+
+static
+  uint
+tile_classify(const Table<UniAct>& acts, uint max_period)
+{
+  const uint domsz = uniring_domsz_of(acts);
+  Table<PcState> ppgfun = uniring_ppgfun_of(acts, domsz);
+  Table<PcState> row;
+  const Trit exists =
+    livelock_semick(max_period, ppgfun, domsz, &row);
+  if (exists == Nil)  return 0;
+  if (exists == Yes)  return row.sz();
+  return max_period + 1;
+}
+
+/** Execute me now!**/
+int main(int argc, char** argv) {
+  int argi = init_sysCx(&argc, &argv);
+
+  uint min_period = 0;
+  uint max_period = 0;
+
+  bool use_bdds = true;
+  bool use_bits = false;
+
+  while (argi < argc) {
+    const char* arg = argv[argi++];
+    if (eq_cstr ("-list", arg)) {
+      use_bits = false;
+    }
+    else if (eq_cstr ("-bits", arg)) {
+      use_bits = true;
+    }
+    else if (eq_cstr ("-nobdd", arg)) {
+      use_bdds = false;
+    }
+    else if (eq_cstr ("-cutoff", arg)) {
+      // Ignored.
+    }
+    else if (max_period == 0) {
+      if (!xget_uint_cstr (&max_period, arg) || max_period == 0)
+        failout_sysCx("Failed to parse period.");
+    }
+    else if (min_period == 0) {
+      min_period = max_period;
+      if (!xget_uint_cstr (&max_period, arg) || max_period <= min_period)
+        failout_sysCx("Failed to parse period.");
     }
     else {
-      ofile << "unknown" << ofile.endl();
+      DBog1( "Unrecognized option: %s", arg );
+      failout_sysCx (0);
     }
+  }
+
+  if (max_period == 0) {
+    failout_sysCx("Please provide a maximum period.");
+  }
+
+  if (min_period == 0) {
+    min_period = 1;
+  }
+
+  C::XFile* xfile = stdin_XFile ();
+  OFile ofile( stdout_OFile () );
+  while (true) {
+    Table<UniAct> acts;
+    uint domsz = 0;
+    if (use_bits) {
+      BitTable actset;
+      domsz = xget_actions(xfile, actset);
+      if (domsz == 0)  break;
+      acts = uniring_actions_of(actset);
+    }
+    else {
+      domsz = xget_list(xfile, acts);
+      if (domsz == 0)  break;
+    }
+     uint period = 0;
+     if (use_bdds)
+       period = bdd_classify(acts, min_period, max_period);
+     else
+       period = tile_classify(acts, max_period);
+
+     if (period == 0)
+       ofile << "silent";
+     else if (period <= max_period)
+       ofile << "livelock\tperiod:" << period;
+     else
+       ofile << "unknown";
+     ofile << ofile.endl();
+
+     // Keep looping only if we're reading bitstrings.
+     if (!use_bits)  break;
   }
 
   lose_sysCx();

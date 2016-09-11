@@ -68,6 +68,7 @@ list (APPEND CCFiles
   uni/livelock.cc
   uni/synthesize.cc
   uni/unifile.cc
+  uni/xlate.cc
   msat.cc
   main-all.cc
   )

@@ -18,8 +18,16 @@ set_target_properties (uni_generate PROPERTIES
   OUTPUT_NAME generate
   RUNTIME_OUTPUT_DIRECTORY ${UniringBinPath})
 
+#### Translate between Unidirectional Ring Protocol Representations ####
+addbinexe (uni_xlate uni/xlate.cc
+  uni/livelock.cc uni/unifile.cc)
+set_target_properties (uni_xlate PROPERTIES
+  OUTPUT_NAME xlate
+  RUNTIME_OUTPUT_DIRECTORY ${UniringBinPath})
+
 #### Classify Unidirectional Ring Protocols ####
-addbinexe (uni_classify uni/classify.cc uni/unifile.cc
+addbinexe (uni_classify uni/classify.cc
+  uni/livelock.cc uni/unifile.cc
   pfmla-glu.c pfmla.c pfmla.cc)
 set_property (TARGET uni_classify
   APPEND PROPERTY INCLUDE_DIRECTORIES ${GluIncludePath})

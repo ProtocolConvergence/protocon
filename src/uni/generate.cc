@@ -28,13 +28,7 @@ struct FilterOpt
   uint max_propagations;
   bool check_ppg_overapprox;
   bool self_disabling_tiles;
-  bool verify;
   bool use_bdds;
-  const char* record_sep;
-  const char* prot_ofilename;
-  const char* graphviz_ofilename;
-  const char* svg_livelock_ofilename;
-  const char* list_ofilename;
 
   PFmlaCtx pfmla_ctx;
   Table<PFmlaVbl> pfmla_vbls;
@@ -49,13 +43,7 @@ struct FilterOpt
     , max_propagations( 0 )
     , check_ppg_overapprox( true )
     , self_disabling_tiles( false )
-    , verify( false )
     , use_bdds( false )
-    , record_sep( "" )
-    , prot_ofilename( 0 )
-    , graphviz_ofilename( 0 )
-    , svg_livelock_ofilename( 0 )
-    , list_ofilename( 0 )
   {}
 
   void commit_domsz() {
@@ -508,64 +496,11 @@ searchit(const FilterOpt& opt, OFile& ofile)
 #undef RECURSE
 }
 
-static void
-filter_stdin (const FilterOpt& opt, OFile& ofile)
-{
-  BitTable actset;
-  C::XFile* xfile = stdin_XFile ();
-  const char* record_sep = 0;
-  uint domsz;
-  while (0 != (domsz = xget_actions(xfile, actset))) {
-    if (record_sep)
-      ofile << record_sep << '\n';
-    else
-      record_sep = opt.record_sep;
-
-    if (opt.verify || opt.svg_livelock_ofilename) {
-      Table<PcState> ppgfun, top, col;
-      init_ppgfun(ppgfun, actset, domsz);
-      Trit livelock_exists =
-        livelock_semick(opt.max_period, ppgfun, domsz, &top, &col);
-
-      if (opt.verify) {
-        switch (livelock_exists) {
-          case Nil: ofile << "silent\n";  break;
-          case May: ofile << "unknown\n";  break;
-          case Yes: ofile << "livelock\n";  break;
-        }
-      }
-
-      if (opt.svg_livelock_ofilename) {
-        OFileB svg_ofileb;
-        OFile svg_ofile( svg_ofileb.uopen(0, opt.svg_livelock_ofilename) );
-        oput_svg_livelock(svg_ofile, ppgfun, top, col, domsz);
-      }
-    }
-
-    if (opt.prot_ofilename) {
-      oput_protocon(opt.prot_ofilename, uniring_actions_of(actset), domsz);
-    }
-
-    if (opt.graphviz_ofilename) {
-      OFileB graphviz_ofileb;
-      OFile graphviz_ofile( graphviz_ofileb.uopen(0, opt.graphviz_ofilename) );
-      oput_graphviz(graphviz_ofile, uniring_actions_of(actset));
-    }
-
-    if (opt.list_ofilename) {
-      OFileB list_ofileb;
-      OFile list_ofile( list_ofileb.uopen(0, opt.list_ofilename) );
-      oput_list(list_ofile, uniring_actions_of(actset));
-    }
-  }
-}
-
 static bool TestKnownAperiodic();
 
 int main(int argc, char** argv)
 {
   int argi = init_sysCx (&argc, &argv);
-  bool filter = false;
   FilterOpt opt;
 
   while (argi < argc) {
@@ -609,35 +544,6 @@ int main(int argc, char** argv)
       lose_sysCx();
       return (passed ? 0 : 1);
     }
-    else if (eq_cstr ("-verify", arg)) {
-      filter = true;
-      opt.verify = true;
-    }
-    else if (eq_cstr ("-o-graphviz", arg)) {
-      filter = true;
-      opt.graphviz_ofilename = argv[argi++];
-      if (!opt.graphviz_ofilename)
-        failout_sysCx("Argument Usage: -o-graphviz <file>");
-    }
-    else if (eq_cstr ("-o-prot", arg)) {
-      filter = true;
-      opt.prot_ofilename = argv[argi++];
-      if (!opt.prot_ofilename)
-        failout_sysCx("Argument Usage: -o-prot <file>");
-    }
-    else if (eq_cstr ("-o-svg-livelock", arg) ||
-             eq_cstr ("-o-svg", arg)) {
-      filter = true;
-      opt.svg_livelock_ofilename = argv[argi++];
-      if (!opt.svg_livelock_ofilename)
-        failout_sysCx("Argument Usage: -o-svg-livelock <file>");
-    }
-    else if (eq_cstr ("-o-list", arg)) {
-      filter = true;
-      opt.list_ofilename = argv[argi++];
-      if (!opt.list_ofilename)
-        failout_sysCx("Argument Usage: -o-list <file>");
-    }
     else if (eq_cstr ("-x-assume", arg) ||
              eq_cstr ("-x-init-list", arg)) {
       String fname = argv[argi++];
@@ -648,12 +554,6 @@ int main(int argc, char** argv)
       C::XFile* xfile = xfileb.uopen(0, fname);
       xget_list(xfile, opt.given_acts);
     }
-    else if (eq_cstr ("-RS", arg)) {
-      filter = true;
-      opt.record_sep = argv[argi++];
-      if (!opt.record_sep)
-        failout_sysCx("Argument Usage: -RS <separator>");
-    }
     else  {
       DBog1( "Unrecognized option: %s", arg );
       failout_sysCx (0);
@@ -663,12 +563,7 @@ int main(int argc, char** argv)
 
   opt.commit_domsz();
 
-  if (filter) {
-    filter_stdin (opt, ofile);
-  }
-  else {
-    searchit(opt, ofile);
-  }
+  searchit(opt, ofile);
   lose_sysCx ();
   return 0;
 }
