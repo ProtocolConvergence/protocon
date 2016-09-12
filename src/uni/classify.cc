@@ -91,9 +91,21 @@ int main(int argc, char** argv) {
   bool use_bits = false;
   bool use_list = false;
 
+  C::XFile xfile_olay[1];
+  C::XFile* xfile = stdin_XFile ();
+  OFile ofile( stdout_OFile () );
+
   while (argi < argc) {
     const char* arg = argv[argi++];
-    if (eq_cstr ("-list", arg)) {
+    if (eq_cstr ("-id", arg)) {
+      if (!argv[argi])
+        failout_sysCx("Argument Usage: -id <id>");
+      init_XFile_olay_cstr (xfile_olay, argv[argi++]);
+      xfile = xfile_olay;
+      use_bits = false;
+      use_list = false;
+    }
+    else if (eq_cstr ("-list", arg)) {
       use_bits = false;
       use_list = true;
     }
@@ -130,8 +142,6 @@ int main(int argc, char** argv) {
     min_period = 1;
   }
 
-  C::XFile* xfile = stdin_XFile ();
-  OFile ofile( stdout_OFile () );
   while (true) {
     Table<UniAct> acts;
     uint domsz = 0;

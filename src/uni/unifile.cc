@@ -351,11 +351,11 @@ oput_protocon(OFile& ofile, const Table<UniAct>& acts, uint domsz)
     << "constant N := 2;"
     << "\nconstant M := " << domsz << ";"
     << "\nvariable x[N] < M;"
+    << "\n(future & future silent) (true);"
     << "\nprocess P[i < N]"
     << "\n{"
     << "\n  read: x[i-1];"
     << "\n  write: x[i];"
-    << "\n  (future & future silent) (true);"
     ;
   ofile << "\n  puppet:";
   for (uint i = 0; i < acts.sz(); ++i) {

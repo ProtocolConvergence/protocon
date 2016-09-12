@@ -27,7 +27,7 @@ struct SearchOpt
   uint max_period;
   uint max_propagations;
   bool check_ppg_overapprox;
-  bool self_disabling_tiles;
+  bool nw_disabling;
   bool use_bdds;
 
   // Ehh... mutable is okay because this is a single-use
@@ -45,12 +45,12 @@ struct SearchOpt
   Table<UniAct> given_acts;
 
   SearchOpt()
-    : domsz( 3 )
+    : domsz( 0 )
     , max_depth( 0 )
     , max_period( 0 )
     , max_propagations( 0 )
     , check_ppg_overapprox( true )
-    , self_disabling_tiles( false )
+    , nw_disabling( false )
     , use_bdds( false )
     , id_ofile( stdout_OFile() )
   {}
@@ -331,7 +331,7 @@ periodic_leads_semick(const BitTable& delegates,
 
   void
 trim_coexist (BitTable& actset, uint actid, uint domsz,
-              bool self_disabling_tiles)
+              bool nw_disabling)
 {
   UniAct act( UniAct::of_id(actid, domsz) );
 
@@ -353,7 +353,7 @@ trim_coexist (BitTable& actset, uint actid, uint domsz,
   subtract_action_mask(actset, UniAct(act[0], act[2], domsz), domsz);
   subtract_action_mask(actset, UniAct(act[0], domsz, act[1]), domsz);
 
-  if (!self_disabling_tiles)  return;
+  if (!nw_disabling)  return;
   // Enforce N-disabling.
   subtract_action_mask(actset, UniAct(act[2], act[1], domsz), domsz);
   subtract_action_mask(actset, UniAct(domsz, act[1], act[0]), domsz);
@@ -378,7 +378,7 @@ recurse(Table<BitTable>& delegates_stack,
   candidates = candidates_stack[depth-1];
   Claim( candidates.ck(actid) );
   candidates.set0(actid);
-  trim_coexist(candidates, actid, domsz, opt.self_disabling_tiles);
+  trim_coexist(candidates, actid, domsz, opt.nw_disabling);
 
   Table<PcState> ppgfun;
   init_ppgfun(ppgfun, delegates, domsz);
@@ -469,7 +469,7 @@ searchit(const SearchOpt& opt)
         DBog1("Action #%u was trimmed already!", i+1);
         failout_sysCx("");
       }
-      trim_coexist(candidates, actid, domsz, opt.self_disabling_tiles);
+      trim_coexist(candidates, actid, domsz, opt.nw_disabling);
     }
     if (!canonical_ck(uniring_ppgfun_of(delegates, domsz), domsz)) {
       OFile ofile( stderr_OFile () );
@@ -557,8 +557,8 @@ int main(int argc, char** argv)
       if (!xget_uint_cstr (&opt.max_propagations, argv[argi++]) || opt.max_propagations == 0)
         failout_sysCx("Argument Usage: -max-ppgs <limit>\nWhere <limit> is a positive integer!");
     }
-    else if (eq_cstr ("-self-disabling-tiles", arg)) {
-      opt.self_disabling_tiles = true;
+    else if (eq_cstr ("-nw-disabling", arg)) {
+      opt.nw_disabling = true;
     }
     else if (eq_cstr ("-test", arg)) {
       bool passed = TestKnownAperiodic();
@@ -571,7 +571,8 @@ int main(int argc, char** argv)
       lose_sysCx();
       return (passed ? 0 : 1);
     }
-    else if (eq_cstr ("-init", arg)) {
+    else if (eq_cstr ("-init", arg) ||
+             eq_cstr ("-id", arg)) {
       if (!argv[argi])
         failout_sysCx("Argument Usage: -init <id>");
 
@@ -613,6 +614,9 @@ int main(int argc, char** argv)
       failout_sysCx (0);
     }
   }
+
+  if (opt.domsz == 0)
+    failout_sysCx("Please specify a domain size with the -domsz flag.");
 
   opt.commit_domsz();
 

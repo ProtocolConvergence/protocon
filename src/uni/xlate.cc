@@ -21,10 +21,19 @@ int main(int argc, char** argv)
   const char* svg_livelock_ofilename = 0;
   const char* list_ofilename = 0;
 
+  C::XFile xfile_olay[1];
+  C::XFile* xfile = stdin_XFile ();
+
   uint cutoff = 15;
   while (argi < argc) {
     const char* arg = argv[argi++];
-    if (eq_cstr ("-cutoff", arg)) {
+    if (eq_cstr ("-id", arg)) {
+      if (!argv[argi])
+        failout_sysCx("Argument Usage: -id <id>");
+      init_XFile_olay_cstr (xfile_olay, argv[argi++]);
+      xfile = xfile_olay;
+    }
+    else if (eq_cstr ("-cutoff", arg)) {
       if (!xget_uint_cstr (&cutoff, argv[argi++]) || cutoff == 0)
         failout_sysCx("Argument Usage: -cutoff <limit>\nWhere <limit> is a positive integer!");
     }
@@ -56,12 +65,10 @@ int main(int argc, char** argv)
     }
   }
 
-  C::XFile* xfile = stdin_XFile ();
   Table<PcState> ppgfun;
-  uint domsz = xget_b64_ppgfun(xfile, ppgfun);
-  if (domsz == 0) {
+  const uint domsz = xget_b64_ppgfun(xfile, ppgfun);
+  if (domsz == 0)
     failout_sysCx (0);
-  }
   const Table<UniAct> acts = uniring_actions_of(ppgfun);
 
   if (svg_livelock_ofilename) {
