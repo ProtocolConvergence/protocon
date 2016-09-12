@@ -31,7 +31,7 @@ uniring_domsz_of(const Table<UniAct>& acts)
   uint domsz = 0;
   for (uint i = 0; i < acts.sz(); ++i) {
     for (uint j = 0; j < 3; ++j) {
-      if (acts[i][j]+1 > domsz) {
+      if (acts[i][j]+1u > domsz) {
         domsz = acts[i][j]+1;
       }
     }
@@ -227,7 +227,7 @@ xget_b64_ppgfun(C::XFile* xfile, Table<PcState>& ppgfun)
   return (PcState) domsz;
 }
 
-  uint
+  PcState
 xget_list(C::XFile* xfile, Table<UniAct>& acts)
 {
   UniAct act;
@@ -240,7 +240,7 @@ xget_list(C::XFile* xfile, Table<UniAct>& acts)
   uint domsz = 0;
   for (uint i = 0; i < acts.sz(); ++i) {
     for (uint j = 0; j < 3; ++j) {
-      if (acts[i][j]+1 > domsz) {
+      if (acts[i][j]+1u > domsz) {
         domsz = acts[i][j]+1;
       }
     }
@@ -259,7 +259,7 @@ oput_list(OFile& ofile, const Table<UniAct>& acts)
   }
 }
 
-  uint
+  PcState
 xget_actions(C::XFile* xfile, BitTable& actset)
 {
   const char* line = getline_XFile(xfile);

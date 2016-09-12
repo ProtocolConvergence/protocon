@@ -287,7 +287,7 @@ periodic_leads_semick(const BitTable& delegates,
     }
 
     for (uint i = 0; i < stack.sz(); ++i) {
-      Triple<uint> node = UniAct::of_id(stack[i][0], domsz);
+      Triple<PcState> node = UniAct::of_id(stack[i][0], domsz);
       const PcState a = node[0];
       const PcState b = node[1];
       const PcState c = ppgfun[id_of2(a, b, domsz)];

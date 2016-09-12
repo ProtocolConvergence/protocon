@@ -31,10 +31,10 @@ cycle_ck_from(uint initial_node, const AdjList<uint>& digraph,
               Table< Tuple<uint,2> >& stack,
               BitTable& visited);
 void
-make_tile_cont_digraph(AdjList<PcState>& digraph, const BitTable& actset,
+make_tile_cont_digraph(AdjList<uint>& digraph, const BitTable& actset,
                        const Table<PcState>& ppgfun, const uint domsz);
 void
-make_overapprox_tile_cont_digraph(AdjList<PcState>& digraph,
+make_overapprox_tile_cont_digraph(AdjList<uint>& digraph,
                                   const BitTable& actset,
                                   const uint domsz);
 END_NAMESPACE
