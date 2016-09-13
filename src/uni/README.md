@@ -22,11 +22,11 @@ For example, the `classify` tool can be used to analyze a protocol using higher 
 The following command analyzes one of the generated protocols, but it uses a cutoff of 20.
 It should find a livelock of period 9.
 ```
-./bld/uni/classify 20 -id hjiMcjUE
+./bld/uni/classify 20 -id 57XHa__A
 ```
 To see what this protocol actually is, use `xlate` as follows.
 ```
-./bld/uni/xlate -id hjiMcjUE -o-prot
+./bld/uni/xlate -id 57XHa__A -o-prot
 ```
 
 ## Options

@@ -165,12 +165,17 @@ oput_b64_ppgfun(OFile& ofile, const Table<PcState>& ppgfun, uint domsz)
     domsz = uniring_domsz_of(ppgfun);
   Claim( domsz > 0 );
   const uint elgsz = 1+lg_luint(domsz);
-  BitTable bt(domsz * domsz * elgsz, 0);
+  // Initialize bitstring with ones.
+  // It is 5 longer than necessary so we fill out the 1 bits.
+  const uint btsz = domsz * domsz * elgsz;
+  BitTable bt(btsz + 5, 1);
   for (zuint i = 0; i < ppgfun.sz(); ++i) {
-    bt.set(i * elgsz, elgsz, ppgfun[i]);
+    const PcState c = ppgfun[i];
+    skip_unless (c < domsz);
+    bt.set(i * elgsz, elgsz, c);
   }
 
-  for (zuint i = 0; i < bt.sz(); i+=6) {
+  for (zuint i = 0; i < btsz; i+=6) {
     const uint w = bt.get(i, 6);
     const char c
       = w < 26 ? 'A'+(char)w
@@ -217,12 +222,8 @@ xget_b64_ppgfun(C::XFile* xfile, Table<PcState>& ppgfun)
 
   ppgfun.resize(domsz*domsz);
   for (zuint i = 0; i < ppgfun.sz(); ++i) {
-    ppgfun[i] = bt.get(elgsz*i, elgsz);
-    if (ppgfun[i] > domsz) {
-      DBog1( "Error reading B64 encoding, got a value larger than %u.",
-             domsz );
-      return 0;
-    }
+    const PcState c = bt.get(elgsz*i, elgsz);
+    ppgfun[i] = (c < domsz ? c : domsz);
   }
   return (PcState) domsz;
 }
