@@ -430,7 +430,6 @@ searchit(const SearchOpt& opt)
   Table<BitTable> candidates_stack;
   candidates_stack.affysz( max_depth+1, mask );
   BitTable& candidates = candidates_stack[0];
-  uint actid;
 
   // Remove self-loops.
 #define REMOVE_ABB \
@@ -450,11 +449,15 @@ searchit(const SearchOpt& opt)
     for (uint b = 0; b < domsz; ++b) \
       candidates.set0(id_of3(a, b, a, domsz))
 
-#define RECURSE \
+#define RECURSE(actid) \
   recurse(delegates_stack, candidates_stack, actid, opt, 1, mask)
 
   // Never need self-loops.
   REMOVE_ABB;
+
+  if (opt.nw_disabling) {
+    REMOVE_ABA;
+  }
 
   if (!opt.given_acts.empty_ck()) {
     uint hi_id = 0;
@@ -477,6 +480,11 @@ searchit(const SearchOpt& opt)
       failout_sysCx("Assumed a non-canonical set of actions!");
     }
 
+    // Clear out low candidates.
+    for (uint actid = 0; actid < hi_id; ++actid) {
+      candidates.set0(actid);
+    }
+
     Claim( delegates.ck(id_of3(0, 0, 1, domsz)) ||
            delegates.ck(id_of3(0, 1, 0, domsz)) ||
            delegates.ck(id_of3(0, 1, 2, domsz)) );
@@ -490,21 +498,19 @@ searchit(const SearchOpt& opt)
 
     delegates.set0(hi_id);
     candidates.set1(hi_id);
-    actid = hi_id;
-    RECURSE;
+    RECURSE(hi_id);
     return;
   }
 
-  actid = id_of3(0, 0, 1, domsz);
-  RECURSE;
+  RECURSE(id_of3(0, 0, 1, domsz));
   REMOVE_AAB;
 
-  actid = id_of3(0, 1, 0, domsz);
-  RECURSE;
-  REMOVE_ABA;
+  if (!opt.nw_disabling) {
+    RECURSE(id_of3(0, 1, 0, domsz));
+    REMOVE_ABA;
+  }
 
-  actid = id_of3(0, 1, 2, domsz);
-  RECURSE;
+  RECURSE(id_of3(0, 1, 2, domsz));
 
 #undef REMOVE_ABB
 #undef REMOVE_ABA
