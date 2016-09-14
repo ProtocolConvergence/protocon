@@ -35,6 +35,7 @@ To see what this protocol actually is, use `xlate` as follows.
 
 * `-domsz <domain size>` -- Number of states per process. Required unless the `-init` flag is given.
 * `-cutoff <limit>` -- Maximum width and height of a tile block that we use to check for livelocks.
+* `-bdd` -- Use binary decision diagrams for livelock detection. This effectively removes the tile block's height constraint when detecting livelocks. It is generally slower, so prefer to use the `classify` tool for this kind of analysis.
 * `-nw-disabling` -- Along with enforcing self-disabling processes, which means the corresponding tilesets are W-disabling, also enforce N-disabling tilesets. The N-disabling property has no real meaning for protocols, but it gives a nice symmetry to the tileset constraints.
 * `-o <file>` -- Write protocol IDs to `<file>` instead of stdout.
 * `-bfs <depth>` -- Search only to a certain depth, writing all partial protocols at `<depth>` to stdout.

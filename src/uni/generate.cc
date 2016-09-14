@@ -554,6 +554,9 @@ int main(int argc, char** argv)
       opt.max_period = cutoff;
       opt.max_propagations = cutoff;
     }
+    else if (eq_cstr ("-bdd", arg)) {
+      opt.use_bdds = true;
+    }
     else if (eq_cstr ("-max-period", arg)) {
       if (!xget_uint_cstr (&opt.max_period, argv[argi++]) || opt.max_period == 0)
         failout_sysCx("Argument Usage: -max-period <limit>\nWhere <limit> is a positive integer!");
