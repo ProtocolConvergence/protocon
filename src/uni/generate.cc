@@ -29,6 +29,7 @@ struct SearchOpt
   bool check_ppg_overapprox;
   bool nw_disabling;
   bool use_bdds;
+  bool line_flush;
 
   // Ehh... mutable is okay because this is a single-use
   // class for recursion parameters.
@@ -54,6 +55,7 @@ struct SearchOpt
     , check_ppg_overapprox( true )
     , nw_disabling( false )
     , use_bdds( false )
+    , line_flush( true )
     , id_ofile( stdout_OFile() )
     , dfs_threshold( 0 )
   {}
@@ -397,7 +399,10 @@ recurse(Table<BitTable>& delegates_stack,
   }
   if (print_delegates) {
     oput_b64_ppgfun(opt.id_ofile, ppgfun, domsz);
-    opt.id_ofile << opt.id_ofile.endl();
+    if (opt.line_flush)
+      opt.id_ofile << opt.id_ofile.endl();
+    else
+      opt.id_ofile << '\n';
   }
 
   if (depth == opt.max_depth) {
@@ -407,7 +412,10 @@ recurse(Table<BitTable>& delegates_stack,
     }
     else if (!!opt.bfs_ofile) {
       oput_b64_ppgfun(opt.bfs_ofile, ppgfun, domsz);
-      opt.bfs_ofile << opt.bfs_ofile.endl();
+      if (opt.line_flush)
+        opt.bfs_ofile << opt.bfs_ofile.endl();
+      else
+        opt.bfs_ofile << '\n';
       return;
     }
     else {
@@ -573,6 +581,9 @@ int main(int argc, char** argv)
     }
     else if (eq_cstr ("-bdd", arg)) {
       opt.use_bdds = true;
+    }
+    else if (eq_cstr ("-flushoff", arg)) {
+      opt.line_flush = false;
     }
     else if (eq_cstr ("-max-period", arg)) {
       if (!xget_uint_cstr (&opt.max_period, argv[argi++]) || opt.max_period == 0)

@@ -40,6 +40,7 @@ gen_ofilename="g${d}.${cutoff}.gz"
   | parallel --pipe -n $lines_per_exec \
     "$gen_exe" -nw-disabling -cutoff $cutoff \
     -bfs $bfs -dfs-within $dfs_threshold \
+    -flushoff \
     -x-init - -o /dev/stderr \
   | gzip >$bfs_ofilename
 } \
