@@ -34,18 +34,25 @@ column_xfmla(const Table<UniAct>& acts, const PFmlaVbl& x_p, const PFmlaVbl& x_j
 }
 
 static
-  uint
-bdd_classify(const Table<UniAct>& acts, uint min_period, uint max_period)
+  void
+bdd_init_vbls(PFmlaCtx& pfmla_ctx, Table<PFmlaVbl>& vbls,
+              uint max_period, uint domsz)
 {
-  const uint domsz = uniring_domsz_of(acts);
-
-  // Initialize formula variables.
-  PFmlaCtx pfmla_ctx;
-  Table<PFmlaVbl> vbls(1+max_period);
+  vbls.affysz(1+max_period);
   for (uint i = 0; i < 1+max_period; ++i) {
     uint vbl_id = pfmla_ctx.add_vbl((String("x") << i), domsz);
     vbls[i] = pfmla_ctx.vbl(vbl_id);
   }
+}
+
+static
+  uint
+bdd_classify(const Table<PcState>& ppgfun,
+             Table<PFmlaVbl>& vbls,
+             uint min_period, uint max_period,
+             const uint domsz)
+{
+  Table<UniAct> acts = uniring_actions_of(ppgfun, domsz);
 
   X::Fmla xn(true);
   for (uint j = 1; j < 1+max_period; ++j) {
@@ -68,10 +75,8 @@ bdd_classify(const Table<UniAct>& acts, uint min_period, uint max_period)
 
 static
   uint
-tile_classify(const Table<UniAct>& acts, uint max_period)
+tile_classify(const Table<PcState>& ppgfun, uint max_period, const uint domsz)
 {
-  const uint domsz = uniring_domsz_of(acts);
-  Table<PcState> ppgfun = uniring_ppgfun_of(acts, domsz);
   Table<PcState> row;
   const Trit exists =
     livelock_semick(max_period, ppgfun, domsz, &row);
@@ -86,10 +91,12 @@ int main(int argc, char** argv) {
 
   uint min_period = 0;
   uint max_period = 0;
+  uint domsz = 0;
 
   bool use_bdds = true;
-  bool use_bits = false;
-  bool use_list = false;
+  bool echo_silent = false;
+  bool echo_livelock = false;
+  bool echo_unknown = false;
 
   C::XFile xfile_olay[1];
   C::XFile* xfile = stdin_XFile ();
@@ -102,22 +109,21 @@ int main(int argc, char** argv) {
         failout_sysCx("Argument Usage: -id <id>");
       init_XFile_olay_cstr (xfile_olay, argv[argi++]);
       xfile = xfile_olay;
-      use_bits = false;
-      use_list = false;
-    }
-    else if (eq_cstr ("-list", arg)) {
-      use_bits = false;
-      use_list = true;
-    }
-    else if (eq_cstr ("-bits", arg)) {
-      use_bits = true;
-      use_list = false;
     }
     else if (eq_cstr ("-nobdd", arg)) {
       use_bdds = false;
     }
     else if (eq_cstr ("-cutoff", arg)) {
       // Ignored.
+    }
+    else if (eq_cstr ("-silent", arg) || eq_cstr ("-sil", arg)) {
+      echo_silent = true;
+    }
+    else if (eq_cstr ("-livelock", arg) || eq_cstr ("-liv", arg)) {
+      echo_livelock = true;
+    }
+    else if (eq_cstr ("-unknown", arg) || eq_cstr ("-unk", arg)) {
+      echo_unknown = true;
     }
     else if (max_period == 0) {
       if (!xget_uint_cstr (&max_period, arg) || max_period == 0)
@@ -127,6 +133,10 @@ int main(int argc, char** argv) {
       min_period = max_period;
       if (!xget_uint_cstr (&max_period, arg) || max_period <= min_period)
         failout_sysCx("Failed to parse period.");
+    }
+    else if (eq_cstr ("-domsz", arg)) {
+      if (!xget_uint_cstr (&domsz, arg) || domsz == 0)
+        failout_sysCx("Usage: -domsz <domsz>\nWhere <domsz> is a positive integer.");
     }
     else {
       DBog1( "Unrecognized option: %s", arg );
@@ -142,42 +152,58 @@ int main(int argc, char** argv) {
     min_period = 1;
   }
 
+  PFmlaCtx pfmla_ctx;
+  Table<PFmlaVbl> vbls;
+  if (domsz > 0 && use_bdds) {
+    bdd_init_vbls(pfmla_ctx, vbls, max_period, domsz);
+  }
+
+  const bool echo_something = (echo_silent || echo_livelock || echo_unknown);
   while (true) {
-    Table<UniAct> acts;
-    uint domsz = 0;
-    if (use_bits) {
-      BitTable actset;
-      domsz = xget_actions(xfile, actset);
-      if (domsz == 0)  break;
-      acts = uniring_actions_of(actset);
+    Table<PcState> ppgfun;
+    uint read_domsz =
+      xget_b64_ppgfun(xfile, ppgfun);
+    if (read_domsz == 0)  break;
+    if (domsz == 0) {
+      domsz = read_domsz;
+      if (use_bdds) {
+        bdd_init_vbls(pfmla_ctx, vbls, max_period, domsz);
+      }
     }
-    else if (use_list) {
-      domsz = xget_list(xfile, acts);
-      if (domsz == 0)  break;
+    else if (domsz != read_domsz) {
+      failout_sysCx ("Use one domain size for inputs.");
+    }
+
+    uint period = 0;
+    if (use_bdds)
+      period = bdd_classify(ppgfun, vbls,
+                            min_period, max_period, domsz);
+    else
+      period = tile_classify(ppgfun, max_period, domsz);
+
+    if (echo_something) {
+      bool echo = false;
+      if (period == 0)
+        echo = echo_silent;
+      else if (period <= max_period)
+        echo = echo_livelock;
+      else
+        echo = echo_unknown;
+
+      if (echo) {
+        oput_b64_ppgfun(ofile, ppgfun, domsz);
+        ofile << ofile.endl();
+      }
     }
     else {
-      Table<PcState> ppgfun;
-      domsz = xget_b64_ppgfun(xfile, ppgfun);
-      if (domsz == 0)  break;
-      acts = uniring_actions_of(ppgfun);
+      if (period == 0)
+        ofile << "silent";
+      else if (period <= max_period)
+        ofile << "livelock\tperiod:" << period;
+      else
+        ofile << "unknown";
+      ofile << ofile.endl();
     }
-
-     uint period = 0;
-     if (use_bdds)
-       period = bdd_classify(acts, min_period, max_period);
-     else
-       period = tile_classify(acts, max_period);
-
-     if (period == 0)
-       ofile << "silent";
-     else if (period <= max_period)
-       ofile << "livelock\tperiod:" << period;
-     else
-       ofile << "unknown";
-     ofile << ofile.endl();
-
-     // Keep looping only if we're reading bitstrings.
-     if (use_list)  break;
   }
 
   lose_sysCx();

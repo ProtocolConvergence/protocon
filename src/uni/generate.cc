@@ -525,6 +525,9 @@ int main(int argc, char** argv)
   int argi = init_sysCx (&argc, &argv);
   SearchOpt opt;
 
+  C::XFile* given_xfile = 0;
+  XFileB given_xfileb;
+
   while (argi < argc) {
     const char* arg = argv[argi++];
     if (eq_cstr ("-domsz", arg)) {
@@ -599,24 +602,16 @@ int main(int argc, char** argv)
       String fname = argv[argi++];
       if (!fname)
         failout_sysCx("Argument Usage: -x-init <file>");
+      given_xfile = given_xfileb.uopen(0, fname);
+      if (!given_xfile)
+        failout_sysCx("Cannot open init file.");
 
-      XFileB xfileb;
-      C::XFile* xfile = xfileb.uopen(0, fname);
       Table<PcState> ppgfun;
-      opt.domsz = xget_b64_ppgfun(xfile, ppgfun);
+      opt.domsz = xget_b64_ppgfun(given_xfile, ppgfun);
       if (opt.domsz == 0) {
         failout_sysCx (0);
       }
       opt.given_acts = uniring_actions_of(ppgfun, opt.domsz);
-    }
-    else if (eq_cstr ("-x-init-list", arg)) {
-      String fname = argv[argi++];
-      if (!fname)
-        failout_sysCx("Argument Usage: -x-init-list <file>");
-
-      XFileB xfileb;
-      C::XFile* xfile = xfileb.uopen(0, fname);
-      xget_list(xfile, opt.given_acts);
     }
     else  {
       DBog1( "Unrecognized option: %s", arg );
@@ -628,14 +623,25 @@ int main(int argc, char** argv)
     failout_sysCx("Please specify a domain size with the -domsz flag.");
 
   opt.commit_domsz();
+  while (true) {
 
-  if (opt.given_acts.sz() > 0) {
-    if (opt.max_depth > 0) {
+    if (opt.given_acts.sz() > 0) {
+      if (opt.max_depth > 0) {
       opt.max_depth += 1;
+      }
     }
-  }
+    searchit(opt);
 
-  searchit(opt);
+    if (!given_xfile)  break;
+
+    Table<PcState> ppgfun;
+    uint domsz = xget_b64_ppgfun(given_xfile, ppgfun);
+    if (opt.domsz != domsz) {
+      if (domsz == 0)  break;
+      failout_sysCx ("Use the same domain size for all inputs.");
+    }
+    opt.given_acts = uniring_actions_of(ppgfun, opt.domsz);
+  }
   lose_sysCx ();
   return 0;
 }
