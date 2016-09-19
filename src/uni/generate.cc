@@ -38,6 +38,8 @@ struct SearchOpt
   OFileB id_ofileb;
   OFileB bfs_ofileb;
 
+  uint dfs_threshold;
+
   PFmlaCtx pfmla_ctx;
   Table<PFmlaVbl> pfmla_vbls;
   uint allbut2_pfmla_list_id;
@@ -53,6 +55,7 @@ struct SearchOpt
     , nw_disabling( false )
     , use_bdds( false )
     , id_ofile( stdout_OFile() )
+    , dfs_threshold( 0 )
   {}
 
   void commit_domsz() {
@@ -396,12 +399,20 @@ recurse(Table<BitTable>& delegates_stack,
     oput_b64_ppgfun(opt.id_ofile, ppgfun, domsz);
     opt.id_ofile << opt.id_ofile.endl();
   }
+
   if (depth == opt.max_depth) {
-    if (!!opt.bfs_ofile) {
+    UniAct act = UniAct::of_id(actid, domsz);
+    if (domsz*domsz - 1 - id_of2(act[0], act[1], domsz) <= opt.dfs_threshold) {
+      // No return.
+    }
+    else if (!!opt.bfs_ofile) {
       oput_b64_ppgfun(opt.bfs_ofile, ppgfun, domsz);
       opt.bfs_ofile << opt.bfs_ofile.endl();
+      return;
     }
-    return;
+    else {
+      return;
+    }
   }
 
   for (uint next_actid = actid+1; next_actid < candidates.sz(); ++next_actid) {
@@ -419,16 +430,15 @@ recurse(Table<BitTable>& delegates_stack,
 searchit(const SearchOpt& opt)
 {
   const uint domsz = opt.domsz;
-  const uint max_depth = opt.max_depth;
 
   BitTable mask( domsz*domsz*domsz, 0 );
   Table<BitTable> delegates_stack;
-  delegates_stack.affysz( max_depth+1, mask );
+  delegates_stack.affysz( domsz*domsz+1, mask );
   BitTable& delegates = delegates_stack[0];
 
   mask.wipe(1);
   Table<BitTable> candidates_stack;
-  candidates_stack.affysz( max_depth+1, mask );
+  candidates_stack.affysz( domsz*domsz+1, mask );
   BitTable& candidates = candidates_stack[0];
 
   // Remove self-loops.
@@ -538,6 +548,10 @@ int main(int argc, char** argv)
       opt.bfs_ofile = stdout_OFile ();
       if (!xget_uint_cstr (&opt.max_depth, argv[argi++]) || opt.max_depth == 0)
         failout_sysCx("Argument Usage: -bfs <limit>\nWhere <limit> is a positive integer!");
+    }
+    else if (eq_cstr ("-dfs-within", arg)) {
+      if (!xget_uint_cstr (&opt.dfs_threshold, argv[argi++]) || opt.dfs_threshold == 0)
+        failout_sysCx("Argument Usage: -dfs-within <threshold>\nWhere <threshold> is a positive integer!");
     }
     else if (eq_cstr ("-o", arg)) {
       arg = argv[argi++];

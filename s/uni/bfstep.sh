@@ -3,19 +3,29 @@
 this_exe_path=$(dirname "$0")
 source "${this_exe_path}/include.sh"
 
-if [ -z "$2" ]
+xfilename=$1
+shift
+cutoff=$1
+shift
+bfs=$1
+shift
+dfs_threshold=$1
+shift
+
+if [ -z "$cutoff" ]
 then
-  echo "Give input file, cutoff, and (optional) bfs depth." 1>&2
+  echo "Give input file, cutoff, (optional) bfs depth, and (optional) dfs threshold." 1>&2
   exit 1
 fi
-
-xfilename=$1
-cutoff=$2
-bfs=$3
 
 if [ -z "$bfs" ]
 then
   bfs=1
+fi
+
+if [ -z "$dfs_threshold" ]
+then
+  dfs_threshold=10
 fi
 
 lines_per_exec=200
@@ -28,7 +38,8 @@ gen_ofilename="g${d}.${cutoff}.gz"
 {
   zcat $xfilename \
   | parallel --pipe -n $lines_per_exec \
-    "$gen_exe" -bfs $bfs -cutoff $cutoff -nw-disabling \
+    "$gen_exe" -nw-disabling -cutoff $cutoff \
+    -bfs $bfs -dfs-within $dfs_threshold \
     -x-init - -o /dev/stderr \
   | gzip >$bfs_ofilename
 } \
