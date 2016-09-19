@@ -623,13 +623,13 @@ int main(int argc, char** argv)
     failout_sysCx("Please specify a domain size with the -domsz flag.");
 
   opt.commit_domsz();
-  while (true) {
-
-    if (opt.given_acts.sz() > 0) {
-      if (opt.max_depth > 0) {
+  if (opt.given_acts.sz() > 0) {
+    if (opt.max_depth > 0) {
       opt.max_depth += 1;
-      }
     }
+  }
+
+  while (true) {
     searchit(opt);
 
     if (!given_xfile)  break;

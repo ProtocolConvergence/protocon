@@ -1,6 +1,7 @@
 #!/bin/sh
 
-this_exe_path=$(dirname $(readlink -f "$0"))
+#this_exe_path=$(dirname $(readlink -f "$0"))
+this_exe_path=$(dirname "$0")
 source "${this_exe_path}/include.sh"
 
 threshold=$1
