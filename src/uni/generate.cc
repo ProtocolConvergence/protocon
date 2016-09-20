@@ -390,7 +390,7 @@ recurse(Table<BitTable>& delegates_stack,
   Table<PcState> ppgfun;
   init_ppgfun(ppgfun, delegates, domsz);
   bool print_delegates = true;
-  if (!!opt.bfs_ofile && depth == 1 && opt.trust_given) {
+  if (depth == 1 && opt.trust_given) {
     print_delegates = false;
   }
   else {
@@ -566,7 +566,8 @@ int main(int argc, char** argv)
         failout_sysCx("Argument Usage: -bfs <limit>\nWhere <limit> is a nonnegative integer!");
     }
     else if (eq_cstr ("-dfs-within", arg)) {
-      if (!xget_uint_cstr (&opt.dfs_threshold, argv[argi++]) || opt.dfs_threshold == 0)
+      // Only positive integers are useful, but let zero slip through.
+      if (!xget_uint_cstr (&opt.dfs_threshold, argv[argi++]))
         failout_sysCx("Argument Usage: -dfs-within <threshold>\nWhere <threshold> is a positive integer!");
     }
     else if (eq_cstr ("-o", arg)) {
@@ -658,12 +659,12 @@ int main(int argc, char** argv)
   if (opt.domsz == 0)
     failout_sysCx("Please specify a domain size with the -domsz flag.");
 
-  opt.commit_domsz();
   if (opt.given_acts.sz() > 0) {
-    if (opt.max_depth > 0) {
+    if (opt.max_depth > 0 || !!opt.bfs_ofile) {
       opt.max_depth += 1;
     }
   }
+  opt.commit_domsz();
 
   while (true) {
     searchit(opt);
