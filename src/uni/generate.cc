@@ -30,6 +30,7 @@ struct SearchOpt
   bool nw_disabling;
   bool use_bdds;
   bool line_flush;
+  bool trust_given;
 
   // Ehh... mutable is okay because this is a single-use
   // class for recursion parameters.
@@ -56,6 +57,7 @@ struct SearchOpt
     , nw_disabling( false )
     , use_bdds( false )
     , line_flush( true )
+    , trust_given( false )
     , id_ofile( stdout_OFile() )
     , dfs_threshold( 0 )
   {}
@@ -388,14 +390,19 @@ recurse(Table<BitTable>& delegates_stack,
   Table<PcState> ppgfun;
   init_ppgfun(ppgfun, delegates, domsz);
   bool print_delegates = true;
-  switch (periodic_leads_semick(delegates, ppgfun, mask,
-                                candidates_stack, depth, opt)) {
-    case Nil: return;
-    case May: print_delegates = false;
-    case Yes: break;
+  if (!!opt.bfs_ofile && depth == 1 && opt.trust_given) {
+    print_delegates = false;
   }
-  if (!canonical_ck(ppgfun, domsz)) {
-    return;
+  else {
+    switch (periodic_leads_semick(delegates, ppgfun, mask,
+                                  candidates_stack, depth, opt)) {
+      case Nil: return;
+      case May: print_delegates = false;
+      case Yes: break;
+    }
+    if (!canonical_ck(ppgfun, domsz)) {
+      return;
+    }
   }
   if (print_delegates) {
     oput_b64_ppgfun(opt.id_ofile, ppgfun, domsz);
@@ -492,7 +499,8 @@ searchit(const SearchOpt& opt)
       }
       trim_coexist(candidates, actid, domsz, opt.nw_disabling);
     }
-    if (!canonical_ck(uniring_ppgfun_of(delegates, domsz), domsz)) {
+    if (!opt.trust_given &&
+        !canonical_ck(uniring_ppgfun_of(delegates, domsz), domsz)) {
       OFile ofile( stderr_OFile () );
       oput_list(ofile, uniring_actions_of(mask, domsz));
       failout_sysCx("Assumed a non-canonical set of actions!");
@@ -554,8 +562,8 @@ int main(int argc, char** argv)
     }
     else if (eq_cstr ("-bfs", arg)) {
       opt.bfs_ofile = stdout_OFile ();
-      if (!xget_uint_cstr (&opt.max_depth, argv[argi++]) || opt.max_depth == 0)
-        failout_sysCx("Argument Usage: -bfs <limit>\nWhere <limit> is a positive integer!");
+      if (!xget_uint_cstr (&opt.max_depth, argv[argi++]))
+        failout_sysCx("Argument Usage: -bfs <limit>\nWhere <limit> is a nonnegative integer!");
     }
     else if (eq_cstr ("-dfs-within", arg)) {
       if (!xget_uint_cstr (&opt.dfs_threshold, argv[argi++]) || opt.dfs_threshold == 0)
@@ -584,6 +592,9 @@ int main(int argc, char** argv)
     }
     else if (eq_cstr ("-flushoff", arg)) {
       opt.line_flush = false;
+    }
+    else if (eq_cstr ("-trustme", arg)) {
+      opt.trust_given = true;
     }
     else if (eq_cstr ("-max-period", arg)) {
       if (!xget_uint_cstr (&opt.max_period, argv[argi++]) || opt.max_period == 0)
