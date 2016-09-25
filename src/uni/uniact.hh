@@ -12,10 +12,10 @@ class UniStep;
 class UniAct : public Cx::Triple<PcState>
 {
 public:
-  UniAct() : Triple<PcState>() {}
-  UniAct(PcState a, PcState b, PcState c) : Triple<PcState>(a, b, c) {}
-  UniAct(const PcState* v) : Triple<PcState>(v[0], v[1], v[2]) {}
-  explicit UniAct(PcState a) : Triple<PcState>(a) {}
+  UniAct() : Cx::Triple<PcState>() {}
+  UniAct(PcState a, PcState b, PcState c) : Cx::Triple<PcState>(a, b, c) {}
+  UniAct(const PcState* v) : Cx::Triple<PcState>(v[0], v[1], v[2]) {}
+  explicit UniAct(PcState a) : Cx::Triple<PcState>(a) {}
 
   static UniAct of_id(uint actid, const uint domsz);
 };
@@ -23,8 +23,8 @@ public:
 class UniStep : public Cx::Tuple<PcState,2>
 {
 public:
-  UniStep() : Tuple<PcState,2>() {}
-  UniStep(PcState a, PcState c) : Tuple<PcState,2>() {
+  UniStep() : Cx::Tuple<PcState,2>() {}
+  UniStep(PcState a, PcState c) : Cx::Tuple<PcState,2>() {
     (*this)[0] = a;
     (*this)[1] = c;
   }

@@ -38,7 +38,6 @@ extern "C" {
 
 
 #include "../namespace.hh"
-using Cx::mk_Tuple;
 
 // Tile set originally from:
 //   Grunbaum and Shephard's 1986 book "Tilings and Patterns".
@@ -73,7 +72,7 @@ static const uint TileSet[][4] = {
  **/
 static
   uint
-LookupSymId (Cx::Map< Cx::Table<uint>, uint >& idmap, const Cx::Table<uint>& key)
+LookupSymId (Map< Table<uint>, uint >& idmap, const Table<uint>& key)
 {
   return idmap.ensure(key, idmap.sz());
 }
@@ -84,10 +83,10 @@ LookupSymId (Cx::Map< Cx::Table<uint>, uint >& idmap, const Cx::Table<uint>& key
  *                     ________ ________
  *                    |   b1   |    $   |
  *    ________        |        |        |
- *   |    b   |       |a0  abcd|abcd  d0|
+ *   |    b   |       |a0    cd|cd    d0|
  *   |        |       |        |        |
- *   |a      d|  -->  |__abcd__|___d0___|
- *   |        |       |  abcd  |   d0   |
+ *   |a      d|  -->  |___cd___|___d0___|
+ *   |        |       |   cd   |   d0   |
  *   |____c___|       |        |        |
  *                    |$     c1|c1     $|
  *                    |        |        |
@@ -95,56 +94,67 @@ LookupSymId (Cx::Map< Cx::Table<uint>, uint >& idmap, const Cx::Table<uint>& key
  **/
 static
   uint
-ReduceToActionTiles (Cx::Table<UniAct>& ret_acts, const Cx::Table< Cx::Tuple<uint,4> >& tiles)
+ReduceToActionTiles (Table<UniAct>& ret_acts, const Table< Tuple<uint,4> >& tiles)
 {
-  Cx::Map< Cx::Table<uint>, uint > idmap;
-  Cx::Set<UniAct> acts;
+  Map< Table<uint>, uint > idmap;
+  Set<UniAct> acts;
 
   // This is the $ symbol.
-  const uint blank = LookupSymId (idmap, Cx::Table<uint>());
+  const uint blank = LookupSymId (idmap, Table<uint>());
+
+  uint max_color = 0;
+  for (uint i = 0; i < tiles.sz(); ++i) {
+    for (uint j = 0; j < 4; ++j) {
+      if (max_color < tiles[i][j]) {
+        max_color = tiles[i][j];
+      }
+    }
+  }
+  const uint ri_sfx = max_color + 1;
+  const uint up_sfx = max_color + 2;
 
   // Reserve low symbol ids (i.e., action tile colors) in the action tile set
   // for those corresponding to Wang tile colors.
   {
-    Cx::Set<uint> ri_colors, up_colors;
+    Set<uint> ri_colors, up_colors;
     for (uint tile_idx = 0; tile_idx < tiles.sz(); ++tile_idx) {
-      const Cx::Tuple<uint,4>& tile = tiles[tile_idx];
-      up_colors << tile[0] << tile[3];
-      ri_colors << tile[1] << tile[2];
+      const Tuple<uint,4>& tile = tiles[tile_idx];
+      ri_colors << tile[0] << tile[3];
+      up_colors << tile[1] << tile[2];
     }
-    Cx::Set<uint>::const_iterator it;
+    Set<uint>::const_iterator it;
     for (it = ri_colors.begin(); it != ri_colors.end(); ++it) {
-      Cx::Table<uint> sym;
-      LookupSymId (idmap, (sym << *it << 0));
+      Table<uint> sym;
+      LookupSymId (idmap, (sym << *it << ri_sfx));
     }
     for (it = up_colors.begin(); it != up_colors.end(); ++it) {
-      Cx::Table<uint> sym;
-      LookupSymId (idmap, (sym << *it << 1));
+      Table<uint> sym;
+      LookupSymId (idmap, (sym << *it << up_sfx));
     }
   }
 
   for (uint tile_idx = 0; tile_idx < tiles.sz(); ++tile_idx) {
-    const Cx::Tuple<uint,4>& tile = tiles[tile_idx];
-    Cx::Table<uint> sym;
+    const Tuple<uint,4>& tile = tiles[tile_idx];
+    Table<uint> sym;
 
-    sym << tile[0] << tile[1] << tile[2] << tile[3];
-    const uint abcd = LookupSymId (idmap, sym);
+    sym.flush() << tile[2] << tile[3];
+    const uint cd = LookupSymId (idmap, sym);
 
-    sym.flush() << tile[0] << 0;
+    sym.flush() << tile[0] << ri_sfx;
     const uint a0 = LookupSymId (idmap, sym);
 
-    sym.flush() << tile[1] << 1;
+    sym.flush() << tile[1] << up_sfx;
     const uint b1 = LookupSymId (idmap, sym);
 
-    sym.flush() << tile[2] << 1;
+    sym.flush() << tile[2] << up_sfx;
     const uint c1 = LookupSymId (idmap, sym);
 
-    sym.flush() << tile[3] << 0;
+    sym.flush() << tile[3] << ri_sfx;
     const uint d0 = LookupSymId (idmap, sym);
 
-    acts << UniAct( a0    , b1    , abcd  );
-    acts << UniAct( blank , abcd  , c1    );
-    acts << UniAct( abcd  , blank , d0    );
+    acts << UniAct( a0    , b1    , cd    );
+    acts << UniAct( blank , cd    , c1    );
+    acts << UniAct( cd    , blank , d0    );
     acts << UniAct( c1    , d0    , blank );
   }
   acts.fill(ret_acts);
@@ -161,17 +171,17 @@ int main (int argc, char** argv)
     failout_sysCx ("Expect one argument of: -id, -gv, -list, -pml, -prot");
   }
 
-  Cx::Table< Cx::Tuple<uint,4> > wtiles;
+  Table< Tuple<uint,4> > wtiles;
   for (uint i = 0; i < ArraySz(TileSet); ++i) {
     const uint* t = TileSet[i];
     wtiles << mk_Tuple(t[0], t[1], t[2], t[3]);
   }
 
   // Compute equivalent action tiles.
-  Cx::Table<UniAct> acts;
+  Table<UniAct> acts;
   const uint domsz = ReduceToActionTiles(acts, wtiles);
 
-  Cx::OFile ofile(stdout_OFile ());
+  OFile ofile(stdout_OFile ());
   if (eq_cstr ("-id", arg) || eq_cstr ("-o-id", arg)) {
     oput_b64_ppgfun(ofile, uniring_ppgfun_of(acts, domsz), domsz);
     ofile << ofile.endl();
