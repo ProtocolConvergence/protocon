@@ -94,13 +94,19 @@ int main(int argc, char** argv) {
   uint domsz = 0;
 
   bool use_bdds = true;
-  bool echo_silent = false;
-  bool echo_livelock = false;
-  bool echo_unknown = false;
+
+  OFile silent_ofile;
+  OFile livelock_ofile;
+  OFile unknown_ofile;
+  OFileB silent_ofileb;
+  OFileB livelock_ofileb;
+  OFileB unknown_ofileb;
 
   C::XFile xfile_olay[1];
   C::XFile* xfile = stdin_XFile ();
   OFile ofile( stdout_OFile () );
+
+  bool line_flush = true;
 
   while (argi < argc) {
     const char* arg = argv[argi++];
@@ -116,14 +122,38 @@ int main(int argc, char** argv) {
     else if (eq_cstr ("-cutoff", arg)) {
       // Ignored.
     }
+    else if (eq_cstr ("-flushoff", arg)) {
+      line_flush = false;
+    }
     else if (eq_cstr ("-silent", arg) || eq_cstr ("-sil", arg)) {
-      echo_silent = true;
+      silent_ofile = stdout_OFile();
     }
     else if (eq_cstr ("-livelock", arg) || eq_cstr ("-liv", arg)) {
-      echo_livelock = true;
+      livelock_ofile = stdout_OFile();
     }
     else if (eq_cstr ("-unknown", arg) || eq_cstr ("-unk", arg)) {
-      echo_unknown = true;
+      unknown_ofile = stdout_OFile();
+    }
+    else if (eq_cstr ("-o-silent", arg) || eq_cstr ("-o-sil", arg)) {
+      arg = argv[argi++];
+      if (!arg)  failout_sysCx("Give a file for -o-silent!");
+      silent_ofile = silent_ofileb.uopen(0, arg);
+      if (!silent_ofile)
+        failout_sysCx("Cannot open file for -o-silent!");
+    }
+    else if (eq_cstr ("-o-livelock", arg) || eq_cstr ("-o-liv", arg)) {
+      arg = argv[argi++];
+      if (!arg)  failout_sysCx("Give a file for -o-livelock!");
+      livelock_ofile = livelock_ofileb.uopen(0, arg);
+      if (!livelock_ofile)
+        failout_sysCx("Cannot open file for -o-livelock!");
+    }
+    else if (eq_cstr ("-o-unknown", arg) || eq_cstr ("-o-unk", arg)) {
+      arg = argv[argi++];
+      if (!arg)  failout_sysCx("Give a file for -o-unknown!");
+      unknown_ofile = unknown_ofileb.uopen(0, arg);
+      if (!unknown_ofile)
+        failout_sysCx("Cannot open file for -o-unknown!");
     }
     else if (max_period == 0) {
       if (!xget_uint_cstr (&max_period, arg) || max_period == 0)
@@ -158,7 +188,9 @@ int main(int argc, char** argv) {
     bdd_init_vbls(pfmla_ctx, vbls, max_period, domsz);
   }
 
-  const bool echo_something = (echo_silent || echo_livelock || echo_unknown);
+  const bool summarize =
+    (!silent_ofile && !livelock_ofile && !unknown_ofile);
+
   while (true) {
     Table<PcState> ppgfun;
     uint read_domsz =
@@ -181,28 +213,32 @@ int main(int argc, char** argv) {
     else
       period = tile_classify(ppgfun, max_period, domsz);
 
-    if (echo_something) {
-      bool echo = false;
-      if (period == 0)
-        echo = echo_silent;
-      else if (period <= max_period)
-        echo = echo_livelock;
-      else
-        echo = echo_unknown;
-
-      if (echo) {
-        oput_b64_ppgfun(ofile, ppgfun, domsz);
-        ofile << ofile.endl();
+    if (period == 0) {
+      if (!!silent_ofile) {
+        oput_b64_ppgfun(silent_ofile, ppgfun, domsz) << '\n';
+      }
+      else if (summarize) {
+        ofile << "silent\n";
+      }
+    }
+    else if (period <= max_period) {
+      if (!!livelock_ofile) {
+        oput_b64_ppgfun(livelock_ofile, ppgfun, domsz) << '\n';
+      }
+      else if (summarize) {
+        ofile << "livelock\tperiod:" << period << '\n';
       }
     }
     else {
-      if (period == 0)
-        ofile << "silent";
-      else if (period <= max_period)
-        ofile << "livelock\tperiod:" << period;
-      else
-        ofile << "unknown";
-      ofile << ofile.endl();
+      if (!!unknown_ofile) {
+        oput_b64_ppgfun(unknown_ofile, ppgfun, domsz) << '\n';
+      }
+      else if (summarize) {
+        ofile << "unknown\n";
+      }
+    }
+    if (line_flush) {
+      ofile.flush();
     }
   }
 

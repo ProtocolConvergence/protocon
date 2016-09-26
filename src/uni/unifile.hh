@@ -36,7 +36,7 @@ uniring_actset_of(const Table<PcState>& ppgfun, uint domsz=0);
 
 OFile& operator<<(OFile& of, const BitTable& bt);
 
-void
+OFile&
 oput_b64_ppgfun(OFile& ofile, const Table<PcState>& ppgfun, uint domsz=0);
 PcState
 xget_b64_ppgfun(C::XFile* xfile, Table<PcState>& ppgfun);

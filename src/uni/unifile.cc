@@ -158,7 +158,7 @@ xget_triple(C::XFile* xfile, UniAct& act)
   return false;
 }
 
-  void
+  OFile&
 oput_b64_ppgfun(OFile& ofile, const Table<PcState>& ppgfun, uint domsz)
 {
   if (domsz == 0)
@@ -184,6 +184,7 @@ oput_b64_ppgfun(OFile& ofile, const Table<PcState>& ppgfun, uint domsz)
       : w < 63 ? '-' : '_';
     ofile << c;
   }
+  return ofile;
 }
 
   PcState
