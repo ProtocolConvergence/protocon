@@ -20,7 +20,6 @@
  * See the paper or tech report for details about problem significance,
  * but see the comment above ReduceToActionTiles() for the new reduction.
  * It will eventually appear in a journal version.
- *
  **/
 extern "C" {
 #include "cx/syscx.h"
@@ -72,9 +71,12 @@ static const uint TileSet[][4] = {
  **/
 static
   uint
-LookupSymId (Map< Table<uint>, uint >& idmap, const Table<uint>& key)
+LookupSymId (Map< Triple<uint>, uint >& idmap,
+             const uint v0 = UINT_MAX,
+             const uint v1 = UINT_MAX,
+             const uint v2 = UINT_MAX)
 {
-  return idmap.ensure(key, idmap.sz());
+  return idmap.ensure(Triple<uint>(v0, v1, v2), idmap.sz());
 }
 
 /** Populate {ret_acts}, return domain size.
@@ -96,22 +98,11 @@ static
   uint
 ReduceToActionTiles (Table<UniAct>& ret_acts, const Table< Tuple<uint,4> >& tiles)
 {
-  Map< Table<uint>, uint > idmap;
+  Map< Triple<uint>, uint > idmap;
   Set<UniAct> acts;
 
-  // This is the $ symbol.
-  const uint blank = LookupSymId (idmap, Table<uint>());
-
-  uint max_color = 0;
-  for (uint i = 0; i < tiles.sz(); ++i) {
-    for (uint j = 0; j < 4; ++j) {
-      if (max_color < tiles[i][j]) {
-        max_color = tiles[i][j];
-      }
-    }
-  }
-  const uint ri_sfx = max_color + 1;
-  const uint up_sfx = max_color + 2;
+  const uint doll = LookupSymId(idmap);
+  const uint direction_tag = 1;
 
   // Reserve low symbol ids (i.e., action tile colors) in the action tile set
   // for those corresponding to Wang tile colors.
@@ -124,41 +115,150 @@ ReduceToActionTiles (Table<UniAct>& ret_acts, const Table< Tuple<uint,4> >& tile
     }
     Set<uint>::const_iterator it;
     for (it = ri_colors.begin(); it != ri_colors.end(); ++it) {
-      Table<uint> sym;
-      LookupSymId (idmap, (sym << *it << ri_sfx));
+      LookupSymId(idmap, *it, 0, direction_tag);
     }
     for (it = up_colors.begin(); it != up_colors.end(); ++it) {
-      Table<uint> sym;
-      LookupSymId (idmap, (sym << *it << up_sfx));
+      LookupSymId(idmap, *it, 1, direction_tag);
     }
   }
+
 
   for (uint tile_idx = 0; tile_idx < tiles.sz(); ++tile_idx) {
     const Tuple<uint,4>& tile = tiles[tile_idx];
-    Table<uint> sym;
 
-    sym.flush() << tile[2] << tile[3];
-    const uint cd = LookupSymId (idmap, sym);
+    const uint
+        cd = LookupSymId(idmap, tile[2], tile[3])
+      , a0 = LookupSymId(idmap, tile[0], 0, direction_tag)
+      , b1 = LookupSymId(idmap, tile[1], 1, direction_tag)
+      , c1 = LookupSymId(idmap, tile[2], 1, direction_tag)
+      , d0 = LookupSymId(idmap, tile[3], 0, direction_tag)
+      ;
 
-    sym.flush() << tile[0] << ri_sfx;
-    const uint a0 = LookupSymId (idmap, sym);
-
-    sym.flush() << tile[1] << up_sfx;
-    const uint b1 = LookupSymId (idmap, sym);
-
-    sym.flush() << tile[2] << up_sfx;
-    const uint c1 = LookupSymId (idmap, sym);
-
-    sym.flush() << tile[3] << ri_sfx;
-    const uint d0 = LookupSymId (idmap, sym);
-
-    acts << UniAct( a0    , b1    , cd    );
-    acts << UniAct( blank , cd    , c1    );
-    acts << UniAct( cd    , blank , d0    );
-    acts << UniAct( c1    , d0    , blank );
+    acts
+      << UniAct( a0   , b1   , cd    )
+      << UniAct( doll , cd   , c1    )
+      << UniAct( cd   , doll , d0    )
+      << UniAct( c1   , d0   , doll  )
+      ;
   }
   acts.fill(ret_acts);
   return idmap.sz();
+}
+
+/** Populate {ret_acts}, return domain size.
+ *
+ * Each input Wang tile is converted to some
+ * commutative action tiles by the following transformation:
+ *                     ________ ________ ________
+ *                    |   b1   |   00   |    $   |
+ *                    |        |        |        |
+ *                    |a0    cd|cd   d00|d00   d0|
+ *                    |        |        |        |
+ *    ________        |___cd___|___d00__|___d0___|
+ *   |    b   |       |   cd   |   d00  |   d0   |
+ *   |        |       |        |        |        |
+ *   |a      d|  -->  |11   c11|c11    #|#     11|
+ *   |        |       |        |        |        |
+ *   |____c___|       |___c11__|____#___|___11___|
+ *                    |   c11  |    #   |   11   |
+ *                    |        |        |        |
+ *                    |$     c1|c1    00|00     $|
+ *                    |        |        |        |
+ *                    |___c1___|___00___|____$___|
+ **/
+static
+  uint
+ReduceToCommutativeTiles(Table<UniAct>& ret_acts,
+                         const Table< Tuple<uint,4> >& tiles)
+{
+  Map< Triple<uint>, uint > idmap;
+  Set<UniAct> acts;
+
+  const uint special_tag = 0;
+  const uint direction_tag = 1;
+  const uint double_direction_tag = 2;
+
+  const uint id00 = LookupSymId(idmap, 0, 0, special_tag);
+  const uint id11 = LookupSymId(idmap, 1, 0, special_tag);
+  const uint hash = LookupSymId(idmap, 3, 0, special_tag);
+  const uint doll = LookupSymId(idmap, 2, 0, special_tag);
+
+  for (uint tile_idx = 0; tile_idx < tiles.sz(); ++tile_idx) {
+    const Tuple<uint,4>& tile = tiles[tile_idx];
+    const uint a = tile[0],  b = tile[1],  c = tile[2],  d = tile[3];
+
+    const uint
+        cd  = LookupSymId(idmap, c, d)
+      , a0  = LookupSymId(idmap, a, 0, direction_tag)
+      , d0  = LookupSymId(idmap, d, 0, direction_tag)
+      , d00 = LookupSymId(idmap, d, 0, double_direction_tag)
+      , b1  = LookupSymId(idmap, b, 1, direction_tag)
+      , c1  = LookupSymId(idmap, c, 1, direction_tag)
+      , c11 = LookupSymId(idmap, c, 1, double_direction_tag)
+      ;
+
+#define ReductionTile(x, y, z) \
+    UniAct(x, y, z) << UniAct(y, x, z)
+
+#define ReductionRow(t, u, v, w, x, y, z) \
+    ReductionTile(t, u, v) << ReductionTile(v, w, x) << ReductionTile(x, y, z)
+
+    acts
+      << ReductionRow(  a0,  b1,  cd, id00,  d00, doll,   d0)
+      << ReductionRow(id11,  cd, c11,  d00, hash,   d0, id11)
+      << ReductionRow(doll, c11,  c1, hash, id00, id11, doll)
+      ;
+#undef ReductionRow
+#undef ReductionTile
+  }
+  acts.fill(ret_acts);
+  return idmap.sz();
+  return idmap.sz();
+}
+
+
+static bool
+check_constraints(Table<UniAct>& acts, bool commutative)
+{
+  const bool explain_failure = true;
+  Set<UniAct> actset(acts);
+  Set< Tuple<PcState,2> > guardset;
+
+
+#define ExplainFail(s) \
+do { \
+  if (explain_failure) \
+    DBog4("%s: (%u, %u, %u)", s, (uint)a, (uint)b, (uint)c); \
+  return false; \
+} while (false)
+
+  for (uint i = 0; i < acts.sz(); ++i) {
+    const UniAct& act = acts[i];
+    const PcState a = act[0],  b = act[1],  c = act[2];
+
+    Tuple<PcState,2> guard = mk_Tuple(a, b);
+    if (guardset.elem_ck(guard))
+      ExplainFail("Not deterministic");
+    guardset << guard;
+  }
+
+
+  for (uint i = 0; i < acts.sz(); ++i) {
+    const UniAct& act = acts[i];
+    const PcState a = act[0],  b = act[1],  c = act[2];
+
+    if (guardset.elem_ck(mk_Tuple(a, c)))
+      ExplainFail("Not W-disabling");
+
+    if (guardset.elem_ck(mk_Tuple(c, b)))
+      ExplainFail("Not N-disabling");
+
+    if (commutative && !actset.elem_ck(UniAct(b, a, c)))
+      ExplainFail("Not commutative");
+  }
+
+#undef ExplainFail
+  return true;
 }
 
 /** Execute me now!**/
@@ -166,6 +266,13 @@ int main (int argc, char** argv)
 {
   int argi = init_sysCx (&argc, &argv);
   const char* arg = argv[argi];
+
+  bool commutative = false;
+  if (eq_cstr (arg, "-commute") ||
+      eq_cstr (arg, "-commutative")) {
+    arg = argv[++argi];
+    commutative = true;
+  }
 
   if (argi+1 != argc || eq_cstr("-h", arg)) {
     failout_sysCx ("Expect one argument of: -id, -gv, -list, -pml, -prot");
@@ -179,7 +286,14 @@ int main (int argc, char** argv)
 
   // Compute equivalent action tiles.
   Table<UniAct> acts;
-  const uint domsz = ReduceToActionTiles(acts, wtiles);
+  const uint domsz =
+    commutative
+    ? ReduceToCommutativeTiles(acts, wtiles)
+    : ReduceToActionTiles(acts, wtiles);
+
+  if (!check_constraints(acts, commutative)) {
+    failout_sysCx("Reduction does not preserve good properties.");
+  }
 
   OFile ofile(stdout_OFile ());
   if (eq_cstr ("-id", arg) || eq_cstr ("-o-id", arg)) {
