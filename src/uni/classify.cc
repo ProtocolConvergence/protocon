@@ -161,7 +161,7 @@ int main(int argc, char** argv) {
     }
     else if (min_period == 0) {
       min_period = max_period;
-      if (!xget_uint_cstr (&max_period, arg) || max_period <= min_period)
+      if (!xget_uint_cstr (&max_period, arg) || max_period < min_period)
         failout_sysCx("Failed to parse period.");
     }
     else if (eq_cstr ("-domsz", arg)) {
