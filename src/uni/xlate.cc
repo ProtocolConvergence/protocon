@@ -16,6 +16,7 @@ int main(int argc, char** argv)
 {
   int argi = init_sysCx (&argc, &argv);
 
+  const char* id_ofilename = 0;
   const char* graphviz_ofilename = 0;
   const char* prot_ofilename = 0;
   const char* svg_livelock_ofilename = 0;
@@ -23,6 +24,10 @@ int main(int argc, char** argv)
 
   C::XFile xfile_olay[1];
   C::XFile* xfile = stdin_XFile ();
+
+  Table<PcState> ppgfun;
+  Table<UniAct> acts;
+  uint domsz = 0;
 
   uint cutoff = 15;
   while (argi < argc) {
@@ -33,9 +38,25 @@ int main(int argc, char** argv)
       init_XFile_olay_cstr (xfile_olay, argv[argi++]);
       xfile = xfile_olay;
     }
+    else if (eq_cstr ("-x-list", arg)) {
+      if (!argv[argi])
+        failout_sysCx("Argument Usage: -x-list <filename>");
+      XFileB list_xfileb;
+      xfile = list_xfileb.uopen(0, argv[argi++]);
+      if (!xfile)
+        failout_sysCx("Cannot open -x-list file.");
+      domsz = xget_list(xfile, acts);
+      ppgfun = uniring_ppgfun_of(acts, domsz);
+      xfile = 0;
+    }
     else if (eq_cstr ("-cutoff", arg)) {
       if (!xget_uint_cstr (&cutoff, argv[argi++]) || cutoff == 0)
         failout_sysCx("Argument Usage: -cutoff <limit>\nWhere <limit> is a positive integer!");
+    }
+    else if (eq_cstr ("-o-id", arg)) {
+      id_ofilename = argv[argi++];
+      if (!id_ofilename)
+        id_ofilename = "-";
     }
     else if (eq_cstr ("-o-graphviz", arg) ||
              eq_cstr ("-o-gv", arg)) {
@@ -65,11 +86,13 @@ int main(int argc, char** argv)
     }
   }
 
-  Table<PcState> ppgfun;
-  const uint domsz = xget_b64_ppgfun(xfile, ppgfun);
+  if (xfile) {
+    domsz = xget_b64_ppgfun(xfile, ppgfun);
+    acts = uniring_actions_of(ppgfun);
+  }
+
   if (domsz == 0)
     failout_sysCx (0);
-  const Table<UniAct> acts = uniring_actions_of(ppgfun);
 
   if (svg_livelock_ofilename) {
     Table<PcState> top, col;
@@ -85,6 +108,13 @@ int main(int argc, char** argv)
 
   if (prot_ofilename) {
     oput_protocon(prot_ofilename, acts, domsz);
+  }
+
+  if (id_ofilename) {
+    OFileB id_ofileb;
+    OFile id_ofile( id_ofileb.uopen(0, id_ofilename) );
+    oput_b64_ppgfun(id_ofile, ppgfun, domsz);
+    id_ofile << '\n';
   }
 
   if (graphviz_ofilename) {
