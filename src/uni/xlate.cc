@@ -28,6 +28,7 @@ int main(int argc, char** argv)
   Table<PcState> ppgfun;
   Table<UniAct> acts;
   uint domsz = 0;
+  uint domsz_override = 0;
 
   uint cutoff = 15;
   while (argi < argc) {
@@ -46,8 +47,13 @@ int main(int argc, char** argv)
       if (!xfile)
         failout_sysCx("Cannot open -x-list file.");
       domsz = xget_list(xfile, acts);
-      ppgfun = uniring_ppgfun_of(acts, domsz);
+      if (domsz == 0)
+        failout_sysCx ("Failed to read protocol.");
       xfile = 0;
+    }
+    else if (eq_cstr ("-domsz", arg)) {
+      if (!xget_uint_cstr (&domsz_override, argv[argi++]) || domsz_override == 0)
+        failout_sysCx("Argument Usage: -domsz <M>\nWhere <M> is a positive integer!");
     }
     else if (eq_cstr ("-cutoff", arg)) {
       if (!xget_uint_cstr (&cutoff, argv[argi++]) || cutoff == 0)
@@ -86,13 +92,28 @@ int main(int argc, char** argv)
     }
   }
 
-  if (xfile) {
-    domsz = xget_b64_ppgfun(xfile, ppgfun);
-    acts = uniring_actions_of(ppgfun);
+  if (domsz_override > 0) {
+    // Override domain size.
+    if (xfile) {
+      failout_sysCx ("-domsz only works with -x-list.");
+    }
+    if (domsz > domsz_override) {
+      failout_sysCx ("The given -domsz is not large enough for the given protocol.");
+    }
+    domsz = domsz_override;
   }
 
-  if (domsz == 0)
-    failout_sysCx (0);
+  if (xfile) {
+    // Protocol given as an ID.
+    domsz = xget_b64_ppgfun(xfile, ppgfun);
+    if (domsz == 0)
+      failout_sysCx ("Failed to read protocol.");
+    acts = uniring_actions_of(ppgfun);
+  }
+  else {
+    // Protocol given as a list of actions.
+    ppgfun = uniring_ppgfun_of(acts, domsz);
+  }
 
   if (svg_livelock_ofilename) {
     Table<PcState> top, col;
