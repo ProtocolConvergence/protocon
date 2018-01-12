@@ -60,6 +60,6 @@ The `xlate` tool outputs many file formats from a (cryptic) protocol ID string.
 * `-o-id [<file>]` -- Write the protocol as an ID.
 * `-o-prot [<file>]` -- Write the protocol in a format that can be read by Protocon. The `<file>` defaults to stdout  if `-o-prot` is the last argument given on the command line.
 * `-o-graphviz [<file>]` -- Write the propagation graph in graphviz format. Use `dot` to make an image out of it.
-* `-o-svg-livelock [<file>]` -- Write an SVG image showing the periodic tile block that characterizes a livelock. Use the `-cutoff` flag with this. If no livelock is found, then no file is written.
+* `-o-svg-livelock [<file>]` -- Write an SVG image showing the periodic tile block that characterizes a livelock. Must provide a `-cutoff`. If no livelock is found, then no file is written.
 * `-cutoff <limit>` -- Maximum width and height of a tile block that we use to check for livelocks. Only useful in conjunction with the `-o-svg-livelock` flag.
 

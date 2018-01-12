@@ -30,7 +30,7 @@ int main(int argc, char** argv)
   uint domsz = 0;
   uint domsz_override = 0;
 
-  uint cutoff = 15;
+  uint cutoff = 0;
   while (argi < argc) {
     const char* arg = argv[argi++];
     if (eq_cstr ("-id", arg)) {
@@ -117,13 +117,19 @@ int main(int argc, char** argv)
 
   if (svg_livelock_ofilename) {
     Table<PcState> top, col;
+    if (cutoff == 0) {
+      failout_sysCx ("Must provide a -cutoff when using -o-svg-livelock.");
+    }
     Trit livelock_exists =
       livelock_semick(cutoff, ppgfun, domsz, &top, &col);
 
-    if (svg_livelock_ofilename && livelock_exists==Yes) {
+    if (livelock_exists==Yes) {
       OFileB svg_ofileb;
       OFile svg_ofile( svg_ofileb.uopen(0, svg_livelock_ofilename) );
       oput_svg_livelock(svg_ofile, ppgfun, top, col, domsz);
+    }
+    else {
+      DBog0("No livelock detected for given -cutoff.");
     }
   }
 
