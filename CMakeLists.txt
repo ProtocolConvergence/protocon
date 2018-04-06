@@ -6,7 +6,7 @@ set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
 include(ExternalProject)
 
 set (GluPfx mdd-glu)
-set (PegPfx peg-0.1.18)
+set (PegPfx peg)
 
 set (TopPath ${CMAKE_CURRENT_SOURCE_DIR})
 set (DepPath ${TopPath}/dep)
@@ -23,8 +23,6 @@ ExternalProject_Add(peg
   PREFIX ${CMAKE_CURRENT_BINARY_DIR}/external/peg
   SOURCE_DIR ${DepPath}/${PegPfx}
   BUILD_IN_SOURCE 1
-  URL http://piumarta.com/software/peg/${PegPfx}.tar.gz
-  URL_HASH MD5=992fc7887afc2a8c92cdb1acb5b935e1
   UPDATE_COMMAND echo "No update."
   CONFIGURE_COMMAND echo "No configure step."
   INSTALL_COMMAND echo "No install step."

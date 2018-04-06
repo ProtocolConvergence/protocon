@@ -7,3 +7,6 @@
 [submodule "dep/mdd-glu"]
 	path = dep/mdd-glu
 	url = https://github.com/grencez/mdd-glu.git
+[submodule "dep/peg"]
+	path = dep/peg
+	url = https://github.com/gpakosz/peg.git
