@@ -37,13 +37,6 @@ Specify its source directory as `/path/to/protocon/` and the build directory as 
 Hit the `Generate` button.
 
 Now there should be a makefile in `bld/ext/`, so in the terminal type `make`.
-This will fail due to a missing `malloc.h` include.
-Run the following to strip that line out and proceed:
-
-```
-sed -i.bak -e 's/^#include "malloc\.h"//' ../../dep/glu-2.4/src/calBdd/calMemoryManagement.c
-make
-```
 
 ## Dependencies:
 
