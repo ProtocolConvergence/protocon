@@ -6,6 +6,7 @@ BinPath=bin
 SrcPath=src
 DepPath=dep
 CxTopPath=$(DepPath)/cx
+MddGluPath=$(DepPath)/mdd-glu
 
 ScanBldPath=clang
 ScanRptPath=$(ScanBldPath)/report
@@ -74,6 +75,7 @@ clean:
 
 distclean:
 	$(GODO) $(CxTopPath) $(MAKE) distclean
+	$(GODO) $(MddGluPath) $(MAKE) distclean
 	rm -fr $(BldPath) $(BinPath) $(ScanBldPath) tags
 
 dep:
@@ -82,6 +84,7 @@ dep:
 init:
 	if [ ! -f $(DepPath)/cx/src/cx.c ] ; then git submodule init dep/cx ; git submodule update dep/cx ; fi
 	if [ ! -f $(DepPath)/cx-pp/cx.c ] ; then git submodule init dep/cx-pp ; git submodule update dep/cx-pp ; fi
+	if [ ! -f $(DepPath)/mdd-glu/README ] ; then git submodule init dep/mdd-glu ; git submodule update dep/mdd-glu ; fi
 
 update:
 	git pull origin master

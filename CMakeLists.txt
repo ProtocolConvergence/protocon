@@ -5,7 +5,7 @@ set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
 
 include(ExternalProject)
 
-set (GluPfx glu-2.4)
+set (GluPfx mdd-glu)
 set (PegPfx peg-0.1.18)
 
 set (TopPath ${CMAKE_CURRENT_SOURCE_DIR})
@@ -31,12 +31,9 @@ ExternalProject_Add(peg
   )
 
 ExternalProject_Add(glu
-  PREFIX ${CMAKE_CURRENT_BINARY_DIR}/external/glu
+  PREFIX ${CMAKE_CURRENT_BINARY_DIR}/external/mdd-glu
   SOURCE_DIR ${DepPath}/${GluPfx}
   BUILD_IN_SOURCE 1
-  URL ftp://vlsi.colorado.edu/pub/vis/${GluPfx}.tar.gz
-  URL_HASH MD5=11c75f6c8fe996730e70a26d957b68e0
-  UPDATE_COMMAND echo "No update."
   CONFIGURE_COMMAND ./configure --enable-gcc
   INSTALL_COMMAND echo "No install step."
   )
