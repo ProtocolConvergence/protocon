@@ -1,12 +1,16 @@
 [submodule "dep/cx"]
 	path = dep/cx
   url = https://github.com/grencez/cx.git
+  branch = master
 [submodule "dep/cx-pp"]
 	path = dep/cx-pp
   url = https://github.com/grencez/cx-pp.git
+  branch = master
 [submodule "dep/mdd-glu"]
 	path = dep/mdd-glu
 	url = https://github.com/grencez/mdd-glu.git
+  branch = master
 [submodule "dep/peg"]
 	path = dep/peg
 	url = https://github.com/gpakosz/peg.git
+  branch = upstream

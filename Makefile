@@ -75,9 +75,9 @@ clean:
 	$(GODO) $(BldPath) $(MAKE) clean
 
 distclean:
-	$(GODO) $(CxTopPath) $(MAKE) distclean
-	$(GODO) $(MddGluPath) $(MAKE) distclean
-	$(GODO) $(PegTopPath) $(MAKE) spotless
+	$(GODO) $(CxTopPath) $(MAKE) distclean || true
+	$(GODO) $(MddGluPath) $(MAKE) distclean || true
+	$(GODO) $(PegTopPath) $(MAKE) spotless || true
 	rm -fr $(BldPath) $(BinPath) $(ScanBldPath) tags
 
 dep:
@@ -92,11 +92,20 @@ init:
 update:
 	git pull origin master
 	git submodule update
-	git submodule foreach git checkout master
-	git submodule foreach git merge --ff-only origin/master
+	git -C dep/cx checkout master
+	git -C dep/cx merge --ff-only origin/master
+	git -C dep/cx-pp checkout master
+	git -C dep/cx-pp merge --ff-only origin/master
+	git -C dep/mdd-glu checkout master
+	git -C dep/mdd-glu merge --ff-only origin/master
+	git -C dep/peg checkout upstream
+	git -C dep/peg merge --ff-only origin/upstream
 
 pull:
 	git pull origin master
-	git submodule foreach git pull origin master
+	git -C dep/cx pull origin master
+	git -C dep/cx-pp pull origin master
+	git -C dep/mdd-glu pull origin master
+	git -C dep/peg pull origin upstream
 	if [ -d $(DepPath)/tex2web ] ; then $(GODO) $(DepPath)/tex2web git pull origin master ; fi
 
