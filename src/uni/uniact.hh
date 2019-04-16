@@ -37,8 +37,8 @@ inline
   UniAct
 UniAct::of_id(uint actid, const uint domsz)
 {
-  const ldiv_t lo = div((long) actid, domsz);
-  const ldiv_t hi = div((long) lo.quot, domsz);
+  const ldiv_t lo = ldiv((long) actid, domsz);
+  const ldiv_t hi = ldiv((long) lo.quot, domsz);
   return UniAct(hi.quot, hi.rem, lo.rem);
 }
 
@@ -46,7 +46,7 @@ inline
   UniStep
 UniStep::of_id(uint stepid, const uint domsz)
 {
-  const ldiv_t d = div((long) stepid, domsz);
+  const ldiv_t d = ldiv((long) stepid, domsz);
   return UniStep(d.quot, d.rem);
 }
 
