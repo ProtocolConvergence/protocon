@@ -32,7 +32,7 @@ ExternalProject_Add(glu
   PREFIX ${CMAKE_CURRENT_BINARY_DIR}/external/mdd-glu
   SOURCE_DIR ${DepPath}/${GluPfx}
   BUILD_IN_SOURCE 1
-  CONFIGURE_COMMAND ./configure --enable-gcc
+  CONFIGURE_COMMAND autoconf && ./configure --enable-gcc
   INSTALL_COMMAND echo "No install step."
   )
 
