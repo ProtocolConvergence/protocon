@@ -21,11 +21,11 @@ set (TopPath ${CMAKE_CURRENT_SOURCE_DIR}/..)
 set (BinPath ${TopPath}/bin)
 set (DepPath ${TopPath}/dep)
 set (CxTopPath ${DepPath}/cx)
-if (NOT DEFINED GluPath)
-  set (GluPath ${DepPath}/mdd-glu)
+if (NOT DEFINED GluBldPath)
+  set (GluBldPath ${DepPath}/mdd-glu/bld)
 endif ()
 set (BldPath protocon)
-set (GluIncludePath ${GluPath}/include)
+set (GluIncludePath ${GluBldPath}/include)
 
 
 list (APPEND CFiles satsyn/satsyn.c satsyn/xnsys.c)
@@ -135,7 +135,7 @@ list (APPEND ProtoconSources
   conflictfamily.cc
   )
 
-link_directories(${GluPath})
+link_directories(${GluBldPath})
 
 
 #### Unit Test Executable ####

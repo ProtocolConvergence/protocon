@@ -76,7 +76,7 @@ clean:
 
 distclean:
 	$(GODO) $(CxTopPath) $(MAKE) distclean || true
-	$(GODO) $(MddGluPath) $(MAKE) distclean || true
+	rm -fr $(MddGluPath)/bld
 	$(GODO) $(PegTopPath) $(MAKE) spotless || true
 	rm -fr $(BldPath) $(BinPath) $(ScanBldPath) tags
 

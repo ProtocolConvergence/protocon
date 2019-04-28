@@ -30,10 +30,19 @@ ExternalProject_Add(peg
 
 ExternalProject_Add(glu
   PREFIX ${CMAKE_CURRENT_BINARY_DIR}/external/mdd-glu
-  SOURCE_DIR ${DepPath}/${GluPfx}
-  BUILD_IN_SOURCE 1
-  CONFIGURE_COMMAND autoconf && ./configure --enable-gcc
-  INSTALL_COMMAND echo "No install step."
+  SOURCE_DIR ${DepPath}/${GluPfx}/src
+  BINARY_DIR ${DepPath}/${GluPfx}/bld
+  INSTALL_COMMAND ${CMAKE_COMMAND} -E make_directory ${DepPath}/${GluPfx}/bld/include
+  COMMAND ${CMAKE_COMMAND} -E copy
+  ${DepPath}/${GluPfx}/src/array/array.h
+  ${DepPath}/${GluPfx}/src/avl/avl.h
+  ${DepPath}/${GluPfx}/src/epd/epd.h
+  ${DepPath}/${GluPfx}/src/bdd/bdd.h
+  ${DepPath}/${GluPfx}/src/mdd/mdd.h
+  ${DepPath}/${GluPfx}/src/util/util.h
+  ${DepPath}/${GluPfx}/src/st/st.h
+  ${DepPath}/${GluPfx}/src/var_set/var_set.h
+  ${DepPath}/${GluPfx}/bld/include/
   )
 
 ExternalProject_Add(protocon
@@ -43,7 +52,7 @@ ExternalProject_Add(protocon
   BINARY_DIR ${TopPath}/bld
   CONFIGURE_COMMAND ${CMAKE_COMMAND}
   -D peg_exe:string=${DepPath}/${PegPfx}/leg
-  -D GluPath:string=${DepPath}/${GluPfx}
+  -D GluBldPath:string=${DepPath}/${GluPfx}/bld
   ../src
   INSTALL_COMMAND echo "No install step."
   )
