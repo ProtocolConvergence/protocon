@@ -16,6 +16,7 @@ ExternalProject_Add(cx
   PREFIX ${CMAKE_CURRENT_BINARY_DIR}/external/cx
   SOURCE_DIR ${DepPath}/cx/src
   BINARY_DIR ${DepPath}/cx/bld
+  BUILD_ALWAYS 1
   INSTALL_COMMAND echo "No install step."
   )
 
@@ -32,8 +33,9 @@ ExternalProject_Add(glu
   PREFIX ${CMAKE_CURRENT_BINARY_DIR}/external/mdd-glu
   SOURCE_DIR ${DepPath}/${GluPfx}/src
   BINARY_DIR ${DepPath}/${GluPfx}/bld
+  BUILD_ALWAYS 1
   INSTALL_COMMAND ${CMAKE_COMMAND} -E make_directory ${DepPath}/${GluPfx}/bld/include
-  COMMAND ${CMAKE_COMMAND} -E copy
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different
   ${DepPath}/${GluPfx}/src/array/array.h
   ${DepPath}/${GluPfx}/src/avl/avl.h
   ${DepPath}/${GluPfx}/src/epd/epd.h
@@ -50,6 +52,7 @@ ExternalProject_Add(protocon
   PREFIX ${CMAKE_CURRENT_BINARY_DIR}/external/src
   SOURCE_DIR ${TopPath}/src
   BINARY_DIR ${TopPath}/bld
+  BUILD_ALWAYS 1
   CONFIGURE_COMMAND ${CMAKE_COMMAND}
   -D peg_exe:string=${DepPath}/${PegPfx}/leg
   -D GluBldPath:string=${DepPath}/${GluPfx}/bld
