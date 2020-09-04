@@ -445,12 +445,10 @@ init_State(State* st, uint PcIdx, uint NPcs)
       BailOut(-1, "socket()/bind()");
   }
 
-  if (!UseChecksum)
-  {
-    const int no_checksum = 1;
-    if (0 > setsockopt(st->fd, SOL_SOCKET, SO_NO_CHECK,
-                       &no_checksum, sizeof(no_checksum)))
-      BailOut(-1, "setsockopt(SO_NO_CHECK)");
+  if (!UseChecksum) {
+    // TODO(http://github.com/grencez/protocon/issues/6):
+    // Support no checksum with UDP-Lite.
+    BailOut(-1, "Cannot disable checksum at the moment.");
   }
 
   /* Fill in the host address and port.*/
