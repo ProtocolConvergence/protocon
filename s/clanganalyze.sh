@@ -2,13 +2,12 @@
 
 # Run this from a build directory.
 #   cd protocon
-#   file CMakeLists.txt
 #   mkdir -p bld
 #   cd bld
 #   ../s/clanganalyze
 
 rm CMakeCache.txt
-cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ ..
+cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ ../src
 
 #export CCC_CC=clang
 #export CCC_CXX=clang++

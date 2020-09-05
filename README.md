@@ -24,19 +24,19 @@ git clone https://github.com/grencez/protocon.git protocon
 cd protocon
 git submodule init
 git submodule update
-mkdir -p bld/ext
-cd bld/ext
-cmake ../..
+mkdir -p bld
+cd bld
+cmake ../src
 make
 ```
 
 If you're on a Mac, read on.
 Was CMake not found?
 If so, make sure it's installed and launch its GUI.
-Specify its source directory as `/path/to/protocon/` and the build directory as `/path/to/protocon/bld/ext/`.
+Specify its source directory as `/path/to/protocon/src/` and the build directory as `/path/to/protocon/bld/`.
 Hit the `Generate` button.
 
-Now there should be a makefile in `bld/ext/`, so in the terminal type `make`.
+Now there should be a makefile in `bld/`, so in the terminal type `make`.
 
 ## Dependencies:
 
