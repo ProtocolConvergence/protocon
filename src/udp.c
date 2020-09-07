@@ -1045,12 +1045,14 @@ static void set_term_flag()
 
 static void randomize_process_state()
 {
+  signal(SIGUSR1, randomize_process_state);
   randomize_State(&StateOfThisProcess);
 }
 
 static void print_process_state()
 {
   State* st = &StateOfThisProcess;
+  signal(SIGUSR2, print_process_state);
   action_assign_hook(st->pc, st->values, st->values);
 }
 
