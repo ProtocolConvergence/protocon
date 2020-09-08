@@ -85,8 +85,8 @@ list (APPEND CFiles
 list (APPEND HFiles
   pfmla.h pfmla-glu.h pfmla-bittable.h)
 
-list (APPEND CFiles udp.c)
-list (APPEND HFiles udp.h udp-act.h)
+list (APPEND CFiles udp-impl/protocol.c)
+list (APPEND HFiles udp-impl/protocol.h udp-impl/act.h)
 
 list (APPEND CCFiles
   pfmla.cc xfmlae.cc
@@ -155,9 +155,9 @@ add_subdirectory (gui)
 # Not really used.
 addbinexe (satsyn satsyn/satsyn.c satsyn/xnsys.c)
 
-file (MAKE_DIRECTORY ${BldPath}/satsyn)
-file (MAKE_DIRECTORY ${BldPath}/udp-dep)
+file (MAKE_DIRECTORY ${BldPath}/udp-impl)
 file (MAKE_DIRECTORY ${BldPath}/uni)
+file (MAKE_DIRECTORY ${BldPath}/satsyn)
 
 #### Parser Generation ####
 if (NOT DEFINED peg_exe)
@@ -239,17 +239,9 @@ set (protocon_exe "$<TARGET_FILE:protocon>")
 ## Set up embedded UDP sources.
 # This is an added dependency to the main executable.
 set (depfiles)
-#foreach (depfile cx/def.h cx/synhax.h udp.h udp.c)
-foreach (depfile udp.h udp.c)
-  pfxeq (in_cx cx/ ${depfile})
-  string(REGEX REPLACE "^.*/" "" depfile "${depfile}")
-  set(ofile ${BldPath}/udp-dep/${depfile})
-
-  if (in_cx)
-    set(xfile ${CxBldPath}/${depfile})
-  else ()
-    set(xfile ${BldPath}/${depfile})
-  endif ()
+foreach (depfile udp-impl/protocol.h udp-impl/protocol.c)
+  set(ofile ${BldPath}/${depfile}.embed)
+  set(xfile ${BldPath}/${depfile})
 
   add_custom_command (
     OUTPUT ${ofile}
@@ -259,10 +251,10 @@ foreach (depfile udp.h udp.c)
 endforeach()
 
 add_custom_command (
-  OUTPUT ${BldPath}/udp-dep/embed.h
-  COMMAND cembed -o ${BldPath}/udp-dep/embed.h ${depfiles}
+  OUTPUT ${BldPath}/udp-impl/act.embed.h
+  COMMAND cembed -o ${BldPath}/udp-impl/act.embed.h ${depfiles}
   DEPENDS ${depfiles})
-add_custom_target (UdpEmbedSources SOURCES ${BldPath}/udp-dep/embed.h)
+add_custom_target (UdpEmbedSources SOURCES ${BldPath}/udp-impl/act.embed.h)
 add_dependencies(protocon UdpEmbedSources)
 
 
@@ -306,7 +298,7 @@ include (uni/CMakeLists.txt)
 #### Stand-Alone UDP Executable ####
 # Just for testing.
 if (UNIX AND NOT APPLE)
-  addbinexe (udp udp.c)
+  addbinexe (udp udp-impl/protocol.c)
   target_link_libraries (udp rt)
   set_property (TARGET udp
     APPEND PROPERTY COMPILE_DEFINITIONS _POSIX_C_SOURCE=200112L)

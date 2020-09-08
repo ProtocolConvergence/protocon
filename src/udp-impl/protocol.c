@@ -1,5 +1,5 @@
 
-#include "udp.h"
+#include "protocol.h"
 
 typedef struct SeqId SeqId;
 typedef struct Packet Packet;
