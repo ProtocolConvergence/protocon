@@ -127,7 +127,7 @@ PFmla::cycle_ck(const PFmla& pf) const
 
 
 /**
- * Output all valuations of variables which satisfy a formula.
+ * Output all valuations of variables that satisfy a formula.
  *
  * \param of  Output stream.
  * \param a  The formula.

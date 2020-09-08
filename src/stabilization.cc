@@ -136,9 +136,9 @@ shadow_ck(P::Fmla* ret_invariant,
   const P::Fmla& shadow_end =
     shadow_invariant - shadow_live.pre();
 
-  // Over-approximation of protocol which does not change shadow variables.
+  // Over-approximation of protocol that does not change shadow variables.
   X::Fmla hi_self = hi_xn & shadow_self;
-  // Over-approximation of protocol which does change shadow variables.
+  // Over-approximation of protocol that does change shadow variables.
   X::Fmla hi_live = hi_xn & shadow_live;
 
   if (invariant_style == Xn::FutureAndSilent) {
@@ -153,7 +153,7 @@ shadow_ck(P::Fmla* ret_invariant,
   P::Fmla hi_invariant =
     shadow_invariant - (lo_xn - (hi_live | hi_self)).pre();
 
-  // Trim all states which cannot be in the invariant since we cannot
+  // Trim all states that cannot be in the invariant since we cannot
   // simulate the shadow protocol in those states given the current
   // over-approximated protocol.
   while (true)

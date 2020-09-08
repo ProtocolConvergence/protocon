@@ -252,7 +252,7 @@ CMD_seq_all(State* st)
  *
  * The {enabled} value can be in three general states:
  * - {enabled == 0}, this process is disabled.
- * - {~enabled == 0}, a flag which has special meaning packets
+ * - {~enabled == 0}, a flag that has special meaning packets
  * but is invalid for processes.
  * - Anything else signifies an enabled process.
  */
@@ -824,9 +824,9 @@ update_enabled(State* st)
  *
  *
  * Case: Both disabled.
- * # If I receive a message which has the wrong sequence number for me,
+ * # If I receive a message that has the wrong sequence number for me,
  * then SEND using my sequence number as {src_seq}
- * # If I receieve a message which uses my correct sequence number,
+ * # If I receieve a message that uses my correct sequence number,
  * but I don't recognize the other's sequence number,
  * then SEND.
  * # If I don't receive a message after some timeout,
@@ -845,7 +845,7 @@ update_enabled(State* st)
  * # If all reply using the new src_seq number and lower or
  * equal enabled values (including equal values),
  * then ENABLE, SEND.
- * # If some message contains new values which disable all of my actions,
+ * # If some message contains new values that disable all of my actions,
  * then DISABLE, SEND.
  */
   int

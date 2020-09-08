@@ -57,7 +57,7 @@ struct XnPcSymm
     BitTable allowed_acts;
     BitTable defined_acts;
 
-    /** Processes which share this symmetry.**/
+    /** Processes that share this symmetry.**/
     TableT(XnPc) instances;
 };
 
@@ -67,7 +67,7 @@ struct XnVbl
 {
     AlphaTab name;
     XnDomSz domsz; /**< Maximum value in the domain.**/
-    TableT(uint) pcs; /**< List of processes which use this variable.**/
+    TableT(uint) pcs; /**< List of processes that use this variable.**/
     XnSz nwpcs;  /**< Number of processes with write (and read) permission.**/
     XnSz stepsz; /**< Step size global state space.**/
 };
@@ -83,7 +83,7 @@ struct XnEVbl
 struct XnPc
 {
     /** Variables this process uses.
-     * Variables which this process can write all appear at the beginning.
+     * Variables that this process can write all appear at the beginning.
      **/
     TableT(uint) vbls;
     /** Number of variables for which this

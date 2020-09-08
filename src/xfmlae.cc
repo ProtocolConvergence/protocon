@@ -136,7 +136,7 @@ bool
         | this->pre(i, ~span0)
         ;
 
-      // Accumulate states which enable this process
+      // Accumulate states that enable this process
       // but will not be resolved by this process.
       span1 |= this->pre(i) - resolved;
     }
