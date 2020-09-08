@@ -684,7 +684,6 @@ fix_process_state (PcIden pc, uint8_t* values)
 CMD_act(State* st, Bool modify)
 {
   uint8_t values[Max_NVariables];
-  fix_process_state (st->pc, st->values);
   memcpy(values, st->values, sizeof(values));
 
   action_assign (st->pc, values);
@@ -753,6 +752,20 @@ CMD_send_all(State* st)
       continue;
     CMD_send(channel, st);
   }
+}
+
+/**
+ * Check whether all processes that read values from this process
+ * have acknowledged that it can act.
+ **/
+Bool all_adj_acknowledged(const State* st) {
+  for (uint i = 0; channel_idx_ck(st->pc, i); ++i) {
+    if (Max_NVariables <= variable_of_channel(st->pc, i, 0, 0))
+      continue;
+    if (!st->channels[i].adj_acknowledged)
+      return 0;
+  }
+  return 1;
 }
 
 /**
@@ -841,8 +854,6 @@ handle_recv (Packet* pkt, Channel* channel, State* st)
   Bool bcast = 0;
   Bool reply = 0;
   Bool adj_acted = 0;
-
-  fix_process_state (st->pc, st->values);
 
   // If the packet doesn't know this process's sequence number,
   // then reply with the current data.
@@ -972,14 +983,7 @@ handle_recv (Packet* pkt, Channel* channel, State* st)
 
   if (st->enabled != 0)
   {
-    Bool acknowledged = 1;
-    for (uint i = 0; channel_idx_ck(st->pc, i); ++i) {
-      if (Max_NVariables <= variable_of_channel(st->pc, i, 0, 0))
-        continue;
-      if (!st->channels[i].adj_acknowledged)
-        acknowledged  = 0;
-    }
-    if (acknowledged) {
+    if (all_adj_acknowledged(st)) {
       // This process is enabled and all adjacent processes
       // have acknowledged that it can act!
       while (CMD_act(st, 1)) {
@@ -1010,15 +1014,21 @@ handle_recv (Packet* pkt, Channel* channel, State* st)
 handle_timeout (State* st)
 {
   const uint skip_limit = NQuickTimeouts/2 + NQuickTimeouts;
+  if (st->enabled != 0 && all_adj_acknowledged(st)) {
+    // This process should have acted after receiving the last acknowledgement,
+    // so its state must be corrupted. Reset {st->enabled} to avoid deadlock.
+    st->enabled = 0;
+  }
   update_enabled(st);
   for (uint i = 0; channel_idx_ck(st->pc, i); ++i) {
     Channel* channel = &st->channels[i];
     if (channel->n_timeout_skips >= skip_limit) {
       channel->n_timeout_skips = NQuickTimeouts-1;
     }
-    if (st->enabled != 0 && channel->adj_acknowledged)
-      continue;
-    if (st->enabled == 0 && channel->adj_acknowledged) {
+    if (channel->adj_acknowledged) {
+      if (st->enabled != 0) {
+        continue;
+      }
       if (channel->n_timeout_skips > 0) {
         channel->n_timeout_skips -= 1;
         continue;
@@ -1142,6 +1152,18 @@ int main(int argc, char** argv)
     if (terminating)
       break;
 
+    // Force state to be one that underlying process considers valid.
+    // The underlying protocol could take advantage of this for detection
+    // and recovery. For example, all processes could do the following:
+    // * Have assume_assign() set a "reset" bit to 1 when state is invalid.
+    // * Have action_assign() set "reset" bit to 0 in all cases.
+    // * Have action_assign() do nothing neighboring "reset" bits are 1
+    //   (unless of course the process's own "reset" bit is 1).
+    // While detection/correction is a good practical approach,
+    // here we actually prefer to emphasize the effects of state corruption
+    // to demonstrate self-stabilization properties of the underlying protocol.
+    fix_process_state(st->pc, st->values);
+
     if (stat == 0) {
       // We hit timeout, resend things.
       handle_timeout(st);
@@ -1152,6 +1174,8 @@ int main(int argc, char** argv)
       Channel* channel = recv_Packet(pkt, st);
       if (channel) {
         if (2 == handle_recv(pkt, channel, st)) {
+          // We broadcasted to all neighbors,
+          // so a timeout would duplicate that traffic at best.
           reset_timeout(timeout_id, QuickTimeoutMS);
         }
       }

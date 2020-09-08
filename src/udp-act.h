@@ -258,14 +258,14 @@ action_assign_hook(PcIden pc, const uint8_t* x, const uint8_t* x_img)
       ||
       (pc.idx != 0 && x[2] != x[3]))
   {
-    if (false) {
+    if (0) {
       FILE* f = fopen("shared-resource", "ab");
       fprintf(f, "%u\n", pc.idx);
       fclose(f);
     }
     fprintf(stderr, "%u WRITING TO SHARED RESOURCE\n", pc.idx);
   }
-  if (false) {
+  if (0) {
   sprintf(buf, " ACT:  e[%u]==%u && e[%u]==%u && t[%u]==%u && t[%u]==%u && ready[%u]==%u --> t[%u]:=%u; e[%u]:=%u; ready[%u]:=%u;",
           process_of_channel(pc, 0), x[0],
           pc.idx, x[1],
