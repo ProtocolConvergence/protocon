@@ -52,7 +52,7 @@ Note that the shadow protocol must not have deadlocks.
 
 \section{Eventual Closure}
 
-Sometimes it is okay to find a protocol that stabilizes to some invariant $I'$ which is a subset of the original invariant $I$.
+Sometimes it is okay to find a protocol that stabilizes to some invariant $I'$ that is a subset of the original invariant $I$.
 This is the method of adaptive programs as described in \href{http://dx.doi.org/10.1109/32.92911}{Adaptive Programming} by Gouda and Herman.
 The three invariant styles above can be stated with this notion of eventual closure:
 \begin{code}
@@ -73,7 +73,7 @@ That is, for every valuation of shadow (or direct) variables that satisfies $I$,
 In other words, we want $I$ to equal $I'$, ignoring differences caused by puppet variables.
 
 Semantics follow directly from the previous section.
-To synthesize a protocol which is silent in some $I'$, we would write \ilcode{(future & silent) (I_prime);} if we knew $I'$.
+To synthesize a protocol that is silent in some $I'$, we would write \ilcode{(future & silent) (I_prime);} if we knew $I'$.
 It can be difficult to determine $I'$ manually, so we prefer to specify $I$ and use a certain notation to say that $I=I'$ \textit{modulo} the puppet variables.
 This is written as:
 \begin{code}

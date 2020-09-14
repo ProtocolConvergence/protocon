@@ -58,9 +58,9 @@ cd tmp
 ispin color.pml
 \end{code}
 In the \ilkey{Edit/View} tab, add the following lines to the end of the file.
-This defines a predicate \ttvbl{Legit} which evaluates to true in all legitimate states.
-There are also two temporal properties which define closure and convergence.
-Closure ensures that once the ring has a valid coloring, no process will change its state in a way which violates that property.
+This defines a predicate \ttvbl{Legit} that evaluates to true in all legitimate states.
+There are also two temporal properties that define closure and convergence.
+Closure ensures that once the ring has a valid coloring, no process will change its state in a way that violates that property.
 Convergence ensures that from any initial state, the ring will eventually reach a valid coloring.
 \begin{code}
 #define Legit \

@@ -60,7 +60,7 @@ Not every action in the invariant passes a token, which causes a noticeable lag 
 \codeinputlisting{../../../examplespec/TokenRingThreeBit.prot}
 
 Each process can read \ttvbl{e[i-1]} and \ttvbl{t[i-1]} and can write \ttvbl{e[i]}, \ttvbl{t[i]}, and \ttvbl{ready[i]}.
-There is a distinguished process \ttvbl{Bot} which can act differently than the others.
+There is a distinguished process \ttvbl{Bot} that can act differently than the others.
 
 The invariant is specified as all states where exactly one process has a token.
 \ttvbl{Bot} is defined to have a token when \ilcode{t[0] == t[N-1]} and each other \ttvbl{P} process has a token when \ilcode{t[i] != t[i-1]}.
@@ -92,7 +92,7 @@ protocon -x examplespec/TokenRingThreeBit.prot -o tmp/3bit.prot -def N 5 -param 
 \end{code}
 
 But what if we want to search up to size $7$, but it takes too long check a system of that size at each decision level?
-Use the \ilflag{-no-partial} flag to just verify the protocol on that system after finding a protocol which is self-stabilizing for all smaller sizes.
+Use the \ilflag{-no-partial} flag to just verify the protocol on that system after finding a protocol that is self-stabilizing for all smaller sizes.
 \begin{code}
 protocon -x examplespec/TokenRingThreeBit.prot -o tmp/3bit.prot -def N 5 -param N 3 -param N 4 -param N 6 -param [ -def N 7 -no-partial ]
 \end{code}

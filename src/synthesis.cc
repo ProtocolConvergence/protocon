@@ -156,10 +156,10 @@ RankDeadlocksMRV(vector<DeadlockConstraint>& dlsets,
 }
 
 /**
- * Revise the ranks of deadlocks which are ranked by number candidate actions
- * which can resolve them.
- * \param adds  Actions which were added to the program.
- * \param dels  Actions which were pruned from the list of candidates.
+ * Revise the ranks of deadlocks that are ranked by number candidate actions
+ * that can resolve them.
+ * \param adds  Actions that were added to the program.
+ * \param dels  Actions that were pruned from the list of candidates.
  */
   void
 ReviseDeadlocksMRV(vector<DeadlockConstraint>& dlsets,
@@ -294,7 +294,7 @@ PickActionMRV(uint& ret_actidx,
   }
 
   // Do minimal remaining values heuristic (MRV).
-  // That is, find an action which resolves a deadlock which
+  // That is, find an action that resolves a deadlock that
   // can only be resolved by some small number of actions.
   uint mrv_dlset_idx = 0;
   for (uint inst_idx = 0; inst_idx < partial.sz(); ++inst_idx) {
@@ -414,7 +414,7 @@ pick_action_candidates(Set<uint>& ret_candidates,
 
   Set<uint>::const_iterator it;
 
-  // Try to choose an action which adds a new path to the invariant.
+  // Try to choose an action that adds a new path to the invariant.
   if (opt.pick_back_reach) {
     const P::Fmla reach_pf = inst.lo_xn.pre_reach(inst.hi_invariant);
     Set<uint> candidates_1;

@@ -1,6 +1,9 @@
 
 find_package (Qt5Widgets)
 
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 if (Qt5Widgets_FOUND)
   set (USING_Qt5 TRUE)
   include_directories(${Qt5Widgets_INCLUDE_DIRS})

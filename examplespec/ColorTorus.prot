@@ -37,7 +37,7 @@ process P[id < (M*N)]
      && x[id]!=x[id_W]
     );
 
-  // Only allow the search to choose actions which can achieve convergence.
+  // Only allow the search to choose actions that can achieve convergence.
   permit:
     ( x[id_N]!=0 && x[id_S]!=0 && x[id_E]!=0 && x[id_W]!=0 && x[id]!=0 --> x[id]:=0; )
     ( x[id_N]!=1 && x[id_S]!=1 && x[id_E]!=1 && x[id_W]!=1 && x[id]!=1 --> x[id]:=1; )

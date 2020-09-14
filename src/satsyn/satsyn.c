@@ -95,7 +95,7 @@ struct FMem_synsearch
 };
 
 /** Boolean literal.
- * This is a variable which appears in a positive form or negated.
+ * This is a variable that appears in a positive form or negated.
  **/
 struct BoolLit {
     Bit  val; /**< Positive (1) or negated (0).**/
@@ -743,8 +743,8 @@ cmpi_XnSz2 (const void* pa, const void* pb)
  *
  * The procedure is:
  * - Ensure the existing protocol is closed.
- * - Add rules which have already been given.
- * - Add rules which do not include legitimate states in the source states.
+ * - Add rules that have already been given.
+ * - Add rules that do not include legitimate states in the source states.
  *   Unless either...
  *  - All legitimate source states are mapped to legitimate destination states
  *    in the legitimate protocol.
@@ -815,7 +815,7 @@ set_may_rules (FMem_synsearch* tape, TableT(XnSz)* may_rules, XnRule* g)
                     add = false;
             }
             else
-                /* Do not add rules which cause
+                /* Do not add rules that cause
                  * bad transitions from legit states.
                  */
             {
@@ -928,7 +928,7 @@ synsearch_quicktrim_mayrules (FMem_synsearch* tape, XnSz nadded)
                 add = !match;
                 if (!add)  break;
 
-                /* Remove actions which would not be self-disabling.*/
+                /* Remove actions that would not be self-disabling.*/
                 match = true;
                 {:for (k ; g0->q.sz)
                     match = (g0->p.s[k] == g1->p.s[k]);
@@ -1122,7 +1122,7 @@ synsearch_check_weak (FMem_synsearch* tape, XnSz* ret_nreqrules)
         }
     }
 
-    /* Find rules which are necessary.*/
+    /* Find rules that are necessary.*/
     if (true)
     {
         XnSz off = 0;

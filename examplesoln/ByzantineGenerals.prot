@@ -39,7 +39,7 @@ process Captain[i < N]
 {
   read: loyal[N];
 
-  // The captain has a plan which will not change.
+  // The captain has a plan that will not change.
   read: plan[N];
 
   write: cplan[i];

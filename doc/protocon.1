@@ -97,7 +97,7 @@ blocks, this can affect the completeness of the search.
 .IP
 .B -no-partial
 Do not build a partial solution for this parameterized system.
-This system will only be considered when a solution is found which satisfies all other systems, at which point the protocol will be verified to work or fail for this system.
+This system will only be considered when a solution is found that satisfies all other systems, at which point the protocol will be verified to work or fail for this system.
 In the case of a failed verification, the search will restart.
 This flag also implies
 .BR -no-conflict .
@@ -106,7 +106,7 @@ This flag also implies
 Consider this system to be synchronous.
 .TP
 .B -sysrand
-Use a system random number generator which takes includes system entropy.
+Use a random number generator that includes system entropy.
 Executions using this option are not reproducible.
 .TP
 .BR -no-random
@@ -123,7 +123,7 @@ This is used by default, and it is always used since (most) other picking heuris
 .IP
 .B lcv
 Least constraining value heuristic.
-Attempt to choose actions which constrain the possibilities the least.
+Attempt to choose actions that constrain the possibilities the least.
 .IP
 .B fully-random
 Randomly choose a candidate action without the MRV heuristic.
@@ -135,7 +135,7 @@ method already uses randomization in a backtracking search when the run mode is
 .BR -serial .
 .IP
 .B conflict
-Try to choose actions which correspond with existing conflicts.
+Try to choose actions that correspond with existing conflicts.
 This is constrained by the MRV heuristic.
 .IP
 .B quick
@@ -145,7 +145,7 @@ The
 picking method is fast.
 .TP
 .BR -pick-reach
-Without breaking the minimum remaining valuesheuristic, try to pick actions which resolve a deadlock which can reach the invariant using the partial solution.
+Without breaking the minimum remaining valuesheuristic, try to pick actions that resolve a deadlock that can reach the invariant using the partial solution.
 .TP
 .BI -o-log\  log-file
 Output log file
@@ -292,7 +292,7 @@ This even works well when the ring, and each variable domain, is of size
     protocon -serial -no-random -x examplespec/LeaderRingHuang.prot -def N 6
 .fi
 
-The random method can make better decisions (for this problem, at least) by trying to choose actions which make an execution from some deadlock state to the invariant, rather than just resolving some deadlock.
+The random method can make better decisions (for this problem, at least) by trying to choose actions that make an execution from some deadlock state to the invariant, rather than just resolving some deadlock.
 This is accomplished with the
 .B -pick-reach
 flag.
@@ -312,7 +312,7 @@ Since
 .B -pick-reach
 helped, we might try the
 .B -rank-shuffle
-search which does not use backtracking at all, but takes reachability into account as a fundamental concept.
+search that does not use backtracking at all, but takes reachability into account as a fundamental concept.
 Use the
 .B -no-conflict
 flag to speed up the trials.
@@ -369,7 +369,7 @@ But what if we want to search up to size
 but it takes too long check a system of that size at each decision level?
 Use the
 .B -no-partial
-flag to just verify the protocol on that system after finding a protocol which is self-stabilizing for all smaller sizes.
+flag to just verify the protocol on that system after finding a protocol that is self-stabilizing for all smaller sizes.
 .nf
     protocon -x examplespec/TokenRingThreeBit.prot -o found.prot -def N 5 -param N 3 -param N 4 -param N 6 -param [ -def N 7 -no-partial ]
 .fi

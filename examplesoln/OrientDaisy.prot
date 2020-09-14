@@ -1,7 +1,7 @@
 // Orientation for daisy chain topology (i.e., either a ring or a chain).
 // The b[i] values are all eventually the same.
-// This is a simplified version of examplesynt/OrientDaisy.prot,
-// which converges in fewer asynchronous steps.
+// This is a simplified version of examplesynt/OrientDaisy.prot
+// that converges in fewer asynchronous steps.
 
 constant N := 3;
 constant Chain := 1;

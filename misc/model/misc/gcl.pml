@@ -1,6 +1,6 @@
 
 // This is a model in progress.
-// Trying to formalize a protocol which allows guarded command
+// Trying to formalize a protocol that allows guarded command
 // semantics and preserves stabilization.
 
 #define N 3

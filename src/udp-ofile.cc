@@ -421,7 +421,7 @@ void oput_udp_include_file(OFile& ofile, const Xn::Sys& sys, const Xn::Net& o_to
 
 void oput_udp_file(OFile& ofile, const Xn::Sys& sys, const Xn::Net& o_topology)
 {
-#include "udp-dep/embed.h"
+#include "udp-impl/act.embed.h"
   for (uint i = 0; i < nfiles-1; ++i) {
     ofile.write((char*) files_bytes[i], files_nbytes[i]);
   }

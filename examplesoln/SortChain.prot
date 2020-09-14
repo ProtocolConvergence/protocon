@@ -15,7 +15,7 @@ process P[i < (N-1)]
   write: x[i];
   write: x[i+1];
 
-  // Only permit actions which swap x[i] and x[i+1] values.
+  // Only permit actions that swap x[i] and x[i+1] values.
   permit:
     ( true --> x[i]:=x[i+1]; x[i+1]:=x[i]; )
     ;

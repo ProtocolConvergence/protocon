@@ -1,5 +1,5 @@
 
-#include "udp.h"
+#include "protocol.h"
 
 typedef struct SeqId SeqId;
 typedef struct Packet Packet;
@@ -252,7 +252,7 @@ CMD_seq_all(State* st)
  *
  * The {enabled} value can be in three general states:
  * - {enabled == 0}, this process is disabled.
- * - {~enabled == 0}, a flag which has special meaning packets
+ * - {~enabled == 0}, a flag that has special meaning packets
  * but is invalid for processes.
  * - Anything else signifies an enabled process.
  */
@@ -445,12 +445,10 @@ init_State(State* st, uint PcIdx, uint NPcs)
       BailOut(-1, "socket()/bind()");
   }
 
-  if (!UseChecksum)
-  {
-    const int no_checksum = 1;
-    if (0 > setsockopt(st->fd, SOL_SOCKET, SO_NO_CHECK,
-                       &no_checksum, sizeof(no_checksum)))
-      BailOut(-1, "setsockopt(SO_NO_CHECK)");
+  if (!UseChecksum) {
+    // TODO(http://github.com/grencez/protocon/issues/6):
+    // Support no checksum with UDP-Lite.
+    BailOut(-1, "Cannot disable checksum at the moment.");
   }
 
   /* Fill in the host address and port.*/
@@ -686,7 +684,6 @@ fix_process_state (PcIden pc, uint8_t* values)
 CMD_act(State* st, Bool modify)
 {
   uint8_t values[Max_NVariables];
-  fix_process_state (st->pc, st->values);
   memcpy(values, st->values, sizeof(values));
 
   action_assign (st->pc, values);
@@ -758,6 +755,20 @@ CMD_send_all(State* st)
 }
 
 /**
+ * Check whether all processes that read values from this process
+ * have acknowledged that it can act.
+ **/
+Bool all_adj_acknowledged(const State* st) {
+  for (uint i = 0; channel_idx_ck(st->pc, i); ++i) {
+    if (Max_NVariables <= variable_of_channel(st->pc, i, 0, 0))
+      continue;
+    if (!st->channels[i].adj_acknowledged)
+      return 0;
+  }
+  return 1;
+}
+
+/**
  * Check if this process should be enabled or disabled.
  * Change {st->enabled} accordingly.
  */
@@ -813,9 +824,9 @@ update_enabled(State* st)
  *
  *
  * Case: Both disabled.
- * # If I receive a message which has the wrong sequence number for me,
+ * # If I receive a message that has the wrong sequence number for me,
  * then SEND using my sequence number as {src_seq}
- * # If I receieve a message which uses my correct sequence number,
+ * # If I receieve a message that uses my correct sequence number,
  * but I don't recognize the other's sequence number,
  * then SEND.
  * # If I don't receive a message after some timeout,
@@ -834,7 +845,7 @@ update_enabled(State* st)
  * # If all reply using the new src_seq number and lower or
  * equal enabled values (including equal values),
  * then ENABLE, SEND.
- * # If some message contains new values which disable all of my actions,
+ * # If some message contains new values that disable all of my actions,
  * then DISABLE, SEND.
  */
   int
@@ -843,8 +854,6 @@ handle_recv (Packet* pkt, Channel* channel, State* st)
   Bool bcast = 0;
   Bool reply = 0;
   Bool adj_acted = 0;
-
-  fix_process_state (st->pc, st->values);
 
   // If the packet doesn't know this process's sequence number,
   // then reply with the current data.
@@ -974,14 +983,7 @@ handle_recv (Packet* pkt, Channel* channel, State* st)
 
   if (st->enabled != 0)
   {
-    Bool acknowledged = 1;
-    for (uint i = 0; channel_idx_ck(st->pc, i); ++i) {
-      if (Max_NVariables <= variable_of_channel(st->pc, i, 0, 0))
-        continue;
-      if (!st->channels[i].adj_acknowledged)
-        acknowledged  = 0;
-    }
-    if (acknowledged) {
+    if (all_adj_acknowledged(st)) {
       // This process is enabled and all adjacent processes
       // have acknowledged that it can act!
       while (CMD_act(st, 1)) {
@@ -1012,15 +1014,21 @@ handle_recv (Packet* pkt, Channel* channel, State* st)
 handle_timeout (State* st)
 {
   const uint skip_limit = NQuickTimeouts/2 + NQuickTimeouts;
+  if (st->enabled != 0 && all_adj_acknowledged(st)) {
+    // This process should have acted after receiving the last acknowledgement,
+    // so its state must be corrupted. Reset {st->enabled} to avoid deadlock.
+    st->enabled = 0;
+  }
   update_enabled(st);
   for (uint i = 0; channel_idx_ck(st->pc, i); ++i) {
     Channel* channel = &st->channels[i];
     if (channel->n_timeout_skips >= skip_limit) {
       channel->n_timeout_skips = NQuickTimeouts-1;
     }
-    if (st->enabled != 0 && channel->adj_acknowledged)
-      continue;
-    if (st->enabled == 0 && channel->adj_acknowledged) {
+    if (channel->adj_acknowledged) {
+      if (st->enabled != 0) {
+        continue;
+      }
       if (channel->n_timeout_skips > 0) {
         channel->n_timeout_skips -= 1;
         continue;
@@ -1047,12 +1055,14 @@ static void set_term_flag()
 
 static void randomize_process_state()
 {
+  signal(SIGUSR1, randomize_process_state);
   randomize_State(&StateOfThisProcess);
 }
 
 static void print_process_state()
 {
   State* st = &StateOfThisProcess;
+  signal(SIGUSR2, print_process_state);
   action_assign_hook(st->pc, st->values, st->values);
 }
 
@@ -1142,6 +1152,18 @@ int main(int argc, char** argv)
     if (terminating)
       break;
 
+    // Force state to be one that underlying process considers valid.
+    // The underlying protocol could take advantage of this for detection
+    // and recovery. For example, all processes could do the following:
+    // * Have assume_assign() set a "reset" bit to 1 when state is invalid.
+    // * Have action_assign() set "reset" bit to 0 in all cases.
+    // * Have action_assign() do nothing neighboring "reset" bits are 1
+    //   (unless of course the process's own "reset" bit is 1).
+    // While detection/correction is a good practical approach,
+    // here we actually prefer to emphasize the effects of state corruption
+    // to demonstrate self-stabilization properties of the underlying protocol.
+    fix_process_state(st->pc, st->values);
+
     if (stat == 0) {
       // We hit timeout, resend things.
       handle_timeout(st);
@@ -1152,6 +1174,8 @@ int main(int argc, char** argv)
       Channel* channel = recv_Packet(pkt, st);
       if (channel) {
         if (2 == handle_recv(pkt, channel, st)) {
+          // We broadcasted to all neighbors,
+          // so a timeout would duplicate that traffic at best.
           reset_timeout(timeout_id, QuickTimeoutMS);
         }
       }

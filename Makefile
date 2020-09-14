@@ -1,6 +1,5 @@
 
 BldPath=bld
-TopBldPath=$(BldPath)/ext
 BinPath=bin
 
 SrcPath=src
@@ -27,7 +26,7 @@ CTAGS=ctags
 
 default:
 	$(MAKE) init
-	if [ ! -d $(TopBldPath) ] ; then $(MAKE) cmake ; fi
+	if [ ! -d $(BldPath) ] ; then $(MAKE) cmake ; fi
 	$(MAKE) proj
 
 all:
@@ -51,11 +50,9 @@ debug:
 
 cmake:
 	if [ ! -d $(BldPath) ] ; then $(MKDIR) $(BldPath) ; fi
-	if [ ! -d $(TopBldPath) ] ; then $(MKDIR) $(TopBldPath) ; fi
-	$(GODO) $(TopBldPath) $(CMAKE) ../..
+	$(GODO) $(BldPath) $(CMAKE) ../src
 
 proj:
-	$(GODO) $(TopBldPath) $(MAKE)
 	$(GODO) $(BldPath) $(MAKE)
 
 test:

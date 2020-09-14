@@ -1,4 +1,5 @@
 
+
 #ifndef XnSys_HH_
 #define XnSys_HH_
 
@@ -191,7 +192,7 @@ public:
 
   PredicateMap predicate_map;
 
-  /// Assumed state predicate which must remain closed.
+  /// Assumed state predicate, which must remain closed.
   P::Fmla closed_assume;
   /// Invariant to which we should converge.
   P::Fmla invariant;
