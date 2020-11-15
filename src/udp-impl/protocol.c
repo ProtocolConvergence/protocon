@@ -126,6 +126,7 @@ hash32_wang(uint32_t seed)
   return seed;
 }
 
+/** Init State rng values using hash32_wang **/
   void
 init_rng_State (State* st, uint PcIdx)
 {
@@ -133,16 +134,17 @@ init_rng_State (State* st, uint PcIdx)
   st->rng[1] = hash32_wang(PcIdx);
 }
 
+/** Xorshift algorithm from George Marsaglia's paper **/
   uint32_t
 rand32_xorshift(uint32_t* state)
 {
-  // Xorshift algorithm from George Marsaglia's paper
   *state ^= (*state << 13);
   *state ^= (*state >> 17);
   *state ^= (*state << 5);
   return *state;
 }
 
+/** Randomizes void * using rand32_xorshift **/
   Bool
 randomize(void* p, size_t size)
 {
@@ -231,6 +233,7 @@ CMD_seq(Channel* channel)
   channel->reply = 1;
 }
 
+/** Compare pc.idx with process_of_channel in act.h **/
 static
   Bool
 channel_idx_ck(PcIden pc, uint i)
@@ -534,6 +537,7 @@ oput_line(const char* line)
   }
 }
 
+/** Coverts values to a string and prints **/
 static
   void
 cstr_of_values(char* s, const uint8_t* values, PcIden pc, uint channel_idx, Bool writing)
@@ -1061,6 +1065,7 @@ set_term_flag()
   terminating = 1;
 }
 
+/** Calls randomize_State to randomize process state */
 static
   void 
 randomize_process_state()
@@ -1069,7 +1074,7 @@ randomize_process_state()
   randomize_State(&StateOfThisProcess);
 }
 
-/** Calls randomize_State to randomize process state */
+/** Prints StateOfThisProcess */
 static 
   void 
 print_process_state()
