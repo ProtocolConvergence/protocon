@@ -87,7 +87,7 @@ init:
 	if [ ! -f $(DepPath)/peg/src/leg.c ] ; then git submodule init dep/peg ; git submodule update dep/peg ; fi
 
 update:
-	git pull origin master
+	git pull origin trunk
 	git submodule update
 	git -C dep/cx checkout master
 	git -C dep/cx merge --ff-only origin/master
@@ -99,7 +99,7 @@ update:
 	git -C dep/peg merge --ff-only origin/upstream
 
 pull:
-	git pull origin master
+	git pull origin trunk
 	git -C dep/cx pull origin master
 	git -C dep/cx-pp pull origin master
 	git -C dep/mdd-glu pull origin master
