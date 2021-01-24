@@ -1,4 +1,3 @@
-
 #include "protocol.h"
 
 typedef struct SeqId SeqId;
@@ -56,7 +55,7 @@ struct State
 
 State StateOfThisProcess;
 
-
+/** Compares index and key of SeqId params */
 static Bool eq_seq (SeqId a, SeqId b) {
   return a.idx == b.idx && a.key == b.key;
 }
@@ -69,6 +68,7 @@ do \
   return ret; \
 } while (0)
 
+/** Prints a descriptive error message */
 void failmsg(const char* msg)
 {
   if (errno != 0) {
@@ -80,6 +80,7 @@ void failmsg(const char* msg)
   }
 }
 
+/** Convert sequence id to network byte order.*/
   void
 hton_SeqId (SeqId* seq)
 {
@@ -87,13 +88,13 @@ hton_SeqId (SeqId* seq)
   seq->key = htons (seq->key);
 }
 
+/** Convert sequence id members to host byte order.*/
   void
 ntoh_SeqId (SeqId* seq)
 {
   seq->idx = ntohs (seq->idx);
   seq->key = ntohs (seq->key);
 }
-
 
 /** Convert packet data members to network byte order.*/
   void
@@ -125,6 +126,7 @@ hash32_wang(uint32_t seed)
   return seed;
 }
 
+/** Init State rng values using hash32_wang **/
   void
 init_rng_State (State* st, uint PcIdx)
 {
@@ -132,16 +134,17 @@ init_rng_State (State* st, uint PcIdx)
   st->rng[1] = hash32_wang(PcIdx);
 }
 
+/** Xorshift algorithm from George Marsaglia's paper **/
   uint32_t
 rand32_xorshift(uint32_t* state)
 {
-  // Xorshift algorithm from George Marsaglia's paper
   *state ^= (*state << 13);
   *state ^= (*state >> 17);
   *state ^= (*state << 5);
   return *state;
 }
 
+/** Randomizes void * using rand32_xorshift **/
   Bool
 randomize(void* p, size_t size)
 {
@@ -194,14 +197,16 @@ randomize(void* p, size_t size)
 #endif
 }
 
+/** Randomize % n */
   uint
-RandomMod(uint n)
+random_Mod(uint n)
 {
   uint x = 0;
   Randomize( x );
   return x % n;
 }
 
+/** Randomize & 1 */
   Bool
 random_Bool()
 {
@@ -228,6 +233,7 @@ CMD_seq(Channel* channel)
   channel->reply = 1;
 }
 
+/** Compare pc.idx with process_of_channel in act.h **/
 static
   Bool
 channel_idx_ck(PcIden pc, uint i)
@@ -318,6 +324,7 @@ lookup_host(struct sockaddr_storage* host, uint id)
   return 0;
 }
 
+/** Sleep for <uint> ms */
   void
 sleep_ms (uint ms)
 {
@@ -530,6 +537,7 @@ oput_line(const char* line)
   }
 }
 
+/** Coverts values to a string and prints **/
 static
   void
 cstr_of_values(char* s, const uint8_t* values, PcIden pc, uint channel_idx, Bool writing)
@@ -697,7 +705,7 @@ CMD_act(State* st, Bool modify)
       {
         // Lag actions a bit to expose livelocks.
         //sleep_ms(ActionLagMS);
-        sleep_ms(ActionLagMS/2 + RandomMod(ActionLagMS));
+        sleep_ms(ActionLagMS/2 + random_Mod(ActionLagMS));
       }
 
       memcpy(st->values, values, sizeof(values));
@@ -1010,6 +1018,7 @@ handle_recv (Packet* pkt, Channel* channel, State* st)
   return 0;
 }
 
+/** Handles channel timeouts */
   void
 handle_timeout (State* st)
 {
@@ -1048,25 +1057,36 @@ handle_timeout (State* st)
 }
 
 static Bool terminating = 0;
-static void set_term_flag()
+/** Terminates program */
+static 
+  void 
+set_term_flag()
 {
   terminating = 1;
 }
 
-static void randomize_process_state()
+/** Calls randomize_State to randomize process state */
+static
+  void 
+randomize_process_state()
 {
   signal(SIGUSR1, randomize_process_state);
   randomize_State(&StateOfThisProcess);
 }
 
-static void print_process_state()
+/** Prints StateOfThisProcess */
+static 
+  void 
+print_process_state()
 {
   State* st = &StateOfThisProcess;
   signal(SIGUSR2, print_process_state);
   action_assign_hook(st->pc, st->values, st->values);
 }
 
-static int
+/** Initializes timeout */
+static
+  int
 init_timeout(timer_t* timeout_id)
 {
   struct sigevent timeout_sigevent[1];
@@ -1079,7 +1099,9 @@ init_timeout(timer_t* timeout_id)
   return 0;
 }
 
-static int
+/** Resets timeout */
+static 
+  int
 reset_timeout(timer_t timeout_id, uint timeout_ms) {
   struct itimerspec timeout_spec[1];
   int stat = 0;

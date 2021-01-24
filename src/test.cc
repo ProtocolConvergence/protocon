@@ -626,7 +626,6 @@ TestShadowMatchRing()
   Claim( solution_found );
 }
 
-
 static void TestProbabilisticLivelock()
 {
   Xn::Sys sys;
@@ -694,6 +693,35 @@ Test(const char testname[])
   else {
     Claim( 0 && "Test does not exist." );
   }
+}
+
+static void
+TestUDP()
+{
+  // Case: BOTH disabled
+  // # If I receive a message that has the wrong sequence number for me,
+  // then SEND using my sequence number as {src_seq}
+  // # If I receieve a message that uses my correct sequence number,
+  // but I don't recognize the other's sequence number,
+  // then SEND.
+  // # If I don't receive a message after some timeout,
+  // then SEND.
+
+  // Case: I am disabled, neighbor is enabled to act.
+  // # If I get a message with a positive {enabled} value,
+  // then SEQ, SEND.
+  
+  // Case: I am enabled to act.
+  // # ENABLE
+  // # If all reply using the new src_seq number and lower enabled values,
+  // then ACT, DISABLE, SEND.
+  // # If one of the replies has an {enabled} value greater than my own,
+  // then SEND. Don't do anything else.
+  // # If all reply using the new src_seq number and lower or
+  // equal enabled values (including equal values),
+  // then ENABLE, SEND.
+  // # If some message contains new values that disable all of my actions,
+  // then DISABLE, SEND.
 }
 
 END_NAMESPACE
