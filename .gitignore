@@ -1,4 +1,9 @@
 
+/bazel-bin
+/bazel-out
+/bazel-protocon
+/bazel-testlogs
+
 /bin/
 /bld/
 /tags
