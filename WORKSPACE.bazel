@@ -3,5 +3,5 @@ load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 git_repository(
     name = "lace",
     commit = "20e1b5427e91022db07f9ddd0de010ec13c95d5b",
-    remote = "git@github.com:/grencez/lace.git",
+    remote = "https://github.com/grencez/lace.git",
 )
