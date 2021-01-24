@@ -199,7 +199,7 @@ randomize(void* p, size_t size)
 
 /** Randomize % n */
   uint
-random_Mod(uint n)
+RandomMod(uint n)
 {
   uint x = 0;
   Randomize( x );
@@ -705,7 +705,7 @@ CMD_act(State* st, Bool modify)
       {
         // Lag actions a bit to expose livelocks.
         //sleep_ms(ActionLagMS);
-        sleep_ms(ActionLagMS/2 + random_Mod(ActionLagMS));
+        sleep_ms(ActionLagMS/2 + RandomMod(ActionLagMS));
       }
 
       memcpy(st->values, values, sizeof(values));
