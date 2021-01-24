@@ -3,7 +3,7 @@
 oput_pla_XnEVbl (OFile* of, const XnEVbl* x)
 {
     const uint n = x->vbl->domsz;
-    {:for (i ; n)
+    for (uint i = 0; i < n; ++i) {
         oput_char_OFile (of, (i == (uint) x->val) ? '1' : '0');
     }
 }
@@ -13,7 +13,7 @@ oput_pla_state_XnSys (OFile* of, const XnSys* sys, const luint sidx)
 {
     const Bit legit = test_BitTable (sys->legit, sidx);
     luint idx = sidx;
-    {:for (i ; sys->vbls.sz)
+    for (uint i = 0; i < sys->vbls.sz; ++i) {
         XnEVbl x;
         x.vbl = &sys->vbls.s[i];
         x.val = idx / x.vbl->stepsz;
@@ -31,12 +31,12 @@ oput_pla_legit (OFile* of, const XnSys* sys)
   oput_cstr_OFile (of, ".mv ");
   oput_uint_OFile (of, sys->vbls.sz + 1);
   oput_cstr_OFile (of, " 0");
-  {:for (i ; sys->vbls.sz)
+  for (uint i = 0; i < sys->vbls.sz; ++i) {
     oput_char_OFile (of, ' ');
     oput_uint_OFile (of, sys->vbls.s[i].domsz);
   }
   oput_cstr_OFile (of, " 2\n");
-  {:for (i ; sys->nstates)
+  for (uint i = 0; i < sys->nstates; ++i) {
     oput_pla_state_XnSys (of, sys, i);
     oput_char_OFile (of, '\n');
   }
@@ -47,14 +47,14 @@ oput_pla_legit (OFile* of, const XnSys* sys)
 oput_pla_XnRule (OFile* of, const XnRule* g, const XnSys* sys)
 {
   const XnPc* pc = &sys->pcs.s[g->pc];
-  {:for (i ; pc->vbls.sz)
+  for (uint i = 0; i < pc->vbls.sz; ++i) {
     XnEVbl x;
     x.vbl = &sys->vbls.s[pc->vbls.s[i]];
     x.val = g->p.s[i];
     oput_char_OFile (of, ' ');
     oput_pla_XnEVbl (of, &x);
   }
-  {:for (i ; pc->nwvbls)
+  for (uint i = 0; i < pc->nwvbls; ++i) {
     XnEVbl x;
     x.vbl = &sys->vbls.s[pc->vbls.s[i]];
     x.val = g->p.s[i];
@@ -71,29 +71,29 @@ oput_pla_pc (OFile* of, const XnPc* pc, const XnSys* sys,
   oput_cstr_OFile (of, ".mv ");
   oput_uint_OFile (of, pc->vbls.sz + pc->nwvbls);
   oput_cstr_OFile (of, " 0");
-  {:for (i ; pc->vbls.sz)
+  for (uint i = 0; i < pc->vbls.sz; ++i) {
     oput_char_OFile (of, ' ');
     oput_uint_OFile (of, sys->vbls.s[pc->vbls.s[i]].domsz);
   }
-  {:for (i ; pc->nwvbls)
+  for (uint i = 0; i < pc->nwvbls; ++i) {
     oput_char_OFile (of, ' ');
     oput_uint_OFile (of, sys->vbls.s[pc->vbls.s[i]].domsz);
   }
   oput_char_OFile (of, '\n');
 
   oput_char_OFile (of, '#');
-  {:for (i ; pc->vbls.sz)
+  for (uint i = 0; i < pc->vbls.sz; ++i) {
     oput_char_OFile (of, ' ');
     oput_AlphaTab (of, &sys->vbls.s[pc->vbls.s[i]].name);
   }
-  {:for (i ; pc->nwvbls)
+  for (uint i = 0; i < pc->nwvbls; ++i) {
     oput_char_OFile (of, ' ');
     oput_AlphaTab (of, &sys->vbls.s[pc->vbls.s[i]].name);
     oput_char_OFile (of, '\'');
   }
   oput_char_OFile (of, '\n');
 
-  {:for (i ; rules.sz)
+  for (uint i = 0; i < rules.sz; ++i) {
     const XnRule* g = &rules.s[i];
     if (g->pc == pcidx)
     {
@@ -108,11 +108,11 @@ oput_pla_pc (OFile* of, const XnPc* pc, const XnSys* sys,
 do_pla_XnSys (const XnSys* sys, const TableT(XnRule) rules)
 {
   DeclLegit( good );
-  OSPc ospc[] = default;
+  OSPc ospc[] = {DEFAULT_OSPc};
   OFile* of = stdout_OFile ();
 
 #if 0
-  OFileB ofb = default;
+  OFileB ofb = DEFAULT_OFileB;
   open_FileB (&ofb.fb, 0, "legit0.esp");
   of = &ofb.of;
   oput_pla_legit (of, sys);
@@ -135,8 +135,7 @@ do_pla_XnSys (const XnSys* sys, const TableT(XnRule) rules)
       oput_cstr_OFile (of, cstr1_XFile (ospc->xf, 0));
     close_OSPc (ospc);
 
-    if (0)
-    {:for (pcidx ; sys->pcs.sz)
+    for (uint pcidx = 0; 0 && pcidx < sys->pcs.sz; ++pcidx) {
       DoLegitLine( "spawning espresso" )
         spawn_OSPc (ospc);
       if (!good)  break;

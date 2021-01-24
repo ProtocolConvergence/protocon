@@ -75,9 +75,9 @@ ExternalProject_Add(glu_project
 list (APPEND CFiles satsyn/satsyn.c satsyn/xnsys.c)
 list (APPEND HFiles
   satsyn/xnsys.h
-  satsyn/dimacs.c satsyn/pla.c satsyn/promela.c
-  satsyn/inst-sat3.c satsyn/inst-matching.c satsyn/inst-coloring.c
-  satsyn/inst-bit3.c satsyn/inst-dijkstra.c satsyn/inst-dijkstra4state.c
+  satsyn/dimacs.h satsyn/pla.h satsyn/promela.h
+  satsyn/inst-sat3.h satsyn/inst-matching.h satsyn/inst-coloring.h
+  satsyn/inst-bit3.h satsyn/inst-dijkstra.h satsyn/inst-dijkstra4state.h
   )
 
 list (APPEND CFiles

@@ -135,7 +135,7 @@ dflt2_BoolLit (bool val, uint vbl)
   CnfDisj
 dflt_CnfDisj ()
 {
-  CnfDisj disj = default;
+  CnfDisj disj = DEFAULT_CnfDisj;
   return disj;
 }
 
@@ -154,7 +154,7 @@ app_CnfDisj (CnfDisj* clause, bool b, uint vbl)
     CnfFmla
 dflt_CnfFmla ()
 {
-  CnfFmla fmla = default;
+  CnfFmla fmla = DEFAULT_CnfFmla;
   return fmla;
 }
 
@@ -174,7 +174,7 @@ app_CnfFmla (CnfFmla* fmla, const CnfDisj* clause)
     PushTable( fmla->idcs, off );
     GrowTable( fmla->vbls, clause->lits.sz );
     grow_BitTable (&fmla->vals, clause->lits.sz);
-    {:for (i ; clause->lits.sz)
+    for (uint i = 0; i < clause->lits.sz; ++i) {
         BoolLit lit = clause->lits.s[i];
         if (lit.val)  set1_BitTable (fmla->vals, off+i);
         else          set0_BitTable (fmla->vals, off+i);
@@ -219,7 +219,7 @@ dec1mod (uint i, uint n)
 }
 
 
-#include "promela.c"
+#include "promela.h"
 
 
     FMem_do_XnSys
@@ -269,7 +269,7 @@ recu_do_XnSys (BitTable* bt, const XnEVbl* a, uint n, XnSz step, XnSz bel)
 do_XnSys (FMem_do_XnSys* tape, BitTable bt)
 {
     tape->evs.sz = 0;
-    {:for (i ; tape->fixed.sz)
+    for (uint i = 0; i < tape->fixed.sz; ++i) {
         XnEVbl e;
         if (test_BitTable (tape->fixed, i))
         {
@@ -306,7 +306,7 @@ recu_do_push_XnSys (TableT(XnSz)* t, const XnEVbl* a, uint n, XnSz step, XnSz be
 do_push_XnSys (FMem_do_XnSys* tape, TableT(XnSz)* t)
 {
     tape->evs.sz = 0;
-    {:for (i ; tape->fixed.sz)
+    for (uint i = 0; i < tape->fixed.sz; ++i) {
         XnEVbl e;
         if (test_BitTable (tape->fixed, i))
         {
@@ -431,7 +431,7 @@ cons1_FMem_detect_convergence (const BitTable* legit)
 
     InitTable( tape.bxns );
     EnsizeTable( tape.bxns, n );
-    {:for (i ; n)
+    for (uint i = 0; i < n; ++i) {
         InitTable( tape.bxns.s[i] );
     }
 
@@ -443,7 +443,7 @@ cons1_FMem_detect_convergence (const BitTable* legit)
     void
 lose_FMem_detect_convergence (FMem_detect_convergence* tape)
 {
-    {:for (i ; tape->bxns.sz)
+    for (uint i = 0; i < tape->bxns.sz; ++i) {
         LoseTable( tape->bxns.s[i] );
     }
     LoseTable( tape->bxns );
@@ -465,21 +465,21 @@ detect_convergence (FMem_detect_convergence* tape,
     BitTable tested = tape->tested;
     XnSz nreached = 0;
 
-    {:for (i ; bxns.sz)
+    for (uint i = 0; i < bxns.sz; ++i) {
         bxns.s[i].sz = 0;
     }
     reach.sz = 0;
 
     op_BitTable (tested, BitOp_IDEN1, *tape->legit);
 
-    {:for (i ; xns.sz)
+    for (uint i = 0; i < xns.sz; ++i) {
         if (test_BitTable (tested, i))
         {
             ++ nreached;
             PushTable( reach, i );
         }
 
-        {:for (j ; xns.s[i].sz)
+        for (uint j = 0; j < xns.s[i].sz; ++j) {
             PushTable( bxns.s[xns.s[i].s[j]], i );
         }
     }
@@ -488,7 +488,7 @@ detect_convergence (FMem_detect_convergence* tape,
     {
         XnSz i = *TopTable( reach );
         -- reach.sz;
-        {:for (j ; bxns.s[i].sz)
+        for (uint j = 0; j < bxns.s[i].sz; ++j) {
             XnSz k = bxns.s[i].s[j];
             if (!set1_BitTable (tested, k))
             {
@@ -514,14 +514,14 @@ detect_strong_convergence (FMem_synsearch* tape)
 {
     if (detect_livelock (&tape->livelock_tape, tape->xns))  return Nil;
 
-    {:for (i ; tape->xns.sz)
+    for (uint i = 0; i < tape->xns.sz; ++i) {
         if (tape->xns.s[i].sz == 0)
             if (!test_BitTable (tape->sys->legit, i))
                 return May;
     }
 
     if (!tape->sys->syn_legit)
-    {:for (i ; tape->legit_states.sz)
+    for (uint i = 0; i < tape->legit_states.sz; ++i) {
         XnSz s0 = tape->legit_states.s[i];
         if (tape->xns.s[s0].sz != tape->legit_xns.s[i].sz)
             return May;
@@ -536,7 +536,7 @@ back1_Xn (TableT(Xns)* xns, TableT(XnSz)* stk)
     zuint n = *TopTable(*stk);
     zuint off = stk->sz - (n + 1);
 
-    {:for (i ; n)
+    for (uint i = 0; i < n; ++i) {
         xns->s[stk->s[off + i]].sz -= 1;
     }
 
@@ -556,7 +556,7 @@ cons1_FMem_synsearch (const XnSys* sys)
 
     InitTable( tape.xns );
     GrowTable( tape.xns, sys->legit.sz );
-    {:for (i ; tape.xns.sz)
+    for (uint i = 0; i < tape.xns.sz; ++i) {
         InitTable( tape.xns.s[i] );
     }
 
@@ -569,7 +569,7 @@ cons1_FMem_synsearch (const XnSys* sys)
     tape.n_cached_may_rules = 0;
     tape.rule_nwvbls = 0;
     tape.rule_nrvbls = 0;
-    {:for (i ; sys->pcs.sz)
+    for (uint i = 0; i < sys->pcs.sz; ++i) {
         uint nwvbls = sys->pcs.s[i].nwvbls;
         uint nrvbls = sys->pcs.s[i].vbls.sz;
         if (nwvbls > tape.rule_nwvbls)  tape.rule_nwvbls = nwvbls;
@@ -577,23 +577,23 @@ cons1_FMem_synsearch (const XnSys* sys)
     }
 
     InitTable( tape.legit_states );
-    {:for (i ; sys->legit.sz)
+    for (uint i = 0; i < sys->legit.sz; ++i) {
         if (test_BitTable (sys->legit, i))
             PushTable( tape.legit_states, i );
     }
 
-    {:for (i ; sys->legit_rules.sz)
+    for (uint i = 0; i < sys->legit_rules.sz; ++i) {
         add_XnRule (&tape, &sys->legit_rules.s[i]);
     }
 
     InitTable( tape.legit_xns );
     EnsizeTable( tape.legit_xns, tape.legit_states.sz );
-    {:for (i ; tape.legit_states.sz)
+    for (uint i = 0; i < tape.legit_states.sz; ++i) {
         InitTable( tape.legit_xns.s[i] );
         CopyTable( tape.legit_xns.s[i], tape.xns.s[tape.legit_states.s[i]] );
     }
 
-    {:for (i ; sys->legit_rules.sz)
+    for (uint i = 0; i < sys->legit_rules.sz; ++i) {
         back1_Xn (&tape.xns, &tape.xn_stk);
     }
 
@@ -607,19 +607,19 @@ lose_FMem_synsearch (FMem_synsearch* tape)
     lose_FMem_detect_convergence (&tape->convergence_tape);
     lose_FMem_do_XnSys (&tape->dostates_tape);
 
-    {:for (i ; tape->xns.sz)
+    for (uint i = 0; i < tape->xns.sz; ++i) {
         LoseTable( tape->xns.s[i] );
     }
     LoseTable( tape->xns );
     LoseTable( tape->xn_stk );
 
-    {:for (i ; tape->n_cached_rules)
+    for (uint i = 0; i < tape->n_cached_rules; ++i) {
         LoseTable( tape->rules.s[i].p );
         LoseTable( tape->rules.s[i].q );
     }
     LoseTable( tape->rules );
 
-    {:for (i ; tape->n_cached_may_rules)
+    for (uint i = 0; i < tape->n_cached_may_rules; ++i) {
         LoseTable( tape->may_rules.s[i] );
     }
     LoseTable( tape->may_rules );
@@ -630,7 +630,7 @@ lose_FMem_synsearch (FMem_synsearch* tape)
 
     LoseTable( tape->legit_states );
 
-    {:for (i ; tape->legit_xns.sz)
+    for (uint i = 0; i < tape->legit_xns.sz; ++i) {
         LoseTable( tape->legit_xns.s[i] );
     }
     LoseTable( tape->legit_xns );
@@ -642,7 +642,7 @@ lose_FMem_synsearch (FMem_synsearch* tape)
 apply1_XnRule (const XnRule* g, const XnSys* sys, XnSz sidx)
 {
     const XnPc* pc = &sys->pcs.s[g->pc];
-    {:for (i ; g->q.sz)
+    for (uint i = 0; i < g->q.sz; ++i) {
         XnSz stepsz = sys->vbls.s[pc->vbls.s[i]].stepsz;
         sidx = AppDelta( sidx,
                          stepsz * g->p.s[i],
@@ -663,7 +663,7 @@ add_XnRule (FMem_synsearch* tape, const XnRule* g)
 
     nadds = stk->sz;
 
-    {:for (i ; g->p.sz)
+    for (uint i = 0; i < g->p.sz; ++i) {
         const XnPc* pc = &tape->sys->pcs.s[g->pc];
         uint vi = pc->vbls.s[i];
         fix->vals[vi] = g->p.s[i];
@@ -672,7 +672,7 @@ add_XnRule (FMem_synsearch* tape, const XnRule* g)
 
     do_push_XnSys (fix, stk);
 
-    {:for (i ; g->p.sz)
+    for (uint i = 0; i < g->p.sz; ++i) {
         const XnPc* pc = &tape->sys->pcs.s[g->pc];
         uint vi = pc->vbls.s[i];
         set0_BitTable (fix->fixed, vi);
@@ -688,7 +688,7 @@ add_XnRule (FMem_synsearch* tape, const XnRule* g)
     sa = t.s[0];
     sb = apply1_XnRule (g, tape->sys, sa);
 
-    {:for (i ; t.sz)
+    for (uint i = 0; i < t.sz; ++i) {
         bool add = true;
         XnSz s0 = t.s[i];
         XnSz s1 = AppDelta( s0, sa, sb );
@@ -697,7 +697,7 @@ add_XnRule (FMem_synsearch* tape, const XnRule* g)
         Claim2( s0 ,<, tape->sys->nstates );
         Claim2( s1 ,<, tape->sys->nstates );
 
-        {:for (j ; src->sz)
+        for (uint j = 0; j < src->sz; ++j) {
             if (src->s[j] == s1)
             {
                 add = false;
@@ -758,9 +758,9 @@ set_may_rules (FMem_synsearch* tape, TableT(XnSz)* may_rules, XnRule* g)
     const XnSys* restrict sys = tape->sys;
 
     /* Ensure protocol is closed.*/
-    {:for (i ; tape->legit_xns.sz)
+    for (uint i = 0; i < tape->legit_xns.sz; ++i) {
         const TableT(XnSz)* t = &tape->legit_xns.s[i];
-        {:for (j ; t->sz)
+        for (uint j = 0; j < t->sz; ++j) {
             if (!test_BitTable (sys->legit, t->s[j]))
             {
                 DBog0( "Protocol breaks closure." );
@@ -772,7 +772,7 @@ set_may_rules (FMem_synsearch* tape, TableT(XnSz)* may_rules, XnRule* g)
 
     /* Note: Scrap variable /g/ is the most recent rule.*/
     /* Add preexisting rules.*/
-    {:for (i ; tape->rules.sz - 1)
+    for (uint i = 0; i < tape->rules.sz - 1; ++i) {
         add_XnRule (tape, &tape->rules.s[i]);
         if (0 == *TopTable( tape->xn_stk ))
         {
@@ -782,7 +782,7 @@ set_may_rules (FMem_synsearch* tape, TableT(XnSz)* may_rules, XnRule* g)
     }
 
 
-    {:for (i ; sys->n_rule_steps)
+    for (uint i = 0; i < sys->n_rule_steps; ++i) {
         /* XnSz rule_step = i; */
         XnSz rule_step = sys->n_rule_steps - 1 - i;
 
@@ -801,7 +801,7 @@ set_may_rules (FMem_synsearch* tape, TableT(XnSz)* may_rules, XnRule* g)
         if (t.sz == 0)  add = false;
 
         if (add)
-        {:for (j ; t.sz)
+        for (uint j = 0; j < t.sz; ++j) {
             const XnSz s0 = t.s[j];
             const XnSz s1 = *TopTable( tape->xns.s[s0] );
 
@@ -898,7 +898,7 @@ synsearch_quicktrim_mayrules (FMem_synsearch* tape, XnSz nadded)
     XnSz off = 0;
     XnRule* g0 = TopTable( tape->rules );
 
-    {:for (i ; may_rules->sz)
+    for (uint i = 0; i < may_rules->sz; ++i) {
         XnSz rule_step = may_rules->s[i];
         bool add = true;
 
@@ -907,12 +907,12 @@ synsearch_quicktrim_mayrules (FMem_synsearch* tape, XnSz nadded)
         Claim2( nadded+1 ,<=, tape->rules.sz );
 
         if (add)
-        {:for (j ; nadded)
+        for (uint j = 0; j < nadded; ++j) {
             XnRule* g1 = &tape->rules.s[tape->rules.sz-1-nadded+j];
             bool match = (g0->pc == g1->pc);
 
             if (match)
-            {:for (k ; g0->p.sz - g0->q.sz)
+            for (uint k = 0; k < g0->p.sz - g0->q.sz; ++k) {
                 match = (g0->p.s[k+g0->q.sz] == g1->p.s[k+g0->q.sz]);
                 if (!match)  break;
             }
@@ -921,7 +921,7 @@ synsearch_quicktrim_mayrules (FMem_synsearch* tape, XnSz nadded)
             {
                 /* Can't have two actions with the same guard.*/
                 match = true;
-                {:for (k ; g0->q.sz)
+                for (uint k = 0; k < g0->q.sz; ++k) {
                     match = (g0->q.s[k] == g1->p.s[k]);
                     if (!match)  break;
                 }
@@ -930,7 +930,7 @@ synsearch_quicktrim_mayrules (FMem_synsearch* tape, XnSz nadded)
 
                 /* Remove actions that would not be self-disabling.*/
                 match = true;
-                {:for (k ; g0->q.sz)
+                for (uint k = 0; k < g0->q.sz; ++k) {
                     match = (g0->p.s[k] == g1->p.s[k]);
                     if (!match)  break;
                 }
@@ -976,7 +976,7 @@ synsearch_trim (FMem_synsearch* tape)
     {
         XnSz off = 0;
 
-        {:for (i ; may_rules->sz)
+        for (uint i = 0; i < may_rules->sz; ++i) {
             Trit stabilizing;
             XnSz rule_step = may_rules->s[i];
             bool tolegit = false;
@@ -1004,7 +1004,7 @@ synsearch_trim (FMem_synsearch* tape)
 
                 Claim2( t.sz ,>, 0 );
 
-                {:for (j ; t.sz)
+                for (uint j = 0; j < t.sz; ++j) {
                     const XnSz s0 = t.s[j];
                     const XnSz s1 = *TopTable( tape->xns.s[s0] );
 
@@ -1056,7 +1056,7 @@ synsearch_trim (FMem_synsearch* tape)
                tape->influence_order.sz,
                sizeof(*tape->influence_order.s),
                cmpi_XnSz2);
-        {:for (i ; tape->influence_order.sz)
+        for (uint i = 0; i < tape->influence_order.sz; ++i) {
             /* XnSz idx = tape->influence_order.sz - 1 - i; */
             XnSz idx = i;
             may_rules->s[i] = tape->influence_order.s[idx].j;
@@ -1079,7 +1079,7 @@ synsearch_check_weak (FMem_synsearch* tape, XnSz* ret_nreqrules)
     if (true)
     {
         bool weak = true;
-        {:for (i ; may_rules->sz)
+        for (uint i = 0; i < may_rules->sz; ++i) {
             XnSz rule_step = may_rules->s[i];
             rule_XnSys (g, sys, rule_step);
             add_XnRule (tape, g);
@@ -1088,7 +1088,7 @@ synsearch_check_weak (FMem_synsearch* tape, XnSz* ret_nreqrules)
         weak = detect_convergence (&tape->convergence_tape, tape->xns);
 
         if (!tape->sys->syn_legit)
-        {:for (i ; tape->legit_states.sz)
+        for (uint i = 0; i < tape->legit_states.sz; ++i) {
             XnSz nout = tape->xns.s[tape->legit_states.s[i]].sz;
             if (nout != tape->legit_xns.s[i].sz)
                 weak = false;
@@ -1099,16 +1099,16 @@ synsearch_check_weak (FMem_synsearch* tape, XnSz* ret_nreqrules)
             XnSz idx = tape->xn_stk.sz;
             tape->cmp_xn_stk.sz = 0;
 
-            {:for (i ; may_rules->sz)
+            for (uint i = 0; i < may_rules->sz; ++i) {
                 const XnSz n = tape->xn_stk.s[idx - 1];
                 idx -= n + 1;
-                {:for (j ; n + 1)
+                for (uint j = 0; j < n + 1; ++j) {
                     PushTable( tape->cmp_xn_stk, tape->xn_stk.s[idx+j] );
                 }
             }
         }
 
-        {:for (i ; may_rules->sz)
+        for (uint i = 0; i < may_rules->sz; ++i) {
             back1_Xn (&tape->xns, &tape->xn_stk);
         }
 
@@ -1129,7 +1129,7 @@ synsearch_check_weak (FMem_synsearch* tape, XnSz* ret_nreqrules)
         XnSz stk_idx, cmp_stk_idx;
 
         /* Add all rules backwards, to find which are absolutely required.*/
-        {:for (i ; may_rules->sz)
+        for (uint i = 0; i < may_rules->sz; ++i) {
             XnSz rule_step = may_rules->s[may_rules->sz - 1 - i];
             rule_XnSys (g, sys, rule_step);
             add_XnRule (tape, g);
@@ -1138,7 +1138,7 @@ synsearch_check_weak (FMem_synsearch* tape, XnSz* ret_nreqrules)
         stk_idx = tape->xn_stk.sz;
         cmp_stk_idx = tape->cmp_xn_stk.sz;
 
-        {:for (i ; may_rules->sz)
+        for (uint i = 0; i < may_rules->sz; ++i) {
             bool required = false;
             const XnSz nas = tape->xn_stk.s[stk_idx-1];
             const XnSz nbs = tape->cmp_xn_stk.s[cmp_stk_idx-1];
@@ -1151,9 +1151,9 @@ synsearch_check_weak (FMem_synsearch* tape, XnSz* ret_nreqrules)
             as = &tape->xn_stk.s[stk_idx];
             bs = &tape->cmp_xn_stk.s[cmp_stk_idx];
 
-            {:for (j ; nas)
+            for (uint j = 0; j < nas; ++j) {
                 const XnSz s0 = as[j];
-                {:for (k ; nbs)
+                for (uint k = 0; k < nbs; ++k) {
                     if (s0 == bs[k] &&
                         tape->xns.s[s0].sz == 1 &&
                         !(sys->syn_legit && test_BitTable (sys->legit, s0)))
@@ -1180,7 +1180,7 @@ synsearch_check_weak (FMem_synsearch* tape, XnSz* ret_nreqrules)
             }
         }
 
-        {:for (i ; may_rules->sz)
+        for (uint i = 0; i < may_rules->sz; ++i) {
             back1_Xn (&tape->xns, &tape->xn_stk);
         }
 
@@ -1259,7 +1259,7 @@ synsearch (FMem_synsearch* tape)
                        nreqrules,
                        may_rules->sz + nreqrules,
                        tape->may_rules.sz-1 );
-            {:for (i ; nreqrules)
+            for (uint i = 0; i < nreqrules; ++i) {
                 add_XnRule (tape, g + i);
             }
 
@@ -1287,7 +1287,7 @@ synsearch (FMem_synsearch* tape)
                 if (tape->stabilizing)  return;
             }
 
-            {:for (i ; nreqrules)
+            for (uint i = 0; i < nreqrules; ++i) {
                 back1_Xn (&tape->xns, &tape->xn_stk);
             }
             break;
@@ -1343,7 +1343,7 @@ testfn_detect_livelock ()
     bool livelock_exists;
 
     GrowTable( xns, legit.sz );
-    {:for (i ; xns.sz)
+    for (uint i = 0; i < xns.sz; ++i) {
         InitTable( xns.s[i] );
     }
 
@@ -1365,19 +1365,19 @@ testfn_detect_livelock ()
 
     lose_FMem_detect_livelock (&mem_detect_livelock);
 
-    {:for (i ; xns.sz)
+    for (uint i = 0; i < xns.sz; ++i) {
         LoseTable( xns.s[i] );
     }
     LoseTable( xns );
     lose_BitTable (&legit);
 }
 
-#include "inst-sat3.c"
-#include "inst-matching.c"
-#include "inst-coloring.c"
-#include "inst-bit3.c"
-#include "inst-dijkstra.c"
-#include "inst-dijkstra4state.c"
+#include "inst-sat3.h"
+#include "inst-matching.h"
+#include "inst-coloring.h"
+#include "inst-bit3.h"
+#include "inst-dijkstra.h"
+#include "inst-dijkstra4state.h"
 
   Sign
 cmp_XnSz (const XnSz* a, const XnSz* b)
@@ -1411,9 +1411,9 @@ synsearch_sat (FMem_synsearch* tape)
     Associa pathmap[1];
 
     DeclTable( State, states );
-    CnfFmla fmla[] = default;
+    CnfFmla fmla[] = {DEFAULT_CnfFmla};
     DeclTable( XnInfo, xns );
-    CnfDisj clause[] = default;
+    CnfDisj clause[] = {DEFAULT_CnfDisj};
 
     const XnSys* restrict sys = tape->sys;
     XnRule* g;
@@ -1454,7 +1454,7 @@ synsearch_sat (FMem_synsearch* tape)
     synsearch_trim (tape);
     if (tape->stabilizing)  return;
 
-    {:for (i ; tape->rules.sz-1)
+    for (uint i = 0; i < tape->rules.sz-1; ++i) {
         XnSz step = step_XnRule (&tape->rules.s[i], sys);
         PushTable( *may_rules, step );
     }
@@ -1466,16 +1466,16 @@ synsearch_sat (FMem_synsearch* tape)
 
     AffyTable( states, sys->nstates );
     states.sz = sys->nstates;
-    {:for (i ; states.sz)
+    for (uint i = 0; i < states.sz; ++i) {
         InitTable( states.s[i].to );
         InitTable( states.s[i].tx );
     }
 
     fmla->nvbls = may_rules->sz;
-    {:for (i ; may_rules->sz)
+    for (uint i = 0; i < may_rules->sz; ++i) {
         rule_XnSys (g, sys, may_rules->s[i]);
         add_XnRule (tape, g);
-        {:for (j ; *TopTable(tape->xn_stk))
+        for (uint j = 0; j < *TopTable(tape->xn_stk); ++j) {
             XnSz2 t;
             bool added = false;
             TableElT(XnInfo)* xn;
@@ -1510,7 +1510,7 @@ synsearch_sat (FMem_synsearch* tape)
         }
         back1_Xn (&tape->xns, &tape->xn_stk);
 
-        {:for (qi ; g->q.sz)
+        for (uint qi = 0; qi < g->q.sz; ++qi) {
             g->q.s[qi] = 0;
         }
 
@@ -1524,7 +1524,7 @@ synsearch_sat (FMem_synsearch* tape)
         }
     }
 
-    {:for (i ; xns.sz)
+    for (uint i = 0; i < xns.sz; ++i) {
         CnfDisj* clause = &xns.s[i].impl;
         app_CnfFmla (fmla, clause);
         lose_CnfDisj (clause);
@@ -1535,8 +1535,8 @@ synsearch_sat (FMem_synsearch* tape)
          assoc = next_Assoc (assoc))
     {
         TableT(zuint)* rules = val_of_Assoc (lstate_map, assoc);
-        {:for (i ; rules->sz)
-            {:for (j ; i)
+        for (uint i = 0; i < rules->sz; ++i) {
+            for (uint j = 0; j < i; ++j) {
                 clause->lits.sz = 0;
                 app_CnfDisj (clause, false, rules->s[i]);
                 app_CnfDisj (clause, false, rules->s[j]);
@@ -1547,7 +1547,7 @@ synsearch_sat (FMem_synsearch* tape)
     }
     lose_Associa (lstate_map);
 
-    {:for (i ; states.sz)
+    for (uint i = 0; i < states.sz; ++i) {
         if (!test_BitTable (sys->legit, i))
         {
             TableElT(State)* state = &states.s[i];
@@ -1557,7 +1557,7 @@ synsearch_sat (FMem_synsearch* tape)
 
             /* Deadlock freedom clause.*/
             clause->lits.sz = 0;
-            {:for (j ; state->to.sz)
+            for (uint j = 0; j < state->to.sz; ++j) {
                 XnSz2 t;
                 Assoc* assoc;
                 zuint idx;
@@ -1572,7 +1572,7 @@ synsearch_sat (FMem_synsearch* tape)
             app_CnfFmla (fmla, clause);
         }
 
-        {:for (j ; states.sz)
+        for (uint j = 0; j < states.sz; ++j) {
             if (states.s[i].to.sz > 0 && states.s[j].tx.sz > 0)
             {
                 XnSz2 xn;
@@ -1595,7 +1595,7 @@ synsearch_sat (FMem_synsearch* tape)
          assoc;
          assoc = next_Assoc (assoc))
     {
-      CnfDisj path_clause[] = default;
+      CnfDisj path_clause[] = {DEFAULT_CnfDisj};
 
         XnSz2 p = *(XnSz2*) key_of_Assoc (pathmap, assoc);
         zuint p_ij = *(zuint*) val_of_Assoc (pathmap, assoc);
@@ -1603,7 +1603,7 @@ synsearch_sat (FMem_synsearch* tape)
 
         app_CnfDisj (path_clause, false, p_ij);
 
-        {:for (k_idx ; state.tx.sz)
+        for (uint k_idx = 0; k_idx < state.tx.sz; ++k_idx) {
             Assoc* assoc;
             zuint k = state.tx.s[k_idx];
             zuint q_ikj;
@@ -1665,7 +1665,7 @@ synsearch_sat (FMem_synsearch* tape)
     }
 
     /* Lose everything we can before running the solve.*/
-    {:for (i ; states.sz)
+    for (uint i = 0; i < states.sz; ++i) {
         LoseTable( states.s[i].tx );
         LoseTable( states.s[i].to );
     }
@@ -1687,7 +1687,7 @@ synsearch_sat (FMem_synsearch* tape)
 
         tape->stabilizing = sat;
         if (sat)
-        {:for (i ; may_rules->sz)
+        for (uint i = 0; i < may_rules->sz; ++i) {
             if (test_BitTable (evs, i))
             {
                 rule_XnSys (g, sys, may_rules->s[i]);
@@ -1702,7 +1702,7 @@ synsearch_sat (FMem_synsearch* tape)
     lose_CnfFmla (fmla);
 }
 
-#include "pla.c"
+#include "pla.h"
 
     int
 main (int argc, char** argv)
@@ -1722,8 +1722,8 @@ main (int argc, char** argv)
     uint n_ring_pcs = 6;  /* For rings (excluding 3-SAT rings).*/
     const uint domsz = 3;
     const bool manual_soln = true;
-    XnSys sys[] = default;
-    CnfFmla fmla[] = default;
+    XnSys sys[] = {DEFAULT_XnSys};
+    CnfFmla fmla[] = {DEFAULT_CnfFmla};
     BoolLit clauses[][3] = {
 #if 0
 #elif 1
@@ -1748,51 +1748,51 @@ main (int argc, char** argv)
 
     while (argi < argc)
     {
-        {:if (eql_cstr (argv[argi], "-h"))
+        if (eql_cstr (argv[argi], "-h")) {
            failout_sysCx ("There is no help for you.");
         }
-        {:else if (eql_cstr (argv[argi], "-inst"))
+        else if (eql_cstr (argv[argi], "-inst")) {
             bool need_npcs = false;
             ++argi;
-            {:if (eql_cstr (argv[argi], "coloring"))
+            if (eql_cstr (argv[argi], "coloring")) {
                 need_npcs = true;
                 inst_kind = ColoringInst;
             }
-            {:else if (eql_cstr (argv[argi], "matching"))
+            else if (eql_cstr (argv[argi], "matching")) {
                 need_npcs = true;
                 inst_kind = MatchingInst;
             }
-            {:else if (eql_cstr (argv[argi], "dijkstra"))
+            else if (eql_cstr (argv[argi], "dijkstra")) {
                 need_npcs = true;
                 inst_kind = TokenRingDijkstraInst;
             }
-            {:else if (eql_cstr (argv[argi], "dijkstra4state"))
+            else if (eql_cstr (argv[argi], "dijkstra4state")) {
                 need_npcs = true;
                 inst_kind = TokenRingDijkstra4StateInst;
             }
-            {:else if (eql_cstr (argv[argi], "bit3"))
+            else if (eql_cstr (argv[argi], "bit3")) {
                 need_npcs = true;
                 inst_kind = TokenRing3BitInst;
             }
-            {:else if (eql_cstr (argv[argi], "sat3"))
+            else if (eql_cstr (argv[argi], "sat3")) {
                 inst_kind = Sat3Inst;
             }
-            {:else
+            else {
                 failout_sysCx ("bad -inst");
             }
 
             ++argi;
-            {:if (need_npcs)
+            if (need_npcs) {
 
-                {:if (xget_uint_cstr (&n_ring_pcs, argv[argi]))
+                if (xget_uint_cstr (&n_ring_pcs, argv[argi])) {
                     ++argi;
                 }
-                {:else
+                else {
                     failout_sysCx ("bad number of processes");
                 }
             }
         }
-        {:else
+        else {
             DBog1("arg: %s", argv[argi]);
             failout_sysCx ("Bad argument.");
         }
@@ -1801,9 +1801,9 @@ main (int argc, char** argv)
     if (argi < argc)
         failout_sysCx ("No arguments expected.");
 
-    {:for (i ; ArraySz(clauses))
+    for (uint i = 0; i < ArraySz(clauses); ++i) {
         CnfDisj clause = dflt_CnfDisj ();
-        {:for (j ; 3)
+        for (uint j = 0; j < 3; ++j) {
             PushTable( clause.lits, clauses[i][j] );
             if (clauses[i][j].vbl + 1 > fmla->nvbls )
                 fmla->nvbls = clauses[i][j].vbl + 1;
@@ -1896,7 +1896,7 @@ main (int argc, char** argv)
         if (tape.stabilizing || (manual_soln && tape.rules.sz > 0))
         {
             // Promela.
-            OFileB pmlf[] = default;
+            OFileB pmlf[] = {DEFAULT_OFileB};
 
             open_FileB (&pmlf->fb, 0, "model.pml");
             oput_promela (&pmlf->of, sys, tape.rules);

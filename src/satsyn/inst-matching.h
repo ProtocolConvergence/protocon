@@ -1,5 +1,5 @@
 /**
- * \file inst-matching.c
+ * \file inst-matching.h
  * Maximal matching instance!
  **/
 
@@ -8,11 +8,11 @@ static
 inst_matching_XnSys (uint npcs)
 {
     DeclTable( XnDomSz, vs );
-    XnSys sys[] = default;
-    OFile name[] = default;
+    XnSys sys[] = {DEFAULT_XnSys};
+    OFile name[] = {DEFAULT_OFile};
 
     /* Make processes and variables.*/
-    {:for (r ; npcs)
+    for (uint r = 0; r < npcs; ++r) {
         XnVbl vbl = dflt_XnVbl ();
 
         vbl.domsz = 3;
@@ -26,7 +26,7 @@ inst_matching_XnSys (uint npcs)
     }
 
     /* Make bidirectional ring topology.*/
-    {:for (r ; npcs)
+    for (uint r = 0; r < npcs; ++r) {
         assoc_XnSys (sys, r, r, Yes);
         assoc_XnSys (sys, r, dec1mod (r, npcs), May);
         assoc_XnSys (sys, r, inc1mod (r, npcs), May);
@@ -34,10 +34,10 @@ inst_matching_XnSys (uint npcs)
 
     accept_topology_XnSys (sys);
 
-    {:for (sidx ; sys->nstates)
+    for (uint sidx = 0; sidx < sys->nstates; ++sidx) {
         bool good = true;
         statevs_of_XnSys (&vs, sys, sidx);
-        {:for (r ; npcs)
+        for (uint r = 0; r < npcs; ++r) {
             bool self =
                 (vs.s[r] == 0) &&
                 (vs.s[dec1mod (r, npcs)] == 1) &&

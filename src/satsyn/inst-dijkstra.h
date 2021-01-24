@@ -1,5 +1,5 @@
 /**
- * \file inst-dijkstra.c
+ * \file inst-dijkstra.h
  *
  * Dijkstra's token ring.
  **/
@@ -10,11 +10,11 @@ inst_dijkstra_XnSys (uint npcs)
 {
     DeclTable( uint, x_idcs );
     DeclTable( XnDomSz, vs );
-    XnSys sys[] = default;
-    OFile name[] = default;
+    XnSys sys[] = {DEFAULT_XnSys};
+    OFile name[] = {DEFAULT_OFile};
 
     /* Make processes and variables.*/
-    {:for (r ; npcs)
+    for (uint r = 0; r < npcs; ++r) {
         XnVbl x_vbl = dflt_XnVbl ();
         PushTable( sys->pcs, dflt_XnPc () );
 
@@ -27,7 +27,7 @@ inst_dijkstra_XnSys (uint npcs)
     }
 
     /* Make unidirectional ring topology.*/
-    {:for (r ; npcs)
+    for (uint r = 0; r < npcs; ++r) {
         assoc_XnSys (sys, r, x_idcs.s[r], Yes);
         assoc_XnSys (sys, r, x_idcs.s[dec1mod (r, npcs)], May);
     }
@@ -35,10 +35,10 @@ inst_dijkstra_XnSys (uint npcs)
     sys->syn_legit = true;
     accept_topology_XnSys (sys);
 
-    {:for (sidx ; sys->nstates)
+    for (uint sidx = 0; sidx < sys->nstates; ++sidx) {
         uint ntokens = 0;
         statevs_of_XnSys (&vs, sys, sidx);
-        {:for (r ; npcs)
+        for (uint r = 0; r < npcs; ++r) {
             ntokens +=
                 (vs.s[x_idcs.s[r]] == vs.s[x_idcs.s[dec1mod (r, npcs)]]
                  ? (r == 0 ? 1 : 0)

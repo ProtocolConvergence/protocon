@@ -1,5 +1,5 @@
 /**
- * \file inst-bit3.c
+ * \file inst-bit3.h
  *
  * 3-bit token ring... kind of.
  * There is no way to enforce that a token can be passed
@@ -14,11 +14,11 @@ inst_bit3_XnSys (uint npcs)
     DeclTable( uint, t_idcs );
     DeclTable( uint, ready_idcs );
     DeclTable( XnDomSz, vs );
-    XnSys sys[] = default;
-    OFile name[] = default;
+    XnSys sys[] = {DEFAULT_XnSys};
+    OFile name[] = {DEFAULT_OFile};
 
     /* Make processes and variables.*/
-    {:for (r ; npcs)
+    for (uint r = 0; r < npcs; ++r) {
         XnVbl e_vbl = dflt_XnVbl ();
         XnVbl t_vbl = dflt_XnVbl ();
         XnVbl ready_vbl = dflt_XnVbl ();
@@ -48,7 +48,7 @@ inst_bit3_XnSys (uint npcs)
     }
 
     /* Make bidirectional ring topology.*/
-    {:for (r ; npcs)
+    for (uint r = 0; r < npcs; ++r) {
         assoc_XnSys (sys, r, e_idcs.s[r], Yes);
         assoc_XnSys (sys, r, t_idcs.s[r], Yes);
         assoc_XnSys (sys, r, ready_idcs.s[r], Yes);
@@ -59,11 +59,11 @@ inst_bit3_XnSys (uint npcs)
     sys->syn_legit = true;
     accept_topology_XnSys (sys);
 
-    {:for (sidx ; sys->nstates)
+    for (uint sidx = 0; sidx < sys->nstates; ++sidx) {
         uint ntokens = 0;
         uint nenabled = 0;
         statevs_of_XnSys (&vs, sys, sidx);
-        {:for (r ; npcs)
+        for (uint r = 0; r < npcs; ++r) {
             ntokens +=
                 (vs.s[t_idcs.s[r]] == vs.s[t_idcs.s[dec1mod (r, npcs)]]
                  ? (r == 0 ? 1 : 0)

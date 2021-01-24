@@ -34,10 +34,10 @@ cons1_XnPcSymm (const char* name)
 lose_XnPcSymm (XnPcSymm* pc)
 {
     lose_AlphaTab (&pc->name);
-    {:for (i ; pc->ovbls.sz)
+    for (uint i = 0; i < pc->ovbls.sz; ++i) {
         lose_XnVblSymm (&pc->ovbls.s[i]);
     }
-    {:for (i ; pc->xvbls.sz)
+    for (uint i = 0; i < pc->xvbls.sz; ++i) {
         lose_XnVblSymm (&pc->xvbls.s[i]);
     }
     LoseTable( pc->ovbls );
@@ -63,19 +63,19 @@ add_vbl_XnPcSymm (XnPcSymm* pc, const char* name, XnDomSz domsz, Bit own)
 commit_initialization_XnPcSymm (XnPcSymm* pc)
 {
     XnSz stepsz = 1;
-    {:for (i ; pc->xvbls.sz)
+    for (uint i = 0; i < pc->xvbls.sz; ++i) {
         XnVblSymm* x = &pc->xvbls.s[pc->xvbls.sz - 1 - i];
         x->stepsz0 = stepsz;
         x->stepsz1 = 0;
         stepsz *= x->domsz;
     }
-    {:for (i ; pc->ovbls.sz)
+    for (uint i = 0; i < pc->ovbls.sz; ++i) {
         XnVblSymm* x = &pc->ovbls.s[pc->ovbls.sz - 1 - i];
         x->stepsz0 = stepsz;
         stepsz *= x->domsz;
     }
     pc->nstates = stepsz;
-    {:for (i ; pc->ovbls.sz)
+    for (uint i = 0; i < pc->ovbls.sz; ++i) {
         XnVblSymm* x = &pc->ovbls.s[pc->ovbls.sz - 1 - i];
         x->stepsz1 = stepsz;
         stepsz *= x->domsz;
@@ -147,10 +147,10 @@ cons2_XnRule (uint np, uint nq)
     XnRule g = dflt_XnRule ();
     EnsizeTable( g.p, np );
     EnsizeTable( g.q, nq );
-    {:for (i ; np)
+    for (uint i = 0; i < np; ++i) {
         g.p.s[i] = 0;
     }
-    {:for (i ; nq)
+    for (uint i = 0; i < nq; ++i) {
         g.q.s[i] = 0;
     }
     return g;
@@ -184,23 +184,23 @@ lose_XnRule (XnRule* g)
     XnSys
 dflt_XnSys ()
 {
-  XnSys sys = default;
+  XnSys sys = DEFAULT_XnSys;
   return sys;
 }
 
     void
 lose_XnSys (XnSys* sys)
 {
-    {:for (i ; sys->pcs.sz)
+    for (uint i = 0; i < sys->pcs.sz; ++i) {
         lose_XnPc (&sys->pcs.s[i]);
     }
     LoseTable( sys->pcs );
-    {:for (i ; sys->vbls.sz)
+    for (uint i = 0; i < sys->vbls.sz; ++i) {
         lose_XnVbl (&sys->vbls.s[i]);
     }
     LoseTable( sys->vbls );
     lose_BitTable (&sys->legit);
-    {:for (i ; sys->legit_rules.sz)
+    for (uint i = 0; i < sys->legit_rules.sz; ++i) {
         lose_XnRule (&sys->legit_rules.s[i]);
     }
     LoseTable( sys->legit_rules );
@@ -241,7 +241,7 @@ size_XnSys (const XnSys* sys)
 {
     XnSz sz = 1;
 
-    {:for (i ; sys->vbls.sz)
+    for (uint i = 0; i < sys->vbls.sz; ++i) {
         const XnSz psz = sz;
         sz *= (XnSz) sys->vbls.s[i].domsz;
 
@@ -297,7 +297,7 @@ assoc_XnSys (XnSys* sys, uint pc_idx, uint vbl_idx, Trit mode)
 accept_topology_XnSys (XnSys* sys)
 {
     XnSz stepsz = 1;
-    {:for (i ; sys->vbls.sz)
+    for (uint i = 0; i < sys->vbls.sz; ++i) {
         XnVbl* x = &sys->vbls.s[sys->vbls.sz-1-i];
         x->stepsz = stepsz;
         stepsz *= x->domsz;
@@ -317,7 +317,7 @@ accept_topology_XnSys (XnSys* sys)
     sys->nstates = stepsz;
     sys->legit = cons2_BitTable (sys->nstates, 1);
 
-    {:for (pcidx ; sys->pcs.sz)
+    for (uint pcidx = 0; pcidx < sys->pcs.sz; ++pcidx) {
         XnPc* pc = &sys->pcs.s[pcidx];
         uint n;
 
@@ -327,7 +327,7 @@ accept_topology_XnSys (XnSys* sys)
         stepsz = 1;
 
         n = pc->rule_stepsz_p.sz;
-        {:for (i ; n)
+        for (uint i = 0; i < n; ++i) {
             XnSz* x = &pc->rule_stepsz_p.s[n-1-i];
             XnDomSz domsz = sys->vbls.s[pc->vbls.s[n-1-i]].domsz;
 
@@ -343,7 +343,7 @@ accept_topology_XnSys (XnSys* sys)
         pc->nstates = stepsz;
 
         n = pc->rule_stepsz_q.sz;
-        {:for (i ; n)
+        for (uint i = 0; i < n; ++i) {
             XnSz* x = &pc->rule_stepsz_q.s[n-1-i];
             XnDomSz domsz = sys->vbls.s[pc->vbls.s[n-1-i]].domsz;
 
@@ -373,7 +373,7 @@ accept_topology_XnSys (XnSys* sys)
 statevs_of_XnSys (TableT(XnDomSz)* t, const XnSys* sys, XnSz sidx)
 {
     SizeTable( *t, sys->vbls.sz );
-    {:for (i ; sys->vbls.sz)
+    for (uint i = 0; i < sys->vbls.sz; ++i) {
         const XnVbl* x = &sys->vbls.s[i];
         t->s[i] = (sidx / x->stepsz);
         sidx = (sidx % x->stepsz);
@@ -395,7 +395,7 @@ rule_XnSys (XnRule* g, const XnSys* sys, XnSz idx)
 {
     const XnPc* pc = 0;
     g->pc = sys->pcs.sz - 1;
-    {:for (i ; sys->pcs.sz-1)
+    for (uint i = 0; i < sys->pcs.sz-1; ++i) {
         if (idx < sys->pcs.s[i+1].rule_step)
         {
             g->pc = i;
@@ -407,14 +407,14 @@ rule_XnSys (XnRule* g, const XnSys* sys, XnSz idx)
     idx -= pc->rule_step;
 
     EnsizeTable( g->q, pc->rule_stepsz_q.sz );
-    {:for (i ; g->q.sz)
+    for (uint i = 0; i < g->q.sz; ++i) {
         XnSz d = pc->rule_stepsz_q.s[i];
         g->q.s[i] = idx / d;
         idx = idx % d;
     }
 
     EnsizeTable( g->p, pc->rule_stepsz_p.sz );
-    {:for (i ; g->p.sz)
+    for (uint i = 0; i < g->p.sz; ++i) {
         XnSz d = pc->rule_stepsz_p.s[i];
         g->p.s[i] = idx / d;
         idx = idx % d;
@@ -427,10 +427,10 @@ step_XnRule (const XnRule* g, const XnSys* sys)
     const XnPc* pc = &sys->pcs.s[g->pc];
     XnSz step = pc->rule_step;
 
-    {:for (i ; g->p.sz)
+    for (uint i = 0; i < g->p.sz; ++i) {
         step += g->p.s[i] * pc->rule_stepsz_p.s[i];
     }
-    {:for (i ; g->q.sz)
+    for (uint i = 0; i < g->q.sz; ++i) {
         step += g->q.s[i] * pc->rule_stepsz_q.s[i];
     }
 

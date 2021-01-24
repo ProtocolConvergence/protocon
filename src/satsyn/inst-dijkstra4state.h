@@ -1,5 +1,5 @@
 /**
- * \file inst-dijkstra4state.c
+ * \file inst-dijkstra4state.h
  *
  * Dijkstra's token passing "spring" of 4 states per process.
  **/
@@ -11,8 +11,9 @@ inst_dijkstra4state_XnSys (uint npcs)
     DeclTable( uint, x_idcs );
     DeclTable( uint, up_idcs );
     DeclTable( XnDomSz, vs );
-    XnSys sys[] = default;
-    OFile name[] = default;
+    XnSys sys[] = {DEFAULT_XnSys};
+    OFile name[] = {DEFAULT_OFile};
+
 
     /* bottom:
      * x up=true
@@ -27,12 +28,12 @@ inst_dijkstra4state_XnSys (uint npcs)
      *   reads x from left
      */
 
-    {:for (r ; npcs+2)
+    for (uint r = 0; r < npcs+2; ++r) {
         PushTable( sys->pcs, dflt_XnPc () );
     }
 
     /* Make processes and variables.*/
-    {:for (r ; npcs)
+    for (uint r = 0; r < npcs; ++r) {
         XnVbl x_vbl = dflt_XnVbl ();
         XnVbl up_vbl = dflt_XnVbl ();
 
@@ -55,15 +56,15 @@ inst_dijkstra4state_XnSys (uint npcs)
     assoc_XnSys (sys, npcs+1, up_idcs.s[npcs-1], Yes);
 
     /* Make spring topology.*/
-    {:for (r ; npcs)
+    for (uint r = 0; r < npcs; ++r) {
         assoc_XnSys (sys, r, x_idcs.s[r], Yes);
-        {:if (0 < r && r < npcs-1)
+        if (0 < r && r < npcs-1) {
             assoc_XnSys (sys, r, up_idcs.s[r], Yes);
         }
-        {:if (r > 0)
+        if (r > 0) {
             assoc_XnSys (sys, r, x_idcs.s[r-1], May);
         }
-        {:if (r < npcs-1)
+        if (r < npcs-1) {
             assoc_XnSys (sys, r, x_idcs.s[r+1], May);
             assoc_XnSys (sys, r, up_idcs.s[r+1], May);
         }
@@ -72,17 +73,17 @@ inst_dijkstra4state_XnSys (uint npcs)
     sys->syn_legit = true;
     accept_topology_XnSys (sys);
 
-    {:for (sidx ; sys->nstates)
+    for (uint sidx = 0; sidx < sys->nstates; ++sidx) {
         uint ntokens = 0;
         statevs_of_XnSys (&vs, sys, sidx);
-        {:for (r ; npcs)
-            {:if (r == 0)
+        for (uint r = 0; r < npcs; ++r) {
+            if (r == 0) {
                 ntokens +=
                     ((vs.s[x_idcs.s[r]] == vs.s[x_idcs.s[r+1]] &&
                       vs.s[up_idcs.s[r+1]] == 0)
                      ? 1 : 0);
             }
-            {:else if (r < npcs-1)
+            else if (r < npcs-1) {
                 ntokens +=
                     (((vs.s[x_idcs.s[r]] != vs.s[x_idcs.s[r-1]])
                       ||
@@ -91,7 +92,7 @@ inst_dijkstra4state_XnSys (uint npcs)
                        vs.s[up_idcs.s[r+1]] == 0))
                      ? 1 : 0);
             }
-            {:else
+            else {
                 ntokens +=
                     ((vs.s[x_idcs.s[r]] != vs.s[x_idcs.s[r-1]])
                      ? 1 : 0);

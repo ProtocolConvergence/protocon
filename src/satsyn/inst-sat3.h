@@ -20,10 +20,10 @@ sat3_legit_XnSys (FMem_do_XnSys* fix,
 
 #if 1
     /* Enforce identity.*/
-    {:for (lo ; npcs)
+    for (uint lo = 0; lo < npcs; ++lo) {
         const uint nsatvbls = sys->vbls.s[x_idcs[0]].domsz;
 
-        {:for (offset ; 2)
+        for (uint offset = 0; offset < 2; ++offset) {
             const uint hi = (lo+1+offset) % npcs;
 
             wipe_BitTable (bt, 0);
@@ -31,7 +31,7 @@ sat3_legit_XnSys (FMem_do_XnSys* fix,
             set1_BitTable (fix->fixed, x_idcs[lo]);
             set1_BitTable (fix->fixed, x_idcs[hi]);
 
-            {:for (val ; nsatvbls)
+            for (uint val = 0; val < nsatvbls; ++val) {
                 fix->vals[x_idcs[lo]] = val;
                 fix->vals[x_idcs[hi]] = val;
                 do_XnSys (fix, bt);
@@ -44,7 +44,7 @@ sat3_legit_XnSys (FMem_do_XnSys* fix,
 
             set1_BitTable (fix->fixed, y_idcs[lo]);
             set1_BitTable (fix->fixed, y_idcs[hi]);
-            {:for (val ; 2)
+            for (uint val = 0; val < 2; ++val) {
                 fix->vals[y_idcs[lo]] = val;
                 fix->vals[y_idcs[hi]] = val;
                 do_XnSys (fix, bt);
@@ -58,7 +58,7 @@ sat3_legit_XnSys (FMem_do_XnSys* fix,
 #endif
 
     /* Clauses.*/
-    {:for (ci ; cnf.sz)
+    for (uint ci = 0; ci < cnf.sz; ++ci) {
         static const byte perms[][3] = {
             { 0, 1, 2 },
             { 0, 2, 1 },
@@ -72,20 +72,20 @@ sat3_legit_XnSys (FMem_do_XnSys* fix,
         /* Only slide the window for the ring.*/
         const uint nwindows = (ring ? npcs : 1);
 
-        {:for (permi ; nperms)
+        for (uint permi = 0; permi < nperms; ++permi) {
             BoolLit lits[3];
 
-            {:for (i ; 3)
+            for (uint i = 0; i < 3; ++i) {
                 byte idx = perms[permi][i];
                 lits[i] = cnf.s[ci].lits.s[idx];
             }
 
-            {:for (lo ; nwindows)
+            for (uint lo = 0; lo < nwindows; ++lo) {
 
                 wipe_BitTable (bt, 0);
 
                 /* Get variables on the stack.*/
-                {:for (i ; 3)
+                for (uint i = 0; i < 3; ++i) {
                     const uint pcidx = x_idcs[(lo + i) % npcs];
 
                     set1_BitTable (fix->fixed, pcidx);
@@ -95,7 +95,7 @@ sat3_legit_XnSys (FMem_do_XnSys* fix,
                 do_XnSys (fix, bt);
                 op_BitTable (bt, BitOp_NOT1, bt);
 
-                {:for (i ; 3)
+                for (uint i = 0; i < 3; ++i) {
                     const uint pcidx = y_idcs[(lo + i) % npcs];
 
                     set1_BitTable (fix->fixed, pcidx);
@@ -117,7 +117,7 @@ sat3_legit_XnSys (FMem_do_XnSys* fix,
     oput_char_OFile (of, '\n');
 
     if (false)
-    {:for (i ; sys->legit.sz)
+    for (uint i = 0; i < sys->legit.sz; ++i) {
         if (test_BitTable (sys->legit, i))
         {
             oput_char_OFile (of, '+');
@@ -136,7 +136,7 @@ sat3_legit_XnSys (FMem_do_XnSys* fix,
 #endif
 }
 
-#include "dimacs.c"
+#include "dimacs.h"
 
     XnSys
 inst_sat3_XnSys (const CnfFmla* fmla)
@@ -144,10 +144,10 @@ inst_sat3_XnSys (const CnfFmla* fmla)
     uint x_idcs[3];
     uint y_idcs[3];
     uint sat_idx;
-    XnSys sys[] = default;
-    OFile name[] = default;
+    XnSys sys[] = {DEFAULT_XnSys};
+    OFile name[] = {DEFAULT_OFile};
 
-    {:for (r ; 3)
+    for (uint r = 0; r < 3; ++r) {
         XnVbl x = dflt_XnVbl ();
         XnVbl y = dflt_XnVbl ();
 
@@ -180,7 +180,7 @@ inst_sat3_XnSys (const CnfFmla* fmla)
         PushTable( sys->vbls, sat );
     }
 
-    {:for (r ; 3)
+    for (uint r = 0; r < 3; ++r) {
         assoc_XnSys (sys, r, x_idcs[r], May);
         assoc_XnSys (sys, r, y_idcs[r], Yes);
         assoc_XnSys (sys, r, sat_idx, May);
@@ -198,7 +198,7 @@ inst_sat3_XnSys (const CnfFmla* fmla)
         DecloStack1( FMem_do_XnSys, fix, cons1_FMem_do_XnSys (sys) );
         BitTable bt = cons2_BitTable (sys->legit.sz, 0);
 
-        {:for (i ; fmla->idcs.sz)
+        for (uint i = 0; i < fmla->idcs.sz; ++i) {
             CnfDisj clause = dflt_CnfDisj ();
             clause_of_CnfFmla (&clause, fmla, i);
             PushTable( clauses, clause );
@@ -213,14 +213,14 @@ inst_sat3_XnSys (const CnfFmla* fmla)
 
         lose_BitTable (&bt);
         lose_FMem_do_XnSys (fix);
-        {:for (i ; clauses.sz)
+        for (uint i = 0; i < clauses.sz; ++i) {
             lose_CnfDisj (&clauses.s[i]);
         }
         LoseTable( clauses );
     }
 
     /*
-    {:for (i ; sys->legit.sz)
+    for (uint i = 0; i < sys->legit.sz; ++i) {
         if (test_BitTable (sys->legit, i))
             DBog1( "%u is true", i );
     }
@@ -237,30 +237,30 @@ inst_sat3_ring_XnSys (const CnfFmla* fmla, const bool use_sat)
     uint y_idcs[ArraySz( x_idcs )];
     uint sat_idcs[ArraySz( x_idcs )];
     const uint npcs = ArraySz( x_idcs );
-    XnSys sys[] = default;
-    OFile name[] = default;
+    XnSys sys[] = {DEFAULT_XnSys};
+    OFile name[] = {DEFAULT_OFile};
 
-    {:for (r ; npcs)
+    for (uint r = 0; r < npcs; ++r) {
         PushTable( sys->pcs, dflt_XnPc () );
     }
 
-    {:for (r ; npcs)
+    for (uint r = 0; r < npcs; ++r) {
         x_idcs[r] = sys->vbls.sz;
         PushTable( sys->vbls, dflt_XnVbl () );
     }
 
-    {:for (r ; npcs)
+    for (uint r = 0; r < npcs; ++r) {
         y_idcs[r] = sys->vbls.sz;
         PushTable( sys->vbls, dflt_XnVbl () );
     }
 
     if (use_sat)
-    {:for (r ; npcs)
+    for (uint r = 0; r < npcs; ++r) {
         sat_idcs[r] = sys->vbls.sz;
         PushTable( sys->vbls, dflt_XnVbl () );
     }
 
-    {:for (r ; npcs)
+    for (uint r = 0; r < npcs; ++r) {
         XnVbl* x = &sys->vbls.s[x_idcs[r]];
         XnVbl* y = &sys->vbls.s[y_idcs[r]];
 
@@ -290,7 +290,7 @@ inst_sat3_ring_XnSys (const CnfFmla* fmla, const bool use_sat)
     }
 
     if (use_sat)
-    {:for (r ; npcs)
+    for (uint r = 0; r < npcs; ++r) {
         XnVbl* sat = &sys->vbls.s[sat_idcs[r]];
         sat->domsz = 2;
 
@@ -314,7 +314,7 @@ inst_sat3_ring_XnSys (const CnfFmla* fmla, const bool use_sat)
         DecloStack1( FMem_do_XnSys, fix, cons1_FMem_do_XnSys (sys) );
         BitTable bt = cons2_BitTable (sys->legit.sz, 0);
 
-        {:for (i ; fmla->idcs.sz)
+        for (uint i = 0; i < fmla->idcs.sz; ++i) {
             CnfDisj clause = dflt_CnfDisj ();
             clause_of_CnfFmla (&clause, fmla, i);
             PushTable( clauses, clause );
@@ -322,7 +322,7 @@ inst_sat3_ring_XnSys (const CnfFmla* fmla, const bool use_sat)
 
         if (use_sat)
         {
-            {:for (i ; npcs)
+            for (uint i = 0; i < npcs; ++i) {
                 fix->vals[sat_idcs[i]] = 1;
                 set1_BitTable (fix->fixed, sat_idcs[i]);
             }
@@ -331,7 +331,7 @@ inst_sat3_ring_XnSys (const CnfFmla* fmla, const bool use_sat)
         }
         else
         {
-            {:for (i ; npcs)
+            for (uint i = 0; i < npcs; ++i) {
                 set1_BitTable (fix->fixed, y_idcs[i]);
                 fix->vals[y_idcs[i]] = 2;
                 wipe_BitTable (bt, 0);
@@ -348,7 +348,7 @@ inst_sat3_ring_XnSys (const CnfFmla* fmla, const bool use_sat)
 
         lose_BitTable (&bt);
         lose_FMem_do_XnSys (fix);
-        {:for (i ; clauses.sz)
+        for (uint i = 0; i < clauses.sz; ++i) {
             lose_CnfDisj (&clauses.s[i]);
         }
         LoseTable( clauses );
@@ -362,7 +362,7 @@ inst_sat3_ring_XnSys (const CnfFmla* fmla, const bool use_sat)
 sat3_soln_XnSys (TableT(XnRule)* rules,
                  const BitTable evs, const XnSys* sys)
 {
-    {:for (pcidx ; 3)
+    for (uint pcidx = 0; pcidx < 3; ++pcidx) {
         const XnPc* pc = &sys->pcs.s[pcidx];
         uint x_idx = 0;
         uint y_idx = 0;
@@ -370,7 +370,7 @@ sat3_soln_XnSys (TableT(XnRule)* rules,
         const XnVbl* x_vbl;
         //const XnVbl* y_vbl;
 
-        {:for (i ; 3)
+        for (uint i = 0; i < 3; ++i) {
             char c = sys->vbls.s[pc->vbls.s[i]].name.s[0];
             if (c == 'x')  x_idx = i;
             if (c == 'y')  y_idx = i;
@@ -380,7 +380,7 @@ sat3_soln_XnSys (TableT(XnRule)* rules,
         x_vbl = &sys->vbls.s[pc->vbls.s[x_idx]];
         //y_vbl = &sys->vbls.s[pc->vbls.s[y_idx]];
 
-        {:for (x_val ; x_vbl->domsz)
+        for (uint x_val = 0; x_val < x_vbl->domsz; ++x_val) {
             XnRule g = cons2_XnRule (3, 1);
             Bit y_val = test_BitTable (evs, x_val);
 
@@ -409,13 +409,13 @@ sat3_ring_soln_XnSys (TableT(XnRule)* rules,
     EnsizeTable( x_idcs, sys->pcs.sz );
     EnsizeTable( y_idcs, sys->pcs.sz );
     EnsizeTable( sat_idcs, sys->pcs.sz );
-    {:for (pcidx ; sys->pcs.sz)
+    for (uint pcidx = 0; pcidx < sys->pcs.sz; ++pcidx) {
         x_idcs.s[pcidx] = sys->vbls.sz;
         y_idcs.s[pcidx] = sys->vbls.sz;
         sat_idcs.s[pcidx] = sys->vbls.sz;
     }
 
-    {:for (i ; sys->vbls.sz)
+    for (uint i = 0; i < sys->vbls.sz; ++i) {
         const XnVbl* x = &sys->vbls.s[i];
         char c = x->name.s[0];
         uint pcidx = 0;
@@ -424,7 +424,7 @@ sat3_ring_soln_XnSys (TableT(XnRule)* rules,
         uint max = mid;
 
         Claim2( x->pcs.sz ,==, 3 );
-        {:for (j ; 2)
+        for (uint j = 0; j < 2; ++j) {
             uint a = x->pcs.s[j];
             if      (a < min) { mid = min; min = a; }
             else if (a > max) { mid = max; max = a; }
@@ -446,14 +446,14 @@ sat3_ring_soln_XnSys (TableT(XnRule)* rules,
         Claim( c == 'x' || c == 'y' || c == 's' );
     }
 
-    {:for (pcidx ; sys->pcs.sz)
+    for (uint pcidx = 0; pcidx < sys->pcs.sz; ++pcidx) {
         Claim2( x_idcs.s[pcidx] ,<, sys->vbls.sz );
         Claim2( y_idcs.s[pcidx] ,<, sys->vbls.sz );
         if (use_sat)
             Claim2( sat_idcs.s[pcidx] ,<, sys->vbls.sz );
     }
 
-    {:for (pcidx ; sys->pcs.sz)
+    for (uint pcidx = 0; pcidx < sys->pcs.sz; ++pcidx) {
         const uint npcs = sys->pcs.sz;
         const uint oh_pcidx = pcidx;
         const uint hi_pcidx = (oh_pcidx + 1) % npcs;
@@ -473,13 +473,13 @@ sat3_ring_soln_XnSys (TableT(XnRule)* rules,
         if (!use_sat)  Claim2( vbls.sz ,==, 6 );
         else           Claim2( vbls.sz ,==, 9 );
 
-        {:for (i ; 3)
+        for (uint i = 0; i < 3; ++i) {
             x_pidcs[i] = vbls.sz;
             y_pidcs[i] = vbls.sz;
             sat_pidcs[i] = vbls.sz;
         }
 
-        {:for (i ; vbls.sz)
+        for (uint i = 0; i < vbls.sz; ++i) {
             if      (vbls.s[i] == x_idcs.s[oh_pcidx])  x_pidcs[0] = i;
             else if (vbls.s[i] == x_idcs.s[lo_pcidx])  x_pidcs[1] = i;
             else if (vbls.s[i] == x_idcs.s[hi_pcidx])  x_pidcs[2] = i;
@@ -493,14 +493,14 @@ sat3_ring_soln_XnSys (TableT(XnRule)* rules,
             else  Claim( 0 );
         }
 
-        {:for (i ; 3)
+        for (uint i = 0; i < 3; ++i) {
             Claim2( x_pidcs[i] ,<, vbls.sz );
             Claim2( y_pidcs[i] ,<, vbls.sz );
             if (use_sat)
                 Claim2( sat_pidcs[i] ,<, vbls.sz );
         }
 
-        {:for (rule_step_idx ; n_rule_steps)
+        for (uint rule_step_idx = 0; rule_step_idx < n_rule_steps; ++rule_step_idx) {
             const XnSz rule_step = pc->rule_step + rule_step_idx;
             bool add = false;
             Bit soln_y = test_BitTable (evs, g.p.s[x_pidcs[0]]);
@@ -510,17 +510,17 @@ sat3_ring_soln_XnSys (TableT(XnRule)* rules,
 
             rule_XnSys (&g, sys, rule_step);
 
-            {:for (i ; fmla->idcs.sz)
+            for (uint i = 0; i < fmla->idcs.sz; ++i) {
                 bool allin = true;
                 bool satisfied = false;
 
                 clause.lits.sz = 0;
                 clause_of_CnfFmla (&clause, fmla, i);
 
-                {:for (j ; 3)
+                for (uint j = 0; j < 3; ++j) {
                     bool found = false;
 
-                    {:for (k ; 3)
+                    for (uint k = 0; k < 3; ++k) {
                         if (g.p.s[x_pidcs[j]] == clause.lits.s[j].vbl)
                         {
                             if (g.p.s[y_pidcs[j]] == clause.lits.s[j].val)

@@ -1,5 +1,5 @@
 /**
- * \file inst-coloring.c
+ * \file inst-coloring.h
  * Ring coloring instance!
  **/
 
@@ -8,8 +8,8 @@ static
 inst_coloring_XnSys (uint npcs, uint domsz)
 {
     DeclTable( XnDomSz, vs );
-    XnSys sys[] = default;
-    OFile name[] = default;
+    XnSys sys[] = {DEFAULT_XnSys};
+    OFile name[] = {DEFAULT_OFile};
 
 #if 0
     const bool symmetric = true;
@@ -24,7 +24,7 @@ inst_coloring_XnSys (uint npcs, uint domsz)
 #endif
 
     /* Make processes and variables.*/
-    {:for (r ; npcs)
+    for (uint r = 0; r < npcs; ++r) {
         XnVbl vbl = dflt_XnVbl ();
 
         vbl.domsz = domsz;
@@ -38,7 +38,7 @@ inst_coloring_XnSys (uint npcs, uint domsz)
     }
 
     /* Make bidirectional ring topology.*/
-    {:for (r ; npcs)
+    for (uint r = 0; r < npcs; ++r) {
         assoc_XnSys (sys, r, r, Yes);
         assoc_XnSys (sys, r, dec1mod (r, npcs), May);
         assoc_XnSys (sys, r, inc1mod (r, npcs), May);
@@ -46,10 +46,10 @@ inst_coloring_XnSys (uint npcs, uint domsz)
 
     accept_topology_XnSys (sys);
 
-    {:for (sidx ; sys->nstates)
+    for (uint sidx = 0; sidx < sys->nstates; ++sidx) {
         bool good = true;
         statevs_of_XnSys (&vs, sys, sidx);
-        {:for (r ; npcs)
+        for (uint r = 0; r < npcs; ++r) {
             good =
                 (vs.s[r] != vs.s[dec1mod (r, npcs)]) &&
                 (vs.s[r] != vs.s[inc1mod (r, npcs)]);
