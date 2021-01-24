@@ -18,7 +18,7 @@ extern "C" {
 
 #include "../namespace.hh"
 
-#include "canonical.cc"
+#include "canonical.hh"
 
 struct SearchOpt
 {

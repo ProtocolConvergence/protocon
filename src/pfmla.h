@@ -175,7 +175,7 @@ qual_inline
   PFmla
 dflt1_PFmla (bool phase)
 {
-  PFmla g = default;
+  PFmla g = DEFAULT_PFmla;
   wipe1_PFmla (&g, phase);
   return g;
 }

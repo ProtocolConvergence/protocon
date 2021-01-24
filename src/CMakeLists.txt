@@ -131,6 +131,7 @@ list (APPEND HHFiles
   prot-xfile.hh prot-ofile.hh
   namespace.hh
   uni/adjlist.hh
+  uni/canonical.hh
   uni/livelock.hh
   uni/uniact.hh
   uni/unifile.hh

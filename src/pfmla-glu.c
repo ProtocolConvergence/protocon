@@ -461,7 +461,7 @@ lose_GluPFmlaCtx (PFmlaCtx* fmlactx)
   GluPFmlaCtx* ctx = castup_as_GluPFmlaCtx (fmlactx);
   if (ctx->vbl_lists.sz > 0)
   {
-    for (i ; ctx->vbl_lists.sz) {
+    for (uint i = 0; i < ctx->vbl_lists.sz; ++i) {
       array_free(ctx->vbl_lists.s[i]);
       array_free(ctx->pre_vbl_lists.s[i]);
       array_free(ctx->img_vbl_lists.s[i]);

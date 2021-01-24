@@ -29,7 +29,7 @@ free_PFmlaCtx (PFmlaCtx* ctx)
 
   lose_Associa (&ctx->vbl_map);
 
-  for (i ; ctx->vbl_lists.sz)
+  for (uint i = 0; i < ctx->vbl_lists.sz; ++i)
     LoseTable( ctx->vbl_lists.s[i] );
   LoseTable( ctx->vbl_lists );
   if (mem)
@@ -264,7 +264,7 @@ sat_ck_PFmla (const PFmla g)
 
   Claim( g->ctx->vt->tautology_ck_fn );
   {
-    PFmla c = default;
+    PFmla c = DEFAULT_PFmla;
     bool ret;
     g->ctx->vt->op2_fn (g->ctx, &c, BitOp_NOT0, g, g);
     ret = g->ctx->vt->tautology_ck_fn (g->ctx, c);
@@ -299,7 +299,7 @@ equiv_ck_PFmla (const PFmla a, const PFmla b)
 
   Claim( a->ctx->vt->tautology_ck_fn );
   {
-    PFmla c = default;
+    PFmla c = DEFAULT_PFmla;
     bool ret;
     a->ctx->vt->op2_fn (a->ctx, &c, BitOp_XNOR, a, b);
     ret = a->ctx->vt->tautology_ck_fn (a->ctx, c);
@@ -332,7 +332,7 @@ overlap_ck_PFmla (const PFmla a, const PFmla b)
     return a->ctx->vt->overlap_ck_fn (a->ctx, a, b);
 
   {
-    PFmla c = default;
+    PFmla c = DEFAULT_PFmla;
     bool ret;
     and_PFmla (&c, a, b);
     ret = sat_ck_PFmla (c);
@@ -364,7 +364,7 @@ subseteq_ck_PFmla (const PFmla a, const PFmla b)
   VTCall( a->ctx->vt, return,subseteq_ck_fn,(a->ctx, a, b) );
 
   {
-    PFmla c = default;
+    PFmla c = DEFAULT_PFmla;
     bool ret;
     or_PFmla (&c, a, b);
     ret = equiv_ck_PFmla (c, b);
@@ -641,9 +641,9 @@ pick_pre_PFmla (PFmla* dst, const PFmla a)
   else
   {
     PFmlaCtx* ctx = a->ctx;
-    PFmla eq = default;
+    PFmla eq = DEFAULT_PFmla;
     PFmla conj = dflt1_PFmla (true);
-    PFmla tmp_conj = default;
+    PFmla tmp_conj = DEFAULT_PFmla;
 
     for (uint i = 0; i < ctx->vbls.sz; ++i) {
       const PFmlaVbl* vbl = vbl_of_PFmlaCtx (ctx, i);
@@ -673,19 +673,19 @@ state_of_PFmla (uint* state, const PFmla a, const uint* indices, uint n)
   if (phase_a != May)
   {
     Claim( (phase_a == Yes) && "No satisfying state." );
-    for (i ; n)  state[i] = 0;
+    for (uint i = 0; i < n; ++i)  state[i] = 0;
   }
   else
   {
     PFmlaCtx* ctx = a->ctx;
-    PFmla eq = default;
+    PFmla eq = DEFAULT_PFmla;
     PFmla conj = dflt1_PFmla (true);
-    PFmla tmp_conj = default;
+    PFmla tmp_conj = DEFAULT_PFmla;
 
-    for (i ; n) {
+    for (uint i = 0; i < n; ++i) {
       const PFmlaVbl* vbl = vbl_of_PFmlaCtx (ctx, indices[i]);
       bool found = false;
-      for (val ; vbl->domsz-1) {
+      for (uint val = 0; val < vbl->domsz-1; ++val) {
         eqc_PFmlaVbl (&eq, vbl, val);
         and_PFmla (&tmp_conj, conj, eq);
         if (overlap_ck_PFmla (tmp_conj, a)) {
@@ -716,8 +716,8 @@ eq_PFmlaVbl (PFmla* dst, const PFmlaVbl* a, const PFmlaVbl* b)
   }
   else {
     const uint n = (a->domsz <= b->domsz) ? a->domsz : b->domsz;
-    PFmla tmp_a = default;
-    PFmla tmp_b = default;
+    PFmla tmp_a = DEFAULT_PFmla;
+    PFmla tmp_b = DEFAULT_PFmla;
 
     wipe1_PFmla (dst, false);
     for (uint i = 0; i < n; ++i) {
@@ -754,8 +754,8 @@ img_eq_PFmlaVbl (PFmla* dst, const PFmlaVbl* a, const PFmlaVbl* b)
     // Use the RHS domain size rather than the minimum in order to be
     // consistent with img_eqc_PFmla(), which computes equality mod the RHS.
     const uint domsz = b->domsz;
-    PFmla tmp_a = default;
-    PFmla tmp_b = default;
+    PFmla tmp_a = DEFAULT_PFmla;
+    PFmla tmp_b = DEFAULT_PFmla;
 
     wipe1_PFmla (dst, false);
     for (uint i = 0; i < domsz; ++i) {
@@ -789,8 +789,8 @@ img_eq_img_PFmlaVbl (PFmla* dst, const PFmlaVbl* a, const PFmlaVbl* b)
     // Use the RHS domain size rather than the minimum in order to be
     // consistent with img_eqc_PFmla(), which computes equality mod the RHS.
     const uint domsz = b->domsz;
-    PFmla tmp_a = default;
-    PFmla tmp_b = default;
+    PFmla tmp_a = DEFAULT_PFmla;
+    PFmla tmp_b = DEFAULT_PFmla;
 
     wipe1_PFmla (dst, false);
     for (uint i = 0; i < domsz; ++i) {

@@ -9,6 +9,7 @@ set_target_properties (uni-aperiodic PROPERTIES
 
 #### Generate Unidirectional Ring Protocols ####
 addbinexe (uni-generate uni/generate.cc
+  uni/canonical.cc
   uni/livelock.cc uni/unifile.cc
   pfmla-glu.c pfmla.c pfmla.cc)
 set_property (TARGET uni-generate

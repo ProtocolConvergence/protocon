@@ -1,5 +1,10 @@
 
-static
+#include "canonical.hh"
+
+#include "cx/bittable.hh"
+
+#include "../namespace.hh"
+
   bool
 minimal_unique_ck (const uint* a, uint n)
 {
@@ -16,7 +21,6 @@ minimal_unique_ck (const uint* a, uint n)
   return true;
 }
 
-static
   void
 permute_pc_act (Table<PcState>& ppgfun, const Table<PcState>& choice, const Table<uint>& perm_map)
 {
@@ -66,3 +70,4 @@ canonical_ck(const Table<PcState>& choice, const uint domsz)
   return true;
 }
 
+END_NAMESPACE
