@@ -4,6 +4,8 @@
 #include "uniact.hh"
 #include "cx/table.hh"
 
+#include "../namespace.hh"
+
 bool
 minimal_unique_ck (const uint* a, uint n);
 void
@@ -11,4 +13,5 @@ permute_pc_act (Cx::Table<PcState>& ppgfun, const Cx::Table<PcState>& choice, co
 bool
 canonical_ck(const Cx::Table<PcState>& choice, const uint domsz);
 
+END_NAMESPACE
 #endif

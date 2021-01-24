@@ -4,6 +4,7 @@ extern "C" {
 }
 
 #include "adjlist.hh"
+#include "canonical.hh"
 #include "livelock.hh"
 #include "uniact.hh"
 #include "unifile.hh"
@@ -17,8 +18,6 @@ extern "C" {
 #include <algorithm>
 
 #include "../namespace.hh"
-
-#include "canonical.hh"
 
 struct SearchOpt
 {
