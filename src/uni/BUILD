@@ -63,23 +63,44 @@ cc_binary(
     ],
 )
 
-#cc_binary(
-#    name = "synthesize",
-#    srcs = [
-#        "synthesize.cc",
-#        "adjlist.hh",
-#        "uniact.hh",
-#        "unifile.cc",
-#        "unifile.hh",
-#        "//src:namespace.hh",
-#    ],
-#    deps = [
-#        "//src:pfmla_lib",
-#        "//src/cx:cx_lib",
-#    ],
-#    copts = [
-#        "-Isrc",
-#        "-Iexternal/lace/src",
-#    ],
-#)
+cc_binary(
+    name = "synthesize",
+    srcs = [
+        "synthesize.cc",
+        "adjlist.hh",
+        "uniact.hh",
+        "unifile.cc",
+        "unifile.hh",
+        "//src:namespace.hh",
+    ],
+    deps = [
+        "//src:prot_file_lib",
+        "//src/cx:cx_lib",
+    ],
+    copts = [
+        "-Isrc",
+        "-Iexternal/lace/src",
+    ],
+)
 
+cc_binary(
+    name = "xlate",
+    srcs = [
+        "xlate.cc",
+        "adjlist.hh",
+        "livelock.cc",
+        "livelock.hh",
+        "uniact.hh",
+        "unifile.cc",
+        "unifile.hh",
+        "//src:namespace.hh",
+    ],
+    deps = [
+        "//src:prot_file_lib",
+        "//src/cx:cx_lib",
+    ],
+    copts = [
+        "-Isrc",
+        "-Iexternal/lace/src",
+    ],
+)

@@ -1,3 +1,4 @@
+load("@rules_foreign_cc//tools/build_defs:make.bzl", "make")
 load("@rules_foreign_cc//tools/build_defs:cmake.bzl", "cmake_external")
 
 exports_files([
@@ -14,6 +15,30 @@ cmake_external(
         "libcu.a",
     ],
 )
+
+
+make(
+    name = "peg",
+    lib_source = "@peg//:all",
+    binaries = [
+        "peg",
+        "leg",
+    ],
+)
+filegroup(
+    name = "peg_leg",
+    srcs = [":peg"],
+    output_group = "leg",
+)
+
+genrule(
+    name = "prot_xfile_leg",
+    srcs = ["prot-xfile.leg"],
+    tools = [":peg_leg"],
+    cmd = "$(location peg_leg) -o \"$@\" $(location prot-xfile.leg)",
+    outs = ["prot-xfile.leg.cc"],
+)
+
 
 cc_library(
     name = "pfmla_glu_lib",
@@ -68,6 +93,30 @@ cc_library(
     ],
     deps = [
         ":pfmla_lib",
+    ],
+    copts = [
+        "-Isrc",
+        "-Iexternal/lace/src",
+    ],
+    visibility = [
+        "//src/uni:__pkg__",
+    ],
+)
+
+cc_library(
+    name = "prot_file_lib",
+    srcs = [
+        "namespace.hh",
+        "pla.cc",
+        "pla.hh",
+        "prot-ofile.cc",
+        "prot-ofile.hh",
+        "prot-xfile.cc",
+        "prot-xfile.hh",
+        "prot-xfile.leg.cc",
+    ],
+    deps = [
+        ":xnsys_lib",
     ],
     copts = [
         "-Isrc",

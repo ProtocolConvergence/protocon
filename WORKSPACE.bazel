@@ -22,6 +22,14 @@ git_repository(
 
 all_content = """filegroup(name = "all", srcs = glob(["**"]), visibility = ["//visibility:public"])"""
 
+http_archive(
+    name = "peg",
+    build_file_content = all_content,
+    urls = ["https://github.com/gpakosz/peg/archive/0.1.18.tar.gz"],
+    sha256 = "aa25b2e10cc673a0a6f20114b0dc5cfc6ce221d1c257852fe4128f0782cbb585",
+    strip_prefix = "peg-0.1.18",
+)
+
 new_git_repository(
     name = "mdd_glu",
     build_file_content = all_content,

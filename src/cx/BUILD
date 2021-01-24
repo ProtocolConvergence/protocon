@@ -11,6 +11,8 @@ cc_library(
         "lgtable.hh",
         "map.hh",
         "ofile.hh",
+        "sesp.c",
+        "sesp.h",
         "set.hh",
         "synhax.hh",
         "table.hh",
