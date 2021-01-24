@@ -15,7 +15,7 @@ find_library (M_LIB m)
 find_package(MPI)
 find_package(OpenMP)
 
-add_definitions (-DPROJECT_NAMESPACE=protocon)
+add_definitions (-DPROTOCON_NAMESPACE=protocon)
 
 set (TopPath ${CMAKE_CURRENT_SOURCE_DIR}/..)
 set (BinPath ${TopPath}/bin)

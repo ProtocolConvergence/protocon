@@ -728,7 +728,7 @@ END_NAMESPACE
 
 int main(int argc, char** argv)
 {
-  using namespace PROJECT_NAMESPACE;
+  using namespace PROTOCON_NAMESPACE;
   int argi = init_sysCx (&argc, &argv);
 
   if (argi == argc) {

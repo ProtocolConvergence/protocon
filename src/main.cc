@@ -11,7 +11,7 @@
 /** Execute me now!*/
 int main(int argc, char** argv)
 {
-  using namespace PROJECT_NAMESPACE;
+  using namespace PROTOCON_NAMESPACE;
   int argi = init_sysCx (&argc, &argv);
   DeclLegit( good );
   AddConvergenceOpt opt;
@@ -173,7 +173,7 @@ END_NAMESPACE
 
 int main(int argc, char** argv)
 {
-  return PROJECT_NAMESPACE::main(argc, argv);
+  return PROTOCON_NAMESPACE::main(argc, argv);
 }
 
 

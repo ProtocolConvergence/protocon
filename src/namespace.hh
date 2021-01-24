@@ -31,7 +31,10 @@ namespace X {
   class FmlaeCtx;
 }
 
-namespace PROJECT_NAMESPACE {
+#ifndef PROTOCON_NAMESPACE
+#define PROTOCON_NAMESPACE protocon
+#endif
+namespace PROTOCON_NAMESPACE {
   typedef Cx::AlphaTab String;
   using Cx::BitTable;
   using Cx::FlatSet;

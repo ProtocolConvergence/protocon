@@ -17,7 +17,10 @@ extern "C" {
   result = xget_char_XFile (&yy->st->xf, buf) ? 1 : 0; \
 }
 
-namespace PROJECT_NAMESPACE {
+#ifndef PROTOCON_NAMESPACE
+#define PROTOCON_NAMESPACE protocon
+#endif
+namespace PROTOCON_NAMESPACE {
 %}
 
 ProtoconFile =
@@ -760,5 +763,5 @@ ReadProtoconFile(Xn::Sys& sys, const ProtoconFileOpt& opt)
   return good;
 }
 
-} // PROJECT_NAMESPACE
+} // PROTOCON_NAMESPACE
 

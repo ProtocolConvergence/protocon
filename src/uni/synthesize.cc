@@ -263,5 +263,5 @@ ReadUniRing(const char* filepath, Xn::Sys& sys, vector<UniStep>& legits)
 END_NAMESPACE
 
 int main(int argc, char** argv) {
-  return PROJECT_NAMESPACE::main(argc, argv);
+  return PROTOCON_NAMESPACE::main(argc, argv);
 }

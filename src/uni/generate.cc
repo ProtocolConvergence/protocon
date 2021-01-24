@@ -723,5 +723,5 @@ TestKnownAperiodic()
 END_NAMESPACE
 
 int main(int argc, char** argv) {
-  return PROJECT_NAMESPACE::main(argc, argv);
+  return PROTOCON_NAMESPACE::main(argc, argv);
 }
