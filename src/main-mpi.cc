@@ -1,6 +1,6 @@
 
 #include <mpi.h>
-#include "main-all.cc"
+#include "main-all.hh"
 
 #include <errno.h>
 #include "cx/mpidissem.hh"

@@ -114,7 +114,6 @@ list (APPEND CCFiles
   uni/unifile.cc
   uni/xlate.cc
   msat.cc
-  main-all.cc
   )
 list (APPEND HHFiles
   pfmla.hh xfmlae.hh
@@ -135,6 +134,7 @@ list (APPEND HHFiles
   uni/livelock.hh
   uni/uniact.hh
   uni/unifile.hh
+  main-all.hh
   )
 
 #### Source-to-Source Tranlation Helpers ####

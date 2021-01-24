@@ -1,5 +1,5 @@
 
-#include "main-all.cc"
+#include "main-all.hh"
 
 #include "graphviz.hh"
 #include "udp-ofile.hh"
