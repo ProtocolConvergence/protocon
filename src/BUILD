@@ -51,7 +51,6 @@ cc_library(
         "//src/cx:cx_lib",
     ],
     copts = [
-        "-Isrc",
         "-Iexternal/lace/src",
         "-Iexternal/mdd_glu/include",
     ],
@@ -69,11 +68,24 @@ cc_library(
         ":pfmla_glu_lib",
     ],
     copts = [
-        "-Isrc",
         "-Iexternal/lace/src",
     ],
     visibility = [
         "//src/uni:__pkg__",
+    ],
+)
+
+cc_test(
+    name = "pfmla_test",
+    srcs = [
+        "namespace.hh",
+        "pfmla_test.cc",
+    ],
+    deps = [
+        ":pfmla_lib",
+    ],
+    copts = [
+        "-Iexternal/lace/src",
     ],
 )
 
@@ -94,11 +106,27 @@ cc_library(
         ":pfmla_lib",
     ],
     copts = [
-        "-Isrc",
         "-Iexternal/lace/src",
     ],
-    visibility = [
-        "//src/uni:__pkg__",
+)
+
+cc_test(
+    name = "xnsys_test",
+    srcs = [
+        "inst.cc",
+        "inst.hh",
+        "namespace.hh",
+        "xnpc.hh",
+        "xnsys.hh",
+        "xfmlae.hh",
+        "xnspec.hh",
+        "xnsys_test.cc",
+    ],
+    deps = [
+        ":xnsys_lib",
+    ],
+    copts = [
+        "-Iexternal/lace/src",
     ],
 )
 

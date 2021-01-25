@@ -19,6 +19,7 @@ git_repository(
     name = "lace",
     commit = "8f2188da058faa672c6b3119b00ea2b6eb7aeff1",
     remote = "https://github.com/grencez/lace.git",
+    shallow_since = "1611540755 -0800",
 )
 
 new_git_repository(

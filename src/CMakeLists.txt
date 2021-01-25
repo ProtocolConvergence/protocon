@@ -11,6 +11,57 @@ add_subdirectory(gui)
 add_subdirectory(udp-impl)
 add_subdirectory(satsyn)
 
+
+add_library(pfmla_lib STATIC
+  "pfmla.c"
+  "pfmla.cc"
+  "pfmla-glu.c"
+  "pfmla-glu.h"
+  "pfmla.h"
+  "pfmla.h"
+  "pfmla.hh"
+  )
+set_property(TARGET pfmla_lib
+  APPEND PROPERTY INCLUDE_DIRECTORIES ${GluIncludePath})
+set_property(TARGET pfmla_lib APPEND PROPERTY INCLUDE_DIRECTORIES
+  "${LaceCxIncludePath}")
+target_link_libraries(pfmla_lib lace_cx_lib ${mdd_glu_libs})
+
+add_executable(pfmla_test
+  "pfmla_test.cc"
+  )
+set_property(TARGET pfmla_test APPEND PROPERTY INCLUDE_DIRECTORIES
+  "${LaceCxIncludePath}")
+target_link_libraries(pfmla_test pfmla_lib)
+add_test(NAME pfmla_test COMMAND pfmla_test)
+
+
+add_library(xnsys_lib STATIC
+  "xfmlae.cc"
+  "xfmlae.hh"
+  "xnsys.cc"
+  "xnsys.hh"
+  "xnpc.cc"
+  "xnpc.hh"
+  "xnspec.cc"
+  "xnspec.hh"
+  )
+set_property(TARGET xnsys_lib
+  APPEND PROPERTY INCLUDE_DIRECTORIES ${GluIncludePath})
+set_property(TARGET xnsys_lib APPEND PROPERTY INCLUDE_DIRECTORIES
+  "${LaceCxIncludePath}")
+target_link_libraries(xnsys_lib pfmla_lib)
+
+add_executable(xnsys_test
+  "inst.cc"
+  "xnsys_test.cc"
+  )
+set_property(TARGET xnsys_test APPEND PROPERTY INCLUDE_DIRECTORIES
+  "${LaceCxIncludePath}")
+target_link_libraries(xnsys_test xnsys_lib)
+add_test(NAME xnsys_test COMMAND xnsys_test)
+
+
 add_executable(conflictfamily_test
   "conflictfamily_test.cc"
   "conflictfamily.cc"
@@ -100,7 +151,11 @@ list (APPEND HHFiles
 #### Source-to-Source Tranlation Helpers ####
 
 set (BldPath protocon)
+set (TMP_C_FLAGS "${CMAKE_C_FLAGS}")
+set (TMP_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 include (${CxTopPath}/src/include.cmake)
+set (CMAKE_C_FLAGS "${TMP_C_FLAGS}")
+set (CMAKE_CXX_FLAGS "${TMP_CXX_FLAGS}")
 
 add_dependencies (cx cx_project)
 add_dependencies (cembed cx_project)

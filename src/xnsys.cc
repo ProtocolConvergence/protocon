@@ -1,7 +1,7 @@
 
 #include "xnsys.hh"
-#include <cx/bittable.hh>
-#include <cx/tuple.hh>
+#include "cx/bittable.hh"
+#include "cx/tuple.hh"
 
 Cx::OFile DBogOF( stderr_OFile () );
 

@@ -1,5 +1,3 @@
-IntPFmla
-PFmla
 PcXn_rryy
 PcXn_rryy_file
 PcXn_rw_random
@@ -15,4 +13,3 @@ ShadowColorRing
 ShadowMatchRing
 TokenRingClosure
 XFmlae
-XnSys
