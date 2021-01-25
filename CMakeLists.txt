@@ -21,7 +21,7 @@ ExternalProject_Add(lace_project
   CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>"
   BUILD_BYPRODUCTS
   "<BINARY_DIR>/src/comparispawn"
-  "<BINARY_DIR>/src/cx/libcx.a"
+  "<BINARY_DIR>/src/cx/libcx_lib.a"
   )
 add_executable(lace IMPORTED)
 #add_executable(comparispawn IMPORTED)
@@ -30,9 +30,11 @@ ExternalProject_Get_Property(lace_project INSTALL_DIR)
 set_target_properties(lace PROPERTIES IMPORTED_LOCATION "${INSTALL_DIR}/lace")
 ExternalProject_Get_Property(lace_project BINARY_DIR)
 #set_target_properties(comparispawn PROPERTIES IMPORTED_LOCATION "${BINARY_DIR}/lace")
-set_target_properties(lace_cx_lib PROPERTIES IMPORTED_LOCATION "${BINARY_DIR}/cx/libcx.a")
+set_target_properties(lace_cx_lib PROPERTIES IMPORTED_LOCATION "${BINARY_DIR}/src/cx/libcx_lib.a")
 add_dependencies (lace lace_project)
 add_dependencies (lace_cx_lib lace_project)
+ExternalProject_Get_Property(lace_project SOURCE_DIR)
+set (LaceCxIncludePath "${SOURCE_DIR}/src")
 
 
 ExternalProject_Add(mdd_glu_project

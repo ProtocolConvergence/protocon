@@ -6,6 +6,10 @@ find_package(OpenMP)
 
 add_definitions (-DPROTOCON_NAMESPACE=protocon)
 
+add_subdirectory(gui)
+add_subdirectory(satsyn)
+
+
 set (TopPath ${CMAKE_CURRENT_SOURCE_DIR}/..)
 set (BinPath ${TopPath}/bin)
 set (DepPath ${TopPath}/dep)
@@ -23,14 +27,6 @@ ExternalProject_Add(cx_project
   )
 
 #### Sources ####
-
-list (APPEND CFiles satsyn/satsyn.c satsyn/xnsys.c)
-list (APPEND HFiles
-  satsyn/xnsys.h
-  satsyn/dimacs.h satsyn/pla.h satsyn/promela.h
-  satsyn/inst-sat3.h satsyn/inst-matching.h satsyn/inst-coloring.h
-  satsyn/inst-bit3.h satsyn/inst-dijkstra.h satsyn/inst-dijkstra4state.h
-  )
 
 list (APPEND CFiles
   pfmla.c pfmla-glu.c pfmla-bittable.c)
@@ -101,16 +97,10 @@ add_dependencies (comparispawn cx_project)
 
 set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${BinPath})
 
-#### GUI ####
-add_subdirectory (gui)
 
-#### Reduction-to-SAT Solver ####
-# Not really used.
-addbinexe (satsyn satsyn/satsyn.c satsyn/xnsys.c)
 
 file (MAKE_DIRECTORY ${BldPath}/udp-impl)
 file (MAKE_DIRECTORY ${BldPath}/uni)
-file (MAKE_DIRECTORY ${BldPath}/satsyn)
 
 #### Parser Generation ####
 add_custom_command (
@@ -135,8 +125,6 @@ list (APPEND ProtoconSources
   synthesis.cc
   conflictfamily.cc
   )
-
-#link_directories("${GluLibPath}")
 
 
 #### Unit Test Executable ####
