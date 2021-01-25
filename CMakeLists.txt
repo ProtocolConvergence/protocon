@@ -11,16 +11,48 @@ project (protocon)
 #set (CMAKE_BUILD_TYPE RELEASE)
 #set (CMAKE_BUILD_TYPE RelWithDebInfo)
 
+
 include(ExternalProject)
+
+
+ExternalProject_Add(lace_project
+  GIT_REPOSITORY "https://github.com/grencez/lace.git"
+  GIT_TAG "8f2188da058faa672c6b3119b00ea2b6eb7aeff1"
+  CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>"
+  BUILD_BYPRODUCTS
+  "<BINARY_DIR>/src/comparispawn"
+  "<BINARY_DIR>/src/cx/libcx.a"
+  )
+add_executable(lace IMPORTED)
+#add_executable(comparispawn IMPORTED)
+add_library (lace_cx_lib STATIC IMPORTED)
+ExternalProject_Get_Property(lace_project INSTALL_DIR)
+set_target_properties(lace PROPERTIES IMPORTED_LOCATION "${INSTALL_DIR}/lace")
+ExternalProject_Get_Property(lace_project BINARY_DIR)
+#set_target_properties(comparispawn PROPERTIES IMPORTED_LOCATION "${BINARY_DIR}/lace")
+set_target_properties(lace_cx_lib PROPERTIES IMPORTED_LOCATION "${BINARY_DIR}/cx/libcx.a")
+add_dependencies (lace lace_project)
+add_dependencies (lace_cx_lib lace_project)
+
 
 ExternalProject_Add(mdd_glu_project
   GIT_REPOSITORY "https://github.com/grencez/mdd-glu.git"
   GIT_TAG "12aa6cced018d976af234f35f87c80606758469d"
   CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>"
   )
+add_library (mdd_cu_lib STATIC IMPORTED)
+add_library (mdd_glu_lib STATIC IMPORTED)
+add_library (mdd_cal_lib STATIC IMPORTED)
 ExternalProject_Get_Property(mdd_glu_project INSTALL_DIR)
+set_target_properties(mdd_cu_lib PROPERTIES IMPORTED_LOCATION "${INSTALL_DIR}/lib/libcu.a")
+set_target_properties(mdd_glu_lib PROPERTIES IMPORTED_LOCATION "${INSTALL_DIR}/lib/libglu.a")
+set_target_properties(mdd_cal_lib PROPERTIES IMPORTED_LOCATION "${INSTALL_DIR}/lib/libcal.a")
+add_dependencies (mdd_cu_lib mdd_glu_project)
+add_dependencies (mdd_glu_lib mdd_glu_project)
+add_dependencies (mdd_cal_lib mdd_glu_project)
+list (APPEND mdd_glu_libs mdd_cu_lib mdd_glu_lib mdd_cal_lib)
 set (GluIncludePath "${INSTALL_DIR}/include")
-set (GluLibPath "${INSTALL_DIR}/lib")
+
 
 ExternalProject_Add(peg_project
   URL "https://github.com/gpakosz/peg/archive/0.1.18.tar.gz"
@@ -29,8 +61,10 @@ ExternalProject_Add(peg_project
   CONFIGURE_COMMAND echo "No configure step."
   INSTALL_COMMAND echo "No install step."
   )
+add_executable(peg_leg IMPORTED)
 ExternalProject_Get_Property(peg_project SOURCE_DIR)
-set (peg_exe "${SOURCE_DIR}/leg")
+set_target_properties(peg_leg PROPERTIES IMPORTED_LOCATION "${SOURCE_DIR}/leg")
+add_dependencies (peg_leg peg_project)
 
 
 enable_testing ()

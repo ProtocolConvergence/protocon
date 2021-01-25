@@ -14,7 +14,7 @@ addbinexe (uni-generate uni/generate.cc
   pfmla-glu.c pfmla.c pfmla.cc)
 set_property (TARGET uni-generate
   APPEND PROPERTY INCLUDE_DIRECTORIES ${GluIncludePath})
-target_link_libraries (uni-generate cu glu cal ${M_LIB})
+target_link_libraries (uni-generate ${mdd_glu_libs} ${M_LIB})
 set_target_properties (uni-generate PROPERTIES
   OUTPUT_NAME generate
   RUNTIME_OUTPUT_DIRECTORY ${UniringBinPath})
@@ -32,7 +32,7 @@ addbinexe (uni-classify uni/classify.cc
   pfmla-glu.c pfmla.c pfmla.cc)
 set_property (TARGET uni-classify
   APPEND PROPERTY INCLUDE_DIRECTORIES ${GluIncludePath})
-target_link_libraries (uni-classify cu glu cal ${M_LIB})
+target_link_libraries (uni-classify ${mdd_glu_libs} ${M_LIB})
 set_target_properties (uni-classify PROPERTIES
   OUTPUT_NAME classify
   RUNTIME_OUTPUT_DIRECTORY ${UniringBinPath})
@@ -47,7 +47,7 @@ set_property (TARGET uni-synthesize
 #  PROPERTY LINK_FLAGS "-Wextra -std=c++11")
 #set_source_files_properties (${BldPath}/uni/synthesize.cc
 #  PROPERTIES COMPILE_FLAGS "-Wextra -std=c++11")
-target_link_libraries (uni-synthesize cu glu cal ${M_LIB})
+target_link_libraries (uni-synthesize ${mdd_glu_libs} ${M_LIB})
 set_target_properties (uni-synthesize PROPERTIES
   OUTPUT_NAME synthesize
   RUNTIME_OUTPUT_DIRECTORY ${UniringBinPath})

@@ -113,14 +113,10 @@ file (MAKE_DIRECTORY ${BldPath}/uni)
 file (MAKE_DIRECTORY ${BldPath}/satsyn)
 
 #### Parser Generation ####
-if (NOT DEFINED peg_exe)
-  set (peg_exe leg)
-endif ()
-
 add_custom_command (
   OUTPUT ${BldPath}/prot-xfile.leg.cc
-  COMMAND ${peg_exe} -o ${BldPath}/prot-xfile.leg.cc ${CMAKE_CURRENT_SOURCE_DIR}/prot-xfile.leg
-  DEPENDS peg_project ${CMAKE_CURRENT_SOURCE_DIR}/prot-xfile.leg)
+  COMMAND peg_leg -o ${BldPath}/prot-xfile.leg.cc ${CMAKE_CURRENT_SOURCE_DIR}/prot-xfile.leg
+  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/prot-xfile.leg)
 set_bld_cfile_properties (${BldPath}/prot-xfile.leg.cc)
 set_property (SOURCE ${BldPath}/prot-xfile.leg.cc
   APPEND PROPERTY COMPILE_FLAGS "-Wno-unused -Wno-unused-parameter")
@@ -140,7 +136,7 @@ list (APPEND ProtoconSources
   conflictfamily.cc
   )
 
-link_directories("${GluLibPath}")
+#link_directories("${GluLibPath}")
 
 
 #### Unit Test Executable ####
@@ -156,8 +152,7 @@ set_target_properties (test_exe PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 set_property (TARGET test_exe
   APPEND PROPERTY INCLUDE_DIRECTORIES ${GluIncludePath})
-target_link_libraries (test_exe cu glu cal ${M_LIB})
-add_dependencies (test_exe mdd_glu_project)
+target_link_libraries (test_exe ${mdd_glu_libs} ${M_LIB})
 
 file (MAKE_DIRECTORY ${BldPath}/test-dep)
 add_custom_command (
@@ -184,8 +179,7 @@ addbinexe (protocon
   )
 set_property (TARGET protocon
   APPEND PROPERTY INCLUDE_DIRECTORIES ${GluIncludePath})
-target_link_libraries (protocon cu glu cal ${M_LIB})
-add_dependencies (protocon mdd_glu_project)
+target_link_libraries (protocon ${mdd_glu_libs} ${M_LIB})
 
 set (protocon_exe "$<TARGET_FILE:protocon>")
 
@@ -237,8 +231,7 @@ set_target_properties (biring PROPERTIES
 addbinexe (deadfree deadfree.cc ${ProtoconSources})
 set_property (TARGET deadfree
   APPEND PROPERTY INCLUDE_DIRECTORIES ${GluIncludePath})
-target_link_libraries (deadfree cu glu cal ${M_LIB})
-add_dependencies (deadfree mdd_glu_project)
+target_link_libraries (deadfree ${mdd_glu_libs} ${M_LIB})
 set_target_properties (deadfree PROPERTIES
   OUTPUT_NAME deadfree
   RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
@@ -273,8 +266,7 @@ if (MPI_FOUND)
   set_property (TARGET protocon-mpi
     APPEND PROPERTY INCLUDE_DIRECTORIES ${GluIncludePath} ${MPI_INCLUDE_PATH})
   target_link_libraries (protocon-mpi ${MPI_LIBRARIES})
-  target_link_libraries (protocon-mpi cu glu cal ${M_LIB})
-  add_dependencies (protocon-mpi mdd_glu_project)
+  target_link_libraries (protocon-mpi ${mdd_glu_libs} ${M_LIB})
 
   if(MPI_COMPILE_FLAGS)
     set (MPI_COMPILE_FLAGS "${MPI_COMPILE_FLAGS} ${DEFAULT_COMPILE_FLAGS}")
@@ -307,8 +299,7 @@ string (REGEX REPLACE "(^| )[/-]pedantic($| )" " "
 
 if (FALSE)
   addbinexe (msat msat.cc ${ProtoconSources})
-  target_link_libraries (msat minisat cu glu cal ${M_LIB})
-  add_dependencies (msat mdd_glu_project)
+  target_link_libraries (msat minisat ${mdd_glu_libs} ${M_LIB})
   set_target_properties (msat PROPERTIES
     COMPILE_FLAGS ${satccflags})
   set_property (TARGET msat

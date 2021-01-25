@@ -1,0 +1,2 @@
+# Ignore CMake build artifacts.
+bld
