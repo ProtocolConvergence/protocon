@@ -1,54 +1,88 @@
 
-set (UniringBinPath ${CMAKE_CURRENT_BINARY_DIR}/uni)
 
 #### Aperiodic Unidirectional Ring Protocol ####
-addbinexe (uni-aperiodic uni/aperiodic.cc uni/unifile.cc)
-set_target_properties (uni-aperiodic PROPERTIES
-  OUTPUT_NAME aperiodic
-  RUNTIME_OUTPUT_DIRECTORY ${UniringBinPath})
+add_executable(uni_aperiodic
+  "aperiodic.cc"
+  "uniact.hh"
+  "unifile.cc"
+  "unifile.hh"
+  )
+set_property(TARGET uni_aperiodic APPEND PROPERTY INCLUDE_DIRECTORIES
+  "${LaceCxIncludePath}" "${CMAKE_CURRENT_SOURCE_DIR}/..")
+set_target_properties(uni_aperiodic PROPERTIES
+  OUTPUT_NAME "aperiodic")
+target_link_libraries(uni_aperiodic lace_cx_lib)
+
 
 #### Generate Unidirectional Ring Protocols ####
-addbinexe (uni-generate uni/generate.cc
-  uni/canonical.cc
-  uni/livelock.cc uni/unifile.cc
-  pfmla-glu.c pfmla.c pfmla.cc)
-set_property (TARGET uni-generate
-  APPEND PROPERTY INCLUDE_DIRECTORIES ${GluIncludePath})
-target_link_libraries (uni-generate ${mdd_glu_libs} ${M_LIB})
-set_target_properties (uni-generate PROPERTIES
-  OUTPUT_NAME generate
-  RUNTIME_OUTPUT_DIRECTORY ${UniringBinPath})
+add_executable(uni_generate
+  "generate.cc"
+  "adjlist.hh"
+  "canonical.cc"
+  "canonical.hh"
+  "livelock.cc"
+  "livelock.hh"
+  "uniact.hh"
+  "unifile.cc"
+  "unifile.hh"
+  )
+set_property(TARGET uni_generate APPEND PROPERTY INCLUDE_DIRECTORIES
+  "${LaceCxIncludePath}" "${CMAKE_CURRENT_SOURCE_DIR}/..")
+set_target_properties(uni_generate PROPERTIES
+  OUTPUT_NAME "generate")
+target_link_libraries(uni_generate pfmla_lib)
+
 
 #### Translate between Unidirectional Ring Protocol Representations ####
-addbinexe (uni-xlate uni/xlate.cc
-  uni/livelock.cc uni/unifile.cc)
-set_target_properties (uni-xlate PROPERTIES
-  OUTPUT_NAME xlate
-  RUNTIME_OUTPUT_DIRECTORY ${UniringBinPath})
+add_executable(uni_xlate
+  "xlate.cc"
+  "adjlist.hh"
+  "livelock.cc"
+  "livelock.hh"
+  "uniact.hh"
+  "unifile.cc"
+  "unifile.hh"
+  )
+set_property(TARGET uni_xlate APPEND PROPERTY INCLUDE_DIRECTORIES
+  "${LaceCxIncludePath}" "${CMAKE_CURRENT_SOURCE_DIR}/..")
+set_target_properties(uni_xlate PROPERTIES
+  OUTPUT_NAME "xlate")
+target_link_libraries(uni_xlate prot_file_lib)
+
 
 #### Classify Unidirectional Ring Protocols ####
-addbinexe (uni-classify uni/classify.cc
-  uni/livelock.cc uni/unifile.cc
-  pfmla-glu.c pfmla.c pfmla.cc)
-set_property (TARGET uni-classify
-  APPEND PROPERTY INCLUDE_DIRECTORIES ${GluIncludePath})
-target_link_libraries (uni-classify ${mdd_glu_libs} ${M_LIB})
-set_target_properties (uni-classify PROPERTIES
-  OUTPUT_NAME classify
-  RUNTIME_OUTPUT_DIRECTORY ${UniringBinPath})
+add_executable(uni_classify
+  "xlate.cc"
+  "adjlist.hh"
+  "livelock.cc"
+  "livelock.hh"
+  "uniact.hh"
+  "unifile.cc"
+  "unifile.hh"
+  )
+set_property(TARGET uni_classify APPEND PROPERTY INCLUDE_DIRECTORIES
+  "${LaceCxIncludePath}" "${CMAKE_CURRENT_SOURCE_DIR}/..")
+set_target_properties(uni_classify PROPERTIES
+  OUTPUT_NAME "classify")
+target_link_libraries(uni_classify pfmla_lib)
+
 
 #### Unidirectional Ring Synthesis ####
-addbinexe (uni-synthesize uni/synthesize.cc uni/unifile.cc ${ProtoconSources})
-set_property (TARGET uni-synthesize
-  APPEND PROPERTY INCLUDE_DIRECTORIES ${GluIncludePath})
-#set_property (TARGET uni-synthesize
+add_executable(uni_synthesize
+  "synthesize.cc"
+  "adjlist.hh"
+  "uniact.hh"
+  "unifile.cc"
+  "unifile.hh"
+  )
+set_property(TARGET uni_synthesize APPEND PROPERTY INCLUDE_DIRECTORIES
+  "${LaceCxIncludePath}" "${CMAKE_CURRENT_SOURCE_DIR}/..")
+set_target_properties(uni_synthesize PROPERTIES
+  OUTPUT_NAME "synthesize")
+target_link_libraries(uni_synthesize prot_file_lib)
+#set_property (TARGET uni_synthesize
 #  PROPERTY COMPILE_FLAGS "-Wextra -std=c++11")
-#set_property (TARGET uni-synthesize
+#set_property (TARGET uni_synthesize
 #  PROPERTY LINK_FLAGS "-Wextra -std=c++11")
-#set_source_files_properties (${BldPath}/uni/synthesize.cc
+#set_source_files_properties ("synthesize.cc"
 #  PROPERTIES COMPILE_FLAGS "-Wextra -std=c++11")
-target_link_libraries (uni-synthesize ${mdd_glu_libs} ${M_LIB})
-set_target_properties (uni-synthesize PROPERTIES
-  OUTPUT_NAME synthesize
-  RUNTIME_OUTPUT_DIRECTORY ${UniringBinPath})
-

@@ -12,6 +12,25 @@ add_subdirectory(udp-impl)
 add_subdirectory(satsyn)
 
 
+#### Bidirectional Ring Instance Enumeration ####
+add_executable(biring
+  "biring.cc"
+  )
+set_property(TARGET biring APPEND PROPERTY INCLUDE_DIRECTORIES
+  "${LaceCxIncludePath}")
+target_link_libraries(biring lace_cx_lib)
+
+add_executable(conflictfamily_test
+  "conflictfamily_test.cc"
+  "conflictfamily.cc"
+  "conflictfamily.hh"
+  )
+set_property(TARGET conflictfamily_test APPEND PROPERTY INCLUDE_DIRECTORIES
+  "${LaceCxIncludePath}")
+target_link_libraries(conflictfamily_test lace_cx_lib)
+add_test(NAME conflictfamily_test COMMAND conflictfamily_test)
+
+
 add_library(pfmla_lib STATIC
   "pfmla.c"
   "pfmla.cc"
@@ -46,8 +65,6 @@ add_library(xnsys_lib STATIC
   "xnspec.cc"
   "xnspec.hh"
   )
-set_property(TARGET xnsys_lib
-  APPEND PROPERTY INCLUDE_DIRECTORIES ${GluIncludePath})
 set_property(TARGET xnsys_lib APPEND PROPERTY INCLUDE_DIRECTORIES
   "${LaceCxIncludePath}")
 target_link_libraries(xnsys_lib pfmla_lib)
@@ -61,17 +78,6 @@ set_property(TARGET xnsys_test APPEND PROPERTY INCLUDE_DIRECTORIES
 target_link_libraries(xnsys_test xnsys_lib)
 add_test(NAME xnsys_test COMMAND xnsys_test)
 
-
-add_executable(conflictfamily_test
-  "conflictfamily_test.cc"
-  "conflictfamily.cc"
-  "conflictfamily.hh"
-  )
-set_property(TARGET conflictfamily_test APPEND PROPERTY INCLUDE_DIRECTORIES
-  "${LaceCxIncludePath}")
-target_link_libraries(conflictfamily_test lace_cx_lib)
-add_test(NAME conflictfamily_test COMMAND conflictfamily_test)
-
 add_executable(stabilization_test
   "inst.cc"
   "stabilization_test.cc"
@@ -82,6 +88,44 @@ set_property(TARGET stabilization_test APPEND PROPERTY INCLUDE_DIRECTORIES
   "${LaceCxIncludePath}")
 target_link_libraries(stabilization_test xnsys_lib)
 add_test(NAME stabilization_test COMMAND stabilization_test)
+
+
+#### Parser Generation ####
+add_custom_command(
+  OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/prot-xfile.leg.cc"
+  COMMAND peg_leg -o "${CMAKE_CURRENT_BINARY_DIR}/prot-xfile.leg.cc" "${CMAKE_CURRENT_SOURCE_DIR}/prot-xfile.leg"
+  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/prot-xfile.leg)
+set_property(SOURCE "${CMAKE_CURRENT_BINARY_DIR}/prot-xfile.leg.cc"
+  APPEND PROPERTY COMPILE_FLAGS "-Wno-unused -Wno-unused-parameter")
+set_property(SOURCE "${CMAKE_CURRENT_BINARY_DIR}/prot-xfile.leg.cc"
+  APPEND PROPERTY INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}")
+
+add_library(prot_file_lib STATIC
+  "pla.cc"
+  "pla.hh"
+  "prot-ofile.cc"
+  "prot-ofile.hh"
+  "prot-xfile.cc"
+  "prot-xfile.hh"
+  "${CMAKE_CURRENT_BINARY_DIR}/prot-xfile.leg.cc"
+  "cx/sesp.c"
+  "cx/sesp.h"
+  )
+set_property(TARGET prot_file_lib APPEND PROPERTY INCLUDE_DIRECTORIES
+  "${LaceCxIncludePath}")
+target_link_libraries(prot_file_lib xnsys_lib)
+
+#### Deadlock Checking for Generalized Rings ####
+add_executable(deadfree
+  "deadfree.cc"
+  )
+set_property(TARGET deadfree APPEND PROPERTY INCLUDE_DIRECTORIES
+  "${LaceCxIncludePath}")
+target_link_libraries(deadfree prot_file_lib)
+
+#### Simple Unidirectional Ring Programs ####
+add_subdirectory(uni)
+
 
 
 set (TopPath ${CMAKE_CURRENT_SOURCE_DIR}/..)
@@ -103,16 +147,14 @@ ExternalProject_Add(cx_project
 #### Sources ####
 
 list (APPEND CFiles
-  pfmla.c pfmla-glu.c pfmla-bittable.c)
+  pfmla-bittable.c)
 list (APPEND HFiles
-  pfmla.h pfmla-glu.h pfmla-bittable.h)
+  pfmla-bittable.h)
 
 list (APPEND CFiles udp-impl/protocol.c)
 list (APPEND HFiles udp-impl/protocol.h udp-impl/act.h)
 
 list (APPEND CCFiles
-  pfmla.cc xfmlae.cc
-  xnspec.cc xnpc.cc xnsys.cc
   opt.cc search.cc
   test.cc
   test-pcxn.cc
@@ -124,22 +166,9 @@ list (APPEND CCFiles
   stabilization.cc
   synthesis.cc
   pla.cc
-  prot-xfile.cc prot-ofile.cc
-  biring.cc
-  deadfree.cc
-  uni/aperiodic.cc
-  uni/canonical.cc
-  uni/classify.cc
-  uni/generate.cc
-  uni/livelock.cc
-  uni/synthesize.cc
-  uni/unifile.cc
-  uni/xlate.cc
   msat.cc
   )
 list (APPEND HHFiles
-  pfmla.hh xfmlae.hh
-  xnspec.hh xnpc.hh xnsys.hh
   test-pcxn.hh
   opt.hh search.hh
   inst.hh
@@ -149,13 +178,7 @@ list (APPEND HHFiles
   stabilization.hh
   synthesis.hh
   pla.hh
-  prot-xfile.hh prot-ofile.hh
   namespace.hh
-  uni/adjlist.hh
-  uni/canonical.hh
-  uni/livelock.hh
-  uni/uniact.hh
-  uni/unifile.hh
   main-all.hh
   )
 
@@ -178,26 +201,13 @@ set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${BinPath})
 
 
 file (MAKE_DIRECTORY ${BldPath}/udp-impl)
-file (MAKE_DIRECTORY ${BldPath}/uni)
-
-#### Parser Generation ####
-add_custom_command (
-  OUTPUT ${BldPath}/prot-xfile.leg.cc
-  COMMAND peg_leg -o ${BldPath}/prot-xfile.leg.cc ${CMAKE_CURRENT_SOURCE_DIR}/prot-xfile.leg
-  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/prot-xfile.leg)
-set_bld_cfile_properties (${BldPath}/prot-xfile.leg.cc)
-set_property (SOURCE ${BldPath}/prot-xfile.leg.cc
-  APPEND PROPERTY COMPILE_FLAGS "-Wno-unused -Wno-unused-parameter")
 
 
 #### Common Files ####
 
 list (APPEND ProtoconSources
-  pfmla.c pfmla.cc xfmlae.cc
-  pfmla-glu.c pfmla-bittable.c
-  xnspec.cc xnpc.cc xnsys.cc
+  pfmla-bittable.c
   pla.cc
-  prot-xfile.cc prot-xfile.leg.cc prot-ofile.cc
   opt.cc inst.cc
   stabilization.cc
   synthesis.cc
@@ -216,9 +226,7 @@ addbinexe (test_exe
 set_target_properties (test_exe PROPERTIES
   OUTPUT_NAME test
   RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-set_property (TARGET test_exe
-  APPEND PROPERTY INCLUDE_DIRECTORIES ${GluIncludePath})
-target_link_libraries (test_exe ${mdd_glu_libs} ${M_LIB})
+target_link_libraries (test_exe prot_file_lib ${M_LIB})
 
 file (MAKE_DIRECTORY ${BldPath}/test-dep)
 add_custom_command (
@@ -243,9 +251,7 @@ addbinexe (protocon
   promela.cc graphviz.cc udp-ofile.cc
   ${ProtoconSources}
   )
-set_property (TARGET protocon
-  APPEND PROPERTY INCLUDE_DIRECTORIES ${GluIncludePath})
-target_link_libraries (protocon ${mdd_glu_libs} ${M_LIB})
+target_link_libraries (protocon prot_file_lib ${M_LIB})
 
 set (protocon_exe "$<TARGET_FILE:protocon>")
 
@@ -286,27 +292,6 @@ endif ()
 add_custom_target(some DEPENDS test_exe protocon)
 
 
-#### Bidirectional Ring Instance Enumeration ####
-addbinexe (biring biring.cc)
-set_target_properties (biring PROPERTIES
-  OUTPUT_NAME biring
-  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-
-
-#### Deadlock Checking for Generalized Rings ####
-addbinexe (deadfree deadfree.cc ${ProtoconSources})
-set_property (TARGET deadfree
-  APPEND PROPERTY INCLUDE_DIRECTORIES ${GluIncludePath})
-target_link_libraries (deadfree ${mdd_glu_libs} ${M_LIB})
-set_target_properties (deadfree PROPERTIES
-  OUTPUT_NAME deadfree
-  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-
-
-#### Simple Unidirectional Ring Programs ####
-include (uni/CMakeLists.txt)
-
-
 #### Main MPI Executable ####
 if (MPI_FOUND)
   addbinexe (protocon-mpi
@@ -316,9 +301,9 @@ if (MPI_FOUND)
     ${ProtoconSources}
     )
   set_property (TARGET protocon-mpi
-    APPEND PROPERTY INCLUDE_DIRECTORIES ${GluIncludePath} ${MPI_INCLUDE_PATH})
+    APPEND PROPERTY INCLUDE_DIRECTORIES ${MPI_INCLUDE_PATH})
   target_link_libraries (protocon-mpi ${MPI_LIBRARIES})
-  target_link_libraries (protocon-mpi ${mdd_glu_libs} ${M_LIB})
+  target_link_libraries (protocon-mpi prot_file_lib ${M_LIB})
 
   if(MPI_COMPILE_FLAGS)
     set (MPI_COMPILE_FLAGS "${MPI_COMPILE_FLAGS} ${DEFAULT_COMPILE_FLAGS}")
@@ -351,11 +336,9 @@ string (REGEX REPLACE "(^| )[/-]pedantic($| )" " "
 
 if (FALSE)
   addbinexe (msat msat.cc ${ProtoconSources})
-  target_link_libraries (msat minisat ${mdd_glu_libs} ${M_LIB})
+  target_link_libraries (msat minisat prot_file_lib ${M_LIB})
   set_target_properties (msat PROPERTIES
     COMPILE_FLAGS ${satccflags})
-  set_property (TARGET msat
-    APPEND PROPERTY INCLUDE_DIRECTORIES ${GluIncludePath})
   set_property (TARGET msat
     APPEND PROPERTY INCLUDE_DIRECTORIES "/usr/include/minisat2")
 endif()

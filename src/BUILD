@@ -39,6 +39,32 @@ genrule(
 )
 
 
+cc_binary(
+    name = "biring",
+    srcs = [
+        "biring.cc",
+    ],
+    deps = ["//src/cx:cx_lib"],
+    copts = [
+        "-Iexternal/lace/src",
+    ],
+)
+
+cc_test(
+    name = "conflictfamily_test",
+    srcs = [
+        "conflictfamily.cc",
+        "conflictfamily.hh",
+        "conflictfamily_test.cc",
+        "namespace.hh",
+    ],
+    deps = ["//src/cx:cx_lib"],
+    copts = [
+        "-Iexternal/lace/src",
+    ],
+)
+
+
 cc_library(
     name = "pfmla_glu_lib",
     srcs = [
@@ -89,6 +115,7 @@ cc_test(
     ],
 )
 
+
 cc_library(
     name = "xnsys_lib",
     srcs = [
@@ -130,6 +157,23 @@ cc_test(
     ],
 )
 
+cc_test(
+    name = "stabilization_test",
+    srcs = [
+        "inst.cc",
+        "inst.hh",
+        "stabilization.cc",
+        "stabilization.hh",
+        "stabilization_test.cc",
+        "namespace.hh",
+    ],
+    deps = [":xnsys_lib"],
+    copts = [
+        "-Iexternal/lace/src",
+    ],
+)
+
+
 cc_library(
     name = "prot_file_lib",
     srcs = [
@@ -154,31 +198,13 @@ cc_library(
     ],
 )
 
-cc_test(
-    name = "conflictfamily_test",
+cc_binary(
+    name = "deadfree",
     srcs = [
-        "conflictfamily.cc",
-        "conflictfamily.hh",
-        "conflictfamily_test.cc",
+        "deadfree.cc",
         "namespace.hh",
     ],
-    deps = ["//src/cx:cx_lib"],
-    copts = [
-        "-Iexternal/lace/src",
-    ],
-)
-
-cc_test(
-    name = "stabilization_test",
-    srcs = [
-        "inst.cc",
-        "inst.hh",
-        "stabilization.cc",
-        "stabilization.hh",
-        "stabilization_test.cc",
-        "namespace.hh",
-    ],
-    deps = [":xnsys_lib"],
+    deps = [":prot_file_lib"],
     copts = [
         "-Iexternal/lace/src",
     ],
