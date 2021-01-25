@@ -9,9 +9,9 @@ cmake_external(
     name = "mdd_glu_lib",
     lib_source = "@mdd_glu//:all",
     static_libraries = [
+        "libcu.a",
         "libglu.a",
         "libcal.a",
-        "libcu.a",
     ],
 )
 
