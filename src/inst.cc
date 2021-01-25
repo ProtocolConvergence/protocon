@@ -111,6 +111,44 @@ BidirectionalRing(Xn::Net& topo, uint npcs, uint domsz,
   }
 }
 
+/** Create a bidirectional ring
+ * with a "((future & silent) % puppet)" constraint.
+ **/
+  void
+SilentShadowRing(Xn::Sys& sys, const uint npcs,
+                 const char* puppet_vbl_name, const uint puppet_vbl_domsz,
+                 const char* shadow_vbl_name, const uint shadow_vbl_domsz)
+{
+  Xn::Net& topo = sys.topology;
+  topo.add_variables(puppet_vbl_name, npcs, puppet_vbl_domsz, Xn::Puppet);
+  topo.add_variables(shadow_vbl_name, npcs, shadow_vbl_domsz, Xn::Shadow);
+  Xn::PcSymm* pc_symm = topo.add_processes("P", "i", npcs);
+  Xn::NatMap indices(npcs);
+
+  for (uint i = 0; i < npcs; ++i)
+    indices.membs[i] = (int)i - 1;
+  indices.expression = "i-1";
+  topo.add_access(pc_symm, &topo.vbl_symms[0], indices, Xn::ReadAccess);
+
+  for (uint i = 0; i < npcs; ++i)
+    indices.membs[i] = (int)i;
+  indices.expression = "i";
+  topo.add_access(pc_symm, &topo.vbl_symms[0], indices, Xn::WriteAccess);
+
+  for (uint i = 0; i < npcs; ++i)
+    indices.membs[i] = (int)i + 1;
+  indices.expression = "i+1";
+  topo.add_access(pc_symm, &topo.vbl_symms[0], indices, Xn::ReadAccess);
+
+  for (uint i = 0; i < npcs; ++i)
+    indices.membs[i] = (int)i;
+  indices.expression = "i";
+  topo.add_access(pc_symm, &topo.vbl_symms[1], indices, Xn::WriteAccess);
+
+  sys.spec->invariant_style = Xn::FutureAndShadow;
+  sys.spec->invariant_scope = Xn::ShadowInvariant;
+  sys.commit_initialization();
+}
 
 /**
  * Performs the 3 color on a ring problem.  Each process must be assigned

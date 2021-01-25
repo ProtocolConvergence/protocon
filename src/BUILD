@@ -167,3 +167,19 @@ cc_test(
         "-Iexternal/lace/src",
     ],
 )
+
+cc_test(
+    name = "stabilization_test",
+    srcs = [
+        "inst.cc",
+        "inst.hh",
+        "stabilization.cc",
+        "stabilization.hh",
+        "stabilization_test.cc",
+        "namespace.hh",
+    ],
+    deps = [":xnsys_lib"],
+    copts = [
+        "-Iexternal/lace/src",
+    ],
+)

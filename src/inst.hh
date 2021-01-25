@@ -8,6 +8,10 @@
 void
 UnidirectionalRing(Xn::Net& topo, uint npcs, uint domsz,
                    const char* basename, bool symmetric, bool distinguished);
+void
+SilentShadowRing(Xn::Sys& sys, const uint npcs,
+                 const char* puppet_vbl_name, const uint puppet_vbl_domsz,
+                 const char* shadow_vbl_name, const uint shadow_vbl_domsz);
 P::Fmla
 SingleTokenPFmla(const vector<P::Fmla>& tokenPFs);
 void

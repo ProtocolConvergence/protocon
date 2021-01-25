@@ -115,6 +115,46 @@ TestXnSys()
   }
 }
 
+static void
+TestTokenRingClosure()
+{
+  Xn::Sys sys;
+  Xn::Net& topo = sys.topology;
+  const uint npcs = 4;
+  UnidirectionalRing(topo, npcs, 2, "b", true, true);
+
+  vector<P::Fmla> token_pfmlas(npcs);
+
+  for (uint me = 0; me < npcs; ++me) {
+    uint pd = (me + npcs - 1) % npcs;
+    const Xn::Pc& pc = topo.pcs[me];
+
+    if (me == npcs-1) {
+      topo.pc_symms[1].shadow_pfmla |=
+        pc.global_mask_xn &&
+        topo.pfmla_vbl(pd) == topo.pfmla_vbl(me) &&
+        topo.pfmla_vbl(me).img_eq(IntPFmla(1) - topo.pfmla_vbl(me));
+      token_pfmlas[me] = (topo.pfmla_vbl(pd) == topo.pfmla_vbl(me));
+    }
+    else {
+      topo.pc_symms[0].shadow_pfmla |=
+        pc.global_mask_xn &&
+        topo.pfmla_vbl(pd) != topo.pfmla_vbl(me) &&
+        topo.pfmla_vbl(me).img_eq(IntPFmla(1) - topo.pfmla_vbl(me));
+      token_pfmlas[me] = (topo.pfmla_vbl(pd) != topo.pfmla_vbl(me));
+    }
+  }
+
+  sys.shadow_pfmla |= (topo.pc_symms[0].shadow_pfmla | topo.pc_symms[1].shadow_pfmla);
+
+  sys.invariant &= SingleTokenPFmla(token_pfmlas);
+
+  sys.commit_initialization();
+
+  Claim( sys.integrityCk() );
+}
+
+
 END_NAMESPACE
 
 int main(int argc, char** argv)
@@ -124,6 +164,7 @@ int main(int argc, char** argv)
   (void) argi;
 
   TestXnSys();
+  TestTokenRingClosure();
 
   lose_sysCx ();
   return 0;

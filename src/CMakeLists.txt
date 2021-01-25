@@ -72,6 +72,17 @@ set_property(TARGET conflictfamily_test APPEND PROPERTY INCLUDE_DIRECTORIES
 target_link_libraries(conflictfamily_test lace_cx_lib)
 add_test(NAME conflictfamily_test COMMAND conflictfamily_test)
 
+add_executable(stabilization_test
+  "inst.cc"
+  "stabilization_test.cc"
+  "stabilization.cc"
+  "stabilization.hh"
+  )
+set_property(TARGET stabilization_test APPEND PROPERTY INCLUDE_DIRECTORIES
+  "${LaceCxIncludePath}")
+target_link_libraries(stabilization_test xnsys_lib)
+add_test(NAME stabilization_test COMMAND stabilization_test)
+
 
 set (TopPath ${CMAKE_CURRENT_SOURCE_DIR}/..)
 set (BinPath ${TopPath}/bin)

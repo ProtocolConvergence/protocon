@@ -60,45 +60,6 @@ TestXFmlae()
 }
 
 static void
-TestTokenRingClosure()
-{
-  Xn::Sys sys;
-  Xn::Net& topo = sys.topology;
-  const uint npcs = 4;
-  UnidirectionalRing(topo, npcs, 2, "b", true, true);
-
-  vector<P::Fmla> token_pfmlas(npcs);
-
-  for (uint me = 0; me < npcs; ++me) {
-    uint pd = (me + npcs - 1) % npcs;
-    const Xn::Pc& pc = topo.pcs[me];
-
-    if (me == npcs-1) {
-      topo.pc_symms[1].shadow_pfmla |=
-        pc.global_mask_xn &&
-        topo.pfmla_vbl(pd) == topo.pfmla_vbl(me) &&
-        topo.pfmla_vbl(me).img_eq(IntPFmla(1) - topo.pfmla_vbl(me));
-      token_pfmlas[me] = (topo.pfmla_vbl(pd) == topo.pfmla_vbl(me));
-    }
-    else {
-      topo.pc_symms[0].shadow_pfmla |=
-        pc.global_mask_xn &&
-        topo.pfmla_vbl(pd) != topo.pfmla_vbl(me) &&
-        topo.pfmla_vbl(me).img_eq(IntPFmla(1) - topo.pfmla_vbl(me));
-      token_pfmlas[me] = (topo.pfmla_vbl(pd) != topo.pfmla_vbl(me));
-    }
-  }
-
-  sys.shadow_pfmla |= (topo.pc_symms[0].shadow_pfmla | topo.pc_symms[1].shadow_pfmla);
-
-  sys.invariant &= SingleTokenPFmla(token_pfmlas);
-
-  sys.commit_initialization();
-
-  Claim( sys.integrityCk() );
-}
-
-static void
 TestProtoconFile(bool agreement)
 {
   Xn::Sys sys_f; //< From file.
@@ -158,119 +119,13 @@ TestProtoconFileAgreement()
 }
 
 static void
-SetupSilentShadowRing(Xn::Sys& sys, const uint npcs,
-                      const char* puppet_vbl_name, const uint puppet_vbl_domsz,
-                      const char* shadow_vbl_name, const uint shadow_vbl_domsz)
-{
-  Xn::Net& topo = sys.topology;
-  topo.add_variables(puppet_vbl_name, npcs, puppet_vbl_domsz, Xn::Puppet);
-  topo.add_variables(shadow_vbl_name, npcs, shadow_vbl_domsz, Xn::Shadow);
-  Xn::PcSymm* pc_symm = topo.add_processes("P", "i", npcs);
-  Xn::NatMap indices(npcs);
-
-  for (uint i = 0; i < npcs; ++i)
-    indices.membs[i] = (int)i - 1;
-  indices.expression = "i-1";
-  topo.add_access(pc_symm, &topo.vbl_symms[0], indices, Xn::ReadAccess);
-
-  for (uint i = 0; i < npcs; ++i)
-    indices.membs[i] = (int)i;
-  indices.expression = "i";
-  topo.add_access(pc_symm, &topo.vbl_symms[0], indices, Xn::WriteAccess);
-
-  for (uint i = 0; i < npcs; ++i)
-    indices.membs[i] = (int)i + 1;
-  indices.expression = "i+1";
-  topo.add_access(pc_symm, &topo.vbl_symms[0], indices, Xn::ReadAccess);
-
-  for (uint i = 0; i < npcs; ++i)
-    indices.membs[i] = (int)i;
-  indices.expression = "i";
-  topo.add_access(pc_symm, &topo.vbl_symms[1], indices, Xn::WriteAccess);
-
-  sys.spec->invariant_style = Xn::FutureAndShadow;
-  sys.spec->invariant_scope = Xn::ShadowInvariant;
-  sys.commit_initialization();
-}
-
-static void
-TestShadowColorRing()
-{
-  OFile& of = DBogOF;
-  Xn::Sys sys;
-  Xn::Net& topo = sys.topology;
-  const uint npcs = 3;
-  SetupSilentShadowRing(sys, npcs, "x", 3, "c", 3);
-
-  for (uint i = 0; i < npcs; ++i) {
-    sys.invariant &=
-      (topo.pfmla_vbl(*topo.vbl_symms[1].membs[i])
-       !=
-       topo.pfmla_vbl(*topo.vbl_symms[1].membs[umod_int(i+1, npcs)]));
-  }
-
-  static const uint act_vals[][4] = {
-    // x[i-1] x[i] x[i+1] --> x[i]'
-    { 0, 0, 0, 1 },
-    { 0, 0, 1, 1 },
-    { 0, 0, 2, 1 },
-    { 0, 2, 0, 2 },
-    { 0, 2, 1, 2 },
-    { 0, 2, 2, 1 },
-    { 1, 0, 0, 0 },
-    { 1, 1, 0, 2 },
-    { 1, 1, 1, 0 },
-    { 1, 1, 2, 0 },
-    { 1, 2, 1, 2 },
-    { 1, 2, 2, 0 },
-    { 2, 0, 0, 0 },
-    { 2, 0, 1, 0 },
-    { 2, 1, 0, 1 },
-    { 2, 1, 1, 1 },
-    { 2, 1, 2, 1 },
-    { 2, 2, 0, 2 },
-    { 2, 2, 1, 2 },
-    { 2, 2, 2, 0 }
-  };
-
-  for (uint actidx = 0; actidx < topo.n_possible_acts; ++actidx)
-  {
-    Xn::ActSymm act_symm;
-    topo.action(act_symm, actidx);
-
-    bool add_action = false;
-    for (uint i = 0; i < ArraySz(act_vals) && !add_action; ++i) {
-      add_action =
-        (   act_vals[i][0] == act_symm.guard(0)
-         && (   act_vals[i][1] == act_symm.guard(1)
-             || act_vals[i][3] == act_symm.guard(1))
-         && act_vals[i][2] == act_symm.guard(2)
-         && act_vals[i][3] == act_symm.assign(0)
-         && act_vals[i][3] == act_symm.assign(1));
-    }
-
-    if (add_action)
-    {
-      uint rep_actidx = topo.representative_action_index(actidx);
-      if (rep_actidx == actidx)
-        sys.actions.push_back(actidx);
-    }
-  }
-
-  StabilizationOpt stabilization_opt;
-  if (!stabilization_ck(of, sys, stabilization_opt, sys.actions)) {
-    Claim(0);
-  }
-}
-
-static void
 TestShadowMatchRing()
 {
   OFile& ofile = DBogOF;
   Xn::Sys sys;
   Xn::Net& topo = sys.topology;
   const uint npcs = 3;
-  SetupSilentShadowRing(sys, npcs, "x", 2, "m", 3);
+  SilentShadowRing(sys, npcs, "x", 2, "m", 3);
 
   const PFmlaVbl& x0 = topo.pfmla_vbl(*topo.vbl_symms[0].membs[0]);
   const PFmlaVbl& x1 = topo.pfmla_vbl(*topo.vbl_symms[0].membs[1]);
