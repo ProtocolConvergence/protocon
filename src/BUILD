@@ -126,3 +126,16 @@ cc_library(
     ],
 )
 
+cc_test(
+    name = "conflictfamily_test",
+    srcs = [
+        "conflictfamily.cc",
+        "conflictfamily.hh",
+        "conflictfamily_test.cc",
+        "namespace.hh",
+    ],
+    deps = ["//src/cx:cx_lib"],
+    copts = [
+        "-Iexternal/lace/src",
+    ],
+)

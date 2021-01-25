@@ -1,6 +1,6 @@
 
 cc_binary(
-    name = "protocol",
+    name = "udp_ThreeColorRing",
     srcs = [
         "protocol.c",
         "protocol.h",

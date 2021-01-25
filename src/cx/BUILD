@@ -30,8 +30,8 @@ cc_library(
 )
 
 cc_test(
-    name = "testcxx", 
-    srcs = ["testcxx.cc"], 
+    name = "testcxx",
+    srcs = ["testcxx.cc"],
     deps = [":cx_lib"],
     copts = [
         "-Iexternal/lace/src",

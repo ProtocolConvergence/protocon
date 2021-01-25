@@ -4,10 +4,22 @@ find_library (M_LIB m)
 find_package(MPI)
 find_package(OpenMP)
 
-add_definitions (-DPROTOCON_NAMESPACE=protocon)
+add_definitions(-DPROTOCON_NAMESPACE=protocon)
 
+add_subdirectory(cx)
 add_subdirectory(gui)
+add_subdirectory(udp-impl)
 add_subdirectory(satsyn)
+
+add_executable(conflictfamily_test
+  "conflictfamily_test.cc"
+  "conflictfamily.cc"
+  "conflictfamily.hh"
+  )
+set_property(TARGET conflictfamily_test APPEND PROPERTY INCLUDE_DIRECTORIES
+  "${LaceCxIncludePath}")
+target_link_libraries(conflictfamily_test lace_cx_lib)
+add_test(NAME conflictfamily_test COMMAND conflictfamily_test)
 
 
 set (TopPath ${CMAKE_CURRENT_SOURCE_DIR}/..)
@@ -227,20 +239,6 @@ set_target_properties (deadfree PROPERTIES
 
 #### Simple Unidirectional Ring Programs ####
 include (uni/CMakeLists.txt)
-
-
-#### Stand-Alone UDP Executable ####
-# Just for testing.
-if (UNIX AND NOT APPLE)
-  addbinexe (udp udp-impl/protocol.c)
-  target_link_libraries (udp rt)
-  set_property (TARGET udp
-    APPEND PROPERTY COMPILE_DEFINITIONS _POSIX_C_SOURCE=200112L)
-
-  set_target_properties (udp PROPERTIES
-    OUTPUT_NAME udp
-    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-endif ()
 
 
 #### Main MPI Executable ####
