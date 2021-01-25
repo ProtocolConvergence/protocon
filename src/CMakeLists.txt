@@ -1,15 +1,4 @@
 
-cmake_minimum_required (VERSION 2.8)
-#set(CMAKE_DISABLE_SOURCE_CHANGES ON)
-set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
-
-project (protocon)
-
-#SET(CMAKE_CXX_FLAGS_DEBUG "-g3")
-#SET(CMAKE_C_FLAGS_DEBUG "-g3")
-#set (CMAKE_BUILD_TYPE DEBUG)
-#set (CMAKE_BUILD_TYPE RELEASE)
-#set (CMAKE_BUILD_TYPE RelWithDebInfo)
 
 find_library (M_LIB m)
 find_package(MPI)
@@ -21,9 +10,7 @@ set (TopPath ${CMAKE_CURRENT_SOURCE_DIR}/..)
 set (BinPath ${TopPath}/bin)
 set (DepPath ${TopPath}/dep)
 
-set (PegPfx peg)
 set (CxTopPath ${DepPath}/cx)
-set (peg_exe ${DepPath}/${PegPfx}/leg)
 set (GluTopPath ${DepPath}/mdd-glu)
 if (NOT DEFINED GluBldPath)
   set (GluBldPath ${GluTopPath}/bld)
@@ -40,15 +27,6 @@ ExternalProject_Add(cx_project
   SOURCE_DIR ${DepPath}/cx/src
   BINARY_DIR ${DepPath}/cx/bld
   BUILD_ALWAYS 1
-  INSTALL_COMMAND echo "No install step."
-  )
-
-ExternalProject_Add(peg_project
-  PREFIX ${CMAKE_CURRENT_BINARY_DIR}/external/peg
-  SOURCE_DIR ${DepPath}/${PegPfx}
-  BUILD_IN_SOURCE 1
-  UPDATE_COMMAND echo "No update."
-  CONFIGURE_COMMAND echo "No configure step."
   INSTALL_COMMAND echo "No install step."
   )
 

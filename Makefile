@@ -6,7 +6,6 @@ SrcPath=src
 DepPath=dep
 CxTopPath=$(DepPath)/cx
 MddGluPath=$(DepPath)/mdd-glu
-PegTopPath=$(DepPath)/peg
 
 ScanBldPath=clang
 ScanRptPath=$(ScanBldPath)/report
@@ -50,7 +49,7 @@ debug:
 
 cmake:
 	if [ ! -d $(BldPath) ] ; then $(MKDIR) $(BldPath) ; fi
-	$(GODO) $(BldPath) $(CMAKE) ../src
+	$(GODO) $(BldPath) $(CMAKE) ..
 
 proj:
 	$(GODO) $(BldPath) $(MAKE)
@@ -74,7 +73,6 @@ clean:
 distclean:
 	$(GODO) $(CxTopPath) $(MAKE) distclean || true
 	rm -fr $(MddGluPath)/bld
-	$(GODO) $(PegTopPath) $(MAKE) spotless || true
 	rm -fr $(BldPath) $(BinPath) $(ScanBldPath) tags
 
 dep:
@@ -84,7 +82,6 @@ init:
 	if [ ! -f $(DepPath)/cx/src/cx.c ] ; then git submodule init dep/cx ; git submodule update dep/cx ; fi
 	if [ ! -f $(DepPath)/cx-pp/cx.c ] ; then git submodule init dep/cx-pp ; git submodule update dep/cx-pp ; fi
 	if [ ! -f $(DepPath)/mdd-glu/README ] ; then git submodule init dep/mdd-glu ; git submodule update dep/mdd-glu ; fi
-	if [ ! -f $(DepPath)/peg/src/leg.c ] ; then git submodule init dep/peg ; git submodule update dep/peg ; fi
 
 update:
 	git pull origin trunk
@@ -95,14 +92,11 @@ update:
 	git -C dep/cx-pp merge --ff-only origin/master
 	git -C dep/mdd-glu checkout master
 	git -C dep/mdd-glu merge --ff-only origin/master
-	git -C dep/peg checkout upstream
-	git -C dep/peg merge --ff-only origin/upstream
 
 pull:
 	git pull origin trunk
 	git -C dep/cx pull origin master
 	git -C dep/cx-pp pull origin master
 	git -C dep/mdd-glu pull origin master
-	git -C dep/peg pull origin upstream
 	if [ -d $(DepPath)/tex2web ] ; then $(GODO) $(DepPath)/tex2web git pull origin master ; fi
 

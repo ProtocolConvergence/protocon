@@ -26,7 +26,7 @@ git submodule init
 git submodule update
 mkdir -p bld
 cd bld
-cmake ../src
+cmake ..
 make
 ```
 

@@ -1,5 +1,4 @@
 
-enable_testing ()
 #include (CTest)
 
 set (TestPath ${TopPath}/test)

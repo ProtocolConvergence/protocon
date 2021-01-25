@@ -10,7 +10,3 @@
 	path = dep/mdd-glu
 	url = https://github.com/grencez/mdd-glu.git
   branch = master
-[submodule "dep/peg"]
-	path = dep/peg
-	url = https://github.com/gpakosz/peg.git
-  branch = upstream
