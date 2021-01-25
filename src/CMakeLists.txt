@@ -148,8 +148,6 @@ ExternalProject_Add(cx_project
 
 list (APPEND CFiles
   pfmla-bittable.c)
-list (APPEND HFiles
-  pfmla-bittable.h)
 
 list (APPEND CFiles udp-impl/protocol.c)
 list (APPEND HFiles udp-impl/protocol.h udp-impl/act.h)
@@ -167,19 +165,6 @@ list (APPEND CCFiles
   synthesis.cc
   pla.cc
   msat.cc
-  )
-list (APPEND HHFiles
-  test-pcxn.hh
-  opt.hh search.hh
-  inst.hh
-  promela.hh graphviz.hh udp-ofile.hh
-  interactive.hh
-  conflictfamily.hh
-  stabilization.hh
-  synthesis.hh
-  pla.hh
-  namespace.hh
-  main-all.hh
   )
 
 #### Source-to-Source Tranlation Helpers ####
@@ -223,6 +208,8 @@ addbinexe (test_exe
   ${CxBldPath}/kautz.cc
   ${ProtoconSources}
   )
+set_property (TARGET test_exe
+  APPEND PROPERTY INCLUDE_DIRECTORIES ${CMAKE_CURRENT_SOURCE_DIR})
 set_target_properties (test_exe PROPERTIES
   OUTPUT_NAME test
   RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
@@ -251,6 +238,8 @@ addbinexe (protocon
   promela.cc graphviz.cc udp-ofile.cc
   ${ProtoconSources}
   )
+set_property (TARGET protocon
+  APPEND PROPERTY INCLUDE_DIRECTORIES ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries (protocon prot_file_lib ${M_LIB})
 
 set (protocon_exe "$<TARGET_FILE:protocon>")
@@ -301,7 +290,7 @@ if (MPI_FOUND)
     ${ProtoconSources}
     )
   set_property (TARGET protocon-mpi
-    APPEND PROPERTY INCLUDE_DIRECTORIES ${MPI_INCLUDE_PATH})
+    APPEND PROPERTY INCLUDE_DIRECTORIES ${CMAKE_CURRENT_SOURCE_DIR} ${MPI_INCLUDE_PATH})
   target_link_libraries (protocon-mpi ${MPI_LIBRARIES})
   target_link_libraries (protocon-mpi prot_file_lib ${M_LIB})
 
@@ -340,7 +329,7 @@ if (FALSE)
   set_target_properties (msat PROPERTIES
     COMPILE_FLAGS ${satccflags})
   set_property (TARGET msat
-    APPEND PROPERTY INCLUDE_DIRECTORIES "/usr/include/minisat2")
+    APPEND PROPERTY INCLUDE_DIRECTORIES ${CMAKE_CURRENT_SOURCE_DIR} "/usr/include/minisat2")
 endif()
 
 #### Tests ####

@@ -4,7 +4,7 @@
 
 #include "synhax.hh"
 extern "C" {
-#include "urandom.h"
+#include "cx/urandom.h"
 }
 
 namespace Cx {
