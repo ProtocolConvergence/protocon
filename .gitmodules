@@ -6,7 +6,3 @@
 	path = dep/cx-pp
   url = https://github.com/grencez/cx-pp.git
   branch = master
-[submodule "dep/mdd-glu"]
-	path = dep/mdd-glu
-	url = https://github.com/grencez/mdd-glu.git
-  branch = master

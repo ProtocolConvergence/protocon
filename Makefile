@@ -5,7 +5,6 @@ BinPath=bin
 SrcPath=src
 DepPath=dep
 CxTopPath=$(DepPath)/cx
-MddGluPath=$(DepPath)/mdd-glu
 
 ScanBldPath=clang
 ScanRptPath=$(ScanBldPath)/report
@@ -72,7 +71,6 @@ clean:
 
 distclean:
 	$(GODO) $(CxTopPath) $(MAKE) distclean || true
-	rm -fr $(MddGluPath)/bld
 	rm -fr $(BldPath) $(BinPath) $(ScanBldPath) tags
 
 dep:
@@ -81,7 +79,6 @@ dep:
 init:
 	if [ ! -f $(DepPath)/cx/src/cx.c ] ; then git submodule init dep/cx ; git submodule update dep/cx ; fi
 	if [ ! -f $(DepPath)/cx-pp/cx.c ] ; then git submodule init dep/cx-pp ; git submodule update dep/cx-pp ; fi
-	if [ ! -f $(DepPath)/mdd-glu/README ] ; then git submodule init dep/mdd-glu ; git submodule update dep/mdd-glu ; fi
 
 update:
 	git pull origin trunk
@@ -90,13 +87,10 @@ update:
 	git -C dep/cx merge --ff-only origin/master
 	git -C dep/cx-pp checkout master
 	git -C dep/cx-pp merge --ff-only origin/master
-	git -C dep/mdd-glu checkout master
-	git -C dep/mdd-glu merge --ff-only origin/master
 
 pull:
 	git pull origin trunk
 	git -C dep/cx pull origin master
 	git -C dep/cx-pp pull origin master
-	git -C dep/mdd-glu pull origin master
 	if [ -d $(DepPath)/tex2web ] ; then $(GODO) $(DepPath)/tex2web git pull origin master ; fi
 

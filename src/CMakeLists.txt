@@ -11,16 +11,8 @@ set (BinPath ${TopPath}/bin)
 set (DepPath ${TopPath}/dep)
 
 set (CxTopPath ${DepPath}/cx)
-set (GluTopPath ${DepPath}/mdd-glu)
-if (NOT DEFINED GluBldPath)
-  set (GluBldPath ${GluTopPath}/bld)
-endif ()
-set (GluIncludePath ${GluBldPath}/include)
 
 #### External Projects ####
-
-include(ExternalProject)
-
 
 ExternalProject_Add(cx_project
   PREFIX ${CMAKE_CURRENT_BINARY_DIR}/external/cx
@@ -28,24 +20,6 @@ ExternalProject_Add(cx_project
   BINARY_DIR ${DepPath}/cx/bld
   BUILD_ALWAYS 1
   INSTALL_COMMAND echo "No install step."
-  )
-
-ExternalProject_Add(glu_project
-  PREFIX ${CMAKE_CURRENT_BINARY_DIR}/external/mdd-glu
-  SOURCE_DIR ${GluTopPath}/src
-  BINARY_DIR ${GluTopPath}/bld
-  BUILD_ALWAYS 1
-  INSTALL_COMMAND ${CMAKE_COMMAND} -E make_directory ${GluTopPath}/bld/include
-  COMMAND ${CMAKE_COMMAND} -E copy_if_different
-  ${GluTopPath}/src/array/array.h
-  ${GluTopPath}/src/avl/avl.h
-  ${GluTopPath}/src/epd/epd.h
-  ${GluTopPath}/src/bdd/bdd.h
-  ${GluTopPath}/src/mdd/mdd.h
-  ${GluTopPath}/src/util/util.h
-  ${GluTopPath}/src/st/st.h
-  ${GluTopPath}/src/var_set/var_set.h
-  ${GluTopPath}/bld/include/
   )
 
 #### Sources ####
@@ -166,7 +140,7 @@ list (APPEND ProtoconSources
   conflictfamily.cc
   )
 
-link_directories(${GluBldPath})
+link_directories("${GluLibPath}")
 
 
 #### Unit Test Executable ####
@@ -183,7 +157,7 @@ set_target_properties (test_exe PROPERTIES
 set_property (TARGET test_exe
   APPEND PROPERTY INCLUDE_DIRECTORIES ${GluIncludePath})
 target_link_libraries (test_exe cu glu cal ${M_LIB})
-add_dependencies (test_exe glu_project)
+add_dependencies (test_exe mdd_glu_project)
 
 file (MAKE_DIRECTORY ${BldPath}/test-dep)
 add_custom_command (
@@ -211,7 +185,7 @@ addbinexe (protocon
 set_property (TARGET protocon
   APPEND PROPERTY INCLUDE_DIRECTORIES ${GluIncludePath})
 target_link_libraries (protocon cu glu cal ${M_LIB})
-add_dependencies (protocon glu_project)
+add_dependencies (protocon mdd_glu_project)
 
 set (protocon_exe "$<TARGET_FILE:protocon>")
 
@@ -264,7 +238,7 @@ addbinexe (deadfree deadfree.cc ${ProtoconSources})
 set_property (TARGET deadfree
   APPEND PROPERTY INCLUDE_DIRECTORIES ${GluIncludePath})
 target_link_libraries (deadfree cu glu cal ${M_LIB})
-add_dependencies (deadfree glu_project)
+add_dependencies (deadfree mdd_glu_project)
 set_target_properties (deadfree PROPERTIES
   OUTPUT_NAME deadfree
   RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
@@ -300,7 +274,7 @@ if (MPI_FOUND)
     APPEND PROPERTY INCLUDE_DIRECTORIES ${GluIncludePath} ${MPI_INCLUDE_PATH})
   target_link_libraries (protocon-mpi ${MPI_LIBRARIES})
   target_link_libraries (protocon-mpi cu glu cal ${M_LIB})
-  add_dependencies (protocon-mpi glu_project)
+  add_dependencies (protocon-mpi mdd_glu_project)
 
   if(MPI_COMPILE_FLAGS)
     set (MPI_COMPILE_FLAGS "${MPI_COMPILE_FLAGS} ${DEFAULT_COMPILE_FLAGS}")
@@ -334,7 +308,7 @@ string (REGEX REPLACE "(^| )[/-]pedantic($| )" " "
 if (FALSE)
   addbinexe (msat msat.cc ${ProtoconSources})
   target_link_libraries (msat minisat cu glu cal ${M_LIB})
-  add_dependencies (msat glu_project)
+  add_dependencies (msat mdd_glu_project)
   set_target_properties (msat PROPERTIES
     COMPILE_FLAGS ${satccflags})
   set_property (TARGET msat

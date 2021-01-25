@@ -12,22 +12,13 @@ load("@rules_foreign_cc//:workspace_definitions.bzl", "rules_foreign_cc_dependen
 
 rules_foreign_cc_dependencies()
 
+all_content = """filegroup(name = "all", srcs = glob(["**"]), visibility = ["//visibility:public"])"""
+
 
 git_repository(
     name = "lace",
     commit = "20e1b5427e91022db07f9ddd0de010ec13c95d5b",
     remote = "https://github.com/grencez/lace.git",
-)
-
-
-all_content = """filegroup(name = "all", srcs = glob(["**"]), visibility = ["//visibility:public"])"""
-
-http_archive(
-    name = "peg",
-    build_file_content = all_content,
-    urls = ["https://github.com/gpakosz/peg/archive/0.1.18.tar.gz"],
-    sha256 = "aa25b2e10cc673a0a6f20114b0dc5cfc6ce221d1c257852fe4128f0782cbb585",
-    strip_prefix = "peg-0.1.18",
 )
 
 new_git_repository(
@@ -42,3 +33,12 @@ new_git_repository(
 #    build_file_content = all_content,
 #    path = "../mdd-glu",
 #)
+
+http_archive(
+    name = "peg",
+    build_file_content = all_content,
+    urls = ["https://github.com/gpakosz/peg/archive/0.1.18.tar.gz"],
+    sha256 = "aa25b2e10cc673a0a6f20114b0dc5cfc6ce221d1c257852fe4128f0782cbb585",
+    strip_prefix = "peg-0.1.18",
+)
+
