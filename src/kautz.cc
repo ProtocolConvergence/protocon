@@ -1,6 +1,6 @@
 
 #include "kautz.hh"
-#include "ofile.hh"
+#include "cx/ofile.hh"
 
 static int
 egcd(int* ret_a, int* ret_b);

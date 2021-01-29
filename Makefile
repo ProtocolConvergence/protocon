@@ -1,10 +1,5 @@
 
 BldPath=bld
-BinPath=bin
-
-SrcPath=src
-DepPath=dep
-CxTopPath=$(DepPath)/cx
 
 ScanBldPath=clang
 ScanRptPath=$(ScanBldPath)/report
@@ -19,16 +14,13 @@ CTAGS=ctags
 .PHONY: default all release cmake proj \
 	test analyze tags \
 	clean-analyze clean distclean \
-	dep \
-	init update pull
+	update pull
 
 default:
-	$(MAKE) init
 	if [ ! -d $(BldPath) ] ; then $(MAKE) cmake ; fi
 	$(MAKE) proj
 
 all:
-	$(MAKE) init
 	$(MAKE) cmake
 	$(MAKE) proj
 
@@ -61,7 +53,7 @@ analyze:
 	$(MAKE) 'BldPath=$(ScanBldPath)' 'CMAKE=$(SCAN_BUILD) cmake' 'MAKE=$(SCAN_BUILD) make'
 
 tags:
-	$(CTAGS) -R src -R dep/cx/src
+	$(CTAGS) -R src
 
 clean-analyze:
 	rm -fr $(ScanBldPath)
@@ -70,27 +62,11 @@ clean:
 	$(GODO) $(BldPath) $(MAKE) clean
 
 distclean:
-	$(GODO) $(CxTopPath) $(MAKE) distclean || true
-	rm -fr $(BldPath) $(BinPath) $(ScanBldPath) tags
-
-dep:
-	$(GODO) $(CxTopPath) $(MAKE)
-
-init:
-	if [ ! -f $(DepPath)/cx/src/cx.c ] ; then git submodule init dep/cx ; git submodule update dep/cx ; fi
-	if [ ! -f $(DepPath)/cx-pp/cx.c ] ; then git submodule init dep/cx-pp ; git submodule update dep/cx-pp ; fi
+	rm -fr $(BldPath) $(ScanBldPath) tags
 
 update:
 	git pull origin trunk
-	git submodule update
-	git -C dep/cx checkout master
-	git -C dep/cx merge --ff-only origin/master
-	git -C dep/cx-pp checkout master
-	git -C dep/cx-pp merge --ff-only origin/master
 
 pull:
 	git pull origin trunk
-	git -C dep/cx pull origin master
-	git -C dep/cx-pp pull origin master
-	if [ -d $(DepPath)/tex2web ] ; then $(GODO) $(DepPath)/tex2web git pull origin master ; fi
 

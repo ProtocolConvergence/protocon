@@ -19,7 +19,7 @@ extern "C" {
 #include "xnsys.hh"
 #include "prot-xfile.hh"
 #include "stabilization.hh"
-#include "cx/kautz.hh"
+#include "kautz.hh"
 #include "search.hh"
 #include "synthesis.hh"
 #include <stdio.h>
@@ -277,9 +277,9 @@ Test(const char testname[])
    *   -case-pfx "fn = Test"
    *   -array AllTests
    *   -x testlist.txt
-   *   -o test-dep/switch.c
+   *   -o test.embed.h
    */
-#include "test-dep/switch.c"
+#include "test.embed.h"
 
   if (fn) {
     fn();

@@ -6,8 +6,6 @@ cc_library(
         "associa.hh",
         "bittable.hh",
         "fileb.hh",
-        "kautz.cc",
-        "kautz.hh",
         "lgtable.hh",
         "map.hh",
         "ofile.hh",

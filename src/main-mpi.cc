@@ -3,7 +3,7 @@
 #include "main-all.hh"
 
 #include <errno.h>
-#include "cx/mpidissem.hh"
+#include "mpidissem.hh"
 
 #include "namespace.hh"
 
@@ -416,6 +416,7 @@ int main(int argc, char** argv)
   clock_gettime(CLOCK_MONOTONIC, &endtime);
   DBogOF.flush();
 
+#ifdef ENABLE_MEMORY_STATS
   if (true) {
     unsigned long peak = peak_memory_use_sysCx ();
     unsigned long max_peak = 0;
@@ -425,6 +426,7 @@ int main(int argc, char** argv)
       oput_stats (exec_opt, begtime, endtime, max_peak);
     }
   }
+#endif
 
   lose_sysCx ();
   return good ? 0 : 1;

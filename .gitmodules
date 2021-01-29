@@ -1,8 +1,0 @@
-[submodule "dep/cx"]
-	path = dep/cx
-  url = https://github.com/grencez/cx.git
-  branch = master
-[submodule "dep/cx-pp"]
-	path = dep/cx-pp
-  url = https://github.com/grencez/cx-pp.git
-  branch = master

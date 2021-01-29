@@ -9,12 +9,12 @@ The project's main page http://asd.cs.mtu.edu/projects/protocon/ contains execut
 
 ## How to Run
 
-Just type `make` from the top-level directory to build object files in `bld/` and place the resulting executables in `bin/`.
+Just type `make` from the top-level directory to build object files in `bld/` and place the main executables there.
 
 ```
 make
 mkdir tmp
-./bin/protocon -x examplespec/ColorRing.prot -o tmp/solution.prot
+./bld/protocon -x examplespec/ColorRing.prot -o tmp/solution.prot
 ```
 
 ### Full Instructions

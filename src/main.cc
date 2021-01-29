@@ -150,12 +150,14 @@ int main(int argc, char** argv)
   }
   DBogOF.flush();
 
+#ifdef ENABLE_MEMORY_STATS
 #ifndef __APPLE__
   if (!exec_opt.stats_ofilepath.empty_ck() ||
       exec_opt.task == ProtoconOpt::SearchTask) {
     unsigned long peak = peak_memory_use_sysCx ();
     oput_stats (exec_opt, begtime, endtime, peak);
   }
+#endif
 #endif
 
   lose_sysCx ();

@@ -2,8 +2,8 @@
 #ifndef KAUTZ_HH_
 #define KAUTZ_HH_
 
-#include "synhax.hh"
-#include "table.hh"
+#include "cx/synhax.hh"
+#include "cx/table.hh"
 
 namespace Cx {
   class OFile;

@@ -8,9 +8,9 @@ set (SolnPath ${TopPath}/examplesoln)
 set (SettPath ${TopPath}/examplesett)
 
 set (MetaPath ${TopPath}/meta)
-set (VerifPath ${CMAKE_CURRENT_SOURCE_DIR}/verif)
+set (VerifPath ${TopPath}/src/verif)
 
-file(READ ${CMAKE_CURRENT_SOURCE_DIR}/testlist.txt TestNames)
+file(READ ${TopPath}/src/testlist.txt TestNames)
 string(REPLACE "\n" ";" TestNames "${TestNames}")
 
 ## Unit tests.
@@ -94,7 +94,7 @@ foreach (f LeaderRingHuang)
   if (MPI_FOUND)
     add_test (NAME SynthMPI_${f}
       COMMAND ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} 4 ${MPIEXEC_PREFLAGS}
-      ${BinPath}/protocon-mpi ${MPIEXEC_POSTFLAGS} -x ${SpecPath}/${f}.prot -prep-conflicts)
+      "$<TARGET_FILE:protocon-mpi>" ${MPIEXEC_POSTFLAGS} -x ${SpecPath}/${f}.prot -prep-conflicts)
     set_tests_properties (SynthMPI_${f} PROPERTIES PROCESSORS 4)
   endif ()
 endforeach ()
