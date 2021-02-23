@@ -228,19 +228,19 @@ if (MPI_FOUND)
     "search.hh"
     )
   set_property (TARGET protocon-mpi APPEND PROPERTY INCLUDE_DIRECTORIES
-    "${LaceCxIncludePath}" ${MPI_INCLUDE_PATH})
+    "${LaceCxIncludePath}" "${MPI_INCLUDE_PATH}")
   target_link_libraries (protocon-mpi ${MPI_LIBRARIES})
   target_link_libraries (protocon-mpi protocon_lib ${M_LIB})
 
   if(MPI_COMPILE_FLAGS)
     set (MPI_COMPILE_FLAGS "${MPI_COMPILE_FLAGS} ${DEFAULT_COMPILE_FLAGS}")
   else()
-    set (MPI_COMPILE_FLAGS ${DEFAULT_COMPILE_FLAGS})
+    set (MPI_COMPILE_FLAGS "${DEFAULT_COMPILE_FLAGS}")
   endif()
 
   set_target_properties (protocon-mpi PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/.."
-    COMPILE_FLAGS ${MPI_COMPILE_FLAGS})
+    COMPILE_FLAGS "${MPI_COMPILE_FLAGS}")
 
   if(MPI_LINK_FLAGS)
     set_target_properties (protocon-mpi PROPERTIES

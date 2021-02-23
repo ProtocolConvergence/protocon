@@ -18,16 +18,17 @@ all_content = """filegroup(name = "all", srcs = glob(["**"]), visibility = ["//v
 git_repository(
     name = "lace",
     remote = "https://github.com/grencez/lace.git",
-    commit = "35798555d5d95f105ea7a6c0d9624a03cb9b38bf",
-    shallow_since = "1613286785 -0800",
+    commit = "c5cf19cbf9ada3310e1467282726eaaf9e403d37",
+    shallow_since = "1614054137 -0800",
     #branch = "trunk",
 )
 
 new_git_repository(
     name = "mdd_glu",
     build_file_content = all_content,
-    commit = "12aa6cced018d976af234f35f87c80606758469d",
     remote = "https://github.com/grencez/mdd-glu.git",
+    commit = "fc5823bdb1429ae5cbf970108a31ba1bcdb77384",
+    shallow_since = "1614054280 -0800",
 )
 
 #new_local_repository(
