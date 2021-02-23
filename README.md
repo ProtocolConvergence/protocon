@@ -20,14 +20,20 @@ mkdir tmp
 ### Full Instructions
 
 ```
+# Get the code.
 git clone https://github.com/grencez/protocon.git protocon
 cd protocon
-git submodule init
-git submodule update
+
+# Build with CMake.
 mkdir -p bld
 cd bld
 cmake ..
-make
+cmake --build . --config Release
+cd ..
+
+# Synthesize 3-coloring protocol.
+mkdir tmp
+./bld/protocon -x examplespec/ColorRing.prot -o tmp/solution.prot
 ```
 
 If you're on a Mac, read on.
@@ -40,7 +46,7 @@ Now there should be a makefile in `bld/`, so in the terminal type `make`.
 
 ## Dependencies:
 
-Besides Qt, all essential dependencies are automatically downloaded when running `make`.
+All essential dependencies are automatically downloaded during compilation.
 
 * peg
   * http://piumarta.com/software/peg/
@@ -48,11 +54,11 @@ Besides Qt, all essential dependencies are automatically downloaded when running
 * glu 2.4
   * ftp://vlsi.colorado.edu/pub/vis/
   * Library for multi-valued decision diagrams (MDDs).
-* Qt4 4.8
+* Qt5 (optional)
   * For the gui.
-* espresso
+* espresso (optional)
   *  http://code.google.com/p/eqntott/downloads/detail?name=espresso-ab-1.0.tar.gz
-  * Optional logic minimization tool when -espresso flag is used.
+  * Logic minimization tool when -espresso flag is used.
 
 ## Thanks
 
