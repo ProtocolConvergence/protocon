@@ -27,8 +27,8 @@ new_git_repository(
     name = "mdd_glu",
     build_file_content = all_content,
     remote = "https://github.com/grencez/mdd-glu.git",
-    commit = "fc5823bdb1429ae5cbf970108a31ba1bcdb77384",
-    shallow_since = "1614054280 -0800",
+    commit = "db346bb5184ae50457397c0cea9bbce7029b39fa",
+    shallow_since = "1614059439 -0800",
 )
 
 #new_local_repository(

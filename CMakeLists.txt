@@ -49,7 +49,7 @@ set (LaceCxIncludePath "${SOURCE_DIR}/src")
 
 ExternalProject_Add(mdd_glu_project
   GIT_REPOSITORY "https://github.com/grencez/mdd-glu.git"
-  GIT_TAG "fc5823bdb1429ae5cbf970108a31ba1bcdb77384"
+  GIT_TAG "db346bb5184ae50457397c0cea9bbce7029b39fa"
   CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>"
   )
 add_library (mdd_cu_lib STATIC IMPORTED)
