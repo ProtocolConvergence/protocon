@@ -94,10 +94,6 @@ add_custom_command(
   OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/prot-xfile.leg.cc"
   COMMAND peg_leg -o "${CMAKE_CURRENT_BINARY_DIR}/prot-xfile.leg.cc" "${CMAKE_CURRENT_SOURCE_DIR}/prot-xfile.leg"
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/prot-xfile.leg)
-set_property(SOURCE "${CMAKE_CURRENT_BINARY_DIR}/prot-xfile.leg.cc"
-  APPEND PROPERTY COMPILE_FLAGS "-Wno-unused -Wno-unused-parameter")
-set_property(SOURCE "${CMAKE_CURRENT_BINARY_DIR}/prot-xfile.leg.cc"
-  APPEND PROPERTY INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}")
 
 add_library(prot_file_lib STATIC
   "pla.cc"
@@ -111,7 +107,7 @@ add_library(prot_file_lib STATIC
   "cx/sesp.h"
   )
 set_property(TARGET prot_file_lib APPEND PROPERTY INCLUDE_DIRECTORIES
-  "${LaceCxIncludePath}")
+  "${LaceCxIncludePath}" "${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(prot_file_lib xnsys_lib)
 
 #### Deadlock Checking for Generalized Rings ####
