@@ -143,8 +143,6 @@ add_library(protocon_lib STATIC
   "opt.hh"
   "pfmla-bittable.c"
   "pfmla-bittable.h"
-  "pla.cc"
-  "pla.hh"
   "promela.cc"
   "promela.hh"
   "stabilization.cc"

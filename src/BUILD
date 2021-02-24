@@ -209,3 +209,97 @@ cc_binary(
         "-Iexternal/lace/src",
     ],
 )
+
+cc_library(
+    name = "protocon_lib",
+    srcs = [
+        "conflictfamily.cc",
+        "conflictfamily.hh",
+        "graphviz.cc",
+        "graphviz.hh",
+        "inst.cc",
+        "inst.hh",
+        "interactive.cc",
+        "interactive.hh",
+        "namespace.hh",
+        "opt.cc",
+        "opt.hh",
+        "pfmla-bittable.c",
+        "pfmla-bittable.h",
+        "promela.cc",
+        "promela.hh",
+        "search.hh",
+        "stabilization.cc",
+        "stabilization.hh",
+        "synthesis.cc",
+        "synthesis.hh",
+        "udp-ofile.cc",
+        "udp-ofile.hh",
+        "//src/udp-impl:act.embed.h",
+    ],
+    deps = [
+        ":prot_file_lib",
+    ],
+    copts = [
+        "-Iexternal/lace/src",
+    ],
+    # This lets udp-ofile.cc include the generated "udp-impl/act.embed.h" file.
+    # Ideally we'd use copts to avoid adding this include path to everything
+    # that depends on protocon_lib.
+    includes = [
+        ".",
+    ],
+)
+
+cc_binary(
+    name = "protocon",
+    srcs = [
+        "main.cc",
+        "main-all.hh",
+        "namespace.hh",
+        "search.cc",
+        "search.hh",
+    ],
+    deps = [
+        ":protocon_lib",
+    ],
+    copts = [
+        "-Iexternal/lace/src",
+    ],
+)
+
+genrule(
+    name = "test_embed_h",
+    srcs = [
+        "testlist.txt",
+    ],
+    tools = ["@lace//tool:cswitch"],
+    cmd = "$(location @lace//tool:cswitch) testname -case-pfx \"fn = Test\" -array AllTests -x $(location testlist.txt) -o \"$@\"",
+    outs = ["test.embed.h"],
+)
+
+
+cc_test(
+    name = "test",
+    srcs = [
+        "kautz.cc",
+        "kautz.hh",
+        "search.cc",
+        "search.hh",
+        "test.cc",
+        "test-pcxn.cc",
+        "test-pcxn.hh",
+        "test.embed.h",
+    ],
+    deps = [
+        ":protocon_lib",
+    ],
+    data = [
+        "//examplesoln:ColorUniRing.prot",
+        "//examplespec:LeaderRingHuang.prot",
+        "//examplespec:SumNotTwo.prot",
+    ],
+    copts = [
+        "-Iexternal/lace/src",
+    ],
+)
