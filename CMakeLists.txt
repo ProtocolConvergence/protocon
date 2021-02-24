@@ -17,7 +17,7 @@ include(ExternalProject)
 
 ExternalProject_Add(lace_project
   GIT_REPOSITORY "https://github.com/grencez/lace.git"
-  GIT_TAG "c5cf19cbf9ada3310e1467282726eaaf9e403d37"
+  GIT_TAG "108c3bb11517780f8967c23b1f668dea30842bb8"
   #GIT_TAG "trunk"
   CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>"
   BUILD_BYPRODUCTS
@@ -32,7 +32,7 @@ add_executable(comparispawn IMPORTED)
 add_executable(cswitch IMPORTED)
 add_library (lace_cx_lib STATIC IMPORTED)
 ExternalProject_Get_Property(lace_project INSTALL_DIR)
-set_target_properties(lace PROPERTIES IMPORTED_LOCATION "${INSTALL_DIR}/lace")
+set_target_properties(lace PROPERTIES IMPORTED_LOCATION "${INSTALL_DIR}/bin/lace")
 ExternalProject_Get_Property(lace_project BINARY_DIR)
 set_target_properties(cembed PROPERTIES IMPORTED_LOCATION "${BINARY_DIR}/tool/cembed")
 set_target_properties(comparispawn PROPERTIES IMPORTED_LOCATION "${BINARY_DIR}/tool/comparispawn")
@@ -49,7 +49,7 @@ set (LaceCxIncludePath "${SOURCE_DIR}/src")
 
 ExternalProject_Add(mdd_glu_project
   GIT_REPOSITORY "https://github.com/grencez/mdd-glu.git"
-  GIT_TAG "db346bb5184ae50457397c0cea9bbce7029b39fa"
+  GIT_TAG "001efd22eedcd754eb34ccb156fd6e591f7bb841"
   CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>"
   )
 add_library (mdd_cu_lib STATIC IMPORTED)
