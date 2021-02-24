@@ -93,13 +93,13 @@ ActionExpr =
     | '-=>' {act.sp = list2_ccstr_Sesp ("-=>", act.sp);}
    )
    WS?
-   ((  vbl:VblRef DEFEQ
+   ((  vbl:VblARef DEFEQ
        (  wild:WILD
           {pushlast_Sesp (act.sp, list3_ccstr_Sesp (":=", vbl.sp, wild.sp));}
         | val:Expr
           {pushlast_Sesp (act.sp, list3_ccstr_Sesp (":=", vbl.sp, val.sp));}
        )
-     | vbl:VblRef
+     | vbl:VblARef
        {pushlast_Sesp (act.sp, list3_ccstr_Sesp (":=", vbl.sp, vbl.sp));}
      | wild:WILD DEFEQ wild2:WILD
        {pushlast_Sesp (act.sp, list3_ccstr_Sesp (":=", wild.sp, wild2.sp));}
@@ -183,8 +183,8 @@ ProcDecl =
   )*
   (
      (  access:VblAccessType
-        WS?      u:VblRef WS? {yy->st->add_access(u.sp, access.aux.access_type);}
-        (',' WS? v:VblRef WS? {yy->st->add_access(v.sp, access.aux.access_type);} )*
+        WS?      u:VblARef WS? {yy->st->add_access(u.sp, access.aux.access_type);}
+        (',' WS? v:VblARef WS? {yy->st->add_access(v.sp, access.aux.access_type);} )*
         END_STMT WS?
       | SymmetricLinks WS?
      )+
@@ -244,8 +244,8 @@ SymmetricLinks =
   '{' WS?
   { yy->st->add_symmetric_links(let_names.sp, let_vals_list.sp); }
   ( access:VblAccessType
-    WS? u:VblRef WS? {u.sp = list1_Sesp (u.sp);}
-    (',' WS? v:VblRef WS? {pushlast_Sesp (u.sp, v.sp);} )*
+    WS? u:VblARef WS? {u.sp = list1_Sesp (u.sp);}
+    (',' WS? v:VblARef WS? {pushlast_Sesp (u.sp, v.sp);} )*
     END_STMT WS?
     {
       Sesp vbls_sp = u.sp;
@@ -548,7 +548,8 @@ IntFuncall =
   ;
 
 Value =
-    a:VblRef {$$ = a;}
+    a:VblARef {$$ = a;}
+  | a:ID {$$ = a; $$.int_ck = 1;}
   | a:NAT {$$ = a;}
   | '(' WS? a:Expr WS? ')'
     {
@@ -557,13 +558,10 @@ Value =
     }
   ;
 
-VblRef =
-  a:ID
-  ('[' WS? b:Expr WS? ']'
-   {a.sp = list3_ccstr_Sesp ("aref", a.sp, b.sp);}
-  )?
+VblARef =
+  a:ID '[' WS? b:Expr WS? ']'
   {
-    $$ = a;
+    $$.sp = list3_ccstr_Sesp("aref", a.sp, b.sp);
     $$.int_ck = 1;
   }
   ;
