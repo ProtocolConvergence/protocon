@@ -17,7 +17,7 @@ include(ExternalProject)
 
 ExternalProject_Add(lace_project
   GIT_REPOSITORY "https://github.com/grencez/lace.git"
-  GIT_TAG "108c3bb11517780f8967c23b1f668dea30842bb8"
+  GIT_TAG "0b9d220033572b25c28af66e04625cb9d5590f4e"
   #GIT_TAG "trunk"
   CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>"
   BUILD_BYPRODUCTS
@@ -45,6 +45,7 @@ add_dependencies (comparispawn lace_project)
 add_dependencies (cswitch lace_project)
 ExternalProject_Get_Property(lace_project SOURCE_DIR)
 set (LaceCxIncludePath "${SOURCE_DIR}/src")
+set (LaceIncludeDir "${SOURCE_DIR}/include")
 
 
 ExternalProject_Add(mdd_glu_project

@@ -10,5 +10,5 @@ add_executable(satsyn
   )
 set_property(TARGET satsyn APPEND PROPERTY INCLUDE_DIRECTORIES
   "${CMAKE_CURRENT_SOURCE_DIRECTORY}/../"
-  "${LaceCxIncludePath}")
+  "${LaceIncludeDir}" "${LaceCxIncludePath}")
 target_link_libraries(satsyn lace_cx_lib)

@@ -16,7 +16,7 @@ add_executable(biring
   "biring.cc"
   )
 set_property(TARGET biring APPEND PROPERTY INCLUDE_DIRECTORIES
-  "${LaceCxIncludePath}")
+  "${LaceIncludeDir}" "${LaceCxIncludePath}")
 target_link_libraries(biring lace_cx_lib)
 
 add_executable(conflictfamily_test
@@ -25,7 +25,7 @@ add_executable(conflictfamily_test
   "conflictfamily.hh"
   )
 set_property(TARGET conflictfamily_test APPEND PROPERTY INCLUDE_DIRECTORIES
-  "${LaceCxIncludePath}")
+  "${LaceIncludeDir}" "${LaceCxIncludePath}")
 target_link_libraries(conflictfamily_test lace_cx_lib)
 add_test(NAME conflictfamily_test COMMAND conflictfamily_test)
 
@@ -42,14 +42,14 @@ add_library(pfmla_lib STATIC
 set_property(TARGET pfmla_lib
   APPEND PROPERTY INCLUDE_DIRECTORIES ${GluIncludePath})
 set_property(TARGET pfmla_lib APPEND PROPERTY INCLUDE_DIRECTORIES
-  "${LaceCxIncludePath}")
+  "${LaceIncludeDir}" "${LaceCxIncludePath}")
 target_link_libraries(pfmla_lib lace_cx_lib ${mdd_glu_libs})
 
 add_executable(pfmla_test
   "pfmla_test.cc"
   )
 set_property(TARGET pfmla_test APPEND PROPERTY INCLUDE_DIRECTORIES
-  "${LaceCxIncludePath}")
+  "${LaceIncludeDir}" "${LaceCxIncludePath}")
 target_link_libraries(pfmla_test pfmla_lib)
 add_test(NAME pfmla_test COMMAND pfmla_test)
 
@@ -65,7 +65,7 @@ add_library(xnsys_lib STATIC
   "xnspec.hh"
   )
 set_property(TARGET xnsys_lib APPEND PROPERTY INCLUDE_DIRECTORIES
-  "${LaceCxIncludePath}")
+  "${LaceIncludeDir}" "${LaceCxIncludePath}")
 target_link_libraries(xnsys_lib pfmla_lib)
 
 add_executable(xnsys_test
@@ -73,7 +73,7 @@ add_executable(xnsys_test
   "xnsys_test.cc"
   )
 set_property(TARGET xnsys_test APPEND PROPERTY INCLUDE_DIRECTORIES
-  "${LaceCxIncludePath}")
+  "${LaceIncludeDir}" "${LaceCxIncludePath}")
 target_link_libraries(xnsys_test xnsys_lib)
 add_test(NAME xnsys_test COMMAND xnsys_test)
 
@@ -84,7 +84,7 @@ add_executable(stabilization_test
   "stabilization.hh"
   )
 set_property(TARGET stabilization_test APPEND PROPERTY INCLUDE_DIRECTORIES
-  "${LaceCxIncludePath}")
+  "${LaceIncludeDir}" "${LaceCxIncludePath}")
 target_link_libraries(stabilization_test xnsys_lib)
 add_test(NAME stabilization_test COMMAND stabilization_test)
 
@@ -107,7 +107,7 @@ add_library(prot_file_lib STATIC
   "cx/sesp.h"
   )
 set_property(TARGET prot_file_lib APPEND PROPERTY INCLUDE_DIRECTORIES
-  "${LaceCxIncludePath}" "${CMAKE_CURRENT_SOURCE_DIR}")
+  "${LaceIncludeDir}" "${LaceCxIncludePath}" "${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(prot_file_lib xnsys_lib)
 
 #### Deadlock Checking for Generalized Rings ####
@@ -115,7 +115,7 @@ add_executable(deadfree
   "deadfree.cc"
   )
 set_property(TARGET deadfree APPEND PROPERTY INCLUDE_DIRECTORIES
-  "${LaceCxIncludePath}")
+  "${LaceIncludeDir}" "${LaceCxIncludePath}")
 target_link_libraries(deadfree prot_file_lib)
 
 #### Simple Unidirectional Ring Programs ####
@@ -154,7 +154,7 @@ add_library(protocon_lib STATIC
   "${CMAKE_CURRENT_BINARY_DIR}/udp-impl/act.embed.h"
   )
 set_property(TARGET protocon_lib APPEND PROPERTY INCLUDE_DIRECTORIES
-  "${LaceCxIncludePath}" "${CMAKE_CURRENT_BINARY_DIR}")
+  "${LaceIncludeDir}" "${LaceCxIncludePath}" "${CMAKE_CURRENT_BINARY_DIR}")
 target_link_libraries(protocon_lib prot_file_lib)
 
 
@@ -179,7 +179,7 @@ add_executable(test_exe
   "${CMAKE_CURRENT_BINARY_DIR}/test.embed.h"
   )
 set_property(TARGET test_exe APPEND PROPERTY INCLUDE_DIRECTORIES
-  "${LaceCxIncludePath}" "${CMAKE_CURRENT_BINARY_DIR}")
+  "${LaceIncludeDir}" "${LaceCxIncludePath}" "${CMAKE_CURRENT_BINARY_DIR}")
 target_link_libraries (test_exe protocon_lib ${M_LIB})
 
 
@@ -191,7 +191,7 @@ add_executable(protocon
   "search.hh"
   )
 set_property(TARGET protocon APPEND PROPERTY INCLUDE_DIRECTORIES
-  "${LaceCxIncludePath}")
+  "${LaceIncludeDir}" "${LaceCxIncludePath}")
 target_link_libraries (protocon protocon_lib ${M_LIB})
 
 set_target_properties(protocon PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/..")
@@ -222,7 +222,7 @@ if (MPI_FOUND)
     "search.hh"
     )
   set_property (TARGET protocon-mpi APPEND PROPERTY INCLUDE_DIRECTORIES
-    "${LaceCxIncludePath}" "${MPI_INCLUDE_PATH}")
+    "${LaceIncludeDir}" "${LaceCxIncludePath}" "${MPI_INCLUDE_PATH}")
   target_link_libraries (protocon-mpi ${MPI_LIBRARIES})
   target_link_libraries (protocon-mpi protocon_lib ${M_LIB})
 
@@ -249,7 +249,7 @@ if (FALSE)
   add_executable (msat "msat.cc")
   target_link_libraries (msat minisat protocon_lib ${M_LIB})
   set_property (TARGET msat APPEND PROPERTY INCLUDE_DIRECTORIES
-    "${LaceCxIncludePath}" "/usr/include/minisat2")
+    "${LaceIncludeDir}" "${LaceCxIncludePath}" "/usr/include/minisat2")
 endif()
 
 
