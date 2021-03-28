@@ -24,7 +24,7 @@ jobs:
 
     - name: Test
       # --enable_runfiles is for Windows tests to access data deps.
-      run: bazel test --enable_runfiles //...
+      run: bazel test --enable_runfiles --test_timeout 300 //...
 
     - name: Upload Test Results
       uses: actions/upload-artifact@v2
