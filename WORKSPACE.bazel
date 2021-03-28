@@ -19,8 +19,8 @@ all_content = """filegroup(name = "all", srcs = glob(["**"]), visibility = ["//v
 git_repository(
     name = "lace",
     remote = "https://github.com/grencez/lace.git",
-    commit = "0b9d220033572b25c28af66e04625cb9d5590f4e",
-    shallow_since = "1616285692 -0700",
+    commit = "19d31b460c4ea6d628336ee4cdd479112da325a6",
+    shallow_since = "1616889188 -0700",
     #branch = "trunk",
 )
 
@@ -28,8 +28,7 @@ new_git_repository(
     name = "mdd_glu",
     build_file_content = all_content,
     remote = "https://github.com/grencez/mdd-glu.git",
-    commit = "001efd22eedcd754eb34ccb156fd6e591f7bb841",
-    shallow_since = "1614138141 -0800",
+    commit = "fce409f88b24385a5fbc521709186b96f13b5383",
 )
 
 #new_local_repository(

@@ -17,7 +17,7 @@ include(ExternalProject)
 
 ExternalProject_Add(lace_project
   GIT_REPOSITORY "https://github.com/grencez/lace.git"
-  GIT_TAG "0b9d220033572b25c28af66e04625cb9d5590f4e"
+  GIT_TAG "19d31b460c4ea6d628336ee4cdd479112da325a6"
   #GIT_TAG "trunk"
   CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>"
   BUILD_BYPRODUCTS
@@ -50,7 +50,7 @@ set (LaceIncludeDir "${SOURCE_DIR}/include")
 
 ExternalProject_Add(mdd_glu_project
   GIT_REPOSITORY "https://github.com/grencez/mdd-glu.git"
-  GIT_TAG "001efd22eedcd754eb34ccb156fd6e591f7bb841"
+  GIT_TAG "fce409f88b24385a5fbc521709186b96f13b5383"
   CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>"
   )
 add_library (mdd_cu_lib STATIC IMPORTED)

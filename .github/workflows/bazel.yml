@@ -4,7 +4,11 @@ on: [push, pull_request]
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platform: [ubuntu-latest, macos-latest]
+
+    runs-on: ${{ matrix.platform }}
 
     steps:
     - name: Setup bazel
@@ -19,11 +23,12 @@ jobs:
       run: bazel build //...
 
     - name: Test
-      run: bazel test //...
+      # --enable_runfiles is for Windows tests to access data deps.
+      run: bazel test --enable_runfiles //...
 
     - name: Upload Test Results
       uses: actions/upload-artifact@v2
       if: failure()
       with:
-        name: Test Results
+        name: Test Results (${{ matrix.platform }})
         path: bazel-testlogs*/**/*
