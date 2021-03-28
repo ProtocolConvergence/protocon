@@ -23,4 +23,8 @@ cc_binary(
     linkopts = [
         "-lrt",
     ],
+    # Uncomment when Bazel version 4 is on Gentoo.
+    # target_compatible_with = [
+    #     "@platforms//os:linux",
+    # ],
 )

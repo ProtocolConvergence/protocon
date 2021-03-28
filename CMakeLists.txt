@@ -50,20 +50,17 @@ set (LaceIncludeDir "${SOURCE_DIR}/include")
 
 ExternalProject_Add(mdd_glu_project
   GIT_REPOSITORY "https://github.com/grencez/mdd-glu.git"
-  GIT_TAG "fce409f88b24385a5fbc521709186b96f13b5383"
+  GIT_TAG "2d00c406296ecc505d4aaa2cb4628fc5c441e011"
   CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>"
   )
 add_library (mdd_cu_lib STATIC IMPORTED)
 add_library (mdd_glu_lib STATIC IMPORTED)
-add_library (mdd_cal_lib STATIC IMPORTED)
 ExternalProject_Get_Property(mdd_glu_project INSTALL_DIR)
 set_target_properties(mdd_cu_lib PROPERTIES IMPORTED_LOCATION "${INSTALL_DIR}/lib/libcu.a")
 set_target_properties(mdd_glu_lib PROPERTIES IMPORTED_LOCATION "${INSTALL_DIR}/lib/libglu.a")
-set_target_properties(mdd_cal_lib PROPERTIES IMPORTED_LOCATION "${INSTALL_DIR}/lib/libcal.a")
 add_dependencies (mdd_cu_lib mdd_glu_project)
 add_dependencies (mdd_glu_lib mdd_glu_project)
-add_dependencies (mdd_cal_lib mdd_glu_project)
-list (APPEND mdd_glu_libs mdd_cu_lib mdd_glu_lib mdd_cal_lib)
+list (APPEND mdd_glu_libs mdd_cu_lib mdd_glu_lib)
 set (GluIncludePath "${INSTALL_DIR}/include")
 
 

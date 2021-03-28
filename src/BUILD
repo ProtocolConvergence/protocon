@@ -11,10 +11,8 @@ cmake_external(
     static_libraries = [
         "libcu.a",
         "libglu.a",
-        "libcal.a",
     ],
 )
-
 
 make(
     name = "peg",
