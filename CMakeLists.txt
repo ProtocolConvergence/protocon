@@ -17,7 +17,7 @@ include(ExternalProject)
 
 ExternalProject_Add(lace_project
   GIT_REPOSITORY "https://github.com/grencez/lace.git"
-  GIT_TAG "5395e063f0897d814afcd449627617ac9b82532c"
+  GIT_TAG "b30cfabde3eeba82834d67ffa9f46087a27fee90"
   #GIT_TAG "trunk"
   CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>"
   BUILD_BYPRODUCTS
