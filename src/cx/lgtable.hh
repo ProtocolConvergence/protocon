@@ -7,7 +7,7 @@
 
 #include "synhax.hh"
 extern "C" {
-#include "cx/lgtable.h"
+#include "lgtable.h"
 }
 
 namespace Cx {

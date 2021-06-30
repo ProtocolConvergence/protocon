@@ -4,7 +4,7 @@
 
 #include "synhax.hh"
 extern "C" {
-#include "cx/ofile.h"
+#include "ofile.h"
 }
 #include "alphatab.hh"
 

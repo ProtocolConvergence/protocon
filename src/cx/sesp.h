@@ -4,7 +4,7 @@
  **/
 #ifndef Sesp_H_
 #define Sesp_H_
-#include "cx/associa.h"
+#include "associa.h"
 
 typedef struct SespBase SespBase;
 typedef SespBase* Sesp;

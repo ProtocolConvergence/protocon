@@ -6,7 +6,7 @@
 
 #include "synhax.hh"
 extern "C" {
-#include "cx/associa.h"
+#include "associa.h"
 }
 
 namespace Cx {

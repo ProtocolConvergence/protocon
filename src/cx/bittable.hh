@@ -7,7 +7,7 @@
 
 #include "synhax.hh"
 extern "C" {
-#include "cx/bittable.h"
+#include "bittable.h"
 }
 
 namespace Cx {

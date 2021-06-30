@@ -21,7 +21,8 @@ ExternalProject_Add(lace_project
   #GIT_TAG "trunk"
   CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>"
   BUILD_BYPRODUCTS
-  "<BINARY_DIR>/src/cx/libcx_lib.a"
+  "<BINARY_DIR>/compat/liblace_compat_lib.a"
+  "<BINARY_DIR>/src/liblace_lib.a"
   "<BINARY_DIR>/tool/cembed"
   "<BINARY_DIR>/tool/comparispawn"
   "<BINARY_DIR>/tool/cswitch"
@@ -30,21 +31,23 @@ add_executable(lace IMPORTED)
 add_executable(cembed IMPORTED)
 add_executable(comparispawn IMPORTED)
 add_executable(cswitch IMPORTED)
-add_library (lace_cx_lib STATIC IMPORTED)
+add_library (lace_lib STATIC IMPORTED)
+add_library (lace_compat_lib STATIC IMPORTED)
 ExternalProject_Get_Property(lace_project INSTALL_DIR)
 set_target_properties(lace PROPERTIES IMPORTED_LOCATION "${INSTALL_DIR}/bin/lace")
 ExternalProject_Get_Property(lace_project BINARY_DIR)
 set_target_properties(cembed PROPERTIES IMPORTED_LOCATION "${BINARY_DIR}/tool/cembed")
 set_target_properties(comparispawn PROPERTIES IMPORTED_LOCATION "${BINARY_DIR}/tool/comparispawn")
 set_target_properties(cswitch PROPERTIES IMPORTED_LOCATION "${BINARY_DIR}/tool/cswitch")
-set_target_properties(lace_cx_lib PROPERTIES IMPORTED_LOCATION "${BINARY_DIR}/src/cx/libcx_lib.a")
+set_target_properties(lace_lib PROPERTIES IMPORTED_LOCATION "${BINARY_DIR}/src/liblace_lib.a")
+set_target_properties(lace_compat_lib PROPERTIES IMPORTED_LOCATION "${BINARY_DIR}/compat/liblace_compat_lib.a")
 add_dependencies (lace lace_project)
-add_dependencies (lace_cx_lib lace_project)
+add_dependencies (lace_lib lace_project)
+add_dependencies (lace_compat_lib lace_project)
 add_dependencies (cembed lace_project)
 add_dependencies (comparispawn lace_project)
 add_dependencies (cswitch lace_project)
 ExternalProject_Get_Property(lace_project SOURCE_DIR)
-set (LaceCxIncludePath "${SOURCE_DIR}/src")
 set (LaceIncludeDir "${SOURCE_DIR}/include")
 
 

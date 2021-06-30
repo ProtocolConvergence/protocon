@@ -17,9 +17,6 @@ cc_binary(
     deps = [
         "//src/cx:cx_lib",
     ],
-    copts = [
-        "-Isrc",
-        "-Iexternal/lace/src",
-    ],
+    copts = ["-Isrc"],
 )
 

@@ -1,6 +1,6 @@
 
 extern "C" {
-#include "cx/syscx.h"
+#include "syscx.h"
 }
 
 #include "table.hh"

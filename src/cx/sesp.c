@@ -1,6 +1,6 @@
 
 #include "sesp.h"
-#include "cx/alphatab.h"
+#include "alphatab.h"
 
 static
   Sign

@@ -7,7 +7,7 @@
 
 #include "synhax.hh"
 extern "C" {
-#include "cx/alphatab.h"
+#include "alphatab.h"
 }
 
 namespace Cx {

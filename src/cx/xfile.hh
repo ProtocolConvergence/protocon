@@ -4,7 +4,7 @@
 
 #include "synhax.hh"
 extern "C" {
-#include "cx/xfile.h"
+#include "xfile.h"
 }
 
 namespace Cx {

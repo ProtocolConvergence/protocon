@@ -2,7 +2,7 @@
 #define Tuple_HH_
 
 extern "C" {
-#include "cx/def.h"
+#include "def.h"
 }
 
 namespace Cx {

@@ -5,7 +5,7 @@
 #include "ofile.hh"
 #include "xfile.hh"
 extern "C" {
-#include "cx/fileb.h"
+#include "fileb.h"
 }
 
 namespace Cx {
