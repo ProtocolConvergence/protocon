@@ -4,6 +4,7 @@ on: [push, pull_request]
 jobs:
   coverage:
     runs-on: ubuntu-latest
+    if: false # Always skip until GCC doesn't fail on prot-xfile.leg rules.
 
     strategy:
       fail-fast: false
