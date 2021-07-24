@@ -1,5 +1,4 @@
 name: Bazel
-
 on: [push, pull_request]
 
 jobs:
@@ -14,10 +13,10 @@ jobs:
     - name: Setup bazel
       uses: jwlawson/actions-setup-bazel@v1
       with:
-        bazel-version: '3.2.0'
+        bazel-version: '4.1.0'
 
     - name: Checkout
-      uses: actions/checkout@v1
+      uses: actions/checkout@v2
 
     - name: Build
       run: bazel build //...

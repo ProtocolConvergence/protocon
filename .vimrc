@@ -2,7 +2,7 @@
 set tabstop=2
 set shiftwidth=2
 set expandtab
-set cinoptions=(0
+set cinoptions=(0,W4
 
 """ Put this at the top of your .vimrc:
 " set nocompatible "< No vi bugs

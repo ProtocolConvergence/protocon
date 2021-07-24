@@ -1,0 +1,8 @@
+
+# Valgrind.
+build:valgrind --run_under='valgrind --trace-children=yes --track-fds=yes --leak-check=full --show-leak-kinds=all'
+#build:valgrind --run_under='valgrind --trace-children=yes --track-fds=yes --leak-check=full --show-leak-kinds=all --exit-on-first-error=yes --error-exitcode=23'
+build:valgrind --nocache_test_results
+build:valgrind --test_output=all
+build:valgrind -c dbg
+
