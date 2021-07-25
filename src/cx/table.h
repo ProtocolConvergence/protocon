@@ -96,7 +96,7 @@ dflt1_Table (TableElSz elsz)
   return dflt4_Table (0, 0, elsz, 0);
 }
 #define DEFAULT_Table  { 0, 0, 0 }
-#define DEFAULT_Z_Table( S )  { (S*)Static00, 1, 0 }
+#define DEFAULT_Z_Table( S )  { NULL, 1, 0 }
 
 #define DeclTable( S, table )  TableT_##S table = DEFAULT_Table
 #define DeclZTable( S, table ) TableT_##S table = DEFAULT_Z_Table(S)
@@ -150,13 +150,13 @@ qual_inline
 init_z_Table (Table* t, TableElSz elsz)
 {
   init1_Table (t, elsz);
-  t->s = (void*) Static00;
+  t->s = (void*) NULL;
   t->sz = 1;
 }
 #define InitZTable( t )  do \
 { \
   (t).alloc_lgsz = 0; \
-  *((byte**) &(t).s) = (byte*) Static00; \
+  *((byte**) &(t).s) = NULL; \
   (t).sz = 1; \
 } while (0)
 

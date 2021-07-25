@@ -264,6 +264,7 @@ cc_binary(
     copts = [
         "-Iexternal/lace/src",
     ],
+    visibility = ["//visibility:public"],
 )
 
 genrule(

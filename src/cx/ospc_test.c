@@ -3,6 +3,7 @@
  * Tests for processes.
  **/
 
+#include "lace_compat_sh.h"
 #include "syscx.h"
 
 #include "ospc.h"
@@ -40,7 +41,6 @@ testfn_exec ()
   pid_t pid = -1;
   int status = 1;
   const char* argv[4];
-  bool good = false;
   argv[0] = exename_of_sysCx ();
   argv[1] = "wait0";
   argv[2] = "5"; /* Special exit code. */
@@ -48,12 +48,12 @@ testfn_exec ()
 
   fputs ("V spawn() called V\n", stderr);
   fflush (stderr);
-  pid = spawnvp_sysCx ((char**) argv);
+  pid = lace_compat_sh_spawn(argv);
 
-  good = waitpid_sysCx (pid, &status);
+  status = lace_compat_sh_wait(pid);
   fputs ("^ wait() returned ^\n", stderr);
   fflush (stderr);
-  Claim( good );
+  Claim( status >= 0 );
   Claim2( status ,==, atoi (argv[2]) );
 }
 
@@ -75,7 +75,7 @@ int main(int argc, char** argv)
   if (eql_cstr (argv[argi], "wait0")) {
     argv[argi] = dup_cstr ("wait1");
     fputs (" V exec() called V\n", stderr);
-    execvp_sysCx (argv);
+    lace_compat_sh_exec((const char**)argv);
     fputs (" ^ exec() failed? ^\n", stderr);
     return 1;
   }

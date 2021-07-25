@@ -4,6 +4,7 @@
  **/
 #include "syscx.h"
 #include "lace_compat_fd.h"
+#include "lace_compat_sh.h"
 
 #include "fileb.h"
 
@@ -29,112 +30,6 @@ signal_hook_sysCx (int sig)
   failout_sysCx ("");
 }
 
-#if 0
-static
-  int
-parse_fd_uri_sysCx (const char* s)
-{
-  static const char fd_pfx[] = "fd://";
-  int fd = -1;
-  if (!s)  return -1;
-  if (strlen (s) <= strlen (fd_pfx))  return -1;
-  if (0 != memcmp (s, fd_pfx, strlen (fd_pfx)))  return -1;
-
-  s += strlen (fd_pfx);
-  s = xget_int_cstr (&fd, s);
-  if (!s)  return -1;
-  return fd;
-}
-#endif
-
-static
-  fd_t
-parse_fd_arg_sysCx (const char* s)
-{
-  int fd = -1;
-  if (!s)  return -1;
-  s = xget_int_cstr (&fd, s);
-  if (!s)  return -1;
-  return fd;
-}
-
-static
-  void
-parse_args_sysCx (int* pargc, char*** pargv)
-{
-  char* execing = NULL;
-  int argc = *pargc;
-  char** argv = *pargv;
-  int argi = 0;
-  ExeName = argv[argi++];
-
-  if (!argv[argi])  return;
-  if (!eql_cstr (argv[argi++], MagicArgv1_sysCx))  return;
-
-  while (argv[argi] && !eql_cstr (argv[argi], "--"))
-  {
-    char* arg = argv[argi++];
-    if (eql_cstr (arg, "-stdxfd"))
-    {
-      fd_t fd = parse_fd_arg_sysCx (argv[argi++]);
-      if (fd >= 0) {
-        if (fd != 0) {
-          lace_compat_fd_move_to(0, fd);
-          lace_compat_fd_inherit(0);
-        }
-      } else {
-        DBog1( "Bad -stdxfd argument: %s", argv[argi-1] );
-        failout_sysCx ("");
-      }
-    }
-    else if (eql_cstr (arg, "-stdofd"))
-    {
-      fd_t fd = parse_fd_arg_sysCx (argv[argi++]);
-      if (fd >= 0) {
-        if (fd != 1) {
-          lace_compat_fd_move_to(1, fd);
-          lace_compat_fd_inherit(1);
-        }
-      } else {
-        DBog1( "Bad -stdofd argument: %s", argv[argi-1] );
-        failout_sysCx ("");
-      }
-    }
-    if (eql_cstr (arg, "-closefd"))
-    {
-      fd_t fd = parse_fd_arg_sysCx (argv[argi++]);
-      if (fd >= 0) {
-        lace_compat_fd_close(fd);
-      } else {
-        DBog1( "Bad -closefd argument: %s", argv[argi-1] );
-        failout_sysCx ("");
-      }
-    }
-    else if (eql_cstr (arg, "-exec"))
-    {
-      execing = argv[argi++];
-    }
-  }
-
-  {
-    int i;
-    for (i = 1; i <= argc-argi; ++i) {
-      argv[i] = argv[argi+i];
-    }
-  }
-
-  *pargc = argc - argi;
-  *pargv = argv;
-
-  if (execing) {
-    /* Only exec if it's a different program.*/
-    if (0 != strcmp(argv[0], execing)) {
-      argv[0] = execing;
-      execvp_sysCx(argv);
-    }
-  }
-}
-
 /** Initialize the system.
  *
  * \return The number one.
@@ -143,11 +38,12 @@ parse_args_sysCx (int* pargc, char*** pargv)
   int
 init_sysCx (int* pargc, char*** pargv)
 {
-  stderr_OFileB ();
-  parse_args_sysCx (pargc, pargv);
+  (void) pargc;
+  ExeName = (*pargv)[0];
 
-  stdin_XFileB ();
+  stderr_OFileB ();
   stdout_OFileB ();
+  stdin_XFileB ();
   signal (SIGSEGV, signal_hook_sysCx);
 #ifndef LACE_POSIX_SOURCE
   _setmode(_fileno(stdin), _O_BINARY);
@@ -357,63 +253,6 @@ stderr_OFile ()
   return &ofb->of;
 }
 
-  int
-open_lace_xfd(const char* filename)
-{
-  static const char dev_fd_prefix[] = "/dev/fd/";
-  int fd = -1;
-  if (eq_cstr("-", filename)) {
-    fd = 0;
-  }
-  else if (pfxeq_cstr(dev_fd_prefix, filename)) {
-    xget_int_cstr(&fd, &filename[strlen(dev_fd_prefix)]);
-  }
-  else {
-#ifdef LACE_POSIX_SOURCE
-    fd = open(filename, O_RDONLY);
-#else
-    fd = _open(filename, _O_RDONLY);
-#endif
-  }
-  if (fd >= 0) {
-    lace_compat_fd_cloexec(fd);
-  }
-  return fd;
-}
-
-  int
-open_lace_ofd(const char* filename)
-{
-  static const char dev_fd_prefix[] = "/dev/fd/";
-#ifdef LACE_POSIX_SOURCE
-  const int flags =  O_WRONLY | O_CREAT | O_TRUNC | O_APPEND;
-  const int mode
-    = S_IWUSR | S_IWGRP | S_IWOTH
-    | S_IRUSR | S_IRGRP | S_IROTH;
-#else
-  const int flags = _O_WRONLY | _O_CREAT | _O_TRUNC | O_APPEND;
-  const int mode = _S_IREAD | _S_IWRITE;
-#endif
-  int fd = -1;
-  if (eq_cstr("-", filename)) {
-    fd = 1;
-  }
-  else if (pfxeq_cstr(dev_fd_prefix, filename)) {
-    xget_int_cstr(&fd, &filename[strlen(dev_fd_prefix)]);
-  }
-  else {
-#ifdef LACE_POSIX_SOURCE
-    fd = open(filename, flags, mode);
-#else
-    fd = _open(filename, flags, mode);
-#endif
-  }
-  if (fd >= 0) {
-    lace_compat_fd_cloexec(fd);
-  }
-  return fd;
-}
-
   bool
 closefd_sysCx (fd_t fd)
 {
@@ -438,132 +277,6 @@ fdopen_sysCx (fd_t fd, const char* mode)
 #else
   return _fdopen (fd, mode);
 #endif
-}
-
-#ifndef LACE_POSIX_SOURCE
-static
-  char*
-escape_windows_cmd_arg(const char* arg)
-{
-  /* We should escape quotes and backslashes!*/
-  const uint arglen = strlen(arg);
-  DeclTable( char, escaped );
-  EnsizeTable( escaped, arglen + 3 );
-  escaped.s[0] = '\"';
-  memcpy(&escaped.s[1], arg, arglen);
-  escaped.s[arglen+1] = '\"';
-  escaped.s[arglen+2] = '\0';
-  return escaped.s;
-}
-#endif
-
-  static void
-oput_execvp_args (const char* fn, char* const* argv)
-{
-  OFile* of = stderr_OFile ();
-  uint i;
-  oput_cstr_OFile (of, fn);
-  oput_char_OFile (of, ':');
-  for (i = 0; argv[i]; ++i)
-  {
-    oput_char_OFile (of, ' ');
-    oput_cstr_OFile (of, argv[i]);
-  }
-  oput_char_OFile (of, '\n');
-  flush_OFile (of);
-}
-
-  pid_t
-spawnvp_sysCx (char* const* argv)
-{
-  pid_t pid;
-#ifdef LACE_POSIX_SOURCE
-  pid = fork ();
-  if (pid == 0)
-  {
-    if (eql_cstr (argv[0], exename_of_sysCx ()) &&
-        eql_cstr (argv[1], MagicArgv1_sysCx))
-    {
-      int argc = 0;
-      DeclTable( cstr, t );
-      uint i;
-      while (argv[argc])  ++ argc;
-
-      SizeTable( t, argc+1 );
-      for (i = 0; i < t.sz; ++i) {
-        t.s[i] = argv[i];
-      }
-      parse_args_sysCx (&argc, &t.s);
-      execvp_sysCx (t.s);
-    }
-    execvp_sysCx (argv);
-  }
-#else
-  DeclTable( cstr, escaped_args );
-  PushTable( escaped_args, dup_cstr(argv[0]) );
-  while (argv[escaped_args.sz]) {
-    char* escaped_arg = escape_windows_cmd_arg(argv[escaped_args.sz]);
-    PushTable( escaped_args, escaped_arg );
-  }
-  PushTable( escaped_args, 0 );
-
-  pid = _spawnvp (_P_NOWAIT, escaped_args.s[0], escaped_args.s);
-
-  CPopTable( escaped_args, 1 );
-  while (escaped_args.sz > 0) {
-    free(*TopTable(escaped_args));
-    CPopTable(escaped_args, 1);
-  }
-  LoseTable(escaped_args);
-#endif
-  if (pid < 0)
-  {
-    DBog0( "spawn() failed!" );
-    oput_execvp_args ("spawnvp_sysCx()", argv);
-  }
-  return pid;
-}
-
-  void
-execvp_sysCx (char* const* argv)
-{
-  if (0) {
-    uint i;
-    for (i = 0; argv[i]; ++i) {
-      DBog2( "argv[%u] = %s", i, argv[i] );
-    }
-  }
-#ifdef LACE_POSIX_SOURCE
-  execvp (argv[0], argv);
-#else
-  pid_t pid = -1;
-  pid = spawnvp_sysCx (argv);
-  if (pid >= 0)
-  {
-    int status = 1;
-    if (!waitpid_sysCx (pid, &status))
-      failout_sysCx ("Failed to wait for process.");
-    exit (status);
-  }
-#endif
-  DBog0( "execvp() failed!" );
-  /* DBog1( "PATH=%s", getenv ("PATH") ); */
-  oput_execvp_args ("execvp_sysCx()", argv);
-  failout_sysCx ("execvp() failed!");
-}
-
-  bool
-waitpid_sysCx (pid_t pid, int* status)
-{
-  int ret = -1;
-#ifdef LACE_POSIX_SOURCE
-  ret = waitpid (pid, status, 0);
-  if (status)
-    *status = WEXITSTATUS( *status );
-#else
-  ret = _cwait (status, pid, 0);
-#endif
-  return (ret >= 0);
 }
 
   bool
@@ -662,19 +375,6 @@ tacenv_sysCx (const char* key, const char* val)
 
   setenv_sysCx (key, cstr_AlphaTab (dec));
   lose_AlphaTab (dec);
-}
-
-  bool
-chmodu_sysCx (const char* pathname, bool r, bool w, bool x)
-{
-  int ret = -1;
-#ifdef LACE_POSIX_SOURCE
-  chmod (pathname, (r ? S_IRUSR : 0) | (w ? S_IWUSR : 0) | (x ? S_IXUSR : 0));
-#else
-  (void) x;
-  _chmod (pathname, (r ? _S_IREAD : 0) | (w ? _S_IWRITE : 0));
-#endif
-  return (ret == 0);
 }
 
   bool

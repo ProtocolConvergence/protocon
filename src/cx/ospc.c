@@ -4,20 +4,20 @@
  **/
 #include "ospc.h"
 #include "lace_compat_fd.h"
+#include "lace_compat_sh.h"
 
   bool
 close_OSPc (OSPc* ospc)
 {
-  bool good = false;
   if (ospc->pid < 0)  return 0;
   ospc->xf = NULL;
   ospc->of = NULL;
   close_XFileB (&ospc->xfb);
   close_OFileB (&ospc->ofb);
   /* if (ospc->pid > 0)  kill (ospc->pid, SIGKILL); */
-  good = waitpid_sysCx (ospc->pid, &ospc->status);
+  ospc->status = lace_compat_sh_wait(ospc->pid);
   ospc->pid = -1;
-  return good;
+  return (ospc->status >= 0);
 }
 
   void
@@ -75,52 +75,28 @@ spawn_OSPc (OSPc* ospc)
 
   if (good)
   {
-    PushTable( argv, dup_cstr (exename_of_sysCx ()) );
-    PushTable( argv, dup_cstr (MagicArgv1_sysCx) );
-    PushTable( argv, dup_cstr ("-exec") );
     PushTable( argv, dup_cstr (cstr_AlphaTab (&ospc->cmd)) );
-
-    if (ospc->of)
-    {
-      PushTable( argv, dup_cstr ("-stdxfd") );
-      PushTable( argv, itoa_dup_cstr (xfd[0]) );
-    }
-    if (ospc->xf)
-    {
-      PushTable( argv, dup_cstr ("-stdofd") );
-      PushTable( argv, itoa_dup_cstr (ofd[1]) );
-    }
-    PushTable( argv, dup_cstr ("--") );
     nfrees = argv.sz;
-
     for (i = 0; i < ospc->args.sz; ++i) {
       PushTable( argv, cstr_AlphaTab (&ospc->args.s[i]) );
     }
-
-    PushTable( argv, 0 );
-  }
-
-  if (good) {
-    if (ospc->of) {
-      lace_compat_fd_inherit(xfd[0]);
-    }
-    if (ospc->xf) {
-      lace_compat_fd_inherit(ofd[1]);
-    }
+    PushTable( argv, NULL );
   }
 
   DoLegitP( ospc->pid >= 0, "spawn" )
-    ospc->pid = spawnvp_sysCx (argv.s);
+    ospc->pid = lace_compat_fd_spawnvp(
+        ospc->of ? xfd[0] : -1,
+        ospc->xf ? ofd[1] : -1,
+        2, NULL,
+        (const char**) argv.s);
 
   DoLegit( 0 )
   {
     /* The old switcharoo. Your input is my output and vice-versa.*/
     if (ospc->of) {
-      lace_compat_fd_close(xfd[0]);
       good = openfd_FileB(&ospc->ofb.fb, xfd[1]);
     }
     if (ospc->xf) {
-     lace_compat_fd_close(ofd[1]);
       good = openfd_FileB(&ospc->xfb.fb, ofd[0]);
     }
   }

@@ -197,7 +197,7 @@ qual_inline
 ccstr_of_AlphaTab (const AlphaTab* ts)
 {
   if (ts->sz == 0)
-    return (char*) Static00;
+    return NULL;
   return ts->s;
 }
 

@@ -63,20 +63,10 @@ typedef int fd_t;
 
 #include "def.h"
 
-int
-open_lace_xfd(const char* filename);
-int
-open_lace_ofd(const char* filename);
 bool
 closefd_sysCx (fd_t fd);
 FILE*
 fdopen_sysCx (fd_t fd, const char* mode);
-pid_t
-spawnvp_sysCx (char* const* argv);
-void
-execvp_sysCx (char* const* argv);
-bool
-waitpid_sysCx (pid_t pid, int* status);
 bool
 kill_please_sysCx(pid_t pid);
 
@@ -85,8 +75,6 @@ setenv_sysCx (const char* key, const char* val);
 void
 tacenv_sysCx (const char* key, const char* val);
 
-bool
-chmodu_sysCx (const char* pathname, bool r, bool w, bool x);
 bool
 mkdir_sysCx (const char* pathname);
 bool

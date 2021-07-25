@@ -1,0 +1,5 @@
+#!/usr/bin/env lace
+
+zec -o $(OF OrientRingOdd) / / $(XA 1)
+
+protocon -verify -x $(XF OrientRingOdd) -param N 4

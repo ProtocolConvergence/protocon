@@ -1,0 +1,8 @@
+#!/usr/bin/env lace
+
+zec -o $(OF expect) / / $(XA 1)
+zec -o $(OF OrientDaisy) / / $(XA 2)
+
+|< protocon -nop -x $(XF OrientDaisy) -param N 5 -o-pml -
+|> cmp $(XF expect)
+

@@ -200,29 +200,6 @@ foreach (f ${VerifyBySynthesis})
     COMMAND protocon -x ${SolnPath}/${f}.prot -param N 5)
 endforeach ()
 
-add_test (NAME Verif4_Sync_OrientRing
-  COMMAND protocon -verify -synchronous -x ${SolnPath}/OrientRing.prot -param N 4)
-
 ## Unidirectional ring sanity check.
 add_test (NAME Uniring_Generate COMMAND uni_generate -test)
-
-## Promela file output.
-add_test (NAME Promela_OrientDaisy
-  COMMAND comparispawn ${TestPath}/expect/OrientDaisy.pml
-  ${protocon_exe} -nop -x ${SolnPath}/OrientDaisy.prot -param N 5 -o-pml -)
-
-## UDP file output.
-add_test (NAME UDP_TokenRingRand
-  COMMAND comparispawn ${TestPath}/expect/TokenRingRand.h
-  ${protocon_exe} -nop -x ${SolnPath}/TokenRingRand.prot -param N 10 -o-udp-include -)
-
-## PLA file output.
-add_test (NAME PLA_MatchRingThreeState
-  COMMAND comparispawn ${TestPath}/expect/MatchRingThreeState.pla
-  ${protocon_exe} -nop -x ${SolnPath}/MatchRingThreeState.prot -o-pla -)
-
-## Ensure our tests can actually detect failure.
-add_test (NAME Verif4_OrientRingOdd
-  COMMAND protocon -verify -x ${SolnPath}/OrientRingOdd.prot -param N 4)
-set_tests_properties (Verif4_OrientRingOdd PROPERTIES WILL_FAIL TRUE)
 

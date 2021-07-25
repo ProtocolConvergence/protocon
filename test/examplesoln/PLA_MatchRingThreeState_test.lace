@@ -1,0 +1,8 @@
+#!/usr/bin/env lace
+
+zec -o $(OF expect) / / $(XA 1)
+zec -o $(OF MatchRingThreeState) / / $(XA 2)
+
+|< protocon -nop -x $(XF MatchRingThreeState) -o-pla -
+|> cmp $(XF expect)
+

@@ -89,8 +89,8 @@ close_XFileB (XFileB* f)
 {
   close_FileB (&f->fb);
   f->xf.off = 0;
-  Ensure0( f->xf.buf.s[0] );
-  f->xf.buf.sz = 1;
+  LoseTable(f->xf.buf);
+  InitTable(f->xf.buf);
 }
 
   void
@@ -99,8 +99,8 @@ close_OFileB (OFileB* f)
   flush_OFileB (f);
   close_FileB (&f->fb);
   f->of.off = 0;
-  Ensure0( f->of.buf.s[0] );
-  f->of.buf.sz = 1;
+  LoseTable(f->of.buf);
+  InitTable(f->of.buf);
 }
 
   void
@@ -328,8 +328,7 @@ openfd_FileB (FileB* fb, fd_t fd)
   assert(!fb->f);
   assert(fb->fd < 0);
 
-  lace_compat_fd_cloexec(fd);
-  fb->fd = fd;
+  fb->fd = lace_compat_fd_claim(fd);
   fb->f = fdopen_sysCx (fd, (fb->sink ? "wb" : "rb"));
   return !!fb->f;
 }
@@ -346,7 +345,6 @@ set_FILE_FileB (FileB* fb, FILE* file)
 #else
   fb->fd = fileno(file);
 #endif
-  lace_compat_fd_cloexec(fb->fd);
 }
 
   char*
@@ -520,12 +518,6 @@ flush1_OFileB (OFileB* ofb, const byte* a, uint n)
     fflush (ofb->fb.f);
   }
 
-
-  if (nullt_FileB (&ofb->fb))
-  {
-    /* Not sure why...*/
-    Ensure0( of->buf.s[of->off] );
-  }
   return true;
 }
 
