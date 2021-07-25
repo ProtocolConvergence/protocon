@@ -81,8 +81,6 @@ bool
 rmdir_sysCx (const char* pathname);
 bool
 chdir_sysCx (const char* pathname);
-Bool
-randomize_sysCx(void* p, uint size);
 
 #endif
 

@@ -175,6 +175,7 @@ cc_test(
 cc_library(
     name = "prot_file_lib",
     srcs = [
+        "lace_wrapped.hh",
         "namespace.hh",
         "pla.cc",
         "pla.hh",

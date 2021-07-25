@@ -1,6 +1,8 @@
 
 #include "synthesis.hh"
 
+#include "lace_wrapped.hh"
+
 #include "cx/fileb.hh"
 #include "cx/tuple.hh"
 #include "prot-ofile.hh"
@@ -1273,9 +1275,13 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
         }
       }
       if (big_livelock) {
-        Cx::OFileB ofb;
-        ofb.open(this->ctx->opt.livelock_ofilepath + "." + this->ctx->opt.sys_pcidx + "." + this->ctx->opt.n_livelock_ofiles++);
-        oput_protocon_file(ofb, sys, this->actions, false, "livelock");
+        const std::string livelock_out_filename = (
+            this->ctx->opt.livelock_ofilepath + "." +
+            this->ctx->opt.sys_pcidx + "." +
+            this->ctx->opt.n_livelock_ofiles).ccstr();
+        this->ctx->opt.n_livelock_ofiles += 1;
+        lace::ofstream livelock_out(livelock_out_filename);
+        oput_protocon_file(livelock_out, sys, this->actions, false, "livelock");
       }
     }
     return false;

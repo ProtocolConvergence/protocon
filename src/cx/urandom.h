@@ -30,9 +30,6 @@ shuffle_uints_URandom (URandom* urandom, uint* a, uint n);
 
 uint
 randommod_sysCx(uint n);
-/* Implemented in syscx.c */
-Bool
-randomize_sysCx(void* p, uint size);
 
 qual_inline
   void

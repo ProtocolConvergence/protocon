@@ -96,6 +96,7 @@ add_custom_command(
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/prot-xfile.leg)
 
 add_library(prot_file_lib STATIC
+  "lace_wrapped.hh"
   "pla.cc"
   "pla.hh"
   "prot-ofile.cc"

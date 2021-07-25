@@ -4,6 +4,7 @@
 extern "C" {
 #include "cx/ospc.h"
 }
+#include "lace_wrapped.hh"
 
 #include "cx/alphatab.hh"
 #include "cx/fileb.hh"
@@ -14,34 +15,34 @@ extern "C" {
 
 static
   void
-oput_pla_val (OFile& of, uint j, uint n)
+oput_pla_val(std::ostream& out, uint j, uint n)
 {
   for (uint i = 0; i < n; ++i)
-    of << (i == j ? 1 : 0);
+    out << (i == j ? 1 : 0);
 }
 
 static
   void
-oput_pla_act (OFile& of, const Xn::ActSymm& act)
+oput_pla_act(std::ostream& out, const Xn::ActSymm& act)
 {
   const Xn::PcSymm& pc_symm = *act.pc_symm;
   for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
     const Xn::VblSymm& vbl_symm = *pc_symm.rvbl_symms[i];
     if (vbl_symm.pure_shadow_ck())
       continue;
-    of << ' ';
-    oput_pla_val (of, act.guard(i), vbl_symm.domsz);
+    out << ' ';
+    oput_pla_val(out, act.guard(i), vbl_symm.domsz);
   }
   for (uint i = 0; i < pc_symm.wvbl_symms.sz(); ++i) {
     const Xn::VblSymm& vbl_symm = *pc_symm.wvbl_symms[i];
-    of << ' ';
-    oput_pla_val (of, act.assign(i), vbl_symm.domsz);
+    out << ' ';
+    oput_pla_val(out, act.assign(i), vbl_symm.domsz);
   }
 }
 
   void
-oput_pla_pc_acts (OFile& of, const Xn::PcSymm& pc_symm,
-                  const Table<Xn::ActSymm>& acts)
+oput_pla_pc_acts(std::ostream& out, const Xn::PcSymm& pc_symm,
+                 const Table<Xn::ActSymm>& acts)
 {
   Claim2( pc_symm.wvbl_symms.sz() ,==, pc_symm.spec->wmap.sz() );
 
@@ -51,42 +52,42 @@ oput_pla_pc_acts (OFile& of, const Xn::PcSymm& pc_symm,
       nrvbls += 1;
   }
 
-  of << ".mv " << (nrvbls + pc_symm.spec->wmap.sz()) << " 0";
+  out << ".mv " << (nrvbls + pc_symm.spec->wmap.sz()) << " 0";
   for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
     const Xn::VblSymm& vbl_symm = *pc_symm.rvbl_symms[i];
     if (vbl_symm.pure_shadow_ck())
       continue;
-    of << ' ' << vbl_symm.domsz;
+    out << ' ' << vbl_symm.domsz;
   }
   for (uint i = 0; i < pc_symm.wvbl_symms.sz(); ++i) {
     const Xn::VblSymm& vbl_symm = *pc_symm.wvbl_symms[i];
-    of << ' ' << vbl_symm.domsz;
+    out << ' ' << vbl_symm.domsz;
   }
-  of << '\n';
+  out << '\n';
 
-  of << '#';
+  out << '#';
   for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
     if (pc_symm.rvbl_symms[i]->pure_shadow_ck())
       continue;
-    of << ' ' << pc_symm.vbl_name(i);
+    out << ' ' << pc_symm.vbl_name(i);
   }
 
   for (uint i = 0; i < pc_symm.spec->wmap.sz(); ++i)
-    of << ' ' << pc_symm.vbl_name(pc_symm.spec->wmap[i]) << '\'';
-  of << '\n';
+    out << ' ' << pc_symm.vbl_name(pc_symm.spec->wmap[i]) << '\'';
+  out << '\n';
 
   for (uint i = 0; i < acts.sz(); ++i) {
     const Xn::ActSymm& act = acts[i];
     if (act.pc_symm == &pc_symm) {
-      oput_pla_act (of, act);
-      of << '\n';
+      oput_pla_act (out, act);
+      out << '\n';
     }
   }
-  of << ".e\n";
+  out << ".e\n";
 }
 
   bool
-oput_pla_file (OFile& ofile, const Xn::Sys& sys)
+oput_pla_file (std::ostream& ofile, const Xn::Sys& sys)
 {
   Table<Xn::ActSymm> acts;
   const Xn::Net& topo = sys.topology;
@@ -100,34 +101,33 @@ oput_pla_file (OFile& ofile, const Xn::Sys& sys)
     const Xn::PcSymm& pc_symm = topo.pc_symms[i];
     const Xn::PcSymmSpec& pc_spec = *pc_symm.spec;
     ofile << "## Process " << pc_spec.name << "[" << pc_spec.idx_name << "]:\n";
-    oput_pla_pc_acts (ofile, pc_symm, acts);
+    oput_pla_pc_acts(ofile, pc_symm, acts);
   }
   return true;
 }
 
   bool
-oput_pla_file (const String& ofilename, const Xn::Sys& sys)
+oput_pla_file(const String& ofilename, const Xn::Sys& sys)
 {
   DeclLegit( good );
-  Cx::OFileB ofb;
-  OFile ofile = ofb.uopen(ofilename);
+  lace::ofstream out(ofilename.ccstr());
   DoLegitLine( "Open PLA file" )
-    !!ofile;
+    out.good();
   DoLegitLine( "" )
-    oput_pla_file (ofile, sys);
+    oput_pla_file(out, sys);
   return good;
 }
 
 
 static
   bool
-oput_protocon_pc_act (OFile& of, ::XFile* xf,
-                      const Table<String>& guard_vbls,
-                      const Table<String>& assign_vbls)
+oput_protocon_pc_act(std::ostream& out, ::XFile* xf,
+                     const Table<String>& guard_vbls,
+                     const Table<String>& assign_vbls)
 {
   DeclLegit( good );
   bool clause = false;
-  of << "\n    ( ";
+  out << "\n    ( ";
   for (uint i = 0;
        good && i < (guard_vbls.sz() + assign_vbls.sz());
        ++i)
@@ -148,46 +148,46 @@ oput_protocon_pc_act (OFile& of, ::XFile* xf,
 
     if (i >= guard_vbls.sz()) {
       if (i == guard_vbls.sz()) {
-        of << " -->";
+        out << " -->";
       }
       Claim2( vals.sz() ,==, 1 );
-      of << ' ' << assign_vbls[i-guard_vbls.sz()] << ":=" << vals[0] << ';';
+      out << ' ' << assign_vbls[i-guard_vbls.sz()] << ":=" << vals[0] << ';';
       continue;
     }
 
     if (vals.sz() == m)  continue;
 
     if (clause)
-      of << " && ";
+      out << " && ";
     clause = true;
 
     if (vals.sz() == m-1 && m > 2) {
       for (uint j = 0; j < m; ++j) {
         if (!vals.elem_ck(j)) {
-          of << guard_vbls[i] << "!=" << j;
+          out << guard_vbls[i] << "!=" << j;
           break;
         }
       }
       continue;
     }
 
-    if (vals.sz() > 1)  of << "(";
+    if (vals.sz() > 1)  out << "(";
     for (uint j = 0; good && j < vals.sz(); ++j) {
-      if (j > 0)  of << " || ";
-      of << guard_vbls[i] << "==" << vals[j];
+      if (j > 0)  out << " || ";
+      out << guard_vbls[i] << "==" << vals[j];
     }
-    if (vals.sz() > 1)  of << ")";
+    if (vals.sz() > 1)  out << ")";
   }
-  of << " )";
+  out << " )";
   return good;
 }
 
 
 static
   bool
-oput_protocon_pc_acts_espresso_spawn (OFile& of, const Xn::PcSymm& pc_symm,
-                                      const Table<Xn::ActSymm>& acts,
-                                      OSPc* ospc)
+oput_protocon_pc_acts_espresso_spawn(std::ostream& out, const Xn::PcSymm& pc_symm,
+                                     const Table<Xn::ActSymm>& acts,
+                                     OSPc* ospc)
 {
   DeclLegit( good );
 
@@ -204,12 +204,17 @@ oput_protocon_pc_acts_espresso_spawn (OFile& of, const Xn::PcSymm& pc_symm,
   }
 
   DoLegitLine( "spawn espresso" )
-    spawn_OSPc (ospc);
+    spawn_OSPc(ospc);
 
   if (good) {
-    OFile espresso_xf(ospc->of);
-    oput_pla_pc_acts (espresso_xf, pc_symm, acts);
-    close_OFile (ospc->of);
+    lace::ofstream to_espresso(open_fd_LaceO(ospc->ofb.fb.fd));
+    oput_pla_pc_acts(to_espresso, pc_symm, acts);
+  }
+  if (good) {
+    /* Double-close is unavoidable unless we dup() above.*/
+    fclose(ospc->ofb.fb.f);
+    ospc->ofb.fb.f = NULL;
+    ospc->ofb.fb.fd = -1;
   }
 
   while (good && !skip_cstr_XFile (ospc->xf, ".p"))
@@ -231,18 +236,18 @@ oput_protocon_pc_acts_espresso_spawn (OFile& of, const Xn::PcSymm& pc_symm,
       getlined_olay_XFile (olay, ospc->xf, "\n");
 
     DoLegitLine(0)
-      oput_protocon_pc_act (of, olay, guard_vbls, assign_vbls);
+      oput_protocon_pc_act(out, olay, guard_vbls, assign_vbls);
   }
-  of << "\n    ;";
+  out << "\n    ;";
 
   close_OSPc (ospc);
   return good;
 }
 
   bool
-oput_protocon_pc_acts_espresso (OFile& of,
-                                const Xn::PcSymm& pc_symm,
-                                const Table<Xn::ActSymm>& acts)
+oput_protocon_pc_acts_espresso(std::ostream& out,
+                               const Xn::PcSymm& pc_symm,
+                               const Table<Xn::ActSymm>& acts)
 {
   DeclLegit( good );
   OSPc ospc[1];
@@ -262,7 +267,7 @@ oput_protocon_pc_acts_espresso (OFile& of,
   }
 
   DoLegitLine( "" )
-    oput_protocon_pc_acts_espresso_spawn (of, pc_symm, acts, ospc);
+    oput_protocon_pc_acts_espresso_spawn(out, pc_symm, acts, ospc);
 
   lose_OSPc (ospc);
   return good;

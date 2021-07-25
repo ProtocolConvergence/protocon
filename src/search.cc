@@ -3,6 +3,8 @@
 #include "xnsys.hh"
 #include <algorithm>
 
+#include "lace_wrapped.hh"
+
 #include "cx/urandom.hh"
 #include "cx/fileb.hh"
 #include "opt.hh"
@@ -32,9 +34,14 @@ verify_solutions(const PartialSynthesis& inst, StabilizationCkInfo* info, uint* 
                           inst[i].actions, info))
     {
       if (i == inst.sz()-1 && info && info->livelock_exists && !!inst.ctx->opt.livelock_ofilepath) {
-        Cx::OFileB ofb;
-        ofb.open(inst.ctx->opt.livelock_ofilepath + "." + inst.ctx->opt.sys_pcidx + "." + inst.ctx->opt.n_livelock_ofiles++);
-        oput_protocon_file(ofb, *inst.ctx->systems[i], inst[i].actions,
+        const std::string livelock_out_filename = (
+            inst.ctx->opt.livelock_ofilepath + "." +
+            inst.ctx->opt.sys_pcidx + "." +
+            inst.ctx->opt.n_livelock_ofiles).ccstr();
+        inst.ctx->opt.n_livelock_ofiles += 1;
+
+        lace::ofstream livelock_out(livelock_out_filename);
+        oput_protocon_file(livelock_out, *inst.ctx->systems[i], inst[i].actions,
                            false, "livelock");
       }
       *inst[i].log << "Solution was NOT self-stabilizing." << inst[i].log->endl();
@@ -678,9 +685,8 @@ void
       if (!!exec_opt.ofilepath) {
         String filepath( exec_opt.ofilepath + "." + i );
         *opt.log << "Writing system to: " << filepath  << opt.log->endl();
-        Cx::OFileB ofb;
-        ofb.open(filepath);
-        oput_protocon_file(ofb, sys, sys.actions,
+        lace::ofstream prot_out(filepath.ccstr());
+        oput_protocon_file(prot_out, sys, sys.actions,
                            exec_opt.use_espresso,
                            exec_opt.argline.ccstr());
       }
@@ -939,11 +945,10 @@ stabilization_search(vector<uint>& ret_actions,
         solution_found = true;
         ret_actions = actions;
         if (global_opt.try_all && !!exec_opt.ofilepath) {
-          Cx::OFileB ofb;
-          ofb.open(exec_opt.ofilepath + "." + PcIdx + "." + trial_idx);
-          oput_protocon_file (ofb, sys, actions,
-                              exec_opt.use_espresso,
-                              exec_opt.argline.ccstr());
+          lace::ofstream prot_out((exec_opt.ofilepath + "." + PcIdx + "." + trial_idx).ccstr());
+          oput_protocon_file(prot_out, sys, actions,
+                             exec_opt.use_espresso,
+                             exec_opt.argline.ccstr());
         }
       }
 

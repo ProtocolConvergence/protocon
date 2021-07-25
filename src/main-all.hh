@@ -8,6 +8,7 @@ extern "C" {
 #endif
 }
 
+#include "lace_wrapped.hh"
 #include "cx/fileb.hh"
 
 #include "opt.hh"

@@ -1,4 +1,5 @@
 
+#include "lace_compat_random.h"
 #include "bittable.h"
 #include "urandom.h"
 
@@ -178,7 +179,8 @@ randommod_sysCx(uint n)
   uint x;
 
   do {
-    randomize_sysCx (bt.s, nbytes);
+    size_t n = lace_compat_random_bytes(bt.s, nbytes);
+    assert(n == nbytes);
 
     /* We can assume each bit is uniformly random,
      * so truncate as much as possible without excluding {max}.

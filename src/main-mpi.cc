@@ -235,11 +235,10 @@ stabilization_search(vector<uint>& ret_actions,
       }
 
       if (global_opt.try_all && !!exec_opt.ofilepath && count_solution) {
-        Cx::OFileB ofb;
-        ofb.open(exec_opt.ofilepath + "." + PcIdx + "." + trial_idx);
-        oput_protocon_file (ofb, sys, actions,
-                            exec_opt.use_espresso,
-                            exec_opt.argline.ccstr());
+        lace::ofstream prot_out((exec_opt.ofilepath + "." + PcIdx + "." + trial_idx).ccstr());
+        oput_protocon_file(prot_out, sys, actions,
+                           exec_opt.use_espresso,
+                           exec_opt.argline.ccstr());
       }
 
       if (!count_solution) {
