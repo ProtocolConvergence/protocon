@@ -3,7 +3,6 @@
 #include "cx/bittable.hh"
 #include "cx/tuple.hh"
 
-Cx::OFile DBogOF( stderr_OFile () );
 
 #include "namespace.hh"
 namespace Xn {
@@ -492,8 +491,8 @@ Net::oput(ostream& of,
   return of;
 }
 
-  OFile&
-Net::oput_vbl_names(OFile& of) const
+std::ostream&
+Net::oput_vbl_names(std::ostream& of) const
 {
   for (uint i = 0; i < this->vbls.sz(); ++i) {
     if (i > 0)
@@ -504,8 +503,8 @@ Net::oput_vbl_names(OFile& of) const
   return of;
 }
 
-  OFile&
-Net::oput_pfmla(OFile& of, Cx::PFmla pf,
+std::ostream&
+Net::oput_pfmla(std::ostream& of, Cx::PFmla pf,
                 Sign pre_or_img, bool just_one) const
 {
   Table<uint> state_pre(this->vbls.sz(), 0);
@@ -550,26 +549,26 @@ Net::oput_pfmla(OFile& of, Cx::PFmla pf,
 }
 
 
-  OFile&
-Net::oput_one_xn(OFile& of, const X::Fmla& pf) const
+std::ostream&
+Net::oput_one_xn(std::ostream& of, const X::Fmla& pf) const
 {
   return this->oput_pfmla(of, pf, 0, true);
 }
 
-  OFile&
-Net::oput_all_xn(OFile& of, const X::Fmla& pf) const
+std::ostream&
+Net::oput_all_xn(std::ostream& of, const X::Fmla& pf) const
 {
   return this->oput_pfmla(of, pf, 0, false);
 }
 
-  OFile&
-Net::oput_one_pf(OFile& of, const P::Fmla& pf) const
+std::ostream&
+Net::oput_one_pf(std::ostream& of, const P::Fmla& pf) const
 {
   return this->oput_pfmla(of, pf, -1, true);
 }
 
-  OFile&
-Net::oput_all_pf(OFile& of, const P::Fmla& pf) const
+std::ostream&
+Net::oput_all_pf(std::ostream& of, const P::Fmla& pf) const
 {
   return this->oput_pfmla(of, pf, -1, false);
 }
@@ -688,8 +687,7 @@ Sys::integrityCk() const
     good = false;
 
     X::Fmla bad_xn = this->shadow_pfmla & this->invariant & (~this->invariant).as_img();
-    OFile of( stderr_OFile () );
-    topo.oput_one_xn(of, bad_xn);
+    topo.oput_one_xn(std::cerr, bad_xn);
   }
 
   return !!good;
@@ -697,8 +695,8 @@ Sys::integrityCk() const
 
 }
 
-  OFile&
-OPut(OFile& of, const Xn::ActSymm& act)
+  std::ostream&
+OPut(std::ostream& of, const Xn::ActSymm& act)
 {
   const Xn::PcSymm& pc = *act.pc_symm;
   of << "/*" << pc.spec->name << "[" << pc.spec->idx_name << "]" << "*/ ";
@@ -809,7 +807,7 @@ find_livelock_actions(Table<uint>& ret_actions, const X::Fmla& xn,
 }
 
   void
-oput_one_cycle(OFile& of, const X::Fmla& xn,
+oput_one_cycle(std::ostream& of, const X::Fmla& xn,
                const P::Fmla& scc, const P::Fmla& initial,
                const Xn::Net& topo)
 {
@@ -1168,7 +1166,7 @@ candidate_actions(std::vector<uint>& candidates,
         add = false;
         rejs << actidx;
         if (explain_rej) {
-          OPut((DBogOF << "Action " << actidx << " is a self-loop: "), act) << '\n';
+          OPut((std::cerr << "Action " << actidx << " is a self-loop: "), act) << '\n';
         }
       }
       if (!shadow_exists)
@@ -1179,7 +1177,7 @@ candidate_actions(std::vector<uint>& candidates,
       add = false;
       rejs << actidx;
       if (explain_rej) {
-        OPut((DBogOF << "Action " << actidx << " leaves assumed states: "), act) << '\n';
+        OPut((std::cerr << "Action " << actidx << " leaves assumed states: "), act) << '\n';
       }
     }
     if (add && !sys.closed_assume.overlap_ck(act_xn.pre())) {
@@ -1229,7 +1227,7 @@ candidate_actions(std::vector<uint>& candidates,
         add = false;
         rejs << actidx;
         if (explain_rej) {
-          OPut((DBogOF << "Action " << actidx << " breaks closure: "), act) << '\n';
+          OPut((std::cerr << "Action " << actidx << " breaks closure: "), act) << '\n';
         }
       }
       else if (sys.spec->invariant_style != Xn::FutureAndClosed &&
@@ -1239,7 +1237,7 @@ candidate_actions(std::vector<uint>& candidates,
         add = false;
         rejs << actidx;
         if (explain_rej) {
-          OPut((DBogOF << "Action " << actidx << " breaks shadow protocol: "), act) << '\n';
+          OPut((std::cerr << "Action " << actidx << " breaks shadow protocol: "), act) << '\n';
         }
       }
     }

@@ -15,10 +15,9 @@ namespace Cx {
   template <class T> class LgTable;
   template <class K, class V> class Map;
   template <class T> class Mem;
-  class OFile;
   template <class T> class Set;
   template <class T> class Table;
-  template <class T, uint N> class Tuple;
+  template <class T, unsigned N> class Tuple;
   template <class T> class Triple;
   class URandom;
   class XFile;
@@ -41,7 +40,6 @@ namespace PROTOCON_NAMESPACE {
   using Cx::LgTable;
   using Cx::Map;
   using Cx::Mem;
-  using Cx::OFile;
   using Cx::Set;
   using Cx::Table;
   using Cx::Tuple;

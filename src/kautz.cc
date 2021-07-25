@@ -1,6 +1,5 @@
 
 #include "kautz.hh"
-#include "cx/ofile.hh"
 
 static int
 egcd(int* ret_a, int* ret_b);
@@ -137,7 +136,7 @@ gkautz_comm_hood(Cx::Table<uint>& hood, uint vidx, uint degree, uint n)
 }
 
   void
-oput_graphviz_kautz(Cx::OFile& ofile, uint degree, uint nverts)
+oput_graphviz_kautz(std::ostream& ofile, uint degree, uint nverts)
 {
   ofile
     << "digraph G {\n"

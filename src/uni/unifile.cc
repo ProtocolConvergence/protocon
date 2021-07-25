@@ -5,6 +5,7 @@ extern "C" {
 
 #include "unifile.hh"
 
+#include "lace_wrapped.hh"
 #include "cx/bittable.hh"
 #include "cx/fileb.hh"
 #include "cx/map.hh"
@@ -130,7 +131,7 @@ uniring_actset_of(const Table<PcState>& ppgfun, uint domsz)
   return actset;
 }
 
-OFile& operator<<(OFile& of, const BitTable& bt)
+std::ostream& operator<<(std::ostream& of, const BitTable& bt)
 {
   for (zuint i = 0; i < bt.sz(); ++i)
     of << bt[i];
@@ -158,8 +159,8 @@ xget_triple(C::XFile* xfile, UniAct& act)
   return false;
 }
 
-  OFile&
-oput_b64_ppgfun(OFile& ofile, const Table<PcState>& ppgfun, uint domsz)
+  std::ostream&
+oput_b64_ppgfun(std::ostream& ofile, const Table<PcState>& ppgfun, uint domsz)
 {
   if (domsz == 0)
     domsz = uniring_domsz_of(ppgfun);
@@ -251,7 +252,7 @@ xget_list(C::XFile* xfile, Table<UniAct>& acts)
 }
 
   void
-oput_list(OFile& ofile, const Table<UniAct>& acts)
+oput_list(std::ostream& ofile, const Table<UniAct>& acts)
 {
   for (uint i = 0; i < acts.sz(); ++i) {
     ofile
@@ -321,7 +322,7 @@ map_livelock_ppgs(void (*f) (void**, const UniAct&, uint, uint),
 }
 
   void
-oput_uniring_invariant(OFile& ofile, const BitTable& set, const uint domsz,
+oput_uniring_invariant(std::ostream& ofile, const BitTable& set, const uint domsz,
                        const char* pfx, const char* delim)
 {
   UniAct prev( domsz );
@@ -343,7 +344,7 @@ oput_uniring_invariant(OFile& ofile, const BitTable& set, const uint domsz,
 }
 
   void
-oput_protocon(OFile& ofile, const Table<UniAct>& acts, uint domsz)
+oput_protocon(std::ostream& ofile, const Table<UniAct>& acts, uint domsz)
 {
   if (domsz == 0) {
     domsz = uniring_domsz_of(acts);
@@ -374,13 +375,12 @@ oput_protocon(OFile& ofile, const Table<UniAct>& acts, uint domsz)
   void
 oput_protocon(const String& ofilename, const Table<UniAct>& acts, uint domsz)
 {
-  OFileB ofb;
-  OFile ofile( ofb.uopen(0, ofilename) );
+  lace::ofstream ofile(ofilename.ccstr());
   oput_protocon(ofile, acts, domsz);
 }
 
   void
-oput_promela(OFile& ofile, const Table<UniAct>& acts, uint domsz)
+oput_promela(std::ostream& ofile, const Table<UniAct>& acts, uint domsz)
 {
   ofile
     << "\n#define N 4"
@@ -397,7 +397,7 @@ oput_promela(OFile& ofile, const Table<UniAct>& acts, uint domsz)
   for (uint i = 0; i < domsz; ++i) {
     ofile << "\n    :: x_i = " << i << ';';
   }
-  ofile.printf("\n    select(tmp : 0..%u);", domsz-1);
+  ofile << "\n    select(tmp : 0.." << (domsz-1) << ");";
   ofile
     << "\n    fi;"
     << "\n    initializing --;"
@@ -420,7 +420,7 @@ oput_promela(OFile& ofile, const Table<UniAct>& acts, uint domsz)
 }
 
   void
-oput_graphviz(OFile& ofile, const Table<UniAct>& acts)
+oput_graphviz(std::ostream& ofile, const Table<UniAct>& acts)
 {
   ofile << "digraph G {"
     << "\n  margin=0;"
@@ -449,7 +449,7 @@ oput_graphviz(OFile& ofile, const Table<UniAct>& acts)
 }
 
 static void
-oput_svg_tile(OFile& ofile, const UniAct& act, uint y, uint x, uint d)
+oput_svg_tile(std::ostream& ofile, const UniAct& act, uint y, uint x, uint d)
 {
   const char rect_style[] = " fill=\"none\" stroke=\"black\" stroke-width=\"4\"";
   const char line_style[] = " stroke=\"black\" stroke-width=\"2\"";
@@ -480,11 +480,11 @@ oput_svg_tile_callback(void** data, const UniAct& act, uint i, uint j)
 {
   const uint d = *(uint*)data[1];
   const uint border = *(uint*)data[2];
-  oput_svg_tile(*(OFile*)data[0], act, i*d+border, j*d+border, d);
+  oput_svg_tile(*(std::ostream*)data[0], act, i*d+border, j*d+border, d);
 }
 
   void
-oput_svg_livelock(OFile& ofile, const Table<PcState>& ppgfun,
+oput_svg_livelock(std::ostream& ofile, const Table<PcState>& ppgfun,
                   const Table<PcState>& bot,
                   const Table<PcState>& col,
                   const PcState domsz)

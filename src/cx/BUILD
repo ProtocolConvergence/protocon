@@ -20,7 +20,6 @@ cc_library(
         "map.hh",
         "ofile.c",
         "ofile.h",
-        "ofile.hh",
         "ospc.c",
         "ospc.h",
         "rbtree.c",

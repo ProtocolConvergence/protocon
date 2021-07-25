@@ -10,6 +10,7 @@ extern "C" {
 #include "cx/fileb.hh"
 #include "cx/table.hh"
 
+#include "../lace_wrapped.hh"
 #include "../namespace.hh"
 
 int main(int argc, char** argv)
@@ -124,9 +125,8 @@ int main(int argc, char** argv)
       livelock_semick(cutoff, ppgfun, domsz, &top, &col);
 
     if (livelock_exists==Yes) {
-      OFileB svg_ofileb;
-      OFile svg_ofile( svg_ofileb.uopen(0, svg_livelock_ofilename) );
-      oput_svg_livelock(svg_ofile, ppgfun, top, col, domsz);
+      lace::ofstream svg_out(svg_livelock_ofilename);
+      oput_svg_livelock(svg_out, ppgfun, top, col, domsz);
     }
     else {
       DBog0("No livelock detected for given -cutoff.");
@@ -138,21 +138,18 @@ int main(int argc, char** argv)
   }
 
   if (id_ofilename) {
-    OFileB id_ofileb;
-    OFile id_ofile( id_ofileb.uopen(0, id_ofilename) );
+    lace::ofstream id_ofile(id_ofilename);
     oput_b64_ppgfun(id_ofile, ppgfun, domsz);
     id_ofile << '\n';
   }
 
   if (graphviz_ofilename) {
-    OFileB graphviz_ofileb;
-    OFile graphviz_ofile( graphviz_ofileb.uopen(0, graphviz_ofilename) );
+    lace::ofstream graphviz_ofile(graphviz_ofilename);
     oput_graphviz(graphviz_ofile, acts);
   }
 
   if (list_ofilename) {
-    OFileB list_ofileb;
-    OFile list_ofile( list_ofileb.uopen(0, list_ofilename) );
+    lace::ofstream list_ofile(list_ofilename);
     oput_list(list_ofile, acts);
   }
 

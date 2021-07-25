@@ -29,7 +29,7 @@ verify_solutions(const PartialSynthesis& inst, StabilizationCkInfo* info, uint* 
   for (uint i = 0; i < inst.sz(); ++i) {
     if (!inst[i].no_partial)
       continue;
-    *inst.log << "Verifying solution for system " << i << "..." << inst.log->endl();
+    *inst.log << "Verifying solution for system " << i << "..." << std::endl;
     if (!stabilization_ck(*inst[i].log, *inst[i].ctx->systems[i], inst[i].stabilization_opt(),
                           inst[i].actions, info))
     {
@@ -44,7 +44,7 @@ verify_solutions(const PartialSynthesis& inst, StabilizationCkInfo* info, uint* 
         oput_protocon_file(livelock_out, *inst.ctx->systems[i], inst[i].actions,
                            false, "livelock");
       }
-      *inst[i].log << "Solution was NOT self-stabilizing." << inst[i].log->endl();
+      *inst[i].log << "Solution was NOT self-stabilizing." << std::endl;
       return false;
     }
     if (info && ret_nlayers_sum) {
@@ -56,11 +56,11 @@ verify_solutions(const PartialSynthesis& inst, StabilizationCkInfo* info, uint* 
   for (uint i = 0; i < inst.sz(); ++i) {
     if (inst[i].no_partial || !inst.ctx->opt.verify_found)
       continue;
-    *inst.log << "Verifying solution for system " << i << "..." << inst.log->endl();
+    *inst.log << "Verifying solution for system " << i << "..." << std::endl;
     if (!stabilization_ck(*inst[i].log, *inst[i].ctx->systems[i],
                           inst[i].stabilization_opt(), inst[i].actions, info))
     {
-      *inst[i].log << "Solution was NOT self-stabilizing." << inst[i].log->endl();
+      *inst[i].log << "Solution was NOT self-stabilizing." << std::endl;
       return false;
     }
     if (info && ret_nlayers_sum) {
@@ -121,7 +121,7 @@ AddStabilization(vector<uint>& ret_actions,
         }
         backtrack = true;
         *partial.log << "SUBOPTIMAL (exceeding best known number of convergence layers: "
-          << nlayers_sum << " >= " << synctx.optimal_nlayers_sum << ")" << partial.log->endl();
+          << nlayers_sum << " >= " << synctx.optimal_nlayers_sum << ")" << std::endl;
       }
 
       if (info.livelock_exists) {
@@ -133,7 +133,7 @@ AddStabilization(vector<uint>& ret_actions,
       }
 
       if (backtrack) {
-        *partial.log << "backtrack from lvl:" << partial.bt_level << partial.log->endl();
+        *partial.log << "backtrack from lvl:" << partial.bt_level << std::endl;
         partial.add_small_conflict_set(partial.picks);
         if (info.livelock_exists && info.find_livelock_actions) {
           partial.ctx->conflicts.add_conflict(info.livelock_actions);
@@ -183,7 +183,7 @@ AddStabilization(vector<uint>& ret_actions,
     while (!bt_stack[stack_idx].revise_actions(Set<uint>(), Set<uint>(actidx), &nlayers_sum))
     {
       PartialSynthesis& partial = bt_stack[stack_idx];
-      *partial.log << "backtrack from lvl:" << partial.bt_level << partial.log->endl();
+      *partial.log << "backtrack from lvl:" << partial.bt_level << std::endl;
       partial.add_small_conflict_set(partial.picks);
 
       stack_idx = decmod(stack_idx, 1, bt_stack.sz());
@@ -365,8 +365,7 @@ rank_actions (Table< Table<uint> >& act_layers,
   void
 oput_conflicts (const ConflictFamily& conflicts, const String& ofilename)
 {
-  Cx::OFileB conflicts_of;
-  conflicts_of.open(ofilename.cstr());
+  lace::ofstream conflicts_of(ofilename.cstr());
   conflicts_of << conflicts;
 }
 
@@ -448,12 +447,12 @@ try_known_solution(const ConflictFamily& conflicts,
     else
       *synctx.log << "I SKIPPED SOME\n";
 
-    Cx::OFileB working_of;
-    working_of.open(String("working_conflicts.out.") + synctx.opt.sys_pcidx);
+    lace::ofstream working_of(
+        (String("working_conflicts.out.") + synctx.opt.sys_pcidx).ccstr());
     working_of << conflicts;
 
-    Cx::OFileB broken_of;
-    broken_of.open(String("broken_conflicts.out.") + synctx.opt.sys_pcidx);
+    lace::ofstream broken_of(
+        (String("broken_conflicts.out.") + synctx.opt.sys_pcidx).ccstr());
     broken_of << synctx.conflicts;
   }
   return good;
@@ -477,7 +476,7 @@ initialize_conflicts(ConflictFamily& conflicts,
     }
     conflicts.trim(global_opt.max_conflict_sz);
     if (do_output) {
-      conflicts.oput_conflict_sizes(DBogOF);
+      conflicts.oput_conflict_sizes(std::cerr);
     }
   }
 
@@ -526,7 +525,7 @@ stabilization_search_init
   (SynthesisCtx& synctx,
    Xn::Sys& sys,
    LgTable<Xn::Sys>& systems,
-   Cx::OFileB& log_ofile,
+   lace::ofstream& log_ofile,
    AddConvergenceOpt& opt,
    const ProtoconFileOpt& infile_opt,
    const ProtoconOpt& exec_opt,
@@ -539,13 +538,13 @@ stabilization_search_init
     String ofilename( exec_opt.log_ofilename );
     ofilename += ".";
     ofilename += opt.sys_pcidx;
-    log_ofile.open(ofilename);
+    log_ofile.open(ofilename.ccstr());
     opt.log = &log_ofile;
   }
   else if (opt.sys_npcs > 1) {
-    opt.log = &OFile::null();
+    log_ofile.open("/dev/null");
+    opt.log = &log_ofile;
   }
-
 
   DoLegit("reading file")
   {
@@ -671,7 +670,7 @@ void
     verif_infile_opt.text.moveq
       (textfile_AlphaTab (0, xfilepath.cstr()));
   }
-  *opt.log << "VERIFYING: " << xfilepath << opt.log->endl();
+  *opt.log << "VERIFYING: " << xfilepath << std::endl;
   const bool lightweight = !exec_opt.conflicts_ofilepath;
   sys.topology.lightweight = lightweight;
   if (ReadProtoconFile(sys, verif_infile_opt)) {
@@ -680,11 +679,11 @@ void
     if (stabilization_ck(*opt.log, sys, exec_opt.instances[0].stabilization_opt, &info)) {
       solution_found = true;
       ret_actions = sys.actions;
-      *opt.log << "System is stabilizing." << opt.log->endl();
+      *opt.log << "System is stabilizing." << std::endl;
 
       if (!!exec_opt.ofilepath) {
         String filepath( exec_opt.ofilepath + "." + i );
-        *opt.log << "Writing system to: " << filepath  << opt.log->endl();
+        *opt.log << "Writing system to: " << filepath  << std::endl;
         lace::ofstream prot_out(filepath.ccstr());
         oput_protocon_file(prot_out, sys, sys.actions,
                            exec_opt.use_espresso,
@@ -692,7 +691,7 @@ void
       }
     }
     else {
-      *opt.log << "System NOT stabilizing." << opt.log->endl();
+      *opt.log << "System NOT stabilizing." << std::endl;
       if (!lightweight && info.livelock_exists) {
         //synctx.conflicts.add_conflict(FlatSet<uint>(sys.actions));
         synctx.conflicts.add_conflict(info.livelock_actions);
@@ -700,7 +699,7 @@ void
     }
   }
   else {
-    *opt.log << "Error reading file: " << xfilepath << opt.log->endl();
+    *opt.log << "Error reading file: " << xfilepath << std::endl;
   }
 }
 
@@ -738,7 +737,7 @@ stabilization_search(vector<uint>& ret_actions,
   DeclLegit( good );
   AddConvergenceOpt opt(global_opt);
   uint PcIdx;
-  Cx::OFileB log_ofile;
+  lace::ofstream log_ofile;
 #pragma omp critical
   {
     PcIdx = NPcs;
@@ -747,7 +746,7 @@ stabilization_search(vector<uint>& ret_actions,
 
 #pragma omp barrier
 
-  //opt.log = &DBogOF;
+  //opt.log = &std::cerr;
   //opt.verify_found = false;
 
   opt.sys_pcidx = PcIdx;
@@ -778,7 +777,7 @@ stabilization_search(vector<uint>& ret_actions,
   if (try_known_solution_ck &&
       !try_known_solution (conflicts, synctx))
   {
-    *opt.log << "Conflicts are inconsistent!" << opt.log->endl();
+    *opt.log << "Conflicts are inconsistent!" << std::endl;
     set_done_flag (1);
   }
 #pragma omp barrier
@@ -813,7 +812,7 @@ stabilization_search(vector<uint>& ret_actions,
           << "pcidx:" << PcIdx
           << " conflict:" << conflict_idx << "/" << flat_conflicts.sz()
           << " sz:" << old_sz
-          << opt.log->endl();
+          << std::endl;
 
         uint new_sz =
           synlvl.add_small_conflict_set(flat_conflicts[conflict_idx]);
@@ -822,7 +821,7 @@ stabilization_search(vector<uint>& ret_actions,
           << "DONE: pcidx:" << PcIdx
           << " conflict:" << conflict_idx << "/" << flat_conflicts.sz()
           << " old_sz:" << old_sz << " new_sz:" << new_sz
-          << opt.log->endl();
+          << std::endl;
       }
     }
 
@@ -941,7 +940,7 @@ stabilization_search(vector<uint>& ret_actions,
       }
 
       if (count_solution) {
-        *opt.log << "SOLUTION FOUND!" << opt.log->endl();
+        *opt.log << "SOLUTION FOUND!" << std::endl;
         solution_found = true;
         ret_actions = actions;
         if (global_opt.try_all && !!exec_opt.ofilepath) {
@@ -997,11 +996,11 @@ stabilization_search(vector<uint>& ret_actions,
       conflicts = synctx.conflicts;
 
       if (opt.search_method == opt.RankShuffleSearch)
-        DBogOF << "pcidx:" << PcIdx << " trial:" << trial_idx+1 << " actions:" << actions.size() << '\n';
+        std::cerr << "pcidx:" << PcIdx << " trial:" << trial_idx+1 << " actions:" << actions.size() << '\n';
       else
-        DBogOF << "pcidx:" << PcIdx << " trial:" << trial_idx+1 << " depth:" << synlvl.failed_bt_level
+        std::cerr << "pcidx:" << PcIdx << " trial:" << trial_idx+1 << " depth:" << synlvl.failed_bt_level
           << " nlayers_sum:" << solution_nlayers_sum << '\n';
-      DBogOF.flush();
+      std::cerr.flush();
     }
     }
 

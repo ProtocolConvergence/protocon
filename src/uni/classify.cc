@@ -13,6 +13,7 @@ extern "C" {
 
 #include "livelock.hh"
 
+#include "../lace_wrapped.hh"
 #include "../namespace.hh"
 
 
@@ -95,16 +96,13 @@ int main(int argc, char** argv) {
 
   bool use_bdds = true;
 
-  OFile silent_ofile;
-  OFile livelock_ofile;
-  OFile unknown_ofile;
-  OFileB silent_ofileb;
-  OFileB livelock_ofileb;
-  OFileB unknown_ofileb;
+  lace::ofstream silent_ofile;
+  lace::ofstream livelock_ofile;
+  lace::ofstream unknown_ofile;
 
   C::XFile xfile_olay[1];
   C::XFile* xfile = stdin_XFile ();
-  OFile ofile( stdout_OFile () );
+  std::ostream& ofile = std::cout;
 
   bool line_flush = true;
 
@@ -126,33 +124,33 @@ int main(int argc, char** argv) {
       line_flush = false;
     }
     else if (eq_cstr ("-silent", arg) || eq_cstr ("-sil", arg)) {
-      silent_ofile = stdout_OFile();
+      silent_ofile.open("/dev/stdout");
     }
     else if (eq_cstr ("-livelock", arg) || eq_cstr ("-liv", arg)) {
-      livelock_ofile = stdout_OFile();
+      livelock_ofile.open("/dev/stdout");
     }
     else if (eq_cstr ("-unknown", arg) || eq_cstr ("-unk", arg)) {
-      unknown_ofile = stdout_OFile();
+      unknown_ofile.open("/dev/stdout");
     }
     else if (eq_cstr ("-o-silent", arg) || eq_cstr ("-o-sil", arg)) {
       arg = argv[argi++];
       if (!arg)  failout_sysCx("Give a file for -o-silent!");
-      silent_ofile = silent_ofileb.uopen(0, arg);
-      if (!silent_ofile)
+      silent_ofile.open(arg);
+      if (!silent_ofile.good())
         failout_sysCx("Cannot open file for -o-silent!");
     }
     else if (eq_cstr ("-o-livelock", arg) || eq_cstr ("-o-liv", arg)) {
       arg = argv[argi++];
       if (!arg)  failout_sysCx("Give a file for -o-livelock!");
-      livelock_ofile = livelock_ofileb.uopen(0, arg);
-      if (!livelock_ofile)
+      livelock_ofile.open(arg);
+      if (!livelock_ofile.good())
         failout_sysCx("Cannot open file for -o-livelock!");
     }
     else if (eq_cstr ("-o-unknown", arg) || eq_cstr ("-o-unk", arg)) {
       arg = argv[argi++];
       if (!arg)  failout_sysCx("Give a file for -o-unknown!");
-      unknown_ofile = unknown_ofileb.uopen(0, arg);
-      if (!unknown_ofile)
+      unknown_ofile.open(arg);
+      if (!unknown_ofile.good())
         failout_sysCx("Cannot open file for -o-unknown!");
     }
     else if (max_period == 0) {

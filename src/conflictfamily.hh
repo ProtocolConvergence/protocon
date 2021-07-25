@@ -4,6 +4,7 @@
 
 #include "cx/synhax.hh"
 #include "cx/set.hh"
+#include <iostream>
 
 #include "namespace.hh"
 
@@ -47,13 +48,13 @@ public:
   void clear();
   bool sat_ck() const;
 
-  void oput_conflict_sizes(OFile& of) const;
-  void oput(OFile& of) const;
+  void oput_conflict_sizes(std::ostream& of) const;
+  void oput(std::ostream& of) const;
   void xget(XFile& xf);
 };
 
-inline OFile&
-operator<<(OFile& of, const ConflictFamily& conflicts)
+inline std::ostream&
+operator<<(std::ostream& of, const ConflictFamily& conflicts)
 { conflicts.oput(of); return of; }
 
 inline XFile&

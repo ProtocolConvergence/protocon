@@ -18,7 +18,7 @@ ProtoconFile::update_allgood(bool good)
   void
 ProtoconFile::bad_parse(const char* text, const char* reason)
 {
-  OFile ofile(stderr_OFile ());
+  std::ostream& ofile = std::cerr;
   ofile << "Error at" << (text ? "" : "/after") << " line " << (this->text_nlines+1);
   if (text) {
      ofile << " in text: " << text;
@@ -26,7 +26,7 @@ ProtoconFile::bad_parse(const char* text, const char* reason)
   if (reason) {
     ofile << "\nReason for error: " << reason;
   }
-  ofile << ofile.endl();
+  ofile << std::endl;
   this->allgood = false;
 }
 

@@ -29,9 +29,11 @@ extern "C" {
 #include "uniact.hh"
 #include "unifile.hh"
 
+#include <iomanip>
+#include <sstream>
+
 #include "cx/alphatab.hh"
 #include "cx/map.hh"
-#include "cx/ofile.hh"
 #include "cx/set.hh"
 #include "cx/table.hh"
 
@@ -295,14 +297,17 @@ int main (int argc, char** argv)
     failout_sysCx("Reduction does not preserve good properties.");
   }
 
-  OFile ofile(stdout_OFile ());
+  std::ostream& ofile = std::cout;
   if (eq_cstr ("-id", arg) || eq_cstr ("-o-id", arg)) {
     oput_b64_ppgfun(ofile, uniring_ppgfun_of(acts, domsz), domsz);
-    ofile << ofile.endl();
+    ofile << std::endl;
   }
   else if (eq_cstr ("-list", arg) || eq_cstr ("-o-list", arg)) {
     for (uint i = 0; i < acts.sz(); ++i) {
-      ofile.printf ("%3u %3u %3u\n", acts[i][0], acts[i][1], acts[i][2]);
+      std::stringstream tmp_ss;
+      tmp_ss << std::setfill('0') << std::setw(3)
+        << acts[i][0] << " " << acts[i][1] << " " << acts[i][2] << "\n";
+      ofile << tmp_ss.str();
     }
   }
   else if (eq_cstr ("-gv", arg) || eq_cstr ("-o-graphviz", arg) || eq_cstr ("-o-gv", arg)) {

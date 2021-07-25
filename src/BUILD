@@ -2,6 +2,7 @@ load("@rules_foreign_cc//tools/build_defs:make.bzl", "make")
 load("@rules_foreign_cc//tools/build_defs:cmake.bzl", "cmake_external")
 
 exports_files([
+    "lace_wrapped.hh",
     "namespace.hh",
 ])
 
@@ -41,6 +42,7 @@ cc_binary(
     name = "biring",
     srcs = [
         "biring.cc",
+        "lace_wrapped.hh",
     ],
     deps = ["//src/cx:cx_lib"],
     copts = [

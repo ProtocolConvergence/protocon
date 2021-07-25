@@ -6,6 +6,7 @@ cc_binary(
         "uniact.hh",
         "unifile.cc",
         "unifile.hh",
+        "//src:lace_wrapped.hh",
         "//src:namespace.hh",
     ],
     deps = [
@@ -27,6 +28,7 @@ cc_binary(
         "uniact.hh",
         "unifile.cc",
         "unifile.hh",
+        "//src:lace_wrapped.hh",
         "//src:namespace.hh",
     ],
     deps = [
@@ -51,6 +53,7 @@ cc_binary(
         "uniact.hh",
         "unifile.cc",
         "unifile.hh",
+        "//src:lace_wrapped.hh",
         "//src:namespace.hh",
     ],
     deps = [
@@ -93,6 +96,7 @@ cc_binary(
         "uniact.hh",
         "unifile.cc",
         "unifile.hh",
+        "//src:lace_wrapped.hh",
         "//src:namespace.hh",
     ],
     deps = [

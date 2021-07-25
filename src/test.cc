@@ -121,7 +121,7 @@ TestProtoconFileAgreement()
 static void
 TestShadowMatchRing()
 {
-  OFile& ofile = DBogOF;
+  std::ostream& ofile = std::cerr;
   Xn::Sys sys;
   Xn::Net& topo = sys.topology;
   const uint npcs = 3;
@@ -263,8 +263,7 @@ static void TestProbabilisticLivelock()
 static void
 TestOPutKautz()
 {
-  OFile ofile( stdout_OFile () );
-  oput_graphviz_kautz(ofile, 4, 25);
+  oput_graphviz_kautz(std::cout, 4, 25);
 }
 
 static

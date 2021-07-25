@@ -5,6 +5,8 @@ extern "C" {
 }
 
 #include <algorithm>
+#include <sstream>
+#include "lace_wrapped.hh"
 #include "cx/fileb.hh"
 #include "cx/map.hh"
 #include "cx/table.hh"
@@ -52,14 +54,14 @@ struct FilterOpt
   {}
 };
 
-Cx::OFile& operator<<(Cx::OFile& of, const BitTable& bt)
+std::ostream& operator<<(std::ostream& of, const BitTable& bt)
 {
   for (zuint i = 0; i < bt.sz; ++i)
     of << (ck_BitTable (bt, i) ? '1' : '0');
   return of;
 }
 
-Cx::OFile& operator<<(Cx::OFile& of, const Cx::BitTable& bt)
+std::ostream& operator<<(std::ostream& of, const Cx::BitTable& bt)
 {
   for (zuint i = 0; i < bt.sz(); ++i)
     of << bt[i];
@@ -535,10 +537,10 @@ subgraph_isomorphism_ck(const BitTable sub_a, const Cx::BitTable& b, uint domsz)
 }
 
   void
-oput_biring_invariant (Cx::OFile& ofile, const Cx::BitTable& legit, const uint domsz,
-                       const char* pfx = "", const char* delim = " || ",
-                       const bool pair = false,
-                       const bool print_own = true)
+oput_biring_invariant(std::ostream& ofile, const Cx::BitTable& legit, const uint domsz,
+                      const char* pfx = "", const char* delim = " || ",
+                      const bool pair = false,
+                      const bool print_own = true)
 {
   if (!delim)
     delim = pfx;
@@ -571,12 +573,11 @@ oput_biring_invariant (Cx::OFile& ofile, const Cx::BitTable& legit, const uint d
 }
 
   void
-oput_biring_protocon_spec (const Cx::String& ofilepath, const Cx::String& ofilename,
-                           const Cx::BitTable& legit, const FilterOpt& opt)
+oput_biring_protocon_spec(const Cx::String& ofilepath, const Cx::String& ofilename,
+                          const Cx::BitTable& legit, const FilterOpt& opt)
 {
   const uint domsz = opt.domsz;
-  Cx::OFileB ofb;
-  Cx::OFile ofile( ofb.uopen(ofilepath, ofilename) );
+  lace::ofstream ofile( open_sibling_LaceOF(ofilepath.ccstr(), ofilename.ccstr()) );
 
   ofile
     << "// " << legit
@@ -617,20 +618,15 @@ recurse(BitTable set, uint q,
 #else
         Cx::Set<FlatDigraph>& db,
 #endif
-        const FilterOpt& opt, Cx::OFile& ofile)
+        const FilterOpt& opt, std::ostream& ofile)
 {
   biring_fixpoint (set, opt.domsz);
 
   Cx::String ofilename;
   {
-    Cx::C::OFile name_ofile;
-    init_OFile (&name_ofile);
-
-    Cx::OFile tmp_ofile(&name_ofile);
-    tmp_ofile << set;
-
-    ofilename = ccstr1_of_OFile (&name_ofile, 0);
-    lose_OFile (&name_ofile);
+    std::stringstream tmp_ss;
+    tmp_ss << set;
+    ofilename = tmp_ss.str().c_str();
   }
 
   if (!biring_sat_ck (set, opt.domsz, opt.minsz)) {
@@ -639,9 +635,8 @@ recurse(BitTable set, uint q,
 
 #if 0
   {
-    Cx::OFileB graph_ofile;
-    graph_ofile.open("xbliss", ofilename);
-    dimacs_graph (graph_ofile, set, opt.domsz);
+    lace::ofstream graph_ofile("xbliss/.", ofilename);
+    dimacs_graph(graph_ofile, set, opt.domsz);
   }
 #endif
 
@@ -701,7 +696,7 @@ recurse(BitTable set, uint q,
 }
 
   void
-searchit(const FilterOpt& opt, Cx::OFile& ofile)
+searchit(const FilterOpt& opt, std::ostream& ofile)
 {
   const uint domsz = opt.domsz;
   BitTable set = cons2_BitTable (domsz*domsz*domsz, 1);
@@ -731,7 +726,7 @@ searchit(const FilterOpt& opt, Cx::OFile& ofile)
 }
 
 static void
-oput_graphviz(Cx::OFile& ofile, const BitTable set, uint domsz, bool pair)
+oput_graphviz(std::ostream& ofile, const BitTable set, uint domsz, bool pair)
 {
 #define NiceLooking
   ofile << "digraph G {\n"
@@ -981,7 +976,7 @@ subck_next10(const BitTable set, const uint domsz) {
 }
 
 static void
-echo_subsets (const BitTable bt, const FilterOpt& opt, Cx::OFile& ofile)
+echo_subsets (const BitTable bt, const FilterOpt& opt, std::ostream& ofile)
 {
   Cx::Set<Cx::BitTable> db;
   BitTable set = cons1_BitTable (bt.sz);
@@ -1006,7 +1001,7 @@ echo_subsets (const BitTable bt, const FilterOpt& opt, Cx::OFile& ofile)
 }
 
 static void
-filter_stdin (const FilterOpt& opt, Cx::OFile& ofile)
+filter_stdin (const FilterOpt& opt, std::ostream& ofile)
 {
   const uint domsz = opt.domsz;
   BitTable set = cons1_BitTable (domsz*domsz*domsz);
@@ -1045,9 +1040,8 @@ filter_stdin (const FilterOpt& opt, Cx::OFile& ofile)
       oput_biring_protocon_spec ("", opt.spec_ofilename, set, opt);
     }
     if (opt.graphviz_ofilename) {
-      Cx::OFileB graphviz_ofileb;
-      Cx::OFile graphviz_ofile( graphviz_ofileb.uopen(0, opt.graphviz_ofilename) );
-      oput_graphviz (graphviz_ofile, set, domsz, opt.pair);
+      lace::ofstream graphviz_ofile(opt.graphviz_ofilename);
+      oput_graphviz(graphviz_ofile, set, domsz, opt.pair);
     }
   }
 
@@ -1125,7 +1119,7 @@ int main(int argc, char** argv)
       failout_sysCx (0);
     }
   }
-  Cx::OFile ofile( stdout_OFile () );
+  std::ostream& ofile = std::cout;
   //BitTable set = cons2_BitTable (domsz*domsz*domsz, 0);
   //set1_BitTable (set, 1);
   //set1_BitTable (set, 2);
@@ -1134,7 +1128,7 @@ int main(int argc, char** argv)
   //lose_BitTable (&set);
 
   if (filter) {
-    filter_stdin (opt, ofile);
+    filter_stdin(opt, ofile);
   }
   else {
     searchit(opt, ofile);

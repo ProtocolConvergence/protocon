@@ -78,8 +78,8 @@ int main(int argc, char** argv)
         const Xn::Net& topo = sys.topology;
         Xn::ActSymm act;
         topo.action(act, sys.actions[i]);
-        //DBogOF << sys.actions[i] << ' ';
-        OPut(DBogOF, act) << '\n';
+        //std::cerr << sys.actions[i] << ' ';
+        OPut(std::cerr, act) << '\n';
       }
     }
   }
@@ -104,33 +104,26 @@ int main(int argc, char** argv)
     }
 
     if (!exec_opt.model_ofilepath.empty_ck()) {
-      Cx::OFileB ofb;
-      OFile ofile;
-      DoLegitLineP( ofile, "Open Promela file" )
-        ofb.uopen(exec_opt.model_ofilepath);
-      DoLegit( 0 )
-        OPutPromelaModel(ofile, sys, *o_topology);
+      lace::ofstream pml_out(exec_opt.model_ofilepath.ccstr());
+      if (pml_out.good()) {
+        OPutPromelaModel(pml_out, sys, *o_topology);
+      }
     }
     if (!exec_opt.graphviz_ofilepath.empty_ck()) {
-      Cx::OFileB ofb;
-      OFile ofile;
-      DoLegitLineP( ofile, "Open GraphViz file" )
-        ofb.uopen(exec_opt.graphviz_ofilepath);
-      DoLegit( 0 )
-        oput_graphviz_file (ofile, *o_topology);
+      lace::ofstream graphviz_out(exec_opt.graphviz_ofilepath.ccstr());
+      if (graphviz_out.good()) {
+        oput_graphviz_file(graphviz_out, *o_topology);
+      }
     }
     if (!exec_opt.udp_ofilepath.empty_ck()) {
       Claim2( exec_opt.task ,==, ProtoconOpt::NoTask );
-      Cx::OFileB ofb;
-      OFile ofile;
-      DoLegitLineP( ofile, "Open UDP file" )
-        ofb.uopen(exec_opt.udp_ofilepath);
-      DoLegit( 0 ) {
+      lace::ofstream udp_out(exec_opt.udp_ofilepath.ccstr());
+      if (udp_out.good()) {
         if (exec_opt.only_udp_include) {
-          oput_udp_include_file (ofile, sys, *o_topology);
+          oput_udp_include_file(udp_out, sys, *o_topology);
         }
         else {
-          oput_udp_file (ofile, sys, *o_topology);
+          oput_udp_file(udp_out, sys, *o_topology);
         }
       }
     }
@@ -148,7 +141,7 @@ int main(int argc, char** argv)
                           exec_opt.argline.ccstr());
     }
   }
-  DBogOF.flush();
+  std::cerr.flush();
 
 #ifdef ENABLE_MEMORY_STATS
 #ifndef __APPLE__

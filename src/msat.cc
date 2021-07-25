@@ -149,7 +149,7 @@ int main(int argc, char** argv)
     StabilizationOpt opt;
     StabilizationCkInfo info;
     info.find_livelock_actions = true;
-    if (stabilization_ck(Cx::OFile::null(), sys, opt, actions, &info)) {
+    if (stabilization_ck(protocon::dev_null_ostream, sys, opt, actions, &info)) {
       DBog0("solution found!");
       oput_protocon_file ("myoutput.prot", sys, actions, false, "from sat");
       break;

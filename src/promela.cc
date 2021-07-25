@@ -6,7 +6,7 @@
 
 static
   void
-OPutPromelaVblRef(OFile& of, const Xn::VblSymm& vbl_symm, const Xn::NatMap& index_map,
+OPutPromelaVblRef(std::ostream& of, const Xn::VblSymm& vbl_symm, const Xn::NatMap& index_map,
                   const String& index_expression)
 {
   uint mod_val = 0;
@@ -38,7 +38,7 @@ OPutPromelaVblRef(OFile& of, const Xn::VblSymm& vbl_symm, const Xn::NatMap& inde
 
 static
   void
-OPutPromelaAction(OFile& of, const Xn::ActSymm& act)
+OPutPromelaAction(std::ostream& of, const Xn::ActSymm& act)
 {
   const Xn::PcSymm& pc_symm = *act.pc_symm;
   for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
@@ -59,7 +59,7 @@ OPutPromelaAction(OFile& of, const Xn::ActSymm& act)
 
 static
   void
-OPutPromelaSelect(OFile& ofile, const Xn::Vbl& x)
+OPutPromelaSelect(std::ostream& ofile, const Xn::Vbl& x)
 {
   ofile << "\n  if";
   for (uint i = 0; i < x.symm->domsz; ++i) {
@@ -72,7 +72,7 @@ OPutPromelaSelect(OFile& ofile, const Xn::Vbl& x)
 
 static
   void
-OPutPromelaPc(OFile& ofile, const Xn::PcSymm& pc_symm, const Table<Xn::ActSymm>& acts,
+OPutPromelaPc(std::ostream& ofile, const Xn::PcSymm& pc_symm, const Table<Xn::ActSymm>& acts,
               const Xn::PcSymm& o_pc_symm, uint pcidx_offset)
 {
   const Xn::PcSymmSpec& pc_symm_spec = *pc_symm.spec;
@@ -145,7 +145,7 @@ OPutPromelaPc(OFile& ofile, const Xn::PcSymm& pc_symm, const Table<Xn::ActSymm>&
  * system is self-stabilizing.
  **/
   void
-OPutPromelaModel(OFile& ofile, const Xn::Sys& sys, const Xn::Net& otopology)
+OPutPromelaModel(std::ostream& ofile, const Xn::Sys& sys, const Xn::Net& otopology)
 {
   const Xn::Net& topo = sys.topology;
   const Xn::Spec& spec = *otopology.spec;

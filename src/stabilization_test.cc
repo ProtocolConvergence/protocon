@@ -13,7 +13,7 @@ extern "C" {
 static void
 TestShadowColorRing()
 {
-  OFile& of = DBogOF;
+  std::ostream& of = std::cerr;
   Xn::Sys sys;
   Xn::Net& topo = sys.topology;
   const uint npcs = 3;

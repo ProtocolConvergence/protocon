@@ -17,6 +17,7 @@ extern "C" {
 
 #include <algorithm>
 
+#include "../lace_wrapped.hh"
 #include "../namespace.hh"
 
 struct SearchOpt
@@ -31,13 +32,8 @@ struct SearchOpt
   bool line_flush;
   bool trust_given;
 
-  // Ehh... mutable is okay because this is a single-use
-  // class for recursion parameters.
-  mutable OFile id_ofile;
-  mutable OFile bfs_ofile;
-
-  OFileB id_ofileb;
-  OFileB bfs_ofileb;
+  std::ostream* id_ofile;
+  std::ostream* bfs_ofile;
 
   uint dfs_threshold;
 
@@ -57,7 +53,8 @@ struct SearchOpt
     , use_bdds( false )
     , line_flush( true )
     , trust_given( false )
-    , id_ofile( stdout_OFile() )
+    , id_ofile( &std::cout )
+    , bfs_ofile( NULL )
     , dfs_threshold( 0 )
   {}
 
@@ -404,11 +401,11 @@ recurse(Table<BitTable>& delegates_stack,
     }
   }
   if (print_delegates) {
-    oput_b64_ppgfun(opt.id_ofile, ppgfun, domsz);
+    oput_b64_ppgfun(*opt.id_ofile, ppgfun, domsz);
     if (opt.line_flush)
-      opt.id_ofile << opt.id_ofile.endl();
+      *opt.id_ofile << std::endl;
     else
-      opt.id_ofile << '\n';
+      *opt.id_ofile << '\n';
   }
 
   if (depth == opt.max_depth) {
@@ -416,12 +413,12 @@ recurse(Table<BitTable>& delegates_stack,
     if (domsz*domsz - 1 - id_of2(act[0], act[1], domsz) <= opt.dfs_threshold) {
       // No return.
     }
-    else if (!!opt.bfs_ofile) {
-      oput_b64_ppgfun(opt.bfs_ofile, ppgfun, domsz);
+    else if (opt.bfs_ofile) {
+      oput_b64_ppgfun(*opt.bfs_ofile, ppgfun, domsz);
       if (opt.line_flush)
-        opt.bfs_ofile << opt.bfs_ofile.endl();
+        *opt.bfs_ofile << std::endl;
       else
-        opt.bfs_ofile << '\n';
+        *opt.bfs_ofile << '\n';
       return;
     }
     else {
@@ -500,8 +497,7 @@ searchit(const SearchOpt& opt)
     }
     if (!opt.trust_given &&
         !canonical_ck(uniring_ppgfun_of(delegates, domsz), domsz)) {
-      OFile ofile( stderr_OFile () );
-      oput_list(ofile, uniring_actions_of(mask, domsz));
+      oput_list(std::cerr, uniring_actions_of(mask, domsz));
       failout_sysCx("Assumed a non-canonical set of actions!");
     }
 
@@ -552,6 +548,7 @@ int main(int argc, char** argv)
 
   C::XFile* given_xfile = 0;
   XFileB given_xfileb;
+  lace::ofstream id_out;
 
   while (argi < argc) {
     const char* arg = argv[argi++];
@@ -560,7 +557,7 @@ int main(int argc, char** argv)
         failout_sysCx("Argument Usage: -domsz <M>\nWhere <M> is a positive integer!");
     }
     else if (eq_cstr ("-bfs", arg)) {
-      opt.bfs_ofile = stdout_OFile ();
+      opt.bfs_ofile = &std::cout;
       if (!xget_uint_cstr (&opt.max_depth, argv[argi++]))
         failout_sysCx("Argument Usage: -bfs <limit>\nWhere <limit> is a nonnegative integer!");
     }
@@ -571,9 +568,11 @@ int main(int argc, char** argv)
     }
     else if (eq_cstr ("-o", arg)) {
       arg = argv[argi++];
-      opt.id_ofile = opt.id_ofileb.uopen(0, arg);
-      if (!opt.id_ofile)
+      id_out.open(arg);
+      if (!id_out.good()) {
         failout_sysCx("Argument Usage: -o <file>\nFailed to open the <file>!");
+      }
+      opt.id_ofile = &id_out;
     }
     else if (eq_cstr ("-max-depth", arg)) {
       if (!xget_uint_cstr (&opt.max_depth, argv[argi++]) || opt.max_depth == 0)
@@ -659,7 +658,7 @@ int main(int argc, char** argv)
     failout_sysCx("Please specify a domain size with the -domsz flag.");
 
   if (opt.given_acts.sz() > 0) {
-    if (opt.max_depth > 0 || !!opt.bfs_ofile) {
+    if (opt.max_depth > 0 || opt.bfs_ofile) {
       opt.max_depth += 1;
     }
   }

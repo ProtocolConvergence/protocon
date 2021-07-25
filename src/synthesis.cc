@@ -11,6 +11,8 @@
 
 #include "namespace.hh"
 
+lace::ofstream dev_null_ostream("/dev/null");
+
 /**
  * Check if two actions can coexist in a
  * deterministic protocol of self-disabling processes.
@@ -386,7 +388,7 @@ PickActionMRV(uint& ret_actidx,
     << (mrv_dlset_idx == 0 ? 0 :
         inst.mcv_deadlocks[mrv_dlset_idx].candidates.sz())
     << ") (rem-sz " << candidates.sz()
-    << ")" << inst.log->endl();
+    << ")" << std::endl;
 
   if (opt.randomize_pick && opt.randomize_depth <= inst.bt_level) {
     uint idx = inst.ctx->urandom.pick(candidates_vec.size());
@@ -548,7 +550,7 @@ pick_action_candidates(Set<uint>& ret_candidates,
     for (it = candidates.begin(); it != candidates.end(); ++it) {
       const uint actId = *it;
       PartialSynthesis next( inst );
-      next.log = &OFile::null();
+      next.log = &dev_null_ostream;
       uint n = inst.candidates.size();
       if (next.revise_actions(Set<uint>(actId), Set<uint>()))
       {
@@ -608,7 +610,7 @@ pick_action_candidates(Set<uint>& ret_candidates,
     for (it = minOverlapSet.begin(); it != minOverlapSet.end(); ++it) {
       const uint actId = *it;
       PartialSynthesis next( inst );
-      next.log = &OFile::null();
+      next.log = &dev_null_ostream;
       uint n = 0;
       if (next.revise_actions(Set<uint>(actId), Set<uint>()))
         n = next.candidates.size();
@@ -854,7 +856,7 @@ PartialSynthesis::add_small_conflict_set(const Table<uint>& delpicks)
   }
   if (conflicts.conflict_ck(Cx::FlatSet<uint>(delpicks))) {
     if (!conflicts.exact_conflict_ck(Cx::FlatSet<uint>(delpicks))) {
-      *this->log << "Conflict subsumed by existing one." << this->log->endl();
+      *this->log << "Conflict subsumed by existing one." << std::endl;
       return delpicks.sz();
     }
   }
@@ -866,7 +868,7 @@ PartialSynthesis::add_small_conflict_set(const Table<uint>& delpicks)
   for (uint i = 0; i < delpicks.sz(); ++i) {
     PartialSynthesis partial( this->ctx->base_partial );
     for (uint j = 0; j < partial.sz(); ++j) {
-      partial[j].log = &OFile::null();
+      partial[j].log = &dev_null_ostream;
       partial[j].directly_add_conflicts = true;
       if (partial[j].no_conflict) {
         partial[j].no_partial = true;
@@ -884,7 +886,7 @@ PartialSynthesis::add_small_conflict_set(const Table<uint>& delpicks)
       conflicts.add_conflict(delpick_set);
     }
   }
-  *this->log << "Conflict size:" << delpick_set.sz() << this->log->endl();
+  *this->log << "Conflict size:" << delpick_set.sz() << std::endl;
   return delpick_set.sz();
 }
 
@@ -957,7 +959,7 @@ PartialSynthesis::check_forward(Set<uint>& adds, Set<uint>& dels, Set<uint>& rej
     Claim(!this->deadlockPF.sat_ck());
     this->candidates.clear();
     if (this->ctx->conflicts.conflict_ck(FlatSet<uint>(this->actions))) {
-      *this->log << "CONFLICT" << this->log->endl();
+      *this->log << "CONFLICT" << std::endl;
       return false;
     }
     return true;
@@ -1004,7 +1006,7 @@ PartialSynthesis::check_forward(Set<uint>& adds, Set<uint>& dels, Set<uint>& rej
         << ") (sz " << this->actions.size()
         << ") (rem " << this->candidates.size()
         << ")  ";
-      OPut(*this->log, act) << this->log->endl();
+      OPut(*this->log, act) << std::endl;
     }
   }
 
@@ -1013,7 +1015,7 @@ PartialSynthesis::check_forward(Set<uint>& adds, Set<uint>& dels, Set<uint>& rej
 
   Set<uint> membs;
   if (!this->ctx->conflicts.conflict_membs(&membs, action_set, candidate_set)) {
-    *this->log << "CONFLICT" << this->log->endl();
+    *this->log << "CONFLICT" << std::endl;
     return false;
   }
   dels |= membs;
@@ -1042,7 +1044,7 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
     *this->log << "candidate " << (i+1) << "/" << this->candidates.size() << ": ";
     topo.action(act, candidates[i]);
     OPut(*this->log, act);
-    *this->log << this->log->endl();
+    *this->log << std::endl;
   }
 
   if (this->ctx->opt.prep_conflicts) {
@@ -1051,7 +1053,7 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
 
     Set<uint> membs;
     if (!this->ctx->conflicts.conflict_membs(&membs, action_set, candidate_set)) {
-      *this->log << "CONFLICT" << this->log->endl();
+      *this->log << "CONFLICT" << std::endl;
       return false;
     }
     dels |= membs;
@@ -1114,7 +1116,7 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
         tmp_dels -= adds;
       }
       if (false && tmp_dels.size() > 0) {
-        *this->log << "QuickTrim() rejects an action!!!" << this->log->endl();
+        *this->log << "QuickTrim() rejects an action!!!" << std::endl;
         Set<uint>::const_iterator del_it;
         for (del_it = tmp_dels.begin(); del_it != tmp_dels.end(); ++del_it) {
           Xn::ActSymm act;
@@ -1125,12 +1127,12 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
             << ") (sz " << this->actions.size()
             << ") (rem " << this->candidates.size()
             << ")  ";
-          OPut(*this->log, act) << this->log->endl();
+          OPut(*this->log, act) << std::endl;
           FlatSet<uint> tmp_adds_dels( adds & tmp_dels );
           for (uint i = 0; i < tmp_adds_dels.sz(); ++i) {
-            *this->log << "Reject:" << this->log->endl();
+            *this->log << "Reject:" << std::endl;
             topo.action(act, tmp_adds_dels[i]);
-            OPut(*this->log, act) << this->log->endl();
+            OPut(*this->log, act) << std::endl;
           }
         }
       }
@@ -1141,19 +1143,19 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
   if (adds.overlap_ck(dels)) {
     if ((adds & dels).subseteq_ck(this->mcv_deadlocks[1].candidates))
     {
-      *this->log << "Conflicting add from MRV." << this->log->endl();
+      *this->log << "Conflicting add from MRV." << std::endl;
     }
     else
     {
-      *this->log << "Tried to add conflicting actions... this is not good!!!" << this->log->endl();
+      *this->log << "Tried to add conflicting actions... this is not good!!!" << std::endl;
     }
     if (true) {
       FlatSet<uint> adds_dels( adds & dels );
       for (uint i = 0; i < adds_dels.sz(); ++i) {
         Xn::ActSymm act;
         topo.action(act, adds_dels[i]);
-        *this->log << "Reject:" << this->log->endl();
-        OPut(*this->log, act) << this->log->endl();
+        *this->log << "Reject:" << std::endl;
+        OPut(*this->log, act) << std::endl;
       }
     }
     return false;
@@ -1163,7 +1165,7 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
     const bool fully_sync = !this->stabilization_opt().semisynchronous;
     this->lo_xn = topo.sync_xn(Table<uint>(this->actions), fully_sync);
     if (!this->lo_xn.img(sys.closed_assume).subseteq_ck(sys.closed_assume)) {
-      *this->log << "SYNC_BREAKS_ASSUME" << this->log->endl();
+      *this->log << "SYNC_BREAKS_ASSUME" << std::endl;
       return false;
     }
   }
@@ -1185,7 +1187,7 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
       << ") (rem " << this->candidates.size()
       << ")  ";
     topo.action(act, actId);
-    OPut(*this->log, act) << this->log->endl();
+    OPut(*this->log, act) << std::endl;
   }
 
   X::Fmla del_act_xn( false );
@@ -1202,9 +1204,9 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
     del_xns.push(topo.action_pfmla(actidx));
     if (false) {
       Xn::ActSymm act;
-      DBogOF << "DEL ";
+      std::cerr << "DEL ";
       topo.action(act, actidx);
-      OPut(DBogOF, act) << DBogOF.endl();
+      OPut(std::cerr, act) << std::endl;
     }
   }
   del_act_xn -= this->lo_xn;
@@ -1236,8 +1238,8 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
   }
   if (max_nlayers > 0 && nlayers > max_nlayers) {
     *this->log << "NLAYERS (maximum number of convergence layers exceeded: "
-      << nlayers << "+ > " << max_nlayers << ")" << this->log->endl();
-    *this->log << "NLAYERS sys_idx:" << this->sys_idx << " nlayers:" << nlayers << this->log->endl();
+      << nlayers << "+ > " << max_nlayers << ")" << std::endl;
+    *this->log << "NLAYERS sys_idx:" << this->sys_idx << " nlayers:" << nlayers << std::endl;
     return false;
   }
   if (ret_nlayers) {
@@ -1248,7 +1250,7 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
     //oput_one_cycle(*this->log, this->lo_xn, scc, scc - sys.invariant, topo);
     //uint n = count_actions_in_cycle(scc, act_pf, this->actions, topo);
     //DBog1("scc actions: %u", n);
-    *this->log << "CYCLE" << this->log->endl();
+    *this->log << "CYCLE" << std::endl;
     if (true || !this->no_conflict) {
       Table<uint> conflict_set;
       if (!topo.probabilistic_ck() && !this->stabilization_opt().synchronous) {
@@ -1260,16 +1262,16 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
         find_livelock_actions (conflict_set, this->lo_xn, scc, sys.invariant, topo);
 #endif
         this->ctx->conflicts.add_conflict(conflict_set);
-        *this->log << "cycle conflict size:" << conflict_set.sz() << this->log->endl();
+        *this->log << "cycle conflict size:" << conflict_set.sz() << std::endl;
       }
     }
     if (!!this->ctx->opt.livelock_ofilepath && &sys == this->ctx->systems.top()) {
       bool big_livelock = true;
       for (uint i = 0; i < this->ctx->systems.sz()-1; ++i) {
-        if (!stabilization_ck(OFile::null(), *this->ctx->systems[i],
+        if (!stabilization_ck(dev_null_ostream, *this->ctx->systems[i],
                               this->ctx->stabilization_opts[i], actions))
         {
-          *this->log << "still issues in system " << i << this->log->endl();
+          *this->log << "still issues in system " << i << std::endl;
           big_livelock = false;
           break;
         }
@@ -1290,7 +1292,7 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
   const P::Fmla old_hi_invariant( this->hi_invariant );
   if (!shadow_ck(&this->hi_invariant, sys, this->lo_xn, this->hi_xn, this->lo_xfmlae, scc))
   {
-    *this->log << "SHADOW" << this->log->endl();
+    *this->log << "SHADOW" << std::endl;
     return false;
   }
   if (true || candidates_contain_all_adds) {
@@ -1305,7 +1307,7 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
     - this->lo_xn.pre();
 
   if (!this->deadlockPF.subseteq_ck(this->hi_xn.pre())) {
-    *this->log << "DEADLOCK" << this->log->endl();
+    *this->log << "DEADLOCK" << std::endl;
     if (false) {
       topo.oput_vbl_names(*this->log);
       topo.oput_one_pf(*this->log, this->deadlockPF - this->hi_xn.pre());
@@ -1318,12 +1320,12 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
 
   if (this->stabilization_opt().uniring) {
     if (!hi_xfmlae.uniring_weak_convergence_ck(&nlayers, this->hi_invariant, sys.closed_assume)) {
-      *this->log << "REACH" << this->log->endl();
+      *this->log << "REACH" << std::endl;
       return false;
     }
   }
   else if (!weak_convergence_ck(&nlayers, this->hi_xn, this->hi_invariant, sys.closed_assume)) {
-    *this->log << "REACH" << this->log->endl();
+    *this->log << "REACH" << std::endl;
 #if 0
     P::Fmla pf( ~this->hi_xn.pre_reach(this->hi_invariant) );
     pf = pf.pick_pre();
@@ -1394,7 +1396,7 @@ PartialSynthesis::revise_actions(const Set<uint>& adds, const Set<uint>& dels,
         }
         if (nlayers_sum >= max_nlayers_sum) {
           *this->log << "SUBOPTIMAL (exceeding best known number of convergence layers: "
-            << nlayers_sum << " >= " << max_nlayers_sum << ")" << this->log->endl();
+            << nlayers_sum << " >= " << max_nlayers_sum << ")" << std::endl;
           return false;
         }
         nlayers_sum -= (*this)[i].lo_nlayers;
@@ -1472,7 +1474,7 @@ PartialSynthesis::revise_actions(const Set<uint>& adds, const Set<uint>& dels,
       newpicks[i] = actidx;
     }
 
-    OFile* tmp_log = this->log;
+    std::ostream* tmp_log = this->log;
     const vector<uint> old_actions = this->actions;
     for (uint i = 0; i < this->sz(); ++i) {
       PartialSynthesis& partial = (*this)[i];
@@ -1488,7 +1490,7 @@ PartialSynthesis::revise_actions(const Set<uint>& adds, const Set<uint>& dels,
       partial.lo_xfmlae = base_partial.lo_xfmlae;
       partial.hi_xfmlae = base_partial.hi_xfmlae;
       partial.hi_invariant = base_partial.hi_invariant;
-      partial.log = &OFile::null();
+      partial.log = &dev_null_ostream;
     }
 
     const Set<uint> newadds(newpicks);
@@ -1504,12 +1506,12 @@ PartialSynthesis::revise_actions(const Set<uint>& adds, const Set<uint>& dels,
         if (this->picks[i] != old_picks[i]) {
           Xn::ActSymm act;
           topo.action(act, this->picks[i]);
-          OPut(*this->log << "SWAPIN ", act) << this->log->endl();
+          OPut(*this->log << "SWAPIN ", act) << std::endl;
         }
       }
     }
     else {
-      *this->log << "USELESS" << this->log->endl();
+      *this->log << "USELESS" << std::endl;
     }
     return consistent;
   }

@@ -314,9 +314,8 @@ TestPcXn_yerrerr_dizzy()
 
     Xn::ActSymm act;
     topo.action(act, actid);
-    OFile ofile( stderr_OFile () );
-    OPut(ofile, act);
-    ofile << ofile.endl();
+    OPut(std::cerr, act);
+    std::cerr << std::endl;
 
     const uint s_i = act.assign(0), s_ij = act.assign(1), s_ik = act.assign(2);
     const uint s_j = act.guard(2), s_k = act.guard(5);

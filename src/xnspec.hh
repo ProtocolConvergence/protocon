@@ -9,8 +9,6 @@
 #include "cx/alphatab.hh"
 #include "cx/map.hh"
 
-extern Cx::OFile DBogOF;
-
 #include "namespace.hh"
 
 namespace Xn {

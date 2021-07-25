@@ -9,7 +9,9 @@ extern "C" {
 }
 
 #include "lace_wrapped.hh"
-#include "cx/fileb.hh"
+#include <iomanip>
+#include <ostream>
+#include <sstream>
 
 #include "opt.hh"
 #include "prot-ofile.hh"
@@ -25,43 +27,38 @@ oput_stats(const ProtoconOpt& exec_opt,
            struct timespec endtime,
            unsigned long peak_mem)
 {
-  DeclLegit( good );
-  Cx::OFileB ofb;
-  Cx::OFile ofile;
-  if (!exec_opt.stats_ofilepath.empty_ck()) {
-    DoLegitLineP( ofile, "Open stats file" )
-      ofb.uopen(exec_opt.stats_ofilepath);
-  }
-  else {
-    ofile = DBogOF;
-  }
+  if (exec_opt.stats_ofilepath.empty_ck()) {return;}
+  lace::ofstream stats_out(exec_opt.stats_ofilepath.ccstr());
+
+  if (!stats_out.good()) {return;}
 
   struct timespec difftime;
-
-  DoLegit( 0 ) {
-    difftime.tv_sec = endtime.tv_sec - begtime.tv_sec;
-    if (endtime.tv_nsec >= begtime.tv_nsec) {
-      difftime.tv_nsec = endtime.tv_nsec - begtime.tv_nsec;
-    }
-    else {
-      difftime.tv_sec -= 1;
-      difftime.tv_nsec = 1000 * 1000 * 1000;
-      difftime.tv_nsec -= begtime.tv_nsec - endtime.tv_nsec;
-    }
-    time_t diff = difftime.tv_sec;
-    ofile.printf("Elapsed Time: %02uh%02um%02u.%03us\n",
-                 (uint) (diff / 60 / 60),
-                 (uint) (diff / 60 % 60),
-                 (uint) (diff % 60),
-                 (uint) (difftime.tv_nsec / 1000 / 1000));
-
-
-    ofile
-      << "Peak Memory: "
-      << peak_mem / 1000000 << "." << peak_mem % 1000000
-      << " MB"
-      << ofile.endl();
+  difftime.tv_sec = endtime.tv_sec - begtime.tv_sec;
+  if (endtime.tv_nsec >= begtime.tv_nsec) {
+    difftime.tv_nsec = endtime.tv_nsec - begtime.tv_nsec;
   }
+  else {
+    difftime.tv_sec -= 1;
+    difftime.tv_nsec = 1000 * 1000 * 1000;
+    difftime.tv_nsec -= begtime.tv_nsec - endtime.tv_nsec;
+  }
+  time_t diff = difftime.tv_sec;
+
+  std::stringstream stats_ss;
+  stats_ss
+    << "Elapsed Time: "
+    << std::setfill('0') << std::setw(2)
+    << (diff / 60 / 60) << "h"
+    << (diff / 60 % 60) << "m"
+    << (diff % 60) << "."
+    << std::setfill('0') << std::setw(3)
+    << (difftime.tv_nsec / 1000 / 1000) << "s\n";
+  stats_out
+    << stats_ss.str()
+    << "Peak Memory: "
+    << peak_mem / 1000000 << "." << peak_mem % 1000000
+    << " MB"
+    << std::endl;
 }
 
 END_NAMESPACE

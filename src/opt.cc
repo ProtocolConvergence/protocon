@@ -336,7 +336,7 @@ protocon_options_rec
    ProtoconOpt& exec_opt,
    ProblemInstance& problem)
 {
-  OFile of( stderr_OFile() );
+  std::ostream& of = std::cerr;
   while (pfxeq_cstr ("-", argv[argi])) {
     ::AlphaTab tmpf = dflt_AlphaTab ();
     const int prev_argi = argi;
@@ -459,13 +459,13 @@ protocon_options_rec
       copy_to_argline = false;
       String args_xfilepath( argv[argi++] );
       if (!args_xfilepath) {
-        of << "-x-args requires an argument!" << of.endl();
+        of << "-x-args requires an argument!" << std::endl;
         return false;
       }
       ::XFileB args_xf;
       init_XFileB (&args_xf);
       if (!open_FileB (&args_xf.fb, relpath, args_xfilepath.cstr())) {
-        of << "Could not open -x-args file: " << args_xfilepath.cstr() << of.endl();
+        of << "Could not open -x-args file: " << args_xfilepath.cstr() << std::endl;
         return false;
       }
       xget_XFileB (&args_xf);
@@ -558,7 +558,7 @@ protocon_options_rec
     }
     else if (eq_cstr (arg, "-o-log")) {
       if (!argv[argi]) {
-        of << "-o-log requires an argument!" << of.endl();
+        of << "-o-log requires an argument!" << std::endl;
         return false;
       }
       pathname2_AlphaTab (&tmpf, relpath, argv[argi++]);
@@ -587,14 +587,14 @@ protocon_options_rec
     else if (eq_cstr (arg, "-x-conflicts")) {
       exec_opt.conflicts_xfilepath = argv[argi++];
       if (!exec_opt.conflicts_xfilepath) {
-        of << "-x-conflicts requires an argument!" << of.endl();
+        of << "-x-conflicts requires an argument!" << std::endl;
         return false;
       }
     }
     else if (eq_cstr (arg, "-o-conflicts")) {
       exec_opt.conflicts_ofilepath = argv[argi++];
       if (!exec_opt.conflicts_ofilepath) {
-        of << "-o-conflicts requires an argument!" << of.endl();
+        of << "-o-conflicts requires an argument!" << std::endl;
         return false;
       }
     }

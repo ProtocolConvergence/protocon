@@ -192,8 +192,8 @@ shadow_ck(P::Fmla* ret_invariant,
       DBog0( "Does not preserve shadow invariant." );
       P::Fmla pf = topo.proj_shadow(shadow_invariant) - topo.proj_shadow(hi_invariant);
       X::Fmla xn = pf & lo_xn & (~topo.proj_shadow(hi_invariant)).as_img();
-      topo.oput_vbl_names(DBogOF);
-      topo.oput_one_xn(DBogOF, xn);
+      topo.oput_vbl_names(std::cerr);
+      topo.oput_one_xn(std::cerr, xn);
       // May not output anything.
     }
     return false;
@@ -275,7 +275,7 @@ shadow_ck(P::Fmla* ret_invariant,
 }
 
   bool
-stabilization_ck(OFile& of, const Xn::Sys& sys,
+stabilization_ck(std::ostream& of, const Xn::Sys& sys,
                  const StabilizationOpt& opt,
                  const X::Fmla& lo_xn,
                  const X::Fmla& hi_xn,
@@ -287,11 +287,11 @@ stabilization_ck(OFile& of, const Xn::Sys& sys,
 
   if (!sys.invariant.overlap_ck(sys.closed_assume)) {
     if (!sys.invariant.sat_ck())
-      of << "Invariant is empty." << of.endl();
+      of << "Invariant is empty." << std::endl;
     else if (!sys.closed_assume.sat_ck())
-      of << "Assumed states are empty." << of.endl();
+      of << "Assumed states are empty." <<  std::endl;
     else
-      of << "No overlap between invariant and assumed states." << of.endl();
+      of << "No overlap between invariant and assumed states." <<  std::endl;
     return false;
   }
 
@@ -328,7 +328,7 @@ stabilization_ck(OFile& of, const Xn::Sys& sys,
     }
   }
 
-  of << "Checking for deadlocks..." << of.endl();
+  of << "Checking for deadlocks..." << std::endl;
   if (!(~sys.invariant & sys.closed_assume).subseteq_ck(hi_xn.pre())) {
     of << "Deadlock found.\n";
     if (show_failure) {
@@ -339,7 +339,7 @@ stabilization_ck(OFile& of, const Xn::Sys& sys,
     of.flush();
     return false;
   }
-  of << "Finding cycles..." << of.endl();
+  of << "Finding cycles..." << std::endl;
   P::Fmla scc( false );
   uint nlayers = opt.max_nlayers;
   if (topo.probabilistic_ck()) {
@@ -361,7 +361,7 @@ stabilization_ck(OFile& of, const Xn::Sys& sys,
   if (opt.max_nlayers > 0 && nlayers > opt.max_nlayers) {
     of << "Too many layers to "
       << (opt.count_convergence_layers ? "converge" : "fixpoint")
-      << "." << of.endl();
+      << "." << std::endl;
     return false;
   }
 
@@ -387,7 +387,7 @@ stabilization_ck(OFile& of, const Xn::Sys& sys,
     of.flush();
     return false;
   }
-  of << "Checking behavior within the invariant..." << of.endl();
+  of << "Checking behavior within the invariant..." << std::endl;
   P::Fmla hi_invariant( false );
   if (!shadow_ck(&hi_invariant, sys, lo_xn, hi_xn, lo_xfmlae, scc, true)) {
     of << "Invariant not valid, given the protocol and behavior.\n";
@@ -395,7 +395,7 @@ stabilization_ck(OFile& of, const Xn::Sys& sys,
     return false;
   }
   if (sys.shadow_puppet_synthesis_ck()) {
-    of << "Checking for deadlocks in new invariant..." << of.endl();
+    of << "Checking for deadlocks in new invariant..." << std::endl;
   }
   if (!(~hi_invariant & sys.closed_assume).subseteq_ck(hi_xn.pre())) {
     of << "Deadlock found.\n";
@@ -434,7 +434,7 @@ stabilization_ck(OFile& of, const Xn::Sys& sys,
   of << "Max strong/weak " << (opt.synchronous ? "sync" : "async") << " "
     << (opt.count_convergence_steps ? "steps" : "layers") << " to "
     << (opt.count_convergence_layers ? "converge" : "fixpoint")
-    << ": " << nlayers << "/" << reach_nlayers << of.endl();
+    << ": " << nlayers << "/" << reach_nlayers << std::endl;
 #if 0
   const Xn::Net& topo = sys.topology;
   of << "Checking for cycles using SCC_Find...\n";
@@ -450,7 +450,7 @@ stabilization_ck(OFile& of, const Xn::Sys& sys,
 }
 
   bool
-stabilization_ck(OFile& of, const Xn::Sys& sys,
+stabilization_ck(std::ostream& of, const Xn::Sys& sys,
                  const StabilizationOpt& opt,
                  const vector<uint>& actions,
                  const vector<uint>& candidates,
@@ -524,7 +524,7 @@ stabilization_ck(OFile& of, const Xn::Sys& sys,
 }
 
   bool
-stabilization_ck(OFile& of, const Xn::Sys& sys,
+stabilization_ck(std::ostream& of, const Xn::Sys& sys,
                  const StabilizationOpt& opt,
                  const vector<uint>& actions,
                  StabilizationCkInfo* info)
@@ -534,7 +534,7 @@ stabilization_ck(OFile& of, const Xn::Sys& sys,
 }
 
   bool
-stabilization_ck(OFile& of, const Xn::Sys& sys,
+stabilization_ck(std::ostream& of, const Xn::Sys& sys,
                  const StabilizationOpt& opt,
                  StabilizationCkInfo* info)
 {

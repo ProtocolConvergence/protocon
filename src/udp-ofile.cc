@@ -2,7 +2,6 @@
 #include "udp-ofile.hh"
 
 #include "cx/map.hh"
-#include "cx/ofile.hh"
 #include "cx/table.hh"
 #include "xnsys.hh"
 
@@ -26,7 +25,7 @@ struct Process {
 };
 }
 
-void oput_udp_include_file(OFile& ofile, const Xn::Sys& sys, const Xn::Net& o_topology)
+void oput_udp_include_file(std::ostream& ofile, const Xn::Sys& sys, const Xn::Net& o_topology)
 {
   const Xn::Net& topo = sys.topology;
 
@@ -419,7 +418,7 @@ void oput_udp_include_file(OFile& ofile, const Xn::Sys& sys, const Xn::Net& o_to
     ;
 }
 
-void oput_udp_file(OFile& ofile, const Xn::Sys& sys, const Xn::Net& o_topology)
+void oput_udp_file(std::ostream& ofile, const Xn::Sys& sys, const Xn::Net& o_topology)
 {
 #include "udp-impl/act.embed.h"
   for (uint i = 0; i < nfiles-1; ++i) {

@@ -62,25 +62,25 @@ weak_convergence_ck(uint* ret_nlayers, const X::Fmla& xn,
                     const P::Fmla& invariant);
 
 bool
-stabilization_ck(OFile& of, const Xn::Sys& sys,
+stabilization_ck(std::ostream& of, const Xn::Sys& sys,
                  const StabilizationOpt& opt,
                  const X::Fmla& lo_xn,
                  const X::Fmla& hi_xn,
                  const X::Fmlae& lo_xfmlae,
                  StabilizationCkInfo* info = 0);
 bool
-stabilization_ck(OFile& of, const Xn::Sys& sys,
+stabilization_ck(std::ostream& of, const Xn::Sys& sys,
                  const StabilizationOpt& opt,
                  const vector<uint>& actions,
                  const vector<uint>& candidates,
                  StabilizationCkInfo* info = 0);
 bool
-stabilization_ck(OFile& of, const Xn::Sys& sys,
+stabilization_ck(std::ostream& of, const Xn::Sys& sys,
                  const StabilizationOpt& opt,
                  const vector<uint>& actions,
                  StabilizationCkInfo* info = 0);
 bool
-stabilization_ck(OFile& of, const Xn::Sys& sys,
+stabilization_ck(std::ostream& of, const Xn::Sys& sys,
                  const StabilizationOpt& opt,
                  StabilizationCkInfo* info = 0);
 

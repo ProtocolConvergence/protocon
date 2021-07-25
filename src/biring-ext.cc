@@ -207,13 +207,13 @@ config_enum_idx_fo(LocalConfig& config, uint idx, uint domsz)
   config.x_sc = tmp[2];
 }
 
-Cx::OFile& operator<<(Cx::OFile& of, const LocalConfig& config)
+std::ostream& operator<<(std::ostream& of, const LocalConfig& config)
 {
   of << config.x_pd << "," << config.x_id << "," << config.x_sc;
   return of;
 }
 
-Cx::OFile& operator<<(Cx::OFile& of, const LocalCont& cont)
+std::ostream& operator<<(std::ostream& of, const LocalCont& cont)
 {
   of << cont.x_id << "," << cont.x_sc;
   return of;
@@ -265,7 +265,7 @@ construct(LocalLegit& legit, const BitTable set)
 }
 
   void
-oput_graph(Cx::OFile& of, const LocalLegit& legit)
+oput_graph(std::ostream& of, const LocalLegit& legit)
 {
   const uint val_offset = 0;
   const uint config_offset = legit.vals.sz();
@@ -335,7 +335,7 @@ construct_graph(Cx::Table< Cx::Table<uint> >& graph, const BitTable& set, const 
 }
 
   void
-dimacs_graph(Cx::OFile& of, const BitTable& set, const uint domsz)
+dimacs_graph(std::ostream& of, const BitTable& set, const uint domsz)
 {
   Cx::Table< Cx::Table<uint> > graph;
   construct_graph(graph, set, domsz);

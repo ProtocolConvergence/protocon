@@ -5,10 +5,7 @@
 
 #include "cx/synhax.hh"
 #include "cx/lgtable.hh"
-#include "cx/ofile.hh"
 #include "xnpc.hh"
-
-extern Cx::OFile DBogOF;
 
 #include "namespace.hh"
 namespace Xn {
@@ -157,18 +154,18 @@ public:
     return this->smooth_pure_shadow_vbls(pf);
   }
 
-  ostream& oput(ostream& of,
+  std::ostream& oput(std::ostream& of,
                 const Cx::PFmla& pf,
                 const String& pfx,
                 const String& sfx) const;
 
-  OFile& oput_vbl_names(OFile& ofile) const;
-  OFile& oput_pfmla(OFile& ofile, Cx::PFmla pf,
+  std::ostream& oput_vbl_names(std::ostream& ofile) const;
+  std::ostream& oput_pfmla(std::ostream& ofile, Cx::PFmla pf,
                     Sign pre_or_img, bool just_one) const;
-  OFile& oput_one_xn(OFile& ofile, const X::Fmla& pf) const;
-  OFile& oput_all_xn(OFile& ofile, const X::Fmla& pf) const;
-  OFile& oput_one_pf(OFile& ofile, const P::Fmla& pf) const;
-  OFile& oput_all_pf(OFile& ofile, const P::Fmla& pf) const;
+  std::ostream& oput_one_xn(std::ostream& ofile, const X::Fmla& pf) const;
+  std::ostream& oput_all_xn(std::ostream& ofile, const X::Fmla& pf) const;
+  std::ostream& oput_one_pf(std::ostream& ofile, const P::Fmla& pf) const;
+  std::ostream& oput_all_pf(std::ostream& ofile, const P::Fmla& pf) const;
 
 
   X::Fmla sync_xn(const Table<uint>& actidcs, const bool fully_synchronous) const;
@@ -245,8 +242,8 @@ public:
 };
 }
 
-OFile&
-OPut(OFile& of, const Xn::ActSymm& act);
+std::ostream&
+OPut(std::ostream& of, const Xn::ActSymm& act);
 void
 find_one_cycle(Table<P::Fmla>& states,
                const X::Fmla& xn, const P::Fmla& scc,
@@ -259,7 +256,7 @@ find_livelock_actions(Table<uint>& actions, const X::Fmla& xn,
                       const P::Fmla& scc, const P::Fmla& invariant,
                       const Xn::Net& topo);
 void
-oput_one_cycle(OFile& of, const X::Fmla& xn,
+oput_one_cycle(std::ostream& of, const X::Fmla& xn,
                const P::Fmla& scc, const P::Fmla& initial,
                const Xn::Net& topo);
 bool

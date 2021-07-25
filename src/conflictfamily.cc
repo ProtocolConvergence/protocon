@@ -1,7 +1,6 @@
 
 #include "conflictfamily.hh"
 
-#include "cx/ofile.hh"
 #include "cx/xfile.hh"
 
 #define FOR_EACH(it,conflict_sets) \
@@ -284,7 +283,7 @@ ConflictFamily::sat_ck() const
 }
 
   void
-ConflictFamily::oput_conflict_sizes(OFile& of) const
+ConflictFamily::oput_conflict_sizes(std::ostream& of) const
 {
   Table<uint> t;
   this->conflict_sizes(t);
@@ -295,7 +294,7 @@ ConflictFamily::oput_conflict_sizes(OFile& of) const
 }
 
   void
-ConflictFamily::oput(OFile& of) const
+ConflictFamily::oput(std::ostream& of) const
 {
   of << conflict_sets.sz() << '\n';
   FOR_EACH( it, conflict_sets )

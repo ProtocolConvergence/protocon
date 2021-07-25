@@ -6,7 +6,7 @@
 #include "namespace.hh"
 
 void
-OPutPromelaModel(OFile& ofile, const Xn::Sys& sys, const Xn::Net& otopology);
+OPutPromelaModel(std::ostream& ofile, const Xn::Sys& sys, const Xn::Net& otopology);
 
 END_NAMESPACE
 #endif

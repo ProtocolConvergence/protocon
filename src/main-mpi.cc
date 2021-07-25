@@ -85,7 +85,7 @@ stabilization_search_init
   (SynthesisCtx& synctx,
    Xn::Sys& sys,
    LgTable<Xn::Sys>& systems,
-   Cx::OFileB& log_ofile,
+   lace::ofstream& log_ofile,
    AddConvergenceOpt& opt,
    const ProtoconFileOpt& infile_opt,
    const ProtoconOpt& exec_opt,
@@ -120,7 +120,7 @@ stabilization_search(vector<uint>& ret_actions,
 
   DeclLegit( good );
   AddConvergenceOpt opt(global_opt);
-  Cx::OFileB log_ofile;
+  lace::ofstream log_ofile;
 
   opt.sys_pcidx = PcIdx;
   opt.sys_npcs = NPcs;
@@ -164,7 +164,7 @@ stabilization_search(vector<uint>& ret_actions,
           << "pcidx:" << PcIdx
           << " conflict:" << conflict_idx << "/" << flat_conflicts.sz()
           << " sz:" << old_sz
-          << opt.log->endl();
+          << std::endl;
 
         uint new_sz =
           synlvl.add_small_conflict_set(flat_conflicts[conflict_idx]);
@@ -173,7 +173,7 @@ stabilization_search(vector<uint>& ret_actions,
           << "DONE: pcidx:" << PcIdx
           << " conflict:" << conflict_idx << "/" << flat_conflicts.sz()
           << " old_sz:" << old_sz << " new_sz:" << new_sz
-          << opt.log->endl();
+          << std::endl;
       }
     }
   }
@@ -222,7 +222,7 @@ stabilization_search(vector<uint>& ret_actions,
     {}
     else if (found)
     {
-      *opt.log << "SOLUTION FOUND!" << opt.log->endl();
+      *opt.log << "SOLUTION FOUND!" << std::endl;
       bool count_solution = true;
       if (opt.solution_as_conflict || global_opt.optimize_soln) {
         FlatSet<uint> flat_actions( actions );
@@ -259,7 +259,7 @@ stabilization_search(vector<uint>& ret_actions,
 
     synctx.conflicts.oput_conflict_sizes(*opt.log);
 
-    for (OFile* ofile = &DBogOF;
+    for (std::ostream* ofile = &std::cerr;
          true;  // See end of loop.
          ofile = opt.log)
     {
@@ -404,8 +404,8 @@ int main(int argc, char** argv)
         const Xn::Net& topo = sys.topology;
         Xn::ActSymm act;
         topo.action(act, sys.actions[i]);
-        //DBogOF << sys.actions[i] << ' ';
-        OPut(DBogOF, act) << '\n';
+        //std::cerr << sys.actions[i] << ' ';
+        OPut(std::cerr, act) << '\n';
       }
     }
   }
@@ -413,7 +413,7 @@ int main(int argc, char** argv)
     DBog0("No solution found...");
   }
   clock_gettime(CLOCK_MONOTONIC, &endtime);
-  DBogOF.flush();
+  std::cerr.flush();
 
 #ifdef ENABLE_MEMORY_STATS
   if (true) {

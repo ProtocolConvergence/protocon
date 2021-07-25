@@ -2,6 +2,7 @@
 #ifndef PartialSynthesis_HH_
 #define PartialSynthesis_HH_
 
+#include "lace_wrapped.hh"
 #include "cx/set.hh"
 #include "cx/urandom.hh"
 #include "pfmla.hh"
@@ -14,6 +15,8 @@
 #include "stabilization.hh"
 
 #include "namespace.hh"
+
+extern lace::ofstream dev_null_ostream;
 
 class SynthesisCtx;
 class PartialSynthesis;
@@ -65,7 +68,7 @@ public:
   SearchMethod search_method;
   NicePolicy nicePolicy;
   bool pick_back_reach;
-  OFile* log;
+  std::ostream* log;
   bool verify_found;
 
   bool randomize_pick;
@@ -96,7 +99,7 @@ public:
     , search_method( BacktrackSearch )
     , nicePolicy( NilNice )
     , pick_back_reach( false )
-    , log( &DBogOF )
+    , log( &std::cerr )
     , verify_found( true )
     , randomize_pick( true )
     , randomize_depth( 0 )
@@ -125,7 +128,7 @@ public:
   SynthesisCtx* ctx;
   uint sys_idx;
 
-  OFile* log;
+  std::ostream* log;
   uint bt_level;
   uint failed_bt_level;
   bool directly_add_conflicts;
@@ -151,7 +154,7 @@ public:
   explicit PartialSynthesis(SynthesisCtx* _ctx, uint idx=0)
     : ctx( _ctx )
     , sys_idx( idx )
-    , log( &OFile::null() )
+    , log( &dev_null_ostream )
     , bt_level( 0 )
     , failed_bt_level( 0 )
     , directly_add_conflicts( false )
@@ -238,7 +241,7 @@ class SynthesisCtx {
 public:
   PartialSynthesis base_partial;
   Table<const Xn::Sys*> systems;
-  OFile* log;
+  std::ostream* log;
   PFmlaCtx csp_pfmla_ctx;
   P::Fmla csp_base_pfmla;
   URandom urandom;
@@ -251,7 +254,7 @@ public:
 
   SynthesisCtx()
     : base_partial( this )
-    , log( &OFile::null() )
+    , log( &dev_null_ostream )
     , csp_base_pfmla(true)
     , optimal_nlayers_sum(0)
     , done_ck_fn(0)
@@ -259,7 +262,7 @@ public:
   {}
   SynthesisCtx(uint pcidx, uint npcs)
     : base_partial( this )
-    , log( &OFile::null() )
+    , log( &dev_null_ostream )
     , csp_base_pfmla(true)
     , urandom(pcidx, npcs)
     , optimal_nlayers_sum(0)
