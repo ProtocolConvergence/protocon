@@ -1,57 +1,46 @@
 
-\title{Orientation on Odd-Sized Rings}
-%\author{}
-\date{}
+# Orientation on Odd-Sized Rings
 
-\begin{document}
+## Ring Orientation {#sec:OrientRing}
 
-\tableofcontents
+**OrientRing.**
+([spec](../examplespec/OrientRing.prot),
+ [args](../examplesett/OrientRing.args),
+ [soln](../examplesoln/OrientRing.prot))
 
-\section{Ring Orientation}
-\label{sec:OrientRing}
+## Odd-Sized Ring Orientation {#sec:OrientRingOdd}
 
-\quicksec{OrientRing}
-(\href{\examplespec/OrientRing.prot}{spec},
-\href{\examplesett/OrientRing.args}{args},
-\href{\examplesoln/OrientRing.prot}{soln})
+**OrientRingOdd.**
+([spec](../examplespec/OrientRingOdd.prot),
+ [args](../examplesett/OrientRingOdd.args),
+ [soln](../examplesoln/OrientRingOdd.prot))
 
-\section{Odd-Sized Ring Orientation}
-\label{sec:OrientRingOdd}
+The `examplespec/OddOrientRing.prot` file specifies a bidirectional ring topology where processes wish to agree with each other on a direction around the ring.
+The topology is taken from the paper by Hoepman titled *Uniform Deterministic Self-Stabilizing Ring-Orientation on Odd-Length Rings*.
 
-\quicksec{OrientRingOdd}
-(\href{\examplespec/OrientRingOdd.prot}{spec},
-\href{\examplesett/OrientRingOdd.args}{args},
-\href{\examplesoln/OrientRingOdd.prot}{soln})
+### Problem Instance
 
-The \ilfile{examplespec/OddOrientRing.prot} file specifies a bidirectional ring topology where processes wish to agree with each other on a direction around the ring.
-The topology is taken from the paper by Hoepman titled \textit{Uniform Deterministic Self-Stabilizing Ring-Orientation on Odd-Length Rings}.
+See: [examplespec/OrientRingOdd.prot](../examplespec/OrientRingOdd.prot)
 
-\subsection{Problem Instance}
+Each process `P[i]` reads `color[i-1]`, `color[i+1]`, `phase[i-1]`, and `phase[i+1]` and writes `color[i]`, `phase[i]`, `way[2*i]`, and `way[2*i+1]`.
 
-\codeinputlisting{../../../examplespec/OrientRingOdd.prot}
-
-Each process \ttvbl{P[i]} reads \ttvbl{color[i-1]}, \ttvbl{color[i+1]}, \ttvbl{phase[i-1]}, and \ttvbl{phase[i+1]} and writes \ttvbl{color[i]}, \ttvbl{phase[i]}, \ttvbl{way[2*i]}, and \ttvbl{way[2*i+1]}.
-
-Eventually we want all the \ttvbl{way[2*i]} values to equal each other and differ from the \ttvbl{way[2*i+1]} values.
+Eventually we want all the `way[2*i]` values to equal each other and differ from the `way[2*i+1]` values.
 That is, we want each process to agree on a direction.
 
-The \ttvbl{color} and \ttvbl{phase} variables are labeled as \ilcode{puppet} because we allow the protocol to use them to achieve convergence.
+The `color` and `phase` variables are labeled as `puppet` because we allow the protocol to use them to achieve convergence.
 
-The invariant is labeled as \ilcode{((future & shadow) % puppet)} since we only require closure within a new invariant $I'$ rather than $I$.
-Also, the behavior of the protocol within the new invariant $I'$ must be the same as the underlying (i.e., shadow) protocol within $I$.
+The invariant is labeled as `((future & shadow) % puppet)` since we only require closure within a new invariant *I'* rather than *I*.
+Also, the behavior of the protocol within the new invariant *I'* must be the same as the underlying (i.e., shadow) protocol within *I*.
 
-\subsection{Stabilizing Version}
+### Stabilizing Version
 
-\codeinputlisting{../../../examplesoln/OrientRingOdd.prot}
+See: [examplesoln/OrientRingOdd.prot](../examplesoln/OrientRingOdd.prot)
 
-\section{Daisy Chain Orientation}
-\label{sec:OrientDaisy}
+## Daisy Chain Orientation {#sec:OrientDaisy}
 
-\quicksec{OrientDaisy}
-(\href{\examplespec/OrientDaisy.prot}{spec},
-\href{\examplesett/OrientDaisy.args}{args},
-\href{\examplesynt/OrientDaisy.prot}{synt},
-\href{\examplesoln/OrientDaisy.prot}{soln})
-
-\end{document}
+**OrientDaisy.**
+([spec](../examplespec/OrientDaisy.prot),
+ [args](../examplesett/OrientDaisy.args),
+ [synt](../examplesynt/OrientDaisy.prot),
+ [soln](../examplesoln/OrientDaisy.prot))
 
