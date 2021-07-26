@@ -109,8 +109,8 @@ install(DIRECTORY "${CMAKE_SOURCE_DIR}/example/" DESTINATION example)
 # Or just:
 #   cpack
 include(InstallRequiredSystemLibraries)
-string(TIMESTAMP CPACK_PACKAGE_VERSION "%Y.%m.%d")
-#set(CPACK_PACKAGE_VERSION "2021.07.25")
+string(TIMESTAMP CPACK_PACKAGE_VERSION "%Y%m%d")
+#set(CPACK_PACKAGE_VERSION "20210725")
 set(CPACK_GENERATOR "ZIP")
 #set(CPACK_GENERATOR "STGZ;TGZ;ZIP")
 set(MyName "Alex Klinkhamer")

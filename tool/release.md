@@ -8,8 +8,8 @@ This can be overridden in the top-level `CMakeLists.txt` (a commented line shows
 # Always release from a clean source tree.
 # The "protocon_to_release" directory name is not important.
 git clone https://github.com/grencez/protocon.git protocon_to_release
-cd protocon_to_release
-mkdir bld
+mkdir protocon_to_release/bld
+cd protocon_to_release/bld
 # Configure.
 cmake ..
 # Build.
