@@ -13,7 +13,7 @@ The `examplespec/ColorRing.prot` file specifies a bidirectional ring topology wh
 Each process has 3 colors to choose from.
 This is a very simple protocol and is useful for instruction.
 
-<--- \codeinputlisting{../../../examplespec/ColorRing.prot} -->
+See: [examplespec/ColorRing.prot](../examplespec/ColorRing.prot)
 
 The invariant can also be specified outside of the process definition as:
 ```

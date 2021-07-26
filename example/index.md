@@ -17,7 +17,7 @@ It has been extremely helpful for reasoning about the nature of [livelocks in un
 
 [Graph coloring](http://en.wikipedia.org/wiki/Graph_coloring) is a well-known problem with many applications.
 Each node in the graph is assigned a color.
-For this assignment to be called a \textit{coloring}, each node must have a different color than the nodes adjacent to it.
+For this assignment to be called a *coloring*, each node must have a different color than the nodes adjacent to it.
 In a computer network, a coloring applies to processes that communicate directly with each other rather than nodes connected by edges.
 
 * ColorRing [info](Coloring.md#sec:ColorRing) -
@@ -54,7 +54,7 @@ gives definite impossibility results at around 8 processes.
 
 [Matching](http://en.wikipedia.org/wiki/Matching_(graph_theory)) is well-known problem from graph theory.
 A matching is a set of edges that do not share any common vertices.
-For a matching to be \textit{maximal}, it must be impossible to add another edge to the set without breaking the matching property.
+For a matching to be *maximal*, it must be impossible to add another edge to the set without breaking the matching property.
 
 * MatchRing [info](Matching.md#sec:MatchRing) -
   Natural specification for matching using the edges in the ring.
