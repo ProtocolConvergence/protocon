@@ -116,7 +116,7 @@ Try the following:
 1. Use the exploration window to find a livelock (a cycle outside of the invariant).
 1. What is happening in the livelock?
 1. How can the last action be modified in order to remove the livelock?
- * Hint: Remove the last action and run synthesis.
+   * Hint: Remove the last action and run synthesis.
 
 
 ## Sum-Not-Odd
@@ -126,19 +126,19 @@ We will see how Protocon can optimize performance and also help with manual cons
 
 Try the following:
 1. Specify the sum-not-odd problem using [examplespec/SumNotTwo.prot](../examplespec/SumNotTwo.prot) as a template.
- * Use the mod operator `%`.
- * Keep variable domains at size `M=3`.
+   * Use the mod operator `%`.
+   * Keep variable domains at size `M=3`.
 1. Synthesize a sum-not-odd protocol that stabilizes on rings of size 2, 3, 4, and 5.
 1. Verify that it stabilizes on a ring of size 8.
- * Note the number reported after `Max async layers to fixpoint:`, this is the worst-case number of steps to converge on a ring of size 8.
+   * Note the number reported after `Max async layers to fixpoint:`, this is the worst-case number of steps to converge on a ring of size 8.
 1. Synthesize a sum-not-odd protocol again for `N=2,3,4,5`, and add the `-optimize` flag to the command.
 1. Verify that the resulting protocol stabilizes on a ring of size 8.
- * Note that the worst-case number of convergence steps is smaller than before.
+   * Note that the worst-case number of convergence steps is smaller than before.
 
 We would now like to create a general sum-not-odd protocol for any variable domain of size `M`.
 One problem is that randomization is used during synthesis, which gives a random-looking protocol.
 1. Synthesize a sum-not-odd protocol again for `N=2,3,4,5`, and add the `-optimize` and `-no-random` flags to the command.
-  * Save this result somewhere.
+   * Save this result somewhere.
 1. Change variable domains to `M=4` in the file.
 1. Repeat step 1.
 1. Change variable domains to `M=5` in the file.
