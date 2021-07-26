@@ -1,3 +1,4 @@
+[![Coverage Status](https://coveralls.io/repos/github/grencez/protocon/badge.svg?branch=trunk)](https://coveralls.io/github/grencez/protocon?branch=trunk)
 
 # Protocon
 

@@ -33,7 +33,8 @@ genrule(
     name = "prot_xfile_leg",
     srcs = ["prot-xfile.leg"],
     tools = [":peg_leg"],
-    cmd = "$(location peg_leg) -o \"$@\" $(location prot-xfile.leg)",
+    # The -P removes #line directives do avoid a GCC crash in `bazel coverage`.
+    cmd = "$(location peg_leg) -P -o \"$@\" $(location prot-xfile.leg)",
     outs = ["prot-xfile.leg.cc"],
 )
 
