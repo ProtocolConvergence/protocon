@@ -1,13 +1,14 @@
+[https://github.com/grencez/protocon](https://github.com/grencez/protocon)\
 [![Coverage Status](https://coveralls.io/repos/github/grencez/protocon/badge.svg?branch=trunk)](https://coveralls.io/github/grencez/protocon?branch=trunk)
 
-# Protocon
+# Protocon: Add Convergence to Shared Memory Protocols
 
 Designing stabilizing protocols is hard, therefore Protocon exists to automate this task.
 It performs a backtracking search to choose actions that finite-state processes should follow in order to converge to a set of legitimate states.
 We call this [shadow/puppet synthesis](doc/legit.md), where the legitimate states and behavior can be specified indirectly using shadow variables.
 Because the problem is hard, one can leverage multiple cores/nodes for parallel search with OpenMP (via the `-parallel` flag) or MPI (via the `protocon-mpi` executable).
 
-## Quick Resources
+## Resources
 * `-->` [Tutorial](doc/tut.md) `<--`
 * [Example Protocols](example/index.md)
 * [Benchmarks](doc/benchmark.md)
