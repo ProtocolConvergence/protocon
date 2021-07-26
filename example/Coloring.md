@@ -41,7 +41,7 @@ Check if the protocol is self-stabilizing rings of size 7. It should be fine!
 ```
 
 ### Model Checking with Spin
-We can also verify this protocol's correctness in the [Spin model checker](http://spinroot.com) (here's a [quick setup guide](../../tut/spin.html)).
+We can also verify this protocol's correctness in the [Spin model checker](http://spinroot.com) (here's a [quick setup guide](https://grencez.dev/2015/spin-checks-agreement-20150407#setup)).
 First output a model in the Promela language for a ring of 6 processes.
 ```
 ./bin/protocon -nop -x tmp/color.prot -param N 6 -o-promela tmp/color.pml
