@@ -9,7 +9,7 @@ That is, the resulting protocols are stabilizing for more processes than were co
 | -------- |:------------------:|:-----------------:|:------------:|:-----------:| ----- |
 | [3-State Token Ring (Dijkstra)](../example/TokenPassing.html#sec:TokenRingThreeState) | [2--5](../examplesett/TokenRingThreeState.args) | 4 | 9.300s | 90.6 MB | Bidirectional ring. |
 | [3-State Token Chain](../example/TokenPassing.html#sec:TokenChainThreeState) | [2--5](../examplesett/TokenChainThreeState.args) | 4 | 29.310s | 101.3 MB | Bidirectional chain (line). Allows actions that do not pass a token. |
-| [4-State Token Chain](../example/TokenPassing.html#sec:TokenChainDijkstra) | [2--4](../examplesett/TokenChainDijkstra.args) | 6.548s | 66.4 MB | Bidirectional chain (line). |
+| [4-State Token Chain (Dijkstra)](../example/TokenPassing.html#sec:TokenChainDijkstra) | [2--4](../examplesett/TokenChainDijkstra.args) | 4 | 6.548s | 66.4 MB | Bidirectional chain (line). |
 | [5-State Token Ring](../example/TokenPassing.html#sec:TokenRingFiveState) | [2--9](../examplesett/TokenRingFiveState.args) | 8 | 12m54.684s | 153.4 MB |
 | [6-State Token Ring](../example/TokenPassing.html#sec:TokenRingSixState) | [2--9](../examplesett/TokenRingSixState.args) | 4 | 20m17.846s | 266.6 MB | Allows actions that do not pass a token. |
 | [3-Bit Token Ring (Gouda and Haddix)](../example/TokenPassing.html#sec:TokenRingThreeBit) | [2--9](../examplesett/TokenRingThreeBit.args) | 4 | 17m17.564s | 495.7 MB | Allows actions that do not pass a token. |

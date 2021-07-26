@@ -4,13 +4,13 @@
 
 Designing stabilizing protocols is hard, therefore Protocon exists to automate this task.
 It performs a backtracking search to choose actions that finite-state processes should follow in order to converge to a set of legitimate states.
-We call this [shadow/puppet synthesis](legit.md), where the legitimate states and behavior can be specified indirectly using shadow variables.
+We call this [shadow/puppet synthesis](doc/legit.md), where the legitimate states and behavior can be specified indirectly using shadow variables.
 Because the problem is hard, one can leverage multiple cores/nodes for parallel search with OpenMP (via the `-parallel` flag) or MPI (via the `protocon-mpi` executable).
 
 ## Quick Resources
 * `-->` [Tutorial](doc/tut.md) `<--`
-* [List of Examples](example/index.md)
-* [Table of Benchmarks](doc/benchmark.md)
+* [Example Protocols](example/index.md)
+* [Benchmarks](doc/benchmark.md)
 * [Different ways to specify legitimate states and behavior](doc/legit.md)
 * [Action constraints and syntax](doc/permit.md)
 * [Man Page](doc/protocon.1)
