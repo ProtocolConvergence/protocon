@@ -92,5 +92,29 @@ add_dependencies (peg_leg peg_project)
 
 enable_testing ()
 
+#### Build ####
 add_subdirectory(src)
+
+#### Test ####
+# (The src/ subdirectory has some tests too.)
 add_subdirectory(test)
+
+#### Install ####
+# (The src/ subdirectory installed some stuff too.)
+install(DIRECTORY "${CMAKE_SOURCE_DIR}/doc/" DESTINATION doc)
+install(DIRECTORY "${CMAKE_SOURCE_DIR}/example/" DESTINATION example)
+
+# Build a CPack-driven installer package.
+#   cpack --config CPackConfig.cmake
+# Or just:
+#   cpack
+include(InstallRequiredSystemLibraries)
+string(TIMESTAMP CPACK_PACKAGE_VERSION "%Y.%m.%d")
+#set(CPACK_PACKAGE_VERSION "2021.07.25")
+set(CPACK_GENERATOR "ZIP")
+#set(CPACK_GENERATOR "STGZ;TGZ;ZIP")
+set(MyName "Alex Klinkhamer")
+set(CPACK_PACKAGE_VENDOR ${MyName})
+set(CPACK_PACKAGE_CONTACT ${MyName})
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/LICENSE")
+include(CPack)

@@ -2,8 +2,6 @@
 #### Reduction-to-SAT Solver ####
 # Not really used.
 
-string(REGEX REPLACE "-DNDEBUG " "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
-
 add_executable(satsyn
   "satsyn.c"
   "xnsys.c"

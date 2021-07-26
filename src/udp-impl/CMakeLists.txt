@@ -6,8 +6,6 @@ if (NOT UNIX OR APPLE)
 endif ()
 
 
-string(REGEX REPLACE "-DNDEBUG " "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
-
 add_executable(udp_ThreeColorRing
   "act.h"
   "protocol.c"

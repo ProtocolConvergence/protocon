@@ -1,6 +1,4 @@
 
-#string(REGEX REPLACE "-DNDEBUG " "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
-
 add_library (cx_lib STATIC
   "alphatab.c"
   "alphatab.h"

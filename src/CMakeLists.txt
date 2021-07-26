@@ -267,52 +267,32 @@ endfunction ()
 
 
 #### Tests ####
-set (TopPath ${CMAKE_CURRENT_SOURCE_DIR}/..)
+set (TopPath ${CMAKE_SOURCE_DIR})
 include (${CMAKE_CURRENT_SOURCE_DIR}/verif/include.cmake)
 
 
 #### Install ####
-
-install (TARGETS protocon DESTINATION bin)
-if (MPI_FOUND)
-  install (TARGETS protocon-mpi DESTINATION bin)
+install(TARGETS protocon DESTINATION bin)
+if(MPI_FOUND)
+  install(TARGETS protocon-mpi DESTINATION bin)
 endif()
 
-cat_parenthesized (DistribSpecs ${MetaPath}/examplespec.files)
-foreach (f ${DistribSpecs})
-  install (FILES ${TopPath}/examplespec/${f}.prot DESTINATION examplespec)
-endforeach ()
+cat_parenthesized(DistribSpecs "${CMAKE_SOURCE_DIR}/meta/examplespec.files")
+foreach(f ${DistribSpecs})
+  install(FILES "${CMAKE_SOURCE_DIR}/examplespec/${f}.prot" DESTINATION examplespec)
+endforeach()
 
-cat_parenthesized (DistribSetts ${MetaPath}/examplesett.files)
-foreach (f ${DistribSetts})
-  install (FILES ${TopPath}/examplesett/${f}.args DESTINATION examplesett)
-endforeach ()
+cat_parenthesized(DistribSetts "${CMAKE_SOURCE_DIR}/meta/examplesett.files")
+foreach(f ${DistribSetts})
+  install(FILES "${CMAKE_SOURCE_DIR}/examplesett/${f}.args" DESTINATION examplesett)
+endforeach()
 
-cat_parenthesized (DistribSynts ${MetaPath}/examplesynt.files)
-foreach (f ${DistribSynts})
-  install (FILES ${TopPath}/examplesynt/${f}.prot DESTINATION examplesynt)
-endforeach ()
+cat_parenthesized(DistribSynts "${CMAKE_SOURCE_DIR}/meta/examplesynt.files")
+foreach(f ${DistribSynts})
+  install(FILES "${CMAKE_SOURCE_DIR}/examplesynt/${f}.prot" DESTINATION examplesynt)
+endforeach()
 
-cat_parenthesized (DistribSolns ${MetaPath}/examplesoln.files)
-foreach (f ${DistribSolns})
-  install (FILES ${TopPath}/examplesoln/${f}.prot DESTINATION examplesoln)
-endforeach ()
-
-install (FILES ${TopPath}/doc/protocon.1 DESTINATION doc)
-install (DIRECTORY ${TopPath}/doc/html/ DESTINATION doc/html)
-
-# Build a CPack-driven installer package.
-#   cpack --config CPackConfig.cmake
-# Or just:
-#   cpack
-include (InstallRequiredSystemLibraries)
-string (TIMESTAMP CPACK_PACKAGE_VERSION "%Y.%m.%d")
-set (CPACK_PACKAGE_VERSION "2015.10.20")
-#set (CPACK_GENERATOR "STGZ;TGZ;ZIP")
-set (CPACK_GENERATOR "ZIP")
-set (MyName "Alex Klinkhamer")
-set (CPACK_PACKAGE_VENDOR ${MyName})
-set (CPACK_PACKAGE_CONTACT ${MyName})
-#set (CPACK_RESOURCE_FILE_LICENSE "${TopPath}/COPYING")
-include (CPack)
-
+cat_parenthesized(DistribSolns "${CMAKE_SOURCE_DIR}/meta/examplesoln.files")
+foreach(f ${DistribSolns})
+  install(FILES "${CMAKE_SOURCE_DIR}/examplesoln/${f}.prot" DESTINATION examplesoln)
+endforeach()
