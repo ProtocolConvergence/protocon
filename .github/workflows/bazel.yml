@@ -2,7 +2,7 @@ name: Bazel
 on: [push, pull_request]
 
 jobs:
-  build:
+  test:
     strategy:
       matrix:
         platform: [ubuntu-latest]
@@ -31,3 +31,34 @@ jobs:
       with:
         name: Test Results (${{ matrix.platform }})
         path: bazel-testlogs*/**/*
+
+
+  coverage:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+
+    steps:
+    - name: Setup bazel
+      uses: jwlawson/actions-setup-bazel@v1
+      with:
+        bazel-version: '4.1.0'
+
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Run tests
+      run: >
+        bazel coverage
+        --instrument_test_targets
+        --instrumentation_filter="^//..."
+        --combined_report=lcov
+        --
+        //...
+
+    - name: Coveralls
+      uses: coverallsapp/github-action@master
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        path-to-lcov: bazel-out/_coverage/_coverage_report.dat

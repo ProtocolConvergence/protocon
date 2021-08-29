@@ -7,7 +7,7 @@ env:
   BUILD_TYPE: Release
 
 jobs:
-  build:
+  test:
     strategy:
       matrix:
         # macos-latest fails some tests
@@ -47,3 +47,26 @@ jobs:
       with:
         name: Test Results (${{ matrix.platform }})
         path: ${{runner.workspace}}/bld/Testing/
+
+
+  configure_with_old_cmake:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: CMake Version Set
+      uses: jwlawson/actions-setup-cmake@v1.9
+      with:
+        cmake-version: '2.8.12'
+
+    - name: CMake Version Get
+      run: cmake --version
+
+    - name: Create Build Environment
+      run: cmake -E make_directory ${{runner.workspace}}/bld
+
+    - name: Configure
+      shell: bash
+      working-directory: ${{runner.workspace}}/bld
+      run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE
