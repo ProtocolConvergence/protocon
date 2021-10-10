@@ -47,7 +47,7 @@ cc_binary(
     ],
     deps = ["//src/cx:cx_lib"],
     copts = [
-        "-Iexternal/lace/src",
+        "-Iexternal/fildesh/src",
     ],
 )
 
@@ -61,7 +61,7 @@ cc_test(
     ],
     deps = ["//src/cx:cx_lib"],
     copts = [
-        "-Iexternal/lace/src",
+        "-Iexternal/fildesh/src",
     ],
 )
 
@@ -78,7 +78,7 @@ cc_library(
         "//src/cx:cx_lib",
     ],
     copts = [
-        "-Iexternal/lace/src",
+        "-Iexternal/fildesh/src",
         "-Iexternal/mdd_glu/include",
     ],
 )
@@ -95,7 +95,7 @@ cc_library(
         ":pfmla_glu_lib",
     ],
     copts = [
-        "-Iexternal/lace/src",
+        "-Iexternal/fildesh/src",
     ],
     visibility = [
         "//src/uni:__pkg__",
@@ -112,7 +112,7 @@ cc_test(
         ":pfmla_lib",
     ],
     copts = [
-        "-Iexternal/lace/src",
+        "-Iexternal/fildesh/src",
     ],
 )
 
@@ -134,7 +134,7 @@ cc_library(
         ":pfmla_lib",
     ],
     copts = [
-        "-Iexternal/lace/src",
+        "-Iexternal/fildesh/src",
     ],
 )
 
@@ -154,7 +154,7 @@ cc_test(
         ":xnsys_lib",
     ],
     copts = [
-        "-Iexternal/lace/src",
+        "-Iexternal/fildesh/src",
     ],
 )
 
@@ -170,7 +170,7 @@ cc_test(
     ],
     deps = [":xnsys_lib"],
     copts = [
-        "-Iexternal/lace/src",
+        "-Iexternal/fildesh/src",
     ],
 )
 
@@ -193,7 +193,7 @@ cc_library(
     ],
     copts = [
         "-Isrc",
-        "-Iexternal/lace/src",
+        "-Iexternal/fildesh/src",
     ],
     visibility = [
         "//src/uni:__pkg__",
@@ -208,7 +208,7 @@ cc_binary(
     ],
     deps = [":prot_file_lib"],
     copts = [
-        "-Iexternal/lace/src",
+        "-Iexternal/fildesh/src",
     ],
 )
 
@@ -243,7 +243,7 @@ cc_library(
         ":prot_file_lib",
     ],
     copts = [
-        "-Iexternal/lace/src",
+        "-Iexternal/fildesh/src",
     ],
     # This lets udp-ofile.cc include the generated "udp-impl/act.embed.h" file.
     # Ideally we'd use copts to avoid adding this include path to everything
@@ -266,7 +266,7 @@ cc_binary(
         ":protocon_lib",
     ],
     copts = [
-        "-Iexternal/lace/src",
+        "-Iexternal/fildesh/src",
     ],
     visibility = ["//visibility:public"],
 )
@@ -276,8 +276,8 @@ genrule(
     srcs = [
         "testlist.txt",
     ],
-    tools = ["@lace//tool:cswitch"],
-    cmd = "$(location @lace//tool:cswitch) testname -case-pfx \"fn = Test\" -array AllTests -x $(location testlist.txt) -o \"$@\"",
+    tools = ["@fildesh//tool:cswitch"],
+    cmd = "$(location @fildesh//tool:cswitch) testname -case-pfx \"fn = Test\" -array AllTests -x $(location testlist.txt) -o \"$@\"",
     outs = ["test.embed.h"],
 )
 
@@ -303,6 +303,6 @@ cc_test(
         "//examplespec:SumNotTwo.prot",
     ],
     copts = [
-        "-Iexternal/lace/src",
+        "-Iexternal/fildesh/src",
     ],
 )

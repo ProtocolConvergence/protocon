@@ -5,8 +5,8 @@ genrule(
         "protocol.c",
         "protocol.h",
     ],
-    tools = ["@lace//tool:cembed"],
-    cmd = "$(location @lace//tool:cembed) -o \"$@\" $(location protocol.h) $(location protocol.c)",
+    tools = ["@fildesh//tool:cembed"],
+    cmd = "$(location @fildesh//tool:cembed) -o \"$@\" $(location protocol.h) $(location protocol.c)",
     outs = ["act.embed.h"],
     visibility = [
         "//src:__pkg__",

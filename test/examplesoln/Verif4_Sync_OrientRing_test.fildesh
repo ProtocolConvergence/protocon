@@ -1,4 +1,4 @@
-#!/usr/bin/env lace
+#!/usr/bin/env fildesh
 
 zec -o $(OF OrientRing) / / $(XA 1)
 

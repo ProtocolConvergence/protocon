@@ -1,8 +1,8 @@
-load("@lace//tool:spawn.bzl", "lace_test")
+load("@fildesh//tool:spawn.bzl", "fildesh_test")
 
-lace_test(
+fildesh_test(
     name = "Verif4_Sync_OrientRing_test",
-    srcs = ["Verif4_Sync_OrientRing_test.lace"],
+    srcs = ["Verif4_Sync_OrientRing_test.fildesh"],
     aliases = ["protocon=$(location //src:protocon)"],
     args = ["$(location //examplesoln:OrientRing.prot)"],
     data = [
@@ -11,9 +11,9 @@ lace_test(
     ],
 )
 
-lace_test(
+fildesh_test(
     name = "Verif4_OrientRingOdd_failure_test",
-    srcs = ["Verif4_OrientRingOdd_failure_test.lace"],
+    srcs = ["Verif4_OrientRingOdd_failure_test.fildesh"],
     aliases = ["protocon=$(location //src:protocon)"],
     args = ["$(location //examplesoln:OrientRingOdd.prot)"],
     data = [
@@ -24,9 +24,9 @@ lace_test(
 )
 
 ## PLA file output.
-lace_test(
+fildesh_test(
     name = "PLA_MatchRingThreeState_test",
-    srcs = ["PLA_MatchRingThreeState_test.lace"],
+    srcs = ["PLA_MatchRingThreeState_test.fildesh"],
     aliases = ["protocon=$(location //src:protocon)"],
     args = [
         "$(location :MatchRingThreeState.pla)",
@@ -40,9 +40,9 @@ lace_test(
 )
 
 ## Promela file output.
-lace_test(
+fildesh_test(
     name = "Promela_OrientDaisy_test",
-    srcs = ["Promela_OrientDaisy_test.lace"],
+    srcs = ["Promela_OrientDaisy_test.fildesh"],
     aliases = ["protocon=$(location //src:protocon)"],
     args = [
         "$(location :OrientDaisy.pml)",
@@ -56,9 +56,9 @@ lace_test(
 )
 
 ## UDP file output.
-lace_test(
+fildesh_test(
     name = "UDP_TokenRingRand_test",
-    srcs = ["UDP_TokenRingRand_test.lace"],
+    srcs = ["UDP_TokenRingRand_test.fildesh"],
     aliases = ["protocon=$(location //src:protocon)"],
     args = [
         "$(location :TokenRingRand.h)",

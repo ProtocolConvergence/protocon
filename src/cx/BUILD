@@ -42,7 +42,7 @@ cc_library(
         "xfile.hh",
     ],
     deps = [
-        "@lace//:lace_lib",
+        "@fildesh//:lace_lib",
     ],
     visibility = ["//src:__subpackages__"],
 )

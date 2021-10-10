@@ -25,9 +25,9 @@ string(REPLACE "/DNDEBUG" "" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}
 include(ExternalProject)
 
 
-ExternalProject_Add(lace_project
-  GIT_REPOSITORY "https://github.com/grencez/lace.git"
-  GIT_TAG "41326bbee87f67d5d99c9a0cd1a715d00bbd33d9"
+ExternalProject_Add(fildesh_project
+  GIT_REPOSITORY "https://github.com/fildesh/fildesh.git"
+  GIT_TAG "1328aff606b5ad61a309f8887673c23149741ceb"
   #GIT_TAG "trunk"
   CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>"
   BUILD_BYPRODUCTS
@@ -37,27 +37,27 @@ ExternalProject_Add(lace_project
   "<BINARY_DIR>/tool/comparispawn"
   "<BINARY_DIR>/tool/cswitch"
   )
-add_executable(lace IMPORTED)
+add_executable(fildesh IMPORTED)
 add_executable(cembed IMPORTED)
 add_executable(comparispawn IMPORTED)
 add_executable(cswitch IMPORTED)
 add_library (lace_lib STATIC IMPORTED)
 add_library (lace_compat_lib STATIC IMPORTED)
-ExternalProject_Get_Property(lace_project INSTALL_DIR)
-set_target_properties(lace PROPERTIES IMPORTED_LOCATION "${INSTALL_DIR}/bin/lace")
-ExternalProject_Get_Property(lace_project BINARY_DIR)
+ExternalProject_Get_Property(fildesh_project INSTALL_DIR)
+set_target_properties(fildesh PROPERTIES IMPORTED_LOCATION "${INSTALL_DIR}/bin/fildesh")
+ExternalProject_Get_Property(fildesh_project BINARY_DIR)
 set_target_properties(cembed PROPERTIES IMPORTED_LOCATION "${BINARY_DIR}/tool/cembed")
 set_target_properties(comparispawn PROPERTIES IMPORTED_LOCATION "${BINARY_DIR}/tool/comparispawn")
 set_target_properties(cswitch PROPERTIES IMPORTED_LOCATION "${BINARY_DIR}/tool/cswitch")
 set_target_properties(lace_lib PROPERTIES IMPORTED_LOCATION "${BINARY_DIR}/src/liblace_lib.a")
 set_target_properties(lace_compat_lib PROPERTIES IMPORTED_LOCATION "${BINARY_DIR}/compat/liblace_compat_lib.a")
-add_dependencies (lace lace_project)
-add_dependencies (lace_lib lace_project)
-add_dependencies (lace_compat_lib lace_project)
-add_dependencies (cembed lace_project)
-add_dependencies (comparispawn lace_project)
-add_dependencies (cswitch lace_project)
-ExternalProject_Get_Property(lace_project SOURCE_DIR)
+add_dependencies (fildesh fildesh_project)
+add_dependencies (lace_lib fildesh_project)
+add_dependencies (lace_compat_lib fildesh_project)
+add_dependencies (cembed fildesh_project)
+add_dependencies (comparispawn fildesh_project)
+add_dependencies (cswitch fildesh_project)
+ExternalProject_Get_Property(fildesh_project SOURCE_DIR)
 set (LaceIncludeDir "${SOURCE_DIR}/include")
 
 
