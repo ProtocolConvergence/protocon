@@ -19,8 +19,8 @@ all_content = """filegroup(name = "all", srcs = glob(["**"]), visibility = ["//v
 git_repository(
     name = "lace",
     remote = "https://github.com/grencez/lace.git",
-    commit = "691d81515c83094ffe68e5cf70181839b1f00bc5",
-    shallow_since = "1630278092 -0700",
+    commit = "41326bbee87f67d5d99c9a0cd1a715d00bbd33d9",
+    shallow_since = "1633856853 -0700",
     #branch = "trunk",
 )
 
