@@ -3,8 +3,8 @@
  * Spawn and communicate with a process.
  **/
 #include "ospc.h"
-#include "lace_compat_fd.h"
-#include "lace_compat_sh.h"
+#include "fildesh_compat_fd.h"
+#include "fildesh_compat_sh.h"
 
   bool
 close_OSPc (OSPc* ospc)

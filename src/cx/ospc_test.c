@@ -3,7 +3,7 @@
  * Tests for processes.
  **/
 
-#include "lace_compat_sh.h"
+#include "fildesh_compat_sh.h"
 #include "syscx.h"
 
 #include "ospc.h"

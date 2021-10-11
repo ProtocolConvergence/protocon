@@ -6,7 +6,7 @@
 #include <algorithm>
 
 extern "C" {
-#include "lace_compat_string.h"
+#include "fildesh_compat_string.h"
 }
 
 #include "namespace.hh"
@@ -53,7 +53,7 @@ public:
     delete cycle_pfmla;
   }
 
-  void assign(LaceX* in);
+  void assign(FildeshX* in);
   void next_options(Table<String>& ret_lines, bool fwd) const;
   void img_options(Table<String>& ret_lines) const;
   void pre_options(Table<String>& ret_lines) const;
@@ -64,7 +64,7 @@ public:
 
 static
   const Xn::Vbl*
-parse_variable(LaceX* in, const Xn::Net& topo)
+parse_variable(FildeshX* in, const Xn::Net& topo)
 {
   static const char other_delims[] = ":=";
   char delims[sizeof(other_delims) - 1 + sizeof(lace_compat_string_blank_bytes)];
@@ -74,9 +74,9 @@ parse_variable(LaceX* in, const Xn::Net& topo)
     memcpy(delims, other_delims, sz);
     memcpy(&delims[sz], lace_compat_string_blank_bytes, sizeof(lace_compat_string_blank_bytes));
   }
-  skipchrs_LaceX(in, delims);
+  skipchrs_FildeshX(in, delims);
   for (uint i = 0; i < topo.vbls.sz(); ++i) {
-    if (skipstr_LaceX(in, name_of(topo.vbls[i]).cstr())) {
+    if (skipstr_FildeshX(in, name_of(topo.vbls[i]).cstr())) {
       return &topo.vbls[i];
     }
   }
@@ -84,21 +84,21 @@ parse_variable(LaceX* in, const Xn::Net& topo)
 }
 
   void
-Interactive::assign(LaceX* in)
+Interactive::assign(FildeshX* in)
 {
   for (const Xn::Vbl* vbl = parse_variable(in, topo);
        vbl;
        vbl = parse_variable(in, topo))
   {
-    skipchrs_LaceX(in, lace_compat_string_blank_bytes);
-    skipchrs_LaceX(in, ":");
-    skipchrs_LaceX(in, "=");
+    skipchrs_FildeshX(in, lace_compat_string_blank_bytes);
+    skipchrs_FildeshX(in, ":");
+    skipchrs_FildeshX(in, "=");
     int val = 0;
-    if (parse_int_LaceX(in, &val)) {
+    if (parse_int_FildeshX(in, &val)) {
       uint idx = topo.vbls.index_of(vbl);
       state[idx] = umod_int (val, vbl->symm->domsz);
-      skipchrs_LaceX(in, lace_compat_string_blank_bytes);
-      skipchrs_LaceX(in, ";");
+      skipchrs_FildeshX(in, lace_compat_string_blank_bytes);
+      skipchrs_FildeshX(in, ";");
     }
   }
 }
@@ -230,22 +230,22 @@ interactive(const Xn::Sys& sys)
   }
 
   lace::ofstream of("/dev/stdout");
-  LaceX* in = open_LaceXF("/dev/stdin");
+  FildeshX* in = open_FildeshXF("/dev/stdin");
   if (!in) {
-    lace_log_error("failed to open stdin");
+    fildesh_log_error("failed to open stdin");
     return;
   }
 
-  for (LaceX line_slice = sliceline_LaceX(in);
+  for (FildeshX line_slice = sliceline_FildeshX(in);
        line_slice.at;
-       line_slice = sliceline_LaceX(in))
+       line_slice = sliceline_FildeshX(in))
   {
-    skipchrs_LaceX(&line_slice, lace_compat_string_blank_bytes);
+    skipchrs_FildeshX(&line_slice, lace_compat_string_blank_bytes);
 
-    if (skipstr_LaceX(&line_slice, "assign") || skipstr_LaceX(&line_slice, "a")) {
+    if (skipstr_FildeshX(&line_slice, "assign") || skipstr_FildeshX(&line_slice, "a")) {
       usim.assign(&line_slice);
     }
-    else if (skipstr_LaceX(&line_slice, "topo")) {
+    else if (skipstr_FildeshX(&line_slice, "topo")) {
       for (uint pcidx = 0; pcidx < topo.pcs.sz(); ++pcidx) {
         const Xn::Pc& pc = topo.pcs[pcidx];
         of << name_of(pc) << " {";
@@ -260,7 +260,7 @@ interactive(const Xn::Sys& sys)
       }
       of << std::endl;
     }
-    else if (skipstr_LaceX(&line_slice, "show-img")) {
+    else if (skipstr_FildeshX(&line_slice, "show-img")) {
       Table<String> lines;
       usim.img_options(lines);
       //std::sort (lines.begin(), lines.end());
@@ -269,7 +269,7 @@ interactive(const Xn::Sys& sys)
       }
       of << std::endl;
     }
-    else if (skipstr_LaceX(&line_slice, "show-pre")) {
+    else if (skipstr_FildeshX(&line_slice, "show-pre")) {
       Table<String> lines;
       usim.pre_options(lines);
       //std::sort (lines.begin(), lines.end());
@@ -278,7 +278,7 @@ interactive(const Xn::Sys& sys)
       }
       of << std::endl;
     }
-    else if (skipstr_LaceX(&line_slice, "show-sat")) {
+    else if (skipstr_FildeshX(&line_slice, "show-sat")) {
       P::Fmla pf = usim.state_pfmla();
       if (usim.invariant_influence != usim.IgnorePredicate) {
         of << "invariant "
@@ -297,18 +297,18 @@ interactive(const Xn::Sys& sys)
       }
       of << std::endl;
     }
-    else if (skipstr_LaceX(&line_slice, "step")) {
-      skipchrs_LaceX(&line_slice, lace_compat_string_blank_bytes);
+    else if (skipstr_FildeshX(&line_slice, "step")) {
+      skipchrs_FildeshX(&line_slice, lace_compat_string_blank_bytes);
       bool forward = true;
-      if (skipstr_LaceX(&line_slice, "img")) {
+      if (skipstr_FildeshX(&line_slice, "img")) {
         forward = true;
       }
-      else if (skipstr_LaceX(&line_slice, "pre")) {
+      else if (skipstr_FildeshX(&line_slice, "pre")) {
         forward = false;
       }
       unsigned n = 1; /* default */
       int x = -1;
-      if (parse_int_LaceX(&line_slice, &x) && x >= 0) {
+      if (parse_int_FildeshX(&line_slice, &x) && x >= 0) {
         n = x;
       }
       while (n > 0) {
@@ -331,12 +331,12 @@ interactive(const Xn::Sys& sys)
       }
       of << std::endl;
     }
-    else if (skipstr_LaceX(&line_slice, "sstep")) {
-      skipchrs_LaceX(&line_slice, lace_compat_string_blank_bytes);
+    else if (skipstr_FildeshX(&line_slice, "sstep")) {
+      skipchrs_FildeshX(&line_slice, lace_compat_string_blank_bytes);
       bool forward = true;
       unsigned n = 1; /* default */
       int x = -1;
-      if (parse_int_LaceX(&line_slice, &x) && x >= 0) {
+      if (parse_int_FildeshX(&line_slice, &x) && x >= 0) {
         n = x;
       }
       while (n > 0) {
@@ -358,30 +358,30 @@ interactive(const Xn::Sys& sys)
       }
       of << std::endl;
     }
-    else if (skipstr_LaceX(&line_slice, "show-state"))
+    else if (skipstr_FildeshX(&line_slice, "show-state"))
     {
       for (uint i = 0; i < topo.vbls.sz(); ++i) {
         of << name_of(topo.vbls[i]) << "==" << usim.state[i] << '\n';
       }
       of << std::endl;
     }
-    else if (skipstr_LaceX(&line_slice, "show-all-xn"))
+    else if (skipstr_FildeshX(&line_slice, "show-all-xn"))
     {
       topo.oput_all_xn(of, usim.xn);
       of << std::endl;
     }
-    else if (skipstr_LaceX(&line_slice, "randomize")) {
+    else if (skipstr_FildeshX(&line_slice, "randomize")) {
       usim.randomize_state();
     }
-    else if (skipstr_LaceX(&line_slice, "predicate")) {
-      skipchrs_LaceX(
+    else if (skipstr_FildeshX(&line_slice, "predicate")) {
+      skipchrs_FildeshX(
           &line_slice, lace_compat_string_blank_bytes);
-      LaceX predicate_name = slicechrs_LaceX(
+      FildeshX predicate_name = slicechrs_FildeshX(
           &line_slice, lace_compat_string_blank_bytes);
 
-      skipchrs_LaceX(
+      skipchrs_FildeshX(
           &line_slice, lace_compat_string_blank_bytes);
-      LaceX predicate_influence = slicechrs_LaceX(
+      FildeshX predicate_influence = slicechrs_FildeshX(
           &line_slice, lace_compat_string_blank_bytes);
 
       Interactive::PredicateInfluence influence = Interactive::IgnorePredicate;
@@ -397,7 +397,7 @@ interactive(const Xn::Sys& sys)
       else if (eq_cstr(predicate_influence.at, "false")) {
         influence = Interactive::NotInPredicate;
       } else {
-        lace_log_warningf("Unknown predicate influence: %s", predicate_influence.at);
+        fildesh_log_warningf("Unknown predicate influence: %s", predicate_influence.at);
       }
 
       if (eq_cstr(predicate_name.at, "invariant")) {
@@ -410,16 +410,16 @@ interactive(const Xn::Sys& sys)
         usim.cycle_influence = influence;
       }
       else {
-        lace_log_warningf("Unknown predicate name: %s", predicate_name.at);
+        fildesh_log_warningf("Unknown predicate name: %s", predicate_name.at);
       }
       usim.reset_mask_pfmla();
     }
-    else if (skipstr_LaceX(&line_slice, "exit"))
+    else if (skipstr_FildeshX(&line_slice, "exit"))
     {
       break;
     }
   }
-  close_LaceX(in);
+  close_FildeshX(in);
 }
 
 END_NAMESPACE

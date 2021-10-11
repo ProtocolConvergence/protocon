@@ -14,7 +14,6 @@ cc_binary(
     ],
     copts = [
         "-Isrc",
-        "-Iexternal/lace/src",
     ],
 )
 
@@ -37,7 +36,6 @@ cc_binary(
     ],
     copts = [
         "-Isrc",
-        "-Iexternal/lace/src",
     ],
 )
 
@@ -62,7 +60,6 @@ cc_binary(
     ],
     copts = [
         "-Isrc",
-        "-Iexternal/lace/src",
     ],
 )
 
@@ -82,7 +79,6 @@ cc_binary(
     ],
     copts = [
         "-Isrc",
-        "-Iexternal/lace/src",
     ],
 )
 
@@ -105,6 +101,5 @@ cc_binary(
     ],
     copts = [
         "-Isrc",
-        "-Iexternal/lace/src",
     ],
 )

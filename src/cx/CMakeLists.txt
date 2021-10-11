@@ -28,7 +28,7 @@ add_library (cx_lib STATIC
 
 set_property(TARGET cx_lib APPEND PROPERTY INCLUDE_DIRECTORIES
   "${LaceIncludeDir}")
-target_link_libraries (cx_lib lace_lib lace_compat_lib)
+target_link_libraries (cx_lib fildesh_lib fildesh_compat_lib)
 
 add_executable(bittable_test "bittable_test.c")
 set_property(TARGET bittable_test APPEND PROPERTY INCLUDE_DIRECTORIES

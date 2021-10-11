@@ -3,8 +3,8 @@
  * Interact with the operating system.
  **/
 #include "syscx.h"
-#include "lace_compat_fd.h"
-#include "lace_compat_sh.h"
+#include "fildesh_compat_fd.h"
+#include "fildesh_compat_sh.h"
 
 #include "fileb.h"
 

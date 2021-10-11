@@ -5,7 +5,7 @@
 #ifndef DEF_H_
 #define DEF_H_
 
-#include "lace.h"
+#include "fildesh.h"
 
 #ifndef __OPENCL_VERSION__
 #include <float.h>

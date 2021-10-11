@@ -207,7 +207,7 @@ oput_protocon_pc_acts_espresso_spawn(std::ostream& out, const Xn::PcSymm& pc_sym
     spawn_OSPc(ospc);
 
   if (good) {
-    lace::ofstream to_espresso(open_fd_LaceO(ospc->ofb.fb.fd));
+    lace::ofstream to_espresso(open_fd_FildeshO(ospc->ofb.fb.fd));
     oput_pla_pc_acts(to_espresso, pc_symm, acts);
   }
   if (good) {

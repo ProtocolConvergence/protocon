@@ -1,5 +1,5 @@
 
-#include "lace.h"
+#include "fildesh.h"
 #include "alphatab.h"
 #include <stdio.h>
 
@@ -26,7 +26,7 @@ xget_uint_cstr (uint* ret, const char* in)
   char*
 xget_int_cstr (int* ret, const char* in)
 {
-  return lace_parse_int(ret, in);
+  return fildesh_parse_int(ret, in);
 }
 
   char*
@@ -60,7 +60,7 @@ char* xget_ujint_cstr (ujint* ret, const char* in) {
 xget_real_cstr (real* ret, const char* in)
 {
   double v = 0;
-  char* out = lace_parse_double(&v, in);
+  char* out = fildesh_parse_double(&v, in);
   if (out) {
     *ret = (real)v;
   }

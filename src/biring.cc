@@ -577,7 +577,7 @@ oput_biring_protocon_spec(const Cx::String& ofilepath, const Cx::String& ofilena
                           const Cx::BitTable& legit, const FilterOpt& opt)
 {
   const uint domsz = opt.domsz;
-  lace::ofstream ofile( open_sibling_LaceOF(ofilepath.ccstr(), ofilename.ccstr()) );
+  lace::ofstream ofile( open_sibling_FildeshOF(ofilepath.ccstr(), ofilename.ccstr()) );
 
   ofile
     << "// " << legit

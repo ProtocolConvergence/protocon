@@ -214,23 +214,23 @@ qual_inline
   void
 grow_Table (Table* t, zuint capac)
 {
-  grow_LaceA_(&t->s, &t->sz, &t->alloc_lgsz, t->elsz,
-              capac, realloc);
+  grow_FildeshA_(&t->s, &t->sz, &t->alloc_lgsz, t->elsz,
+                 capac, realloc);
 }
 #define GrowTable( t, capac ) \
-  grow_LaceA_((void**)&(t).s, &(t).sz, &(t).alloc_lgsz, sizeof(*(t).s), capac, \
-              realloc)
+  grow_FildeshA_((void**)&(t).s, &(t).sz, &(t).alloc_lgsz, sizeof(*(t).s), \
+                 capac, realloc)
 
 qual_inline
   void
 mpop_Table (Table* t, zuint capac)
 {
-  mpop_LaceA_(&t->s, &t->sz, &t->alloc_lgsz, t->elsz,
-              capac, realloc);
+  mpop_FildeshA_(&t->s, &t->sz, &t->alloc_lgsz, t->elsz,
+                 capac, realloc);
 }
 #define MPopTable( t, capac ) \
-  mpop_LaceA_((void**)&(t).s, &(t).sz, &(t).alloc_lgsz, sizeof(*(t).s), capac, \
-              realloc)
+  mpop_FildeshA_((void**)&(t).s, &(t).sz, &(t).alloc_lgsz, sizeof(*(t).s), \
+                 capac, realloc)
 #endif  /* #ifndef __OPENCL_VERSION__ */
 
 
@@ -269,12 +269,12 @@ qual_inline
   void*
 grow1_Table (Table* t)
 {
-  return grow_LaceA_(&t->s, &t->sz, &t->alloc_lgsz, t->elsz,
+  return grow_FildeshA_(&t->s, &t->sz, &t->alloc_lgsz, t->elsz,
                      1, realloc);
 }
 
 #define Grow1Table( t ) \
-  (grow_LaceA_((void**)&(t).s, &(t).sz, &(t).alloc_lgsz, \
+  (grow_FildeshA_((void**)&(t).s, &(t).sz, &(t).alloc_lgsz, \
                sizeof(*(t).s), 1, realloc), \
    TopTable( t ))
 #define DeclGrow1Table( S, x, t ) \
