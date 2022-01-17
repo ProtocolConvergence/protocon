@@ -328,7 +328,7 @@ openfd_FileB (FileB* fb, fd_t fd)
   assert(!fb->f);
   assert(fb->fd < 0);
 
-  fb->fd = lace_compat_fd_claim(fd);
+  fb->fd = fildesh_compat_fd_claim(fd);
   fb->f = fdopen_sysCx (fd, (fb->sink ? "wb" : "rb"));
   return !!fb->f;
 }

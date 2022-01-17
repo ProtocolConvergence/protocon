@@ -266,7 +266,7 @@ closefd_sysCx (fd_t fd)
     close_OFileB(stderr_OFileB());
     return true;
   }
-  return (0 == lace_compat_fd_close(fd));
+  return (0 == fildesh_compat_fd_close(fd));
 }
 
   FILE*

@@ -67,12 +67,12 @@ static
 parse_variable(FildeshX* in, const Xn::Net& topo)
 {
   static const char other_delims[] = ":=";
-  char delims[sizeof(other_delims) - 1 + sizeof(lace_compat_string_blank_bytes)];
+  char delims[sizeof(other_delims) - 1 + sizeof(fildesh_compat_string_blank_bytes)];
 
   {
     const uint sz = sizeof(other_delims)-1;
     memcpy(delims, other_delims, sz);
-    memcpy(&delims[sz], lace_compat_string_blank_bytes, sizeof(lace_compat_string_blank_bytes));
+    memcpy(&delims[sz], fildesh_compat_string_blank_bytes, sizeof(fildesh_compat_string_blank_bytes));
   }
   skipchrs_FildeshX(in, delims);
   for (uint i = 0; i < topo.vbls.sz(); ++i) {
@@ -90,14 +90,14 @@ Interactive::assign(FildeshX* in)
        vbl;
        vbl = parse_variable(in, topo))
   {
-    skipchrs_FildeshX(in, lace_compat_string_blank_bytes);
+    skipchrs_FildeshX(in, fildesh_compat_string_blank_bytes);
     skipchrs_FildeshX(in, ":");
     skipchrs_FildeshX(in, "=");
     int val = 0;
     if (parse_int_FildeshX(in, &val)) {
       uint idx = topo.vbls.index_of(vbl);
       state[idx] = umod_int (val, vbl->symm->domsz);
-      skipchrs_FildeshX(in, lace_compat_string_blank_bytes);
+      skipchrs_FildeshX(in, fildesh_compat_string_blank_bytes);
       skipchrs_FildeshX(in, ";");
     }
   }
@@ -240,7 +240,7 @@ interactive(const Xn::Sys& sys)
        line_slice.at;
        line_slice = sliceline_FildeshX(in))
   {
-    skipchrs_FildeshX(&line_slice, lace_compat_string_blank_bytes);
+    skipchrs_FildeshX(&line_slice, fildesh_compat_string_blank_bytes);
 
     if (skipstr_FildeshX(&line_slice, "assign") || skipstr_FildeshX(&line_slice, "a")) {
       usim.assign(&line_slice);
@@ -298,7 +298,7 @@ interactive(const Xn::Sys& sys)
       of << std::endl;
     }
     else if (skipstr_FildeshX(&line_slice, "step")) {
-      skipchrs_FildeshX(&line_slice, lace_compat_string_blank_bytes);
+      skipchrs_FildeshX(&line_slice, fildesh_compat_string_blank_bytes);
       bool forward = true;
       if (skipstr_FildeshX(&line_slice, "img")) {
         forward = true;
@@ -332,7 +332,7 @@ interactive(const Xn::Sys& sys)
       of << std::endl;
     }
     else if (skipstr_FildeshX(&line_slice, "sstep")) {
-      skipchrs_FildeshX(&line_slice, lace_compat_string_blank_bytes);
+      skipchrs_FildeshX(&line_slice, fildesh_compat_string_blank_bytes);
       bool forward = true;
       unsigned n = 1; /* default */
       int x = -1;
@@ -375,14 +375,14 @@ interactive(const Xn::Sys& sys)
     }
     else if (skipstr_FildeshX(&line_slice, "predicate")) {
       skipchrs_FildeshX(
-          &line_slice, lace_compat_string_blank_bytes);
+          &line_slice, fildesh_compat_string_blank_bytes);
       FildeshX predicate_name = slicechrs_FildeshX(
-          &line_slice, lace_compat_string_blank_bytes);
+          &line_slice, fildesh_compat_string_blank_bytes);
 
       skipchrs_FildeshX(
-          &line_slice, lace_compat_string_blank_bytes);
+          &line_slice, fildesh_compat_string_blank_bytes);
       FildeshX predicate_influence = slicechrs_FildeshX(
-          &line_slice, lace_compat_string_blank_bytes);
+          &line_slice, fildesh_compat_string_blank_bytes);
 
       Interactive::PredicateInfluence influence = Interactive::IgnorePredicate;
       if (eq_cstr(predicate_influence.at, "display")) {

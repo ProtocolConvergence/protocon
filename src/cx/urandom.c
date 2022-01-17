@@ -179,7 +179,7 @@ randommod_sysCx(uint n)
   uint x;
 
   do {
-    size_t n = lace_compat_random_bytes(bt.s, nbytes);
+    size_t n = fildesh_compat_random_bytes(bt.s, nbytes);
     assert(n == nbytes);
 
     /* We can assume each bit is uniformly random,

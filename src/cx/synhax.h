@@ -221,7 +221,7 @@ poset_cmp_lhs (PosetCmp cmp, const void* a, const void* b)
 
 /** Implemented in syscx.c **/
 #define Default_RandomMod(n)  randommod_sysCx (n)
-#define Default_Randomize(x)  lace_compat_random_bytes(&(x), sizeof(x))
+#define Default_Randomize(x)  fildesh_compat_random_bytes(&(x), sizeof(x))
 
 #define RandomMod(n)  Default_RandomMod(n)
 #define Randomize(x)  Default_Randomize(x)

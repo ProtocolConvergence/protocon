@@ -48,9 +48,9 @@ testfn_exec ()
 
   fputs ("V spawn() called V\n", stderr);
   fflush (stderr);
-  pid = lace_compat_sh_spawn(argv);
+  pid = fildesh_compat_sh_spawn(argv);
 
-  status = lace_compat_sh_wait(pid);
+  status = fildesh_compat_sh_wait(pid);
   fputs ("^ wait() returned ^\n", stderr);
   fflush (stderr);
   Claim( status >= 0 );
@@ -75,7 +75,7 @@ int main(int argc, char** argv)
   if (eql_cstr (argv[argi], "wait0")) {
     argv[argi] = dup_cstr ("wait1");
     fputs (" V exec() called V\n", stderr);
-    lace_compat_sh_exec((const char**)argv);
+    fildesh_compat_sh_exec((const char**)argv);
     fputs (" ^ exec() failed? ^\n", stderr);
     return 1;
   }

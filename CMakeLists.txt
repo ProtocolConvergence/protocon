@@ -27,7 +27,7 @@ include(ExternalProject)
 
 ExternalProject_Add(fildesh_project
   GIT_REPOSITORY "https://github.com/fildesh/fildesh.git"
-  GIT_TAG "3865f45140ad423f8c33517d647940a803e0d476"
+  GIT_TAG "a7eab071b05f89d6407f2ed172ee31b71c3916f5"
   #GIT_TAG "trunk"
   CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>"
   BUILD_BYPRODUCTS

@@ -15,7 +15,7 @@ close_OSPc (OSPc* ospc)
   close_XFileB (&ospc->xfb);
   close_OFileB (&ospc->ofb);
   /* if (ospc->pid > 0)  kill (ospc->pid, SIGKILL); */
-  ospc->status = lace_compat_sh_wait(ospc->pid);
+  ospc->status = fildesh_compat_sh_wait(ospc->pid);
   ospc->pid = -1;
   return (ospc->status >= 0);
 }
@@ -64,12 +64,12 @@ spawn_OSPc (OSPc* ospc)
 
   if (ospc->of) {
     DoLegit( "pipe()" ) {
-      good = (0 == lace_compat_fd_pipe(&xfd[1], &xfd[0]));
+      good = (0 == fildesh_compat_fd_pipe(&xfd[1], &xfd[0]));
     }
   }
   if (ospc->xf) {
     DoLegit( "pipe()" ) {
-      good = (0 == lace_compat_fd_pipe(&ofd[1], &ofd[0]));
+      good = (0 == fildesh_compat_fd_pipe(&ofd[1], &ofd[0]));
     }
   }
 
@@ -84,7 +84,7 @@ spawn_OSPc (OSPc* ospc)
   }
 
   DoLegitP( ospc->pid >= 0, "spawn" )
-    ospc->pid = lace_compat_fd_spawnvp(
+    ospc->pid = fildesh_compat_fd_spawnvp(
         ospc->of ? xfd[0] : -1,
         ospc->xf ? ofd[1] : -1,
         2, NULL,

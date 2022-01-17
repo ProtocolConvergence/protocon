@@ -19,8 +19,8 @@ all_content = """filegroup(name = "all", srcs = glob(["**"]), visibility = ["//v
 git_repository(
     name = "fildesh",
     remote = "https://github.com/grencez/fildesh.git",
-    commit = "3865f45140ad423f8c33517d647940a803e0d476",
-    shallow_since = "1633923817 -0700",
+    commit = "a7eab071b05f89d6407f2ed172ee31b71c3916f5",
+    shallow_since = "1642462645 -0800",
     #branch = "trunk",
 )
 
