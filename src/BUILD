@@ -1,15 +1,15 @@
-load("@rules_foreign_cc//tools/build_defs:make.bzl", "make")
-load("@rules_foreign_cc//tools/build_defs:cmake.bzl", "cmake_external")
+load("@rules_foreign_cc//foreign_cc:make.bzl", "make")
+load("@rules_foreign_cc//foreign_cc:cmake.bzl", "cmake")
 
 exports_files([
     "lace_wrapped.hh",
     "namespace.hh",
 ])
 
-cmake_external(
+cmake(
     name = "mdd_glu_lib",
     lib_source = "@mdd_glu//:all",
-    static_libraries = [
+    out_static_libs = [
         "libcu.a",
         "libglu.a",
     ],
@@ -18,7 +18,7 @@ cmake_external(
 make(
     name = "peg",
     lib_source = "@peg//:all",
-    binaries = [
+    out_binaries = [
         "peg",
         "leg",
     ],
