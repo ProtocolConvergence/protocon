@@ -74,7 +74,7 @@ parse_variable(FildeshX* in, const Xn::Net& topo)
     memcpy(delims, other_delims, sz);
     memcpy(&delims[sz], fildesh_compat_string_blank_bytes, sizeof(fildesh_compat_string_blank_bytes));
   }
-  skipchrs_FildeshX(in, delims);
+  while_chars_FildeshX(in, delims);
   for (uint i = 0; i < topo.vbls.sz(); ++i) {
     if (skipstr_FildeshX(in, name_of(topo.vbls[i]).cstr())) {
       return &topo.vbls[i];
@@ -374,43 +374,45 @@ interactive(const Xn::Sys& sys)
       usim.randomize_state();
     }
     else if (skipstr_FildeshX(&line_slice, "predicate")) {
-      skipchrs_FildeshX(
-          &line_slice, fildesh_compat_string_blank_bytes);
-      FildeshX predicate_name = slicechrs_FildeshX(
+      while_chars_FildeshX(&line_slice, fildesh_compat_string_blank_bytes);
+      FildeshX predicate_name = until_chars_FildeshX(
           &line_slice, fildesh_compat_string_blank_bytes);
 
-      skipchrs_FildeshX(
-          &line_slice, fildesh_compat_string_blank_bytes);
-      FildeshX predicate_influence = slicechrs_FildeshX(
+      while_chars_FildeshX(&line_slice, fildesh_compat_string_blank_bytes);
+      FildeshX predicate_influence = until_chars_FildeshX(
           &line_slice, fildesh_compat_string_blank_bytes);
 
       Interactive::PredicateInfluence influence = Interactive::IgnorePredicate;
-      if (eq_cstr(predicate_influence.at, "display")) {
+      if (skipstr_FildeshX(&predicate_influence, "display")) {
         influence = Interactive::DisplayPredicate;
       }
-      else if (eq_cstr(predicate_influence.at, "ignore")) {
+      else if (skipstr_FildeshX(&predicate_influence, "ignore")) {
         influence = Interactive::IgnorePredicate;
       }
-      else if (eq_cstr(predicate_influence.at, "true")) {
+      else if (skipstr_FildeshX(&predicate_influence, "true")) {
         influence = Interactive::WithinPredicate;
       }
-      else if (eq_cstr(predicate_influence.at, "false")) {
+      else if (skipstr_FildeshX(&predicate_influence, "false")) {
         influence = Interactive::NotInPredicate;
       } else {
-        fildesh_log_warningf("Unknown predicate influence: %s", predicate_influence.at);
+        fildesh_log_warningf(
+            "Unknown predicate influence: %s",
+            std::string(predicate_influence.at, predicate_influence.size).c_str());
       }
 
-      if (eq_cstr(predicate_name.at, "invariant")) {
+      if (skipstr_FildeshX(&predicate_name, "invariant")) {
         usim.invariant_influence = influence;
       }
-      else if (eq_cstr(predicate_name.at, "silent")) {
+      else if (skipstr_FildeshX(&predicate_name, "silent")) {
         usim.silent_influence = influence;
       }
-      else if (eq_cstr(predicate_name.at, "cycle")) {
+      else if (skipstr_FildeshX(&predicate_name, "cycle")) {
         usim.cycle_influence = influence;
       }
       else {
-        fildesh_log_warningf("Unknown predicate name: %s", predicate_name.at);
+        fildesh_log_warningf(
+            "Unknown predicate name: %s",
+            std::string(predicate_name.at, predicate_name.size).c_str());
       }
       usim.reset_mask_pfmla();
     }

@@ -2,4 +2,5 @@
 
 zec -o $(OF OrientRingOdd) / / $(XA 1)
 
-protocon -verify -x $(XF OrientRingOdd) -param N 4
+$(O? status) protocon -verify -x $(XF OrientRingOdd) -param N 4
+expect_failure -x? $(XF status)

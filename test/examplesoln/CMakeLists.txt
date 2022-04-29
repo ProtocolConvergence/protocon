@@ -5,11 +5,9 @@ add_test (NAME Verif4_Sync_OrientRing_test COMMAND fildesh -alias "protocon=${pr
   "${CMAKE_CURRENT_SOURCE_DIR}/Verif4_Sync_OrientRing_test.fildesh"
   "${CMAKE_SOURCE_DIR}/examplesoln/OrientRing.prot")
 
-## Ensure our tests can actually detect failure.
 add_test (NAME Verif4_OrientRingOdd_failure_test COMMAND fildesh -alias "protocon=${protocon_exe}" -f
   "${CMAKE_CURRENT_SOURCE_DIR}/Verif4_OrientRingOdd_failure_test.fildesh"
   "${CMAKE_SOURCE_DIR}/examplesoln/OrientRingOdd.prot")
-set_tests_properties (Verif4_OrientRingOdd_failure_test PROPERTIES WILL_FAIL TRUE)
 
 ## PLA file output.
 add_test (NAME PLA_MatchRingThreeState_test COMMAND fildesh -alias "protocon=${protocon_exe}" -f

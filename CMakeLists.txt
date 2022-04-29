@@ -26,8 +26,10 @@ include(ExternalProject)
 
 
 ExternalProject_Add(fildesh_project
-  GIT_REPOSITORY "https://github.com/fildesh/fildesh.git"
-  GIT_TAG "5bcdb9479935a03b7c3dd3242c5cd36f5548bfc9"
+  URL "https://github.com/fildesh/fildesh/archive/refs/tags/v0.1.3.tar.gz"
+  URL_HASH "SHA256=f65bcae7580b749e34b27682b915b5cdc239b5481f13db7bc94136381e337128"
+  #GIT_REPOSITORY "https://github.com/fildesh/fildesh.git"
+  #GIT_TAG "1bddffb7c521c54b4d6a49cf6533b2c75b06f1f0"
   #GIT_TAG "trunk"
   CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>"
   BUILD_BYPRODUCTS
