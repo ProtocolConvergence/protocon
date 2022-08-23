@@ -26,7 +26,7 @@ jobs:
       run: bazel test --enable_runfiles --test_timeout 300 //...
 
     - name: Upload Test Results
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       if: failure()
       with:
         name: Test Results (${{ matrix.platform }})
