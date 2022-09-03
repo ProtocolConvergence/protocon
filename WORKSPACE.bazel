@@ -7,7 +7,7 @@ http_archive(
     name = "rules_foreign_cc",
     sha256 = "2a4d07cd64b0719b39a7c12218a3e507672b82a97b98c6a89d38565894cf7c51",
     strip_prefix = "rules_foreign_cc-0.9.0",
-    url = "https://github.com/bazelbuild/rules_foreign_cc/archive/refs/tags/0.9.0.tar.gz",
+    url = "https://github.com/bazelbuild/rules_foreign_cc/archive/0.9.0.tar.gz",
 )
 load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_dependencies")
 rules_foreign_cc_dependencies()
@@ -15,17 +15,10 @@ rules_foreign_cc_dependencies()
 
 http_archive(
     name = "fildesh",
-    urls = ["https://github.com/fildesh/fildesh/archive/refs/tags/v0.1.4.tar.gz"],
+    urls = ["https://github.com/fildesh/fildesh/archive/v0.1.4.tar.gz"],
     sha256 = "8f06918fa9d73369c09b3f0003f9328cbf5883c0d3796e201c3472a06e70e5e1",
     strip_prefix = "fildesh-0.1.4",
 )
-#git_repository(
-#    name = "fildesh",
-#    remote = "https://github.com/grencez/fildesh.git",
-#    commit = "1bddffb7c521c54b4d6a49cf6533b2c75b06f1f0",
-#    shallow_since = "1649842818 -0700",
-#    #branch = "trunk",
-#)
 
 
 all_content = """filegroup(name = "all", srcs = glob(["**"]), visibility = ["//visibility:public"])"""
@@ -38,12 +31,6 @@ new_git_repository(
     shallow_since = "1616899330 -0700",
 )
 
-#new_local_repository(
-#    name = "mdd_glu",
-#    build_file_content = all_content,
-#    path = "../mdd-glu",
-#)
-
 http_archive(
     name = "peg",
     build_file_content = all_content,
@@ -52,3 +39,17 @@ http_archive(
     strip_prefix = "peg-0.1.18",
 )
 
+
+#git_repository(
+#    name = "fildesh",
+#    remote = "https://github.com/grencez/fildesh.git",
+#    commit = "1bddffb7c521c54b4d6a49cf6533b2c75b06f1f0",
+#    shallow_since = "1649842818 -0700",
+#    #branch = "trunk",
+#)
+
+#new_local_repository(
+#    name = "mdd_glu",
+#    build_file_content = all_content,
+#    path = "../mdd-glu",
+#)
