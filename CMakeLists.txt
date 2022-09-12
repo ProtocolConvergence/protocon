@@ -34,7 +34,7 @@ ExternalProject_Add(fildesh_project
   CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>"
   BUILD_BYPRODUCTS
   "<BINARY_DIR>/compat/libfildesh_compat_lib.a"
-  "<BINARY_DIR>/src/libfildesh_lib.a"
+  "<BINARY_DIR>/src/libfildesh.a"
   "<BINARY_DIR>/tool/cembed"
   "<BINARY_DIR>/tool/comparispawn"
   "<BINARY_DIR>/tool/cswitch"
@@ -51,7 +51,7 @@ ExternalProject_Get_Property(fildesh_project BINARY_DIR)
 set_target_properties(cembed PROPERTIES IMPORTED_LOCATION "${BINARY_DIR}/tool/cembed")
 set_target_properties(comparispawn PROPERTIES IMPORTED_LOCATION "${BINARY_DIR}/tool/comparispawn")
 set_target_properties(cswitch PROPERTIES IMPORTED_LOCATION "${BINARY_DIR}/tool/cswitch")
-set_target_properties(fildesh_lib PROPERTIES IMPORTED_LOCATION "${BINARY_DIR}/src/libfildesh_lib.a")
+set_target_properties(fildesh_lib PROPERTIES IMPORTED_LOCATION "${BINARY_DIR}/src/libfildesh.a")
 set_target_properties(fildesh_compat_lib PROPERTIES IMPORTED_LOCATION "${BINARY_DIR}/compat/libfildesh_compat_lib.a")
 add_dependencies (fildesh fildesh_project)
 add_dependencies (fildesh_lib fildesh_project)
