@@ -15,9 +15,9 @@ rules_foreign_cc_dependencies()
 
 http_archive(
     name = "fildesh",
-    urls = ["https://github.com/fildesh/fildesh/archive/v0.1.4.tar.gz"],
-    sha256 = "8f06918fa9d73369c09b3f0003f9328cbf5883c0d3796e201c3472a06e70e5e1",
-    strip_prefix = "fildesh-0.1.4",
+    urls = ["https://github.com/fildesh/fildesh/archive/v0.1.5.tar.gz"],
+    sha256 = "43be71eccda7254fed9b027db8f750d0ce744bd12375c3e560a584fb83889f90",
+    strip_prefix = "fildesh-0.1.5",
 )
 
 
