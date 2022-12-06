@@ -2,6 +2,7 @@
 #define UNIFILE_HH_
 
 #include "uniact.hh"
+#include <istream>
 #include <ostream>
 
 struct XFile;
@@ -39,6 +40,8 @@ std::ostream&
 oput_b64_ppgfun(std::ostream& ofile, const Table<PcState>& ppgfun, uint domsz=0);
 PcState
 xget_b64_ppgfun(C::XFile* xfile, Table<PcState>& ppgfun);
+PcState
+xget_b64_ppgfun(std::istream& in, Table<PcState>& ppgfun);
 
 PcState
 xget_list(C::XFile* xfile, Table<UniAct>& acts);

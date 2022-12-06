@@ -10,7 +10,7 @@ extern "C" {
 #include "cx/fileb.hh"
 #include "cx/table.hh"
 
-#include "../lace_wrapped.hh"
+#include "fildesh/ofstream.hh"
 #include "../namespace.hh"
 
 int main(int argc, char** argv)
@@ -125,7 +125,7 @@ int main(int argc, char** argv)
       livelock_semick(cutoff, ppgfun, domsz, &top, &col);
 
     if (livelock_exists==Yes) {
-      lace::ofstream svg_out(svg_livelock_ofilename);
+      fildesh::ofstream svg_out(svg_livelock_ofilename);
       oput_svg_livelock(svg_out, ppgfun, top, col, domsz);
     }
     else {
@@ -138,18 +138,18 @@ int main(int argc, char** argv)
   }
 
   if (id_ofilename) {
-    lace::ofstream id_ofile(id_ofilename);
+    fildesh::ofstream id_ofile(id_ofilename);
     oput_b64_ppgfun(id_ofile, ppgfun, domsz);
     id_ofile << '\n';
   }
 
   if (graphviz_ofilename) {
-    lace::ofstream graphviz_ofile(graphviz_ofilename);
+    fildesh::ofstream graphviz_ofile(graphviz_ofilename);
     oput_graphviz(graphviz_ofile, acts);
   }
 
   if (list_ofilename) {
-    lace::ofstream list_ofile(list_ofilename);
+    fildesh::ofstream list_ofile(list_ofilename);
     oput_list(list_ofile, acts);
   }
 

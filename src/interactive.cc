@@ -1,12 +1,12 @@
 
 #include "interactive.hh"
-#include "lace_wrapped.hh"
+#include "fildesh/ofstream.hh"
 #include "xnsys.hh"
 #include "cx/urandom.hh"
 #include <algorithm>
 
 extern "C" {
-#include "fildesh_compat_string.h"
+#include <fildesh/fildesh_compat_string.h>
 }
 
 #include "namespace.hh"
@@ -229,7 +229,7 @@ interactive(const Xn::Sys& sys)
     usim.all_vbls[i] = topo.vbls[i].pfmla_idx;
   }
 
-  lace::ofstream of("/dev/stdout");
+  fildesh::ofstream of("/dev/stdout");
   FildeshX* in = open_FildeshXF("/dev/stdin");
   if (!in) {
     fildesh_log_error("failed to open stdin");

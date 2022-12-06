@@ -1,14 +1,14 @@
 
 
 extern "C" {
-#include "cx/syscx.h"
+  /* #include "cx/syscx.h" */
 }
 
-#include "cx/synhax.hh"
-#include "xnsys.hh"
-#include "inst.hh"
+#include "src/cx/synhax.hh"
+#include "src/xnsys.hh"
+#include "src/inst.hh"
 
-#include "namespace.hh"
+#include "src/namespace.hh"
 
 static
   void
@@ -157,16 +157,10 @@ TestTokenRingClosure()
 
 END_NAMESPACE
 
-int main(int argc, char** argv)
-{
+int main() {
   using namespace PROTOCON_NAMESPACE;
-  int argi = init_sysCx (&argc, &argv);
-  (void) argi;
-
   TestXnSys();
   TestTokenRingClosure();
-
-  lose_sysCx ();
   return 0;
 }
 

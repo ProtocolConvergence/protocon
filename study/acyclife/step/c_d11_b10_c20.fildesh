@@ -1,0 +1,16 @@
+#!/usr/bin/env fildesh
+
+$(<< include/common.fildesh)
+$(> domsz) "11"
+$(> cutoff) "20"
+$(> max_period) "${cutoff}"
+$(> bfs) "10"
+$(> dataname) "g_d${domsz}_b${bfs}_c${cutoff}"
+$(> studyname) "c_d${domsz}_b${bfs}_c${cutoff}"
+
+|< xzcat "data/${dataname}.xz"
+|- nice -n 5 parallel -P "${parallelism}" -I '{}' \
+   "${classify_exe}" "${max_period}" -domsz "${domsz}" -id "{}"
+|- xz
+|> zec -o "data/${studyname}.xz"
+

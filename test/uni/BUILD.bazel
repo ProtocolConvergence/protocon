@@ -1,0 +1,13 @@
+load("@fildesh//:def.bzl", "fildesh_test")
+
+fildesh_test(
+    name = "g_d7_b3_c20_test",
+    srcs = ["g_d7_b3_c20_test.fildesh"],
+    aliases = {"generate": "//src/uni:generate"},
+)
+
+fildesh_test(
+    name = "c_d7_b3_c20_test",
+    srcs = ["c_d7_b3_c20_test.fildesh"],
+    aliases = {"classify": "//src/uni:classify"},
+)

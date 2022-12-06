@@ -7,7 +7,7 @@
 
 #include "../namespace.hh"
   void
-subtract_action_mask(BitTable& mask, const UniAct& mask_act, uint domsz)
+subtract_action_mask(BitTable& mask, const UniAct& mask_act, uint domsz, const BitTable& delegates)
 {
   UniAct beg( 0, 0, 0 );
   UniAct inc( 1, 1, 1 );
@@ -21,7 +21,9 @@ subtract_action_mask(BitTable& mask, const UniAct& mask_act, uint domsz)
   for (uint a = beg[0]; a < domsz; a += inc[0]) {
     for (uint b = beg[1]; b < domsz; b += inc[1]) {
       for (uint c = beg[2]; c < domsz; c += inc[2]) {
-        mask.set0(id_of3(a, b, c, domsz));
+        unsigned id = id_of3(a, b, c, domsz);
+        mask.set0(id);
+        assert(!delegates.ck(id));
       }
     }
   }

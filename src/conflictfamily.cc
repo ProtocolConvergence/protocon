@@ -1,7 +1,6 @@
 
 #include "conflictfamily.hh"
 
-#include "cx/xfile.hh"
 
 #define FOR_EACH(it,conflict_sets) \
   for (Set<  FlatSet<uint> >::const_iterator it = conflict_sets.begin(); \
@@ -308,24 +307,24 @@ ConflictFamily::oput(std::ostream& of) const
 }
 
   void
-ConflictFamily::xget(XFile& xf)
+ConflictFamily::xget(std::istream& in)
 {
   conflict_sets.clear();
   impossible_set.clear();
 
   zuint n = 0;
-  xf >> n;
+  in >> n;
 
   Table<uint> conflict_set;
   for (zuint i = 0; i < n; ++i)
   {
     uint sz = 0;
-    xf >> sz;
+    in >> sz;
     conflict_set.resize(sz);
     for (uint j = 0; j < sz; ++j)
     {
-      xf >> conflict_set[j];
-      if (!xf.good())  return;
+      in >> conflict_set[j];
+      if (!in.good())  return;
     }
     if (conflict_set.sz() == 1)
       impossible_set << conflict_set[0];

@@ -1,19 +1,18 @@
-#ifndef LACE_WRAPPED_HH_
-#define LACE_WRAPPED_HH_
-extern "C" {
-#include "fildesh.h"
-}
+#ifndef FILDESH_OFSTREAM_HH_
+#define FILDESH_OFSTREAM_HH_
+#include <fildesh/fildesh.h>
 
-#include <cstring>
-#include <iostream>
+#include <ostream>
 #include <memory>
 #include <mutex>
 
-namespace lace {
+namespace fildesh {
 class ofstream : private std::streambuf, public std::ostream
 {
 public:
-  ofstream() : std::ostream(this) {}
+  ofstream() : std::ostream(this) {
+    setstate(std::ios::badbit);
+  }
 
   ofstream(const std::string& filename)
     : std::ostream(this)
@@ -30,9 +29,11 @@ public:
   }
 
   void close() {
+    setstate(std::ios::badbit);
     out_.reset(NULL);
   }
   void open(const std::string& filename) {
+    clear();
     out_.reset(::open_FildeshOF(filename.c_str()));
   }
 
@@ -43,12 +44,7 @@ private:
     return 0;
   }
 
-  std::streamsize xsputn(const char* buf, std::streamsize size) override {
-    std::unique_lock<std::mutex> exclusive_block(lock_);
-    memcpy(grow_FildeshO(out_.get(), size), buf, size);
-    maybe_flush_FildeshO(out_.get());
-    return size;
-  }
+  std::streamsize xsputn(const char* buf, std::streamsize size) override;
 
   int overflow(int c) override {
     std::unique_lock<std::mutex> exclusive_block(lock_);

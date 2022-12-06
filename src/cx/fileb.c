@@ -3,7 +3,7 @@
  * Simple and advanced file I/O and parsing.
  **/
 #include "fileb.h"
-#include "fildesh_compat_fd.h"
+#include <fildesh/fildesh_compat_fd.h>
 
 #include <assert.h>
 #include <errno.h>

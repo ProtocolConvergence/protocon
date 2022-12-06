@@ -1,4 +1,10 @@
 
+package(
+    default_visibility = [
+        "//test/uni:__pkg__",
+    ],
+)
+
 cc_binary(
     name = "aperiodic",
     srcs = [
@@ -6,11 +12,11 @@ cc_binary(
         "uniact.hh",
         "unifile.cc",
         "unifile.hh",
-        "//src:lace_wrapped.hh",
         "//src:namespace.hh",
     ],
     deps = [
         "//src/cx:cx_lib",
+        "//src/fildesh:fildesh_cc_lib",
     ],
     copts = [
         "-Isrc",
@@ -27,12 +33,12 @@ cc_binary(
         "uniact.hh",
         "unifile.cc",
         "unifile.hh",
-        "//src:lace_wrapped.hh",
         "//src:namespace.hh",
     ],
     deps = [
         "//src:pfmla_lib",
         "//src/cx:cx_lib",
+        "//src/fildesh:fildesh_cc_lib",
     ],
     copts = [
         "-Isrc",
@@ -51,12 +57,12 @@ cc_binary(
         "uniact.hh",
         "unifile.cc",
         "unifile.hh",
-        "//src:lace_wrapped.hh",
         "//src:namespace.hh",
     ],
     deps = [
         "//src:pfmla_lib",
         "//src/cx:cx_lib",
+        "//src/fildesh:fildesh_cc_lib",
     ],
     copts = [
         "-Isrc",
@@ -92,7 +98,6 @@ cc_binary(
         "uniact.hh",
         "unifile.cc",
         "unifile.hh",
-        "//src:lace_wrapped.hh",
         "//src:namespace.hh",
     ],
     deps = [

@@ -305,8 +305,9 @@ int main (int argc, char** argv)
   else if (eq_cstr ("-list", arg) || eq_cstr ("-o-list", arg)) {
     for (uint i = 0; i < acts.sz(); ++i) {
       std::stringstream tmp_ss;
-      tmp_ss << std::setfill('0') << std::setw(3)
-        << acts[i][0] << " " << acts[i][1] << " " << acts[i][2] << "\n";
+      tmp_ss << std::setfill(' ') << std::setw(3) << (unsigned)acts[i][0]
+        << " " << std::setw(3) << (unsigned)acts[i][1]
+        << " " << std::setw(3) << (unsigned)acts[i][2] << "\n";
       ofile << tmp_ss.str();
     }
   }

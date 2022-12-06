@@ -4,7 +4,7 @@
 extern "C" {
 #include "cx/ospc.h"
 }
-#include "lace_wrapped.hh"
+#include "fildesh/ofstream.hh"
 
 #include "cx/alphatab.hh"
 #include "cx/fileb.hh"
@@ -110,7 +110,7 @@ oput_pla_file (std::ostream& ofile, const Xn::Sys& sys)
 oput_pla_file(const String& ofilename, const Xn::Sys& sys)
 {
   DeclLegit( good );
-  lace::ofstream out(ofilename.ccstr());
+  fildesh::ofstream out(ofilename.ccstr());
   DoLegitLine( "Open PLA file" )
     out.good();
   DoLegitLine( "" )
@@ -207,7 +207,7 @@ oput_protocon_pc_acts_espresso_spawn(std::ostream& out, const Xn::PcSymm& pc_sym
     spawn_OSPc(ospc);
 
   if (good) {
-    lace::ofstream to_espresso(open_fd_FildeshO(ospc->ofb.fb.fd));
+    fildesh::ofstream to_espresso(open_fd_FildeshO(ospc->ofb.fb.fd));
     oput_pla_pc_acts(to_espresso, pc_symm, acts);
   }
   if (good) {

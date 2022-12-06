@@ -1,7 +1,7 @@
 
 #include "prot-ofile.hh"
 
-#include "lace_wrapped.hh"
+#include "fildesh/ofstream.hh"
 #include "pla.hh"
 #include "xnsys.hh"
 
@@ -472,7 +472,7 @@ oput_protocon_file (const String& ofilename,
                     bool use_espresso,
                     const char* comment)
 {
-  lace::ofstream out(ofilename.ccstr());
+  fildesh::ofstream out(ofilename.ccstr());
   if (!out.good()) {return false;}
   return oput_protocon_file(out, sys, o_topology, actions, use_espresso, comment);
 }

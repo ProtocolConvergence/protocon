@@ -1,14 +1,11 @@
 
-extern "C" {
-#include "cx/syscx.h"
-}
-#include "cx/synhax.hh"
+#include "src/cx/synhax.hh"
 
-#include "stabilization.hh"
-#include "inst.hh"
-#include "xnsys.hh"
+#include "src/stabilization.hh"
+#include "src/inst.hh"
+#include "src/xnsys.hh"
 
-#include "namespace.hh"
+#include "src/namespace.hh"
 
 static void
 TestShadowColorRing()
@@ -75,22 +72,16 @@ TestShadowColorRing()
   }
 
   StabilizationOpt stabilization_opt;
-  if (!stabilization_ck(of, sys, stabilization_opt, sys.actions)) {
-    Claim(0);
-  }
+  const bool stabilizing =
+    stabilization_ck(of, sys, stabilization_opt, sys.actions);
+  assert(stabilizing);
 }
 
 END_NAMESPACE
 
-int main(int argc, char** argv)
-{
+int main() {
   using namespace PROTOCON_NAMESPACE;
-  int argi = init_sysCx (&argc, &argv);
-  (void) argi;
-
   TestShadowColorRing();
-
-  lose_sysCx ();
   return 0;
 }
 

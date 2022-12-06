@@ -4,7 +4,8 @@
  **/
 #ifndef Sesp_H_
 #define Sesp_H_
-#include "associa.h"
+#include <fildesh/fildesh.h>
+#include "lgtable.h"
 
 typedef struct SespBase SespBase;
 typedef SespBase* Sesp;
@@ -45,7 +46,7 @@ struct SespCtx
 {
   SespCellBase nil;
   // SespVT -> SespKind*
-  Associa kindmap;
+  FildeshKV kindmap;
 };
 
 struct SespCCStrBase
@@ -63,7 +64,7 @@ struct SespCStrBase
 struct SespNatBase
 {
   SespBase base;
-  uint u;
+  unsigned u;
 };
 
 struct SespIntBase
@@ -117,7 +118,7 @@ list4_Sesp (Sesp a, Sesp b, Sesp c, Sesp d);
 bool
 pushlast_Sesp (Sesp list, Sesp a);
 
-qual_inline
+static inline
   void
 lose_Sesp (Sesp sp)
 {
@@ -128,42 +129,42 @@ lose_Sesp (Sesp sp)
   }
 }
 
-qual_inline
+static inline
   SespCell
 to_SespCell (Sesp sp)
 {
   return CastUp( SespCellBase, base, sp );
 }
 
-qual_inline
+static inline
   SespCStr
 to_SespCStr (Sesp sp)
 {
   return CastUp( SespCStrBase, base, sp );
 }
 
-qual_inline
+static inline
   SespCCStr
 to_SespCCStr (Sesp sp)
 {
   return CastUp( SespCCStrBase, base, sp );
 }
 
-qual_inline
+static inline
   SespNat
 to_SespNat (Sesp sp)
 {
   return CastUp( SespNatBase, base, sp );
 }
 
-qual_inline
+static inline
   SespInt
 to_SespInt (Sesp sp)
 {
   return CastUp( SespIntBase, base, sp );
 }
 
-qual_inline
+static inline
   const char*
 ccstr_of_Sesp (const Sesp a)
 {
@@ -174,14 +175,14 @@ ccstr_of_Sesp (const Sesp a)
 }
 
 /** Check if this is an empty list.**/
-qual_inline
+static inline
   bool
 nil_ck_Sesp (const Sesp a)
 {
   return !a->kind;
 }
 /** Check if this is a list.**/
-qual_inline
+static inline
   bool
 list_ck_Sesp (const Sesp a)
 {
@@ -189,16 +190,16 @@ list_ck_Sesp (const Sesp a)
   return (a->kind->vt == vt_SespCell ());
 }
 /** Check if this is not a list.**/
-qual_inline
+static inline
   bool
 atom_ck_Sesp (const Sesp a)
 {
   return !list_ck_Sesp (a);
 }
 
-qual_inline
+static inline
   bool
-uint_of_Sesp (const Sesp a, uint* x)
+uint_of_Sesp (const Sesp a, unsigned* x)
 {
   if (a->kind && a->kind->vt == vt_SespNat ()) {
     *x = CastUp( SespNatBase, base, a ) -> u;
@@ -207,7 +208,7 @@ uint_of_Sesp (const Sesp a, uint* x)
   return false;
 }
 
-qual_inline
+static inline
   Sesp
 car_of_Sesp (Sesp a)
 {
@@ -222,7 +223,7 @@ car_of_Sesp (Sesp a)
   return 0;
 }
 
-qual_inline
+static inline
   Sesp
 cdr_of_Sesp (Sesp a)
 {
@@ -238,74 +239,74 @@ cdr_of_Sesp (Sesp a)
   return 0;
 }
 
-qual_inline
+static inline
   Sesp
 caar_of_Sesp (Sesp a)
 {
   return car_of_Sesp (car_of_Sesp (a));
 }
 
-qual_inline
+static inline
   Sesp
 cadr_of_Sesp (Sesp a)
 {
   return car_of_Sesp (cdr_of_Sesp (a));
 }
 
-qual_inline
+static inline
   Sesp
 cdar_of_Sesp (Sesp a)
 {
   return cdr_of_Sesp (car_of_Sesp (a));
 }
 
-qual_inline
+static inline
   Sesp
 cddr_of_Sesp (Sesp a)
 {
   return cdr_of_Sesp (cdr_of_Sesp (a));
 }
 
-qual_inline
+static inline
   Sesp
 caddr_of_Sesp (Sesp a)
 {
   return car_of_Sesp (cddr_of_Sesp (a));
 }
 
-qual_inline
+static inline
   Sesp
 cddar_of_Sesp (Sesp a)
 {
   return cdr_of_Sesp (cdar_of_Sesp (a));
 }
 
-qual_inline
+static inline
   Sesp
 cdddr_of_Sesp (Sesp a)
 {
   return cdr_of_Sesp (cddr_of_Sesp (a));
 }
 
-qual_inline
+static inline
   Sesp
 caddar_of_Sesp (Sesp a)
 {
   return car_of_Sesp (cddar_of_Sesp (a));
 }
 
-qual_inline
+static inline
   Sesp
 cadddr_of_Sesp (Sesp a)
 {
   return car_of_Sesp (cdddr_of_Sesp (a));
 }
 
-qual_inline
-  uint
+static inline
+  unsigned
 sz_of_Sesp (Sesp a)
 {
-  uint n = 0;
+  unsigned n = 0;
   while (!nil_ck_Sesp (a)) {
     a = cdr_of_Sesp (a);
     n += 1;
@@ -313,7 +314,7 @@ sz_of_Sesp (Sesp a)
   return n;
 }
 
-qual_inline
+static inline
   bool
 car_fo_Sesp (Sesp a, Sesp b)
 {
@@ -331,7 +332,7 @@ car_fo_Sesp (Sesp a, Sesp b)
   return true;
 }
 
-qual_inline
+static inline
   bool
 cdr_fo_Sesp (Sesp a, Sesp b)
 {
@@ -357,39 +358,39 @@ make_SespCStr (SespCtx* ctx, const char* s);
 SespCCStr
 make_SespCCStr (SespCtx* ctx, const char* s);
 SespNat
-make_SespNat (SespCtx* ctx, uint u);
+make_SespNat (SespCtx* ctx, unsigned u);
 SespInt
 make_SespInt (SespCtx* ctx, int i);
 
-qual_inline
+static inline
   Sesp
 make_cstr_Sesp (SespCtx* ctx, const char* s)
 {
   return &make_SespCStr (ctx, s)->base;
 }
 
-qual_inline
+static inline
   Sesp
 make_ccstr_Sesp (SespCtx* ctx, const char* s)
 {
   return &make_SespCCStr (ctx, s)->base;
 }
 
-qual_inline
+static inline
   Sesp
-make_Nat_Sesp (SespCtx* ctx, uint u)
+make_Nat_Sesp (SespCtx* ctx, unsigned u)
 {
   return &make_SespNat (ctx, u)->base;
 }
 
-qual_inline
+static inline
   Sesp
 make_Int_Sesp (SespCtx* ctx, int i)
 {
   return &make_SespInt (ctx, i)->base;
 }
 
-qual_inline
+static inline
   Sesp
 cons_ccstr_Sesp (const char* a, Sesp b)
 {
@@ -397,21 +398,21 @@ cons_ccstr_Sesp (const char* a, Sesp b)
   return &cell->base;
 }
 
-qual_inline
+static inline
   Sesp
 list2_ccstr_Sesp (const char* a, Sesp b)
 {
   return list2_Sesp (make_ccstr_Sesp (ctx_of_Sesp (b), a), b);
 }
 
-qual_inline
+static inline
   Sesp
 list3_ccstr_Sesp (const char* a, Sesp b, Sesp c)
 {
   return list3_Sesp (make_ccstr_Sesp (ctx_of_Sesp (b), a), b, c);
 }
 
-qual_inline
+static inline
   Sesp
 list4_ccstr_Sesp (const char* a, Sesp b, Sesp c, Sesp d)
 {

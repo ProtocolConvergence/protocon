@@ -19,12 +19,9 @@ extern "C" {
 #include "xnsys.hh"
 #include "prot-xfile.hh"
 #include "stabilization.hh"
-#include "kautz.hh"
 #include "search.hh"
 #include "synthesis.hh"
 #include <stdio.h>
-
-#include "test-pcxn.hh"
 
 #include "namespace.hh"
 
@@ -258,12 +255,6 @@ static void TestProbabilisticLivelock()
 
   Claim(scc.subseteq_ck(sys.invariant));
   Claim(!cycle_found);
-}
-
-static void
-TestOPutKautz()
-{
-  oput_graphviz_kautz(std::cout, 4, 25);
 }
 
 static

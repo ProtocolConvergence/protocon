@@ -1,0 +1,8 @@
+
+(: id Str "XX6X______X___6__________")
+(: expect_silent Str "silent\n")
+
+|< classify 20 -domsz 7 -id "${id}"
+|- cmp - $(XF expect_silent)
+|> stdout
+

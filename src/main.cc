@@ -104,20 +104,20 @@ int main(int argc, char** argv)
     }
 
     if (!exec_opt.model_ofilepath.empty_ck()) {
-      lace::ofstream pml_out(exec_opt.model_ofilepath.ccstr());
+      fildesh::ofstream pml_out(exec_opt.model_ofilepath.ccstr());
       if (pml_out.good()) {
         OPutPromelaModel(pml_out, sys, *o_topology);
       }
     }
     if (!exec_opt.graphviz_ofilepath.empty_ck()) {
-      lace::ofstream graphviz_out(exec_opt.graphviz_ofilepath.ccstr());
+      fildesh::ofstream graphviz_out(exec_opt.graphviz_ofilepath.ccstr());
       if (graphviz_out.good()) {
         oput_graphviz_file(graphviz_out, *o_topology);
       }
     }
     if (!exec_opt.udp_ofilepath.empty_ck()) {
       Claim2( exec_opt.task ,==, ProtoconOpt::NoTask );
-      lace::ofstream udp_out(exec_opt.udp_ofilepath.ccstr());
+      fildesh::ofstream udp_out(exec_opt.udp_ofilepath.ccstr());
       if (udp_out.good()) {
         if (exec_opt.only_udp_include) {
           oput_udp_include_file(udp_out, sys, *o_topology);

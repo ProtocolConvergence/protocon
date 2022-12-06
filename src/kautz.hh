@@ -2,8 +2,7 @@
 #ifndef KAUTZ_HH_
 #define KAUTZ_HH_
 
-#include "lace_wrapped.hh"
-#include "cx/synhax.hh"
+#include "fildesh/ofstream.hh"
 #include "cx/table.hh"
 
 uint

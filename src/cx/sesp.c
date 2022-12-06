@@ -2,24 +2,12 @@
 #include "sesp.h"
 #include "alphatab.h"
 
-static
-  Sign
-cmp_MemLoc (const void* a, const void* b)
-{
-  if ((size_t) a < (size_t) b) {
-    return -1;
-  }
-  if ((size_t) a == (size_t) b) {
-    return 0;
-  }
-  return 1;
-}
-
   SespCtx*
 make_SespCtx ()
 {
+  const FildeshKV empty_map = DEFAULT_FildeshKV_SINGLE_LIST;
   SespCtx* ctx = AllocT( SespCtx, 1 );
-  InitAssocia( SespVT*, SespKind*, ctx->kindmap, cmp_MemLoc );
+  ctx->kindmap = empty_map;
   ctx->nil.base.kind = 0;
   ctx->nil.car = 0;
   ctx->nil.cdr = 0;
@@ -29,16 +17,18 @@ make_SespCtx ()
   void
 free_SespCtx (SespCtx* ctx)
 {
-
-  for (Assoc* assoc = beg_Associa (&ctx->kindmap);
-       assoc;
-       assoc = next_Assoc (assoc))
+  FildeshKV_id_t id;
+  FildeshKV* map = &ctx->kindmap;
+  for (id = any_id_FildeshKV(map);
+       !fildesh_nullid(id);
+       id = any_id_FildeshKV(map))
   {
-    SespKind* kind = *(SespKind**) val_of_Assoc (&ctx->kindmap, assoc);
-    free_SespKind (kind);
+    SespKind* kind = (SespKind*) value_at_FildeshKV(map, id);
+    free_SespKind(kind);
+    remove_at_FildeshKV(map, id);
   }
-  lose_Associa (&ctx->kindmap);
-  free (ctx);
+  close_FildeshKV(map);
+  free(ctx);
 }
 
   SespCtx*
@@ -52,15 +42,14 @@ ctx_of_Sesp (const Sesp a)
   SespKind*
 ensure_kind_SespCtx (SespCtx* ctx, const SespVT* vt)
 {
-  bool added = false;
-  Assoc* assoc =
-    ensure1_Associa (&ctx->kindmap, vt, &added);
-  if (added) {
-    SespKind* kind = make_SespKind (vt);
+  FildeshKV_id_t id = ensure_FildeshKV(&ctx->kindmap, vt, sizeof(*vt));
+  SespKind* kind = (SespKind*) value_at_FildeshKV(&ctx->kindmap, id);
+  if (!kind) {
+    kind = make_SespKind(vt);
     kind->ctx = ctx;
-    val_fo_Assoc (&ctx->kindmap, assoc, &kind);
+    assign_at_FildeshKV(&ctx->kindmap, id, kind, sizeof(*kind));
   }
-  return *(SespKind**) val_of_Assoc (&ctx->kindmap, assoc);
+  return kind;
 }
 
 /** Easy make function for SespKind.*/
@@ -255,7 +244,7 @@ vt_SespCCStr ()
 }
 
   SespNat
-make_SespNat (SespCtx* ctx, uint u)
+make_SespNat (SespCtx* ctx, unsigned u)
 {
   SespKind* kind = ensure_kind_SespCtx (ctx, vt_SespNat ());
   SespNat sp = to_SespNat (take_SespKind (kind));

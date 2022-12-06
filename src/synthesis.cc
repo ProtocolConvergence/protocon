@@ -1,7 +1,7 @@
 
 #include "synthesis.hh"
 
-#include "lace_wrapped.hh"
+#include "fildesh/ofstream.hh"
 
 #include "cx/fileb.hh"
 #include "cx/tuple.hh"
@@ -11,7 +11,7 @@
 
 #include "namespace.hh"
 
-lace::ofstream dev_null_ostream("/dev/null");
+fildesh::ofstream dev_null_ostream("/dev/null");
 
 /**
  * Check if two actions can coexist in a
@@ -1282,7 +1282,7 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
             this->ctx->opt.sys_pcidx + "." +
             this->ctx->opt.n_livelock_ofiles).ccstr();
         this->ctx->opt.n_livelock_ofiles += 1;
-        lace::ofstream livelock_out(livelock_out_filename);
+        fildesh::ofstream livelock_out(livelock_out_filename);
         oput_protocon_file(livelock_out, sys, this->actions, false, "livelock");
       }
     }

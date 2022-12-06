@@ -1,0 +1,22 @@
+#!/usr/bin/env fildesh
+
+$(<< include/common.fildesh)
+$(> domsz) "11"
+$(> bfs) "10"
+$(> cutoff) "20"
+$(> studyname) "g_d${domsz}_b${bfs}_c${cutoff}"
+
+$(> initial_bfs) "4"
+$(> initial_cutoff) "${cutoff}"
+
+mkdir -p data
+$(barrier)
+
+expr "${bfs}" - "${initial_bfs}" $(O final_bfs)
+
+|< "${generate_exe}" -domsz "${domsz}" -cutoff "${initial_cutoff}" -bfs "${initial_bfs}" -acyclife
+|- nice -n 5 parallel -P "${parallelism}" -I '{}' \
+   "${generate_exe}" -domsz "${domsz}" -cutoff "${cutoff}" -bfs $(XA final_bfs) -acyclife -id "{}"
+|- xz
+|> zec -o "data/${studyname}.xz"
+

@@ -5,7 +5,8 @@ extern "C" {
 
 #include "unifile.hh"
 
-#include "lace_wrapped.hh"
+#include "fildesh/ifstream.hh"
+#include "fildesh/ofstream.hh"
 #include "cx/bittable.hh"
 #include "cx/fileb.hh"
 #include "cx/map.hh"
@@ -231,6 +232,49 @@ xget_b64_ppgfun(C::XFile* xfile, Table<PcState>& ppgfun)
 }
 
   PcState
+xget_b64_ppgfun(std::istream& in, Table<PcState>& ppgfun)
+{
+  std::string s;
+  std::getline(in, s);
+  if (s.empty())  return 0;
+  const size_t n = s.size();
+  size_t domsz = 1;
+  unsigned elgsz = 1;
+  while (domsz * domsz * elgsz + 5 < 6 * n) {
+    domsz += 1;
+    elgsz = 1+lg_luint(domsz);
+  }
+  if ((domsz * domsz * elgsz + 5) / 6 != n) {
+    DBog2("B64 encoding has %zu bits, which is not close to %s.",
+          6*n, "a valid length (domsz^2*lg(domsz+1))");
+    return 0;
+  }
+  BitTable bt(domsz*domsz*elgsz, 0);
+  for (zuint i = 0; i < n; ++i) {
+    const char c = s[i];
+    const uint w
+      = ('A' <= c && c <= 'Z') ? (uint) (c-'A')
+      : ('a' <= c && c <= 'z') ? (uint) (c-'a') + 26
+      : ('0' <= c && c <= '9') ? (uint) (c-'0') + 52
+      : ('-' == c) ? 62
+      : ('_' == c) ? 63
+      : 64;
+    if (w >= 64) {
+      DBog1( "Error reading B64 encoding, get char '%c'.", c );
+      return 0;
+    }
+    bt.set(6*i, 6, w);
+  }
+
+  ppgfun.resize(domsz*domsz);
+  for (size_t i = 0; i < ppgfun.sz(); ++i) {
+    const PcState c = bt.get(elgsz*i, elgsz);
+    ppgfun[i] = (c < domsz ? c : domsz);
+  }
+  return (PcState) domsz;
+}
+
+  PcState
 xget_list(C::XFile* xfile, Table<UniAct>& acts)
 {
   UniAct act;
@@ -375,7 +419,7 @@ oput_protocon(std::ostream& ofile, const Table<UniAct>& acts, uint domsz)
   void
 oput_protocon(const String& ofilename, const Table<UniAct>& acts, uint domsz)
 {
-  lace::ofstream ofile(ofilename.ccstr());
+  fildesh::ofstream ofile(ofilename.ccstr());
   oput_protocon(ofile, acts, domsz);
 }
 

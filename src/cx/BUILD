@@ -5,12 +5,8 @@ cc_library(
         "alphatab.c",
         "alphatab.h",
         "alphatab.hh",
-        "associa.h",
-        "associa.hh",
         "bittable.h",
         "bittable.hh",
-        "bstree.c",
-        "bstree.h",
         "def.h",
         "fileb.c",
         "fileb.h",
@@ -22,8 +18,6 @@ cc_library(
         "ofile.h",
         "ospc.c",
         "ospc.h",
-        "rbtree.c",
-        "rbtree.h",
         "sesp.c",
         "sesp.h",
         "set.hh",
@@ -77,13 +71,6 @@ cc_test(
 cc_test(
     name = "ospc_test",
     srcs = ["ospc_test.c"],
-    deps = [":cx_lib"],
-    size = "small",
-)
-
-cc_test(
-    name = "rbtree_test",
-    srcs = ["rbtree_test.c"],
     deps = [":cx_lib"],
     size = "small",
 )

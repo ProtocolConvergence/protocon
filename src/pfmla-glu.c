@@ -1,8 +1,9 @@
 
 #define HAVE_ASSERT_H 1
-#include "mdd.h"
+#include "mdd-glu/mdd.h"
 
 #include "pfmla-glu.h"
+#include "cx/alphatab.h"
 
 typedef struct GluPFmla GluPFmla;
 typedef struct GluPFmlaVbl GluPFmlaVbl;
@@ -491,11 +492,11 @@ add_vbl_GluPFmlaCtx (PFmlaCtx* fmlactx, uint id)
   GluPFmlaVbl* x = CastUp( GluPFmlaVbl, base, vbl );
 
   x->img_name = dflt_AlphaTab ();
-  cat_AlphaTab (&x->img_name, &vbl->name);
+  cat_cstr_AlphaTab(&x->img_name, vbl->name);
   cat_cstr_AlphaTab (&x->img_name, "'");
 
   x->aux_name = dflt_AlphaTab ();
-  cat_AlphaTab (&x->aux_name, &vbl->name);
+  cat_cstr_AlphaTab(&x->aux_name, vbl->name);
   cat_cstr_AlphaTab (&x->aux_name, "''");
 
   x->pre_id = vbl->id * 3 + 2;
@@ -508,7 +509,7 @@ add_vbl_GluPFmlaCtx (PFmlaCtx* fmlactx, uint id)
   // Notice that the actual variables are added in the order: aux, img, pre.
   array_insert_last(const char*, names, ccstr_of_AlphaTab (&x->aux_name));
   array_insert_last(const char*, names, ccstr_of_AlphaTab (&x->img_name));
-  array_insert_last(const char*, names, ccstr_of_AlphaTab (&vbl->name));
+  array_insert_last(const char*, names, vbl->name);
   array_insert_last(uint, ctx->aux_vbl_list, x->aux_id);
   array_insert_last(uint, ctx->img_vbl_list, x->img_id);
   array_insert_last(uint, ctx->pre_vbl_list, x->pre_id);

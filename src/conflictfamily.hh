@@ -50,16 +50,16 @@ public:
 
   void oput_conflict_sizes(std::ostream& of) const;
   void oput(std::ostream& of) const;
-  void xget(XFile& xf);
+  void xget(std::istream& in);
 };
 
 inline std::ostream&
 operator<<(std::ostream& of, const ConflictFamily& conflicts)
 { conflicts.oput(of); return of; }
 
-inline XFile&
-operator>>(XFile& xf, ConflictFamily& conflicts)
-{ conflicts.xget(xf); return xf; }
+inline std::istream&
+operator>>(std::istream& in, ConflictFamily& conflicts)
+{ conflicts.xget(in); return in; }
 
 END_NAMESPACE
 #endif

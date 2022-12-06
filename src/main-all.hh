@@ -8,7 +8,7 @@ extern "C" {
 #endif
 }
 
-#include "lace_wrapped.hh"
+#include "fildesh/ofstream.hh"
 #include <iomanip>
 #include <ostream>
 #include <sstream>
@@ -28,7 +28,7 @@ oput_stats(const ProtoconOpt& exec_opt,
            unsigned long peak_mem)
 {
   if (exec_opt.stats_ofilepath.empty_ck()) {return;}
-  lace::ofstream stats_out(exec_opt.stats_ofilepath.ccstr());
+  fildesh::ofstream stats_out(exec_opt.stats_ofilepath.ccstr());
 
   if (!stats_out.good()) {return;}
 

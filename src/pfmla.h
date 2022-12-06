@@ -2,8 +2,7 @@
 #ifndef PFmla_H_
 #define PFmla_H_
 
-#include "cx/alphatab.h"
-#include "cx/associa.h"
+#include <fildesh/fildesh.h>
 #include "cx/bittable.h"
 
 typedef struct PFmlaBase PFmlaBase;
@@ -23,14 +22,15 @@ struct PFmlaVbl
   PFmlaCtx* ctx;
   uint domsz;
   uint id;
-  AlphaTab name;
+  const char* name;
   uint list_id;
 };
 
 struct PFmlaCtx
 {
-  LgTable vbls;
-  Associa vbl_map;
+  DECLARE_FildeshAT(PFmlaVbl*, vbls);
+  FildeshKV vbl_map;
+  FildeshAlloc* alloc;
   TableT( TableT_uint ) vbl_lists;
   const PFmlaVT* vt;
 };
@@ -164,14 +164,14 @@ void
 add_to_vbl_list_PFmlaCtx (PFmlaCtx* ctx, uint listid, uint vblid);
 
 #define DEFAULT_PFmla ((PFmla) NULL)
-qual_inline
+static inline
   PFmla
 dflt_PFmla ()
 {
   return NULL;
 }
 
-qual_inline
+static inline
   PFmla
 dflt1_PFmla (bool phase)
 {
@@ -180,21 +180,21 @@ dflt1_PFmla (bool phase)
   return g;
 }
 
-qual_inline
+static inline
   void
 init_PFmla (PFmla* g)
 {
   *g = dflt_PFmla ();
 }
 
-qual_inline
+static inline
   void
 init1_PFmla (PFmla* g, bool phase)
 {
   *g = dflt1_PFmla (phase);
 }
 
-qual_inline
+static inline
   PFmla
 cons_PFmla (PFmlaCtx* ctx)
 {
@@ -203,7 +203,7 @@ cons_PFmla (PFmlaCtx* ctx)
   return g;
 }
 
-qual_inline
+static inline
   PFmla
 cons1_PFmla (PFmlaCtx* ctx, bool phase)
 {
@@ -212,7 +212,7 @@ cons1_PFmla (PFmlaCtx* ctx, bool phase)
   return g;
 }
 
-qual_inline
+static inline
   Trit
 phase_of_PFmla (const PFmla g)
 {
@@ -221,7 +221,7 @@ phase_of_PFmla (const PFmla g)
   return May;
 }
 
-qual_inline
+static inline
   void
 init2_PFmla (PFmla* g, bool phase, const PFmla a)
 {
@@ -233,7 +233,7 @@ init2_PFmla (PFmla* g, bool phase, const PFmla a)
   }
 }
 
-qual_inline
+static inline
   void
 lose_PFmla (PFmla* g)
 {
@@ -241,17 +241,16 @@ lose_PFmla (PFmla* g)
     (*g)->ctx->vt->free_fn ((*g)->ctx, *g);
 }
 
-qual_inline
+static inline
   void
 lose_PFmlaVbl (PFmlaVbl* x)
 {
   if (x->ctx->vt->vbl_lose_fn) {
     x->ctx->vt->vbl_lose_fn (x);
   }
-  lose_AlphaTab (&x->name);
 }
 
-qual_inline
+static inline
   void
 wipe_PFmla (PFmla* g)
 {
@@ -259,7 +258,7 @@ wipe_PFmla (PFmla* g)
   *g = 0;
 }
 
-qual_inline
+static inline
   void
 ensure_ctx_PFmla (PFmla* a, PFmlaCtx* ctx)
 {
@@ -274,7 +273,7 @@ ensure_ctx_PFmla (PFmla* a, PFmlaCtx* ctx)
   }
 }
 
-qual_inline
+static inline
   void
 fill_ctx_PFmla (PFmla* a, PFmla* b)
 {
@@ -294,21 +293,20 @@ fill_ctx_PFmla (PFmla* a, PFmla* b)
   }
 }
 
-qual_inline
+static inline
   PFmlaVbl*
 vbl_of_PFmlaCtx (PFmlaCtx* ctx, uint id)
 {
-  return CastOff( PFmlaVbl, elt_LgTable (&ctx->vbls, id)
-                  ,+, ctx->vt->vbl_base_offset );
+  return (*ctx->vbls)[id];
 }
 
-qual_inline
+static inline
   PFmlaVbl*
 vbl_lookup_PFmlaCtx (PFmlaCtx* ctx, const char* s)
 {
-  AlphaTab alpha = dflt1_AlphaTab (s);
-  Assoc* assoc = lookup_Associa (&ctx->vbl_map, &alpha);
-  return *(PFmlaVbl**) val_of_Assoc (&ctx->vbl_map, assoc);
+  PFmlaVbl** x = (PFmlaVbl**) lookup_value_FildeshKV(
+      &ctx->vbl_map, s, strlen(s)+1);
+  return x ? *x : NULL;
 }
 
 #endif

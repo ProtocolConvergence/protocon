@@ -13,7 +13,7 @@ extern "C" {
 
 #include "livelock.hh"
 
-#include "../lace_wrapped.hh"
+#include "fildesh/ofstream.hh"
 #include "../namespace.hh"
 
 
@@ -96,9 +96,9 @@ int main(int argc, char** argv) {
 
   bool use_bdds = true;
 
-  lace::ofstream silent_ofile;
-  lace::ofstream livelock_ofile;
-  lace::ofstream unknown_ofile;
+  fildesh::ofstream silent_ofile;
+  fildesh::ofstream livelock_ofile;
+  fildesh::ofstream unknown_ofile;
 
   C::XFile xfile_olay[1];
   C::XFile* xfile = stdin_XFile ();
@@ -153,6 +153,12 @@ int main(int argc, char** argv) {
       if (!unknown_ofile.good())
         failout_sysCx("Cannot open file for -o-unknown!");
     }
+    else if (eq_cstr ("-domsz", arg)) {
+      arg = argv[argi++];
+      if (!arg) {failout_sysCx("Give a file for -domsz!");}
+      if (!xget_uint_cstr (&domsz, arg) || domsz == 0)
+        failout_sysCx("Usage: -domsz <domsz>\nWhere <domsz> is a positive integer.");
+    }
     else if (max_period == 0) {
       if (!xget_uint_cstr (&max_period, arg) || max_period == 0)
         failout_sysCx("Failed to parse period.");
@@ -161,10 +167,6 @@ int main(int argc, char** argv) {
       min_period = max_period;
       if (!xget_uint_cstr (&max_period, arg) || max_period < min_period)
         failout_sysCx("Failed to parse period.");
-    }
-    else if (eq_cstr ("-domsz", arg)) {
-      if (!xget_uint_cstr (&domsz, arg) || domsz == 0)
-        failout_sysCx("Usage: -domsz <domsz>\nWhere <domsz> is a positive integer.");
     }
     else {
       DBog1( "Unrecognized option: %s", arg );

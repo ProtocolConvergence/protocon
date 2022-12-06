@@ -1,12 +1,15 @@
 
 #include "pfmla.h"
-#include "cx/fileb.h"
+#include <assert.h>
 
   void
 init1_PFmlaCtx (PFmlaCtx* ctx, const PFmlaVT* vt)
 {
-  ctx->vbls = dflt1_LgTable (vt->vbl_size);
-  InitAssocia( AlphaTab, PFmlaVbl*, ctx->vbl_map, cmp_AlphaTab );
+  const FildeshKV empty_map = DEFAULT_FildeshKV_SINGLE_LIST;
+  assert(vt->vbl_base_offset == 0);
+  init_FildeshAT(ctx->vbls);
+  ctx->vbl_map = empty_map;
+  ctx->alloc = open_FildeshAlloc();
   InitTable( ctx->vbl_lists );
   ctx->vt = vt;
 }
@@ -18,16 +21,12 @@ free_PFmlaCtx (PFmlaCtx* ctx)
   if (ctx->vt->ctx_lose_fn)
     mem = ctx->vt->ctx_lose_fn (ctx);
 
-  for (zuint i = begidx_LgTable (&ctx->vbls);
-       i != SIZE_MAX;
-       i = nextidx_LgTable (&ctx->vbls, i))
-  {
-    PFmlaVbl* x = vbl_of_PFmlaCtx (ctx, i);
-    lose_PFmlaVbl (x);
+  for (size_t i = 0; i < count_of_FildeshAT(ctx->vbls); ++i) {
+    lose_PFmlaVbl((*ctx->vbls)[i]);
   }
-  lose_LgTable (&ctx->vbls);
-
-  lose_Associa (&ctx->vbl_map);
+  close_FildeshAT(ctx->vbls);
+  close_FildeshKV(&ctx->vbl_map);
+  close_FildeshAlloc(ctx->alloc);
 
   for (uint i = 0; i < ctx->vbl_lists.sz; ++i)
     LoseTable( ctx->vbl_lists.s[i] );
@@ -645,7 +644,7 @@ pick_pre_PFmla (PFmla* dst, const PFmla a)
     PFmla conj = dflt1_PFmla (true);
     PFmla tmp_conj = DEFAULT_PFmla;
 
-    for (uint i = 0; i < ctx->vbls.sz; ++i) {
+    for (uint i = 0; i < count_of_FildeshAT(ctx->vbls); ++i) {
       const PFmlaVbl* vbl = vbl_of_PFmlaCtx (ctx, i);
       bool found = false;
       for (uint val = 0; !found && val < vbl->domsz-1; ++val) {
@@ -807,39 +806,42 @@ img_eq_img_PFmlaVbl (PFmla* dst, const PFmlaVbl* a, const PFmlaVbl* b)
   uint
 add_vbl_PFmlaCtx (PFmlaCtx* ctx, const char* name, uint domsz)
 {
-  bool added = false;
-  PFmlaVbl* x;
-  uint id;
-  AlphaTab key = cons1_AlphaTab (name);
-  Assoc* assoc;
+  PFmlaVbl* x = vbl_lookup_PFmlaCtx(ctx, name);
+  uint vbl_id;
 
-  assoc = ensure1_Associa (&ctx->vbl_map, &key, &added);
-  if (!added) {
-    lose_AlphaTab (&key);
+  if (x) {
 #if 0
     DBog1( "There already exists a variable with name: %s", name );
     return 0;
 #else
     //DBog1( "Re-using variable with name: %s", name );
-    return (*(PFmlaVbl**) val_of_Assoc (&ctx->vbl_map, assoc))->id;
+    return x->id;
 #endif
   }
 
-  id = takeidx_LgTable (&ctx->vbls);
-  x = vbl_of_PFmlaCtx (ctx, id);
-  *(PFmlaVbl**) val_of_Assoc (&ctx->vbl_map, assoc) = x;
+  x = (PFmlaVbl*) reserve_FildeshAlloc(
+      ctx->alloc, ctx->vt->vbl_size, fildesh_alignof(PFmlaVbl));
+  vbl_id = count_of_FildeshAT(ctx->vbls);
+  push_FildeshAT(ctx->vbls, x);
+
+  {
+    char* key = strdup_FildeshAlloc(ctx->alloc, name);
+    const FildeshKV_id_t id = ensure_FildeshKV(
+        &ctx->vbl_map, key, strlen(key)+1);
+    assign_at_FildeshKV(&ctx->vbl_map, id, &x, sizeof(x));
+    x->name = key;
+  }
 
   x->ctx = ctx;
-  x->name = key;
-  x->id = id;
+  x->id = vbl_id;
   x->domsz = domsz;
   x->list_id = add_vbl_list_PFmlaCtx (ctx);
 
-  ctx->vt->ctx_add_vbl_fn (ctx, id);
+  ctx->vt->ctx_add_vbl_fn(ctx, vbl_id);
 
   add_to_vbl_list_PFmlaCtx (ctx, x->list_id, x->id);
 
-  return id;
+  return vbl_id;
 }
 
   uint

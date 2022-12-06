@@ -1,41 +1,21 @@
-load("@rules_foreign_cc//foreign_cc:make.bzl", "make")
-load("@rules_foreign_cc//foreign_cc:cmake.bzl", "cmake")
+load("@rules_peg//peg:defs.bzl", "cc_parsing_expression_grammar")
+
+package(
+    default_visibility = [
+        "//test/src:__pkg__",
+    ],
+)
 
 exports_files([
-    "lace_wrapped.hh",
     "namespace.hh",
+    "inst.cc",
+    "inst.hh",
 ])
 
-cmake(
-    name = "mdd_glu_lib",
-    lib_source = "@mdd_glu//:all",
-    out_static_libs = [
-        "libcu.a",
-        "libglu.a",
-    ],
-)
-
-make(
-    name = "peg",
-    lib_source = "@peg//:all",
-    out_binaries = [
-        "peg",
-        "leg",
-    ],
-)
-filegroup(
-    name = "peg_leg",
-    srcs = [":peg"],
-    output_group = "leg",
-)
-
-genrule(
+cc_parsing_expression_grammar(
     name = "prot_xfile_leg",
-    srcs = ["prot-xfile.leg"],
-    tools = [":peg_leg"],
-    # The -P removes #line directives do avoid a GCC crash in `bazel coverage`.
-    cmd = "$(location peg_leg) -P -o \"$@\" $(location prot-xfile.leg)",
-    outs = ["prot-xfile.leg.cc"],
+    src = "prot-xfile.leg",
+    out_cc = "prot-xfile.leg.cc",
 )
 
 
@@ -43,23 +23,11 @@ cc_binary(
     name = "biring",
     srcs = [
         "biring.cc",
-        "lace_wrapped.hh",
     ],
-    deps = ["//src/cx:cx_lib"],
-    copts = [
-        "-Iexternal/fildesh/src",
+    deps = [
+        "//src/cx:cx_lib",
+        "//src/fildesh:fildesh_cc_lib",
     ],
-)
-
-cc_test(
-    name = "conflictfamily_test",
-    srcs = [
-        "conflictfamily.cc",
-        "conflictfamily.hh",
-        "conflictfamily_test.cc",
-        "namespace.hh",
-    ],
-    deps = ["//src/cx:cx_lib"],
     copts = [
         "-Iexternal/fildesh/src",
     ],
@@ -74,12 +42,11 @@ cc_library(
         "pfmla.h",
     ],
     deps = [
-        ":mdd_glu_lib",
+        "@mdd-glu//:mdd_glu_cudd_lib",
         "//src/cx:cx_lib",
     ],
     copts = [
         "-Iexternal/fildesh/src",
-        "-Iexternal/mdd_glu/include",
     ],
 )
 
@@ -138,47 +105,10 @@ cc_library(
     ],
 )
 
-cc_test(
-    name = "xnsys_test",
-    srcs = [
-        "inst.cc",
-        "inst.hh",
-        "namespace.hh",
-        "xnpc.hh",
-        "xnsys.hh",
-        "xfmlae.hh",
-        "xnspec.hh",
-        "xnsys_test.cc",
-    ],
-    deps = [
-        ":xnsys_lib",
-    ],
-    copts = [
-        "-Iexternal/fildesh/src",
-    ],
-)
-
-cc_test(
-    name = "stabilization_test",
-    srcs = [
-        "inst.cc",
-        "inst.hh",
-        "stabilization.cc",
-        "stabilization.hh",
-        "stabilization_test.cc",
-        "namespace.hh",
-    ],
-    deps = [":xnsys_lib"],
-    copts = [
-        "-Iexternal/fildesh/src",
-    ],
-)
-
 
 cc_library(
     name = "prot_file_lib",
     srcs = [
-        "lace_wrapped.hh",
         "namespace.hh",
         "pla.cc",
         "pla.hh",
@@ -190,6 +120,7 @@ cc_library(
     ],
     deps = [
         ":xnsys_lib",
+        "//src/fildesh:fildesh_cc_lib",
     ],
     copts = [
         "-Isrc",
@@ -281,17 +212,25 @@ genrule(
     outs = ["test.embed.h"],
 )
 
+cc_library(
+    name = "kautz_lib",
+    srcs = [
+        "kautz.cc",
+        "kautz.hh",
+    ],
+    deps = [
+        "//src/cx:cx_lib",
+        "//src/fildesh:fildesh_cc_lib",
+    ],
+    testonly = 1,
+)
 
 cc_test(
     name = "test",
     srcs = [
-        "kautz.cc",
-        "kautz.hh",
         "search.cc",
         "search.hh",
         "test.cc",
-        "test-pcxn.cc",
-        "test-pcxn.hh",
         "test.embed.h",
     ],
     deps = [

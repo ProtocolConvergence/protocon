@@ -1,0 +1,79 @@
+cc_library(
+    name = "detect_lib",
+    srcs = [
+        "detect.c",
+        "detect.h",
+        "xnsys.c",
+        "xnsys.h",
+    ],
+    copts = ["-Isrc"],
+    deps = [
+        "//src/cx:cx_lib",
+    ],
+    visibility = [
+        "//test/satsyn:__pkg__",
+    ],
+)
+
+cc_library(
+    name = "synsearch_lib",
+    srcs = [
+        "promela.c",
+        "promela.h",
+        "synsearch.c",
+        "synsearch.h",
+    ],
+    copts = ["-Isrc"],
+    deps = [
+        ":detect_lib",
+    ],
+    visibility = [
+        "//test/satsyn:__pkg__",
+    ],
+)
+
+cc_library(
+    name = "instance_lib",
+    srcs = [
+        "instance.c",
+        "instance.h",
+    ],
+    copts = ["-Isrc"],
+    deps = [
+        ":detect_lib",
+    ],
+    visibility = [
+        "//test/satsyn:__pkg__",
+    ],
+)
+
+cc_library(
+    name = "encodesat_lib",
+    srcs = [
+        "encodesat.c",
+        "encodesat.h",
+    ],
+    copts = ["-Isrc"],
+    deps = [
+        ":synsearch_lib",
+    ],
+    visibility = [
+        "//test/satsyn:__pkg__",
+    ],
+)
+
+cc_binary(
+    name = "satsyn",
+    srcs = [
+        "dimacs.h",
+        "inst-sat3.h",
+        "satsyn.c",
+        "pla.h",
+    ],
+    deps = [
+        ":instance_lib",
+        ":encodesat_lib",
+    ],
+    copts = ["-Isrc"],
+)
+

@@ -1,0 +1,45 @@
+load("@fildesh//:def.bzl", "fildesh_test")
+
+cc_binary(
+    name = "kautz_graphviz",
+    srcs = ["kautz_graphviz.cc"],
+    deps = ["//src:kautz_lib"],
+    testonly = 1,
+)
+
+
+cc_test(
+    name = "conflictfamily_test",
+    srcs = ["conflictfamily_test.cc"],
+    deps = ["//src:protocon_lib"],
+)
+
+fildesh_test(
+    name = "kautz_test",
+    srcs = ["kautz_test.fildesh"],
+    aliases = {"kautz_graphviz": ":kautz_graphviz"},
+)
+
+cc_test(
+    name = "pcxn_test",
+    srcs = ["pcxn_test.cc"],
+    deps = ["//src:protocon_lib"],
+)
+
+cc_test(
+    name = "stabilization_test",
+    srcs = ["stabilization_test.cc"],
+    deps = ["//src:protocon_lib"],
+)
+
+cc_test(
+    name = "xnsys_test",
+    srcs = [
+        "xnsys_test.cc",
+        "//src:inst.cc",
+        "//src:inst.hh",
+    ],
+    deps = ["//src:xnsys_lib"],
+    #copts = ["-Iexternal/fildesh/src"],
+)
+

@@ -10,7 +10,8 @@
 template <typename T> class AdjList;
 
 void
-subtract_action_mask(BitTable& mask, const UniAct& mask_act, uint domsz);
+subtract_action_mask(BitTable& mask, const UniAct& mask_act, uint domsz,
+                     const BitTable& delegates);
 bool
 action_mask_overlap_ck(const UniAct& mask_act,
                        const BitTable& actset, uint domsz);

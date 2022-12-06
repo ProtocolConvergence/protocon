@@ -1,0 +1,69 @@
+
+cc_test(
+    name = "detect_livelock_test",
+    srcs = ["detect_livelock_test.c"],
+    deps = [
+        "//src/satsyn:detect_lib",
+    ],
+    copts = ["-Isrc"],
+)
+
+cc_test(
+    name = "encodesat_coloring_test",
+    srcs = ["encodesat_coloring_test.cc"],
+    deps = [
+        "//src/satsyn:encodesat_lib",
+        "//src/satsyn:instance_lib",
+    ],
+    copts = ["-Isrc"],
+)
+
+cc_test(
+    name = "synthesize_coloring_test",
+    srcs = ["synthesize_coloring_test.c"],
+    deps = [
+        "//src/satsyn:instance_lib",
+        "//src/satsyn:synsearch_lib",
+    ],
+    copts = ["-Isrc"],
+)
+
+cc_test(
+    name = "synthesize_matching_test",
+    srcs = ["synthesize_matching_test.c"],
+    deps = [
+        "//src/satsyn:instance_lib",
+        "//src/satsyn:synsearch_lib",
+    ],
+    copts = ["-Isrc"],
+)
+
+cc_test(
+    name = "synthesize_bit3_test",
+    srcs = ["synthesize_bit3_test.c"],
+    deps = [
+        "//src/satsyn:instance_lib",
+        "//src/satsyn:synsearch_lib",
+    ],
+    copts = ["-Isrc"],
+)
+
+cc_test(
+    name = "synthesize_dijkstra_test",
+    srcs = ["synthesize_dijkstra_test.c"],
+    deps = [
+        "//src/satsyn:instance_lib",
+        "//src/satsyn:synsearch_lib",
+    ],
+    copts = ["-Isrc"],
+)
+
+cc_test(
+    name = "synthesize_dijkstra4state_test",
+    srcs = ["synthesize_dijkstra4state_test.c"],
+    deps = [
+        "//src/satsyn:instance_lib",
+        "//src/satsyn:synsearch_lib",
+    ],
+    copts = ["-Isrc"],
+)

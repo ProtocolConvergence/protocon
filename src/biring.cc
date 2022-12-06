@@ -6,7 +6,7 @@ extern "C" {
 
 #include <algorithm>
 #include <sstream>
-#include "lace_wrapped.hh"
+#include "fildesh/ofstream.hh"
 #include "cx/fileb.hh"
 #include "cx/map.hh"
 #include "cx/table.hh"
@@ -577,7 +577,7 @@ oput_biring_protocon_spec(const Cx::String& ofilepath, const Cx::String& ofilena
                           const Cx::BitTable& legit, const FilterOpt& opt)
 {
   const uint domsz = opt.domsz;
-  lace::ofstream ofile( open_sibling_FildeshOF(ofilepath.ccstr(), ofilename.ccstr()) );
+  fildesh::ofstream ofile( open_sibling_FildeshOF(ofilepath.ccstr(), ofilename.ccstr()) );
 
   ofile
     << "// " << legit
@@ -635,7 +635,7 @@ recurse(BitTable set, uint q,
 
 #if 0
   {
-    lace::ofstream graph_ofile("xbliss/.", ofilename);
+    fildesh::ofstream graph_ofile("xbliss/.", ofilename);
     dimacs_graph(graph_ofile, set, opt.domsz);
   }
 #endif
@@ -1040,7 +1040,7 @@ filter_stdin (const FilterOpt& opt, std::ostream& ofile)
       oput_biring_protocon_spec ("", opt.spec_ofilename, set, opt);
     }
     if (opt.graphviz_ofilename) {
-      lace::ofstream graphviz_ofile(opt.graphviz_ofilename);
+      fildesh::ofstream graphviz_ofile(opt.graphviz_ofilename);
       oput_graphviz(graphviz_ofile, set, domsz, opt.pair);
     }
   }

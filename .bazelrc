@@ -1,3 +1,9 @@
+common:bzlmod --experimental_enable_bzlmod
+common:bzlmod --registry=https://raw.githubusercontent.com/grencez/grencez_bazel_registry/trunk
+common:bzlmod --registry=https://raw.githubusercontent.com/fildesh/fildesh_bazel_registry/trunk
+common:bzlmod --registry=https://raw.githubusercontent.com/bazelbuild/bazel-central-registry/main
+
+common --config=bzlmod
 
 # Valgrind.
 build:valgrind --run_under='valgrind --trace-children=yes --track-fds=yes --leak-check=full --show-leak-kinds=all'

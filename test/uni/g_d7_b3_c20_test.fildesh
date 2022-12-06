@@ -1,0 +1,6 @@
+
+(: expect_id Str "XX6X______X___6__________\n")
+
+|< generate -domsz 7 -bfs 3 -cutoff 20 -acyclife
+|- cmp - $(XF expect_id)
+|> stdout

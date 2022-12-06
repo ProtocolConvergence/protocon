@@ -1,11 +1,8 @@
 
-extern "C" {
-#include "cx/syscx.h"
-}
-#include "conflictfamily.hh"
-#include "cx/lgtable.hh"
+#include "src/conflictfamily.hh"
+#include "src/cx/lgtable.hh"
 
-#include "namespace.hh"
+#include "src/namespace.hh"
 
 static
   void
@@ -57,15 +54,9 @@ TestConflictFamily()
 
 END_NAMESPACE
 
-int main(int argc, char** argv)
-{
+int main() {
   using namespace PROTOCON_NAMESPACE;
-  int argi = init_sysCx (&argc, &argv);
-  (void) argi;
-
   TestConflictFamily();
-
-  lose_sysCx ();
   return 0;
 }
 

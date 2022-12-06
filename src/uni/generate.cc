@@ -12,12 +12,12 @@ extern "C" {
 #include "../pfmla.hh"
 
 #include "cx/bittable.hh"
-#include "cx/fileb.hh"
 #include "cx/table.hh"
 
 #include <algorithm>
 
-#include "../lace_wrapped.hh"
+#include "fildesh/ifstream.hh"
+#include "fildesh/ofstream.hh"
 #include "../namespace.hh"
 
 struct SearchOpt
@@ -27,7 +27,10 @@ struct SearchOpt
   uint max_period;
   uint max_propagations;
   bool check_ppg_overapprox;
+  bool nw_deterministic;
+  bool nw_commutative;
   bool nw_disabling;
+  bool nn_ww_disabling;
   bool use_bdds;
   bool line_flush;
   bool trust_given;
@@ -49,7 +52,10 @@ struct SearchOpt
     , max_period( 0 )
     , max_propagations( 0 )
     , check_ppg_overapprox( true )
+    , nw_deterministic( true )
+    , nw_commutative( false )
     , nw_disabling( false )
+    , nn_ww_disabling( false )
     , use_bdds( false )
     , line_flush( true )
     , trust_given( false )
@@ -133,6 +139,14 @@ column_xfmla(const BitTable& actset, const PFmlaVbl& x_p, const PFmlaVbl& x_j, u
     xn |= x_p.img_eq(act[0]) && x_j==act[1] && x_j.img_eq(act[2]);
   }
   return xn;
+}
+
+static
+  unsigned
+commute_action_id(unsigned id, unsigned domsz)
+{
+  UniAct act = UniAct::of_id(id, domsz);
+  return id_of3(act[1], act[0], act[2], domsz);
 }
 
   Trit
@@ -239,6 +253,10 @@ periodic_leads_semick(const BitTable& delegates,
           // If the penultimate livelock action is picked,
           // forbid the maximal livelock action.
           candidates_stack[i].set0(max_livelock_actids[1]);
+          if (opt.nw_commutative) {
+            candidates_stack[i].set0(
+                commute_action_id(max_livelock_actids[1], domsz));
+          }
         }
       }
 #endif
@@ -332,34 +350,197 @@ periodic_leads_semick(const BitTable& delegates,
   return (maybe_livelock ? Yes : May);
 }
 
+
+#define TRIM_MASK(a, b, c) \
+  subtract_action_mask(candidates, UniAct(a,b,c), domsz, delegates)
+
+static
   void
-trim_coexist (BitTable& actset, uint actid, uint domsz,
-              bool nw_disabling)
+abc_checkem(unsigned a, unsigned b, unsigned c, unsigned domsz,
+            const BitTable& delegates, BitTable& candidates)
 {
+  // a,b,c => c,x,y => no a,y,z && no b,y,z
+  for (unsigned x = 0; x < domsz; ++x) {
+    for (unsigned y = 0; y < domsz; ++y) {
+      unsigned cxy_id = id_of(UniAct(c, x, y), domsz);
+      if (delegates.ck(cxy_id)) {
+        TRIM_MASK(a, y, domsz);
+        TRIM_MASK(y, a, domsz);
+        TRIM_MASK(b, y, domsz);
+        TRIM_MASK(y, b, domsz);
+      }
+    }
+  }
+  // a,b,c => a,y,z => no c,x,y
+  for (unsigned y = 0; y < domsz; ++y) {
+    for (unsigned z = 0; z < domsz; ++z) {
+      unsigned ayz_id = id_of(UniAct(a, y, z), domsz);
+      unsigned byz_id = id_of(UniAct(b, y, z), domsz);
+      if (delegates.ck(ayz_id) || delegates.ck(byz_id)) {
+        TRIM_MASK(c, domsz, y);
+        TRIM_MASK(domsz, c, y);
+      }
+    }
+  }
+}
+
+static
+  void
+cxy_checkem(unsigned c, unsigned x, unsigned y, unsigned domsz,
+            const BitTable& delegates, BitTable& candidates)
+{
+  // c,x,y => a,b,c => no a,y,z && no b,y,z
+  for (unsigned a = 0; a < domsz; ++a) {
+    for (unsigned b = 0; b < domsz; ++b) {
+      unsigned abc_id = id_of(UniAct(a, b, c), domsz);
+      unsigned abx_id = id_of(UniAct(a, b, x), domsz);
+      if (delegates.ck(abc_id) || delegates.ck(abx_id)) {
+        TRIM_MASK(a, y, domsz);
+        TRIM_MASK(y, a, domsz);
+        TRIM_MASK(b, y, domsz);
+        TRIM_MASK(y, b, domsz);
+      }
+    }
+  }
+  // c,x,y => a,y,z => no a,b,c
+  // c,x,y => b,y,z => no a,b,c
+  for (unsigned a = 0; a < domsz; ++a) {
+    for (unsigned z = 0; z < domsz; ++z) {
+      unsigned ayz_id = id_of(UniAct(a, y, z), domsz);
+      if (delegates.ck(ayz_id)) {
+        TRIM_MASK(a, domsz, c);
+        TRIM_MASK(domsz, a, c);
+        TRIM_MASK(a, domsz, x);
+        TRIM_MASK(domsz, a, x);
+      }
+    }
+  }
+}
+
+static
+  void
+ay_checkem(unsigned a, unsigned y, unsigned domsz,
+           const BitTable& delegates, BitTable& candidates)
+{
+  // a,y,z => a,b,c => no c,x,y
+  for (unsigned b = 0; b < domsz; ++b) {
+    for (unsigned c = 0; c < domsz; ++c) {
+      unsigned abc_id = id_of(UniAct(a, b, c), domsz);
+      if (delegates.ck(abc_id)) {
+        TRIM_MASK(c, domsz, y);
+        TRIM_MASK(domsz, c, y);
+      }
+    }
+  }
+  // a,y,z => c,x,y => no a,b,c
+  for (unsigned c = 0; c < domsz; ++c) {
+    for (unsigned x = 0; x < domsz; ++x) {
+      unsigned cxy_id = id_of(UniAct(c, x, y), domsz);
+      if (delegates.ck(cxy_id)) {
+        TRIM_MASK(a, domsz, c);
+        TRIM_MASK(domsz, a, c);
+      }
+    }
+  }
+}
+
+static
+  void
+trim_coexist(BitTable& candidates, unsigned actid,
+             const SearchOpt& opt, const BitTable& delegates)
+{
+  const unsigned domsz = opt.domsz;
   UniAct act( UniAct::of_id(actid, domsz) );
+  const bool nw_deterministic = opt.nw_deterministic;
+  const bool nw_commutative = opt.nw_commutative;
+  const bool nw_disabling = opt.nw_disabling;
+  const bool nn_ww_disabling = opt.nn_ww_disabling;
+
+  // The action itself.
+  assert(candidates.ck(actid));
+  if (nw_commutative) {
+    const unsigned dual_id = id_of(UniAct(act[1], act[0], act[2]), domsz);
+    assert(candidates.ck(dual_id));
+  }
 
   // Trivial livelock.
   if (act[0]==act[1]) {
-    subtract_action_mask(actset, UniAct(act[2], act[2], act[0]), domsz);
+    TRIM_MASK(act[2], act[2], act[0]);
+    if (nw_commutative) {
+      TRIM_MASK(act[2], act[2], act[1]);
+    }
   }
 
   // Trivial livelock.
-  if (act[0]==act[2]) {
-    subtract_action_mask(actset, UniAct(act[1], act[0], act[1]), domsz);
+  if (!nw_commutative && act[0]==act[2]) {
+    TRIM_MASK(act[1], act[0], act[1]);
   }
 
+  assert(nw_deterministic);
   // Enforce determinism.
-  subtract_action_mask(actset, UniAct(act[0], act[1], domsz), domsz);
-  //mask.set0(actid);
+  if (nw_deterministic) {
+    for (unsigned c = 0; c < domsz; ++c) {
+      if (c == act[2]) {continue;}
+      TRIM_MASK(act[0], act[1], c);
+      if (nw_commutative) {
+        TRIM_MASK(act[1], act[0], c);
+      }
+    }
+  }
+  candidates.set0(id_of3(act[0], act[1], act[2], domsz));
+  if (nw_commutative) {
+    candidates.set0(id_of3(act[1], act[0], act[2], domsz));
+  }
 
   // Enforce W-disabling.
-  subtract_action_mask(actset, UniAct(act[0], act[2], domsz), domsz);
-  subtract_action_mask(actset, UniAct(act[0], domsz, act[1]), domsz);
+  TRIM_MASK(act[0], act[2], domsz);
+  TRIM_MASK(act[0], domsz, act[1]);
 
-  if (!nw_disabling)  return;
-  // Enforce N-disabling.
-  subtract_action_mask(actset, UniAct(act[2], act[1], domsz), domsz);
-  subtract_action_mask(actset, UniAct(domsz, act[1], act[0]), domsz);
+  if (nw_commutative) {
+    TRIM_MASK(act[1], act[2], domsz);
+    TRIM_MASK(act[1], domsz, act[0]);
+
+    TRIM_MASK(act[2], act[0], domsz);
+    TRIM_MASK(domsz, act[0], act[1]);
+    assert(nw_disabling);
+  }
+
+  if (nw_disabling) {
+    // Enforce N-disabling.
+    TRIM_MASK(act[2], act[1], domsz);
+    TRIM_MASK(domsz, act[1], act[0]);
+  }
+
+  if (nn_ww_disabling) {
+    // a,b,c && c,x,y =>
+    //   no a,y,z
+    //   no b,y,z
+    assert(nw_commutative);
+    // a,b,c => c,x,y => no a,y,z && no b,y,z
+    abc_checkem(act[0], act[1], act[2], domsz, delegates, candidates);
+    // c,x,y => a,b,c => no a,y,z && no b,y,z
+    cxy_checkem(act[0], act[1], act[2], domsz, delegates, candidates);
+    // a,y,z => a,b,c => no c,x,y
+    ay_checkem(act[0], act[1], domsz, delegates, candidates);
+    ay_checkem(act[1], act[0], domsz, delegates, candidates);
+  }
+}
+
+static
+  void
+choose_delegate(const unsigned delegate_id,
+                BitTable& delegates, BitTable& candidates,
+                const SearchOpt& opt)
+{
+  const UniAct act( UniAct::of_id(delegate_id, opt.domsz) );
+  delegates.set1(delegate_id);
+  if (opt.nw_commutative) {
+    const UniAct dual(act[1], act[0], act[2]);
+    const unsigned dual_id = id_of(dual, opt.domsz);
+    assert(delegate_id <= dual_id);
+    delegates.set1(dual_id);
+  }
+  trim_coexist(candidates, delegate_id, opt, delegates);
 }
 
 static
@@ -368,20 +549,16 @@ recurse(Table<BitTable>& delegates_stack,
         Table<BitTable>& candidates_stack,
         uint actid,
         const SearchOpt& opt,
-        uint depth,
+        unsigned depth,
         BitTable& mask)
 {
   const uint domsz = opt.domsz;
 
   BitTable& delegates = delegates_stack[depth];
-  delegates = delegates_stack[depth-1];
-  delegates.set1(actid);
-
   BitTable& candidates = candidates_stack[depth];
+  delegates = delegates_stack[depth-1];
   candidates = candidates_stack[depth-1];
-  Claim( candidates.ck(actid) );
-  candidates.set0(actid);
-  trim_coexist(candidates, actid, domsz, opt.nw_disabling);
+  choose_delegate(actid, delegates, candidates, opt);
 
   Table<PcState> ppgfun;
   init_ppgfun(ppgfun, delegates, domsz);
@@ -434,6 +611,10 @@ recurse(Table<BitTable>& delegates_stack,
     // This must be after recurse() so that the livelock
     // detection doesn't remove valid candidates.
     candidates.set0(next_actid);
+    if (opt.nw_commutative) {
+      UniAct act = UniAct::of_id(next_actid, domsz);
+      candidates.set0(id_of(UniAct(act[1], act[0], act[2]), domsz));
+    }
   }
 }
 
@@ -476,24 +657,24 @@ searchit(const SearchOpt& opt)
   // Never need self-loops.
   REMOVE_ABB;
 
+  if (opt.nw_commutative) {
+    REMOVE_AAB;
+  }
   if (opt.nw_disabling) {
     REMOVE_ABA;
   }
 
   if (!opt.given_acts.empty_ck()) {
-    uint hi_id = 0;
-    for (uint i = 0; i < opt.given_acts.sz(); ++i) {
-      const UniAct& act = opt.given_acts[i];
-      const uint actid = id_of(act, domsz);
-      if (actid > hi_id) {
+    unsigned hi_id = 0;
+    BitTable tmp_delegates = delegates;
+    for (unsigned i = 0; i < opt.given_acts.sz(); ++i) {
+      tmp_delegates.set1(id_of(opt.given_acts[i], domsz));
+    }
+    for (unsigned actid = 0; actid < delegates.sz(); ++actid) {
+      if (tmp_delegates.ck(actid) && !delegates.ck(actid)) {
         hi_id = actid;
+        choose_delegate(actid, delegates, candidates, opt);
       }
-      delegates.set1(actid);
-      if (!candidates.set0(actid)) {
-        DBog1("Action #%u was trimmed already!", i+1);
-        failout_sysCx("");
-      }
-      trim_coexist(candidates, actid, domsz, opt.nw_disabling);
     }
     if (!opt.trust_given &&
         !canonical_ck(uniring_ppgfun_of(delegates, domsz), domsz)) {
@@ -504,6 +685,10 @@ searchit(const SearchOpt& opt)
     // Clear out low candidates.
     for (uint actid = 0; actid < hi_id; ++actid) {
       candidates.set0(actid);
+      if (opt.nw_commutative) {
+        UniAct act = UniAct::of_id(actid, domsz);
+        candidates.set0(id_of(UniAct(act[1], act[0], act[2]), domsz));
+      }
     }
 
     Claim( delegates.ck(id_of3(0, 0, 1, domsz)) ||
@@ -519,12 +704,20 @@ searchit(const SearchOpt& opt)
 
     delegates.set0(hi_id);
     candidates.set1(hi_id);
+    if (opt.nw_commutative) {
+      UniAct hi_act = UniAct::of_id(hi_id, domsz);
+      unsigned dual_id = id_of(UniAct(hi_act[1], hi_act[0], hi_act[2]), domsz);
+      delegates.set0(dual_id);
+      candidates.set1(dual_id);
+    }
     RECURSE(hi_id);
     return;
   }
 
-  RECURSE(id_of3(0, 0, 1, domsz));
-  REMOVE_AAB;
+  if (!opt.nw_commutative) {
+    RECURSE(id_of3(0, 0, 1, domsz));
+    REMOVE_AAB;
+  }
 
   if (!opt.nw_disabling) {
     RECURSE(id_of3(0, 1, 0, domsz));
@@ -546,9 +739,8 @@ int main(int argc, char** argv)
   int argi = init_sysCx (&argc, &argv);
   SearchOpt opt;
 
-  C::XFile* given_xfile = 0;
-  XFileB given_xfileb;
-  lace::ofstream id_out;
+  fildesh::ifstream given_in;
+  fildesh::ofstream id_out;
 
   while (argi < argc) {
     const char* arg = argv[argi++];
@@ -607,6 +799,11 @@ int main(int argc, char** argv)
     else if (eq_cstr ("-nw-disabling", arg)) {
       opt.nw_disabling = true;
     }
+    else if (eq_cstr ("-acyclife", arg)) {
+      opt.nw_disabling = true;
+      opt.nn_ww_disabling = true;
+      opt.nw_commutative = true;
+    }
     else if (eq_cstr ("-test", arg)) {
       bool passed = TestKnownAperiodic();
       if (passed) {
@@ -623,26 +820,29 @@ int main(int argc, char** argv)
       if (!argv[argi])
         failout_sysCx("Argument Usage: -init <id>");
 
-      C::XFile xfile[1];
-      init_XFile_olay_cstr (xfile, argv[argi++]);
+      FildeshX* argslice = open_FildeshXA();
+      size_t n = strlen(argv[argi]);
+      memcpy(grow_FildeshX(argslice, n), argv[argi], n);
+      argi += 1;
+      fildesh::ifstream in(argslice);
 
       Table<PcState> ppgfun;
-      opt.domsz = xget_b64_ppgfun(xfile, ppgfun);
+      opt.domsz = xget_b64_ppgfun(in, ppgfun);
       if (opt.domsz == 0) {
         failout_sysCx (0);
       }
       opt.given_acts = uniring_actions_of(ppgfun, opt.domsz);
     }
     else if (eq_cstr ("-x-init", arg)) {
-      String fname = argv[argi++];
-      if (!fname)
+      if (!argv[argi])
         failout_sysCx("Argument Usage: -x-init <file>");
-      given_xfile = given_xfileb.uopen(0, fname);
-      if (!given_xfile)
+      given_in.open(argv[argi]);
+      if (!given_in.good())
         failout_sysCx("Cannot open init file.");
+      argi += 1;
 
       Table<PcState> ppgfun;
-      opt.domsz = xget_b64_ppgfun(given_xfile, ppgfun);
+      opt.domsz = xget_b64_ppgfun(given_in, ppgfun);
       if (opt.domsz == 0) {
         failout_sysCx (0);
       }
@@ -667,10 +867,10 @@ int main(int argc, char** argv)
   while (true) {
     searchit(opt);
 
-    if (!given_xfile)  break;
+    if (!given_in.good())  break;
 
     Table<PcState> ppgfun;
-    uint domsz = xget_b64_ppgfun(given_xfile, ppgfun);
+    uint domsz = xget_b64_ppgfun(given_in, ppgfun);
     if (opt.domsz != domsz) {
       if (domsz == 0)  break;
       failout_sysCx ("Use the same domain size for all inputs.");

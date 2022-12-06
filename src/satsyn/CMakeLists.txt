@@ -3,7 +3,12 @@
 # Not really used.
 
 add_executable(satsyn
+  "detect.c"
+  "encodesat.c"
+  "instance.c"
+  "promela.c"
   "satsyn.c"
+  "synsearch.c"
   "xnsys.c"
   )
 set_property(TARGET satsyn APPEND PROPERTY INCLUDE_DIRECTORIES

@@ -5,7 +5,7 @@
 #ifndef DEF_H_
 #define DEF_H_
 
-#include "fildesh.h"
+#include <fildesh/fildesh.h>
 
 #ifndef __OPENCL_VERSION__
 #include <float.h>

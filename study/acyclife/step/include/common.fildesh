@@ -1,0 +1,3 @@
+$(> generate_exe) "../../bld/src/uni/generate"
+$(> classify_exe) "../../bld/src/uni/classify"
+$(> parallelism) "24"

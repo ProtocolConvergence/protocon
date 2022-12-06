@@ -8,10 +8,10 @@ add_executable(uni_aperiodic
   "unifile.hh"
   )
 set_property(TARGET uni_aperiodic APPEND PROPERTY INCLUDE_DIRECTORIES
-  "${LaceIncludeDir}" "${CMAKE_CURRENT_SOURCE_DIR}/..")
+  "${CMAKE_CURRENT_SOURCE_DIR}/..")
 set_target_properties(uni_aperiodic PROPERTIES
   OUTPUT_NAME "aperiodic")
-target_link_libraries(uni_aperiodic cx_lib)
+target_link_libraries(uni_aperiodic fildesh_cc_lib cx_lib)
 
 
 #### Generate Unidirectional Ring Protocols ####
@@ -27,10 +27,10 @@ add_executable(uni_generate
   "unifile.hh"
   )
 set_property(TARGET uni_generate APPEND PROPERTY INCLUDE_DIRECTORIES
-  "${LaceIncludeDir}" "${CMAKE_CURRENT_SOURCE_DIR}/..")
+  "${CMAKE_CURRENT_SOURCE_DIR}/..")
 set_target_properties(uni_generate PROPERTIES
   OUTPUT_NAME "generate")
-target_link_libraries(uni_generate pfmla_lib)
+target_link_libraries(uni_generate pfmla_lib fildesh_cc_lib)
 
 
 #### Translate between Unidirectional Ring Protocol Representations ####
@@ -44,7 +44,7 @@ add_executable(uni_xlate
   "unifile.hh"
   )
 set_property(TARGET uni_xlate APPEND PROPERTY INCLUDE_DIRECTORIES
-  "${LaceIncludeDir}" "${CMAKE_CURRENT_SOURCE_DIR}/..")
+  "${CMAKE_CURRENT_SOURCE_DIR}/..")
 set_target_properties(uni_xlate PROPERTIES
   OUTPUT_NAME "xlate")
 target_link_libraries(uni_xlate prot_file_lib)
@@ -52,7 +52,7 @@ target_link_libraries(uni_xlate prot_file_lib)
 
 #### Classify Unidirectional Ring Protocols ####
 add_executable(uni_classify
-  "xlate.cc"
+  "classify.cc"
   "adjlist.hh"
   "livelock.cc"
   "livelock.hh"
@@ -61,10 +61,10 @@ add_executable(uni_classify
   "unifile.hh"
   )
 set_property(TARGET uni_classify APPEND PROPERTY INCLUDE_DIRECTORIES
-  "${LaceIncludeDir}" "${CMAKE_CURRENT_SOURCE_DIR}/..")
+  "${CMAKE_CURRENT_SOURCE_DIR}/..")
 set_target_properties(uni_classify PROPERTIES
   OUTPUT_NAME "classify")
-target_link_libraries(uni_classify pfmla_lib)
+target_link_libraries(uni_classify pfmla_lib fildesh_cc_lib)
 
 
 #### Unidirectional Ring Synthesis ####
@@ -76,7 +76,7 @@ add_executable(uni_synthesize
   "unifile.hh"
   )
 set_property(TARGET uni_synthesize APPEND PROPERTY INCLUDE_DIRECTORIES
-  "${LaceIncludeDir}" "${CMAKE_CURRENT_SOURCE_DIR}/..")
+  "${CMAKE_CURRENT_SOURCE_DIR}/..")
 set_target_properties(uni_synthesize PROPERTIES
   OUTPUT_NAME "synthesize")
 target_link_libraries(uni_synthesize prot_file_lib)

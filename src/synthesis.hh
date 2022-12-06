@@ -2,7 +2,7 @@
 #ifndef PartialSynthesis_HH_
 #define PartialSynthesis_HH_
 
-#include "lace_wrapped.hh"
+#include "fildesh/ofstream.hh"
 #include "cx/set.hh"
 #include "cx/urandom.hh"
 #include "pfmla.hh"
@@ -16,7 +16,7 @@
 
 #include "namespace.hh"
 
-extern lace::ofstream dev_null_ostream;
+extern fildesh::ofstream dev_null_ostream;
 
 class SynthesisCtx;
 class PartialSynthesis;

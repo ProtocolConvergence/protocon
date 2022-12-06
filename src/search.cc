@@ -3,10 +3,11 @@
 #include "xnsys.hh"
 #include <algorithm>
 
-#include "lace_wrapped.hh"
+#include "fildesh/ifstream.hh"
+#include "fildesh/ofstream.hh"
 
-#include "cx/urandom.hh"
 #include "cx/fileb.hh"
+#include "cx/urandom.hh"
 #include "opt.hh"
 #include "prot-xfile.hh"
 #include "prot-ofile.hh"
@@ -40,7 +41,7 @@ verify_solutions(const PartialSynthesis& inst, StabilizationCkInfo* info, uint* 
             inst.ctx->opt.n_livelock_ofiles).ccstr();
         inst.ctx->opt.n_livelock_ofiles += 1;
 
-        lace::ofstream livelock_out(livelock_out_filename);
+        fildesh::ofstream livelock_out(livelock_out_filename);
         oput_protocon_file(livelock_out, *inst.ctx->systems[i], inst[i].actions,
                            false, "livelock");
       }
@@ -365,7 +366,7 @@ rank_actions (Table< Table<uint> >& act_layers,
   void
 oput_conflicts (const ConflictFamily& conflicts, const String& ofilename)
 {
-  lace::ofstream conflicts_of(ofilename.cstr());
+  fildesh::ofstream conflicts_of(ofilename.cstr());
   conflicts_of << conflicts;
 }
 
@@ -447,11 +448,11 @@ try_known_solution(const ConflictFamily& conflicts,
     else
       *synctx.log << "I SKIPPED SOME\n";
 
-    lace::ofstream working_of(
+    fildesh::ofstream working_of(
         (String("working_conflicts.out.") + synctx.opt.sys_pcidx).ccstr());
     working_of << conflicts;
 
-    lace::ofstream broken_of(
+    fildesh::ofstream broken_of(
         (String("broken_conflicts.out.") + synctx.opt.sys_pcidx).ccstr());
     broken_of << synctx.conflicts;
   }
@@ -467,10 +468,9 @@ initialize_conflicts(ConflictFamily& conflicts,
 {
   if (!!exec_opt.conflicts_xfilepath)
   {
-    Cx::XFileB conflicts_xf;
-    conflicts_xf.open(exec_opt.conflicts_xfilepath);
-    conflicts_xf >> conflicts;
-    if (!conflicts_xf.good()) {
+    fildesh::ifstream conflicts_in(exec_opt.conflicts_xfilepath.cstr());
+    conflicts_in >> conflicts;
+    if (!conflicts_in.good()) {
       DBog1( "Bad read from conflicts file: %s", exec_opt.conflicts_xfilepath.cstr() );
       return false;
     }
@@ -525,7 +525,7 @@ stabilization_search_init
   (SynthesisCtx& synctx,
    Xn::Sys& sys,
    LgTable<Xn::Sys>& systems,
-   lace::ofstream& log_ofile,
+   fildesh::ofstream& log_ofile,
    AddConvergenceOpt& opt,
    const ProtoconFileOpt& infile_opt,
    const ProtoconOpt& exec_opt,
@@ -684,7 +684,7 @@ void
       if (!!exec_opt.ofilepath) {
         String filepath( exec_opt.ofilepath + "." + i );
         *opt.log << "Writing system to: " << filepath  << std::endl;
-        lace::ofstream prot_out(filepath.ccstr());
+        fildesh::ofstream prot_out(filepath.ccstr());
         oput_protocon_file(prot_out, sys, sys.actions,
                            exec_opt.use_espresso,
                            exec_opt.argline.ccstr());
@@ -737,7 +737,7 @@ stabilization_search(vector<uint>& ret_actions,
   DeclLegit( good );
   AddConvergenceOpt opt(global_opt);
   uint PcIdx;
-  lace::ofstream log_ofile;
+  fildesh::ofstream log_ofile;
 #pragma omp critical
   {
     PcIdx = NPcs;
@@ -944,7 +944,7 @@ stabilization_search(vector<uint>& ret_actions,
         solution_found = true;
         ret_actions = actions;
         if (global_opt.try_all && !!exec_opt.ofilepath) {
-          lace::ofstream prot_out((exec_opt.ofilepath + "." + PcIdx + "." + trial_idx).ccstr());
+          fildesh::ofstream prot_out((exec_opt.ofilepath + "." + PcIdx + "." + trial_idx).ccstr());
           oput_protocon_file(prot_out, sys, actions,
                              exec_opt.use_espresso,
                              exec_opt.argline.ccstr());

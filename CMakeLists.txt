@@ -26,15 +26,13 @@ include(ExternalProject)
 
 
 ExternalProject_Add(fildesh_project
-  URL "https://github.com/fildesh/fildesh/archive/v0.1.5.tar.gz"
-  URL_HASH "SHA256=43be71eccda7254fed9b027db8f750d0ce744bd12375c3e560a584fb83889f90"
+  URL "https://github.com/fildesh/fildesh/archive/v0.1.6.tar.gz"
+  URL_HASH "SHA256=0a176d6744992806e6376062df5a56ee55c2bc666be807a414c5bf10f2eba5d1"
   #GIT_REPOSITORY "https://github.com/fildesh/fildesh.git"
-  #GIT_TAG "1bddffb7c521c54b4d6a49cf6533b2c75b06f1f0"
+  #GIT_TAG "861f4d697e72be20046b6563eddf830a06b26ff3"
   #GIT_TAG "trunk"
   CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>"
   BUILD_BYPRODUCTS
-  "<BINARY_DIR>/compat/libfildesh_compat_lib.a"
-  "<BINARY_DIR>/src/libfildesh.a"
   "<BINARY_DIR>/tool/cembed"
   "<BINARY_DIR>/tool/comparispawn"
   "<BINARY_DIR>/tool/cswitch"
@@ -47,25 +45,25 @@ add_library (fildesh_lib STATIC IMPORTED)
 add_library (fildesh_compat_lib STATIC IMPORTED)
 ExternalProject_Get_Property(fildesh_project INSTALL_DIR)
 set_target_properties(fildesh PROPERTIES IMPORTED_LOCATION "${INSTALL_DIR}/bin/fildesh")
+set_target_properties(fildesh_lib PROPERTIES IMPORTED_LOCATION "${INSTALL_DIR}/lib/fildesh/libfildesh.a")
+set_target_properties(fildesh_compat_lib PROPERTIES IMPORTED_LOCATION "${INSTALL_DIR}/lib/fildesh/libfildeshcompat.a")
+include_directories("${INSTALL_DIR}/include")
+
 ExternalProject_Get_Property(fildesh_project BINARY_DIR)
 set_target_properties(cembed PROPERTIES IMPORTED_LOCATION "${BINARY_DIR}/tool/cembed")
 set_target_properties(comparispawn PROPERTIES IMPORTED_LOCATION "${BINARY_DIR}/tool/comparispawn")
 set_target_properties(cswitch PROPERTIES IMPORTED_LOCATION "${BINARY_DIR}/tool/cswitch")
-set_target_properties(fildesh_lib PROPERTIES IMPORTED_LOCATION "${BINARY_DIR}/src/libfildesh.a")
-set_target_properties(fildesh_compat_lib PROPERTIES IMPORTED_LOCATION "${BINARY_DIR}/compat/libfildesh_compat_lib.a")
 add_dependencies (fildesh fildesh_project)
 add_dependencies (fildesh_lib fildesh_project)
 add_dependencies (fildesh_compat_lib fildesh_project)
 add_dependencies (cembed fildesh_project)
 add_dependencies (comparispawn fildesh_project)
 add_dependencies (cswitch fildesh_project)
-ExternalProject_Get_Property(fildesh_project SOURCE_DIR)
-set (LaceIncludeDir "${SOURCE_DIR}/include")
 
 
 ExternalProject_Add(mdd_glu_project
   GIT_REPOSITORY "https://github.com/grencez/mdd-glu.git"
-  GIT_TAG "2d00c406296ecc505d4aaa2cb4628fc5c441e011"
+  GIT_TAG "b0068976e7a6b4d2c18178d37c4038f8c0900bce"
   CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>"
   )
 add_library (mdd_cu_lib STATIC IMPORTED)
