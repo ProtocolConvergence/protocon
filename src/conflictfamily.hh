@@ -19,6 +19,7 @@ public:
   Set<uint> impossible_set;
 
   ConflictFamily operator-(const ConflictFamily& fam) const;
+  bool operator==(const ConflictFamily& fam) const;
 
   ConflictFamily()
     : record_new_conflict_sets(false)

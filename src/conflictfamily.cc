@@ -19,6 +19,14 @@ ConflictFamily::operator-(const ConflictFamily& fam) const
 }
 
   bool
+ConflictFamily::operator==(const ConflictFamily& fam) const
+{
+  return (
+      this->conflict_sets == fam.conflict_sets &&
+      this->impossible_set == fam.impossible_set);
+}
+
+  bool
 ConflictFamily::conflict_ck(const FlatSet<uint>& test_set) const
 {
   //if (conflict_sets.elem_ck(test_set))

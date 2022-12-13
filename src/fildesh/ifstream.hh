@@ -2,6 +2,7 @@
 #define FILDESH_IFSTREAM_HH_
 #include <fildesh/fildesh.h>
 
+#include <cstring>
 #include <istream>
 #include <memory>
 #include <mutex>
@@ -40,13 +41,24 @@ public:
 private:
   std::streamsize xsgetn(char* buf, std::streamsize size) override;
 
-  int underflow() override {
+  std::streambuf::int_type uflow() override {
     char buf[1];
     std::streamsize n = xsgetn(buf, 1);
     if (n == 0) {
       return std::streambuf::traits_type::eof();
     }
     return buf[0];
+  }
+
+  std::streambuf::int_type underflow() override {
+    if (in_->off >= in_->size) {
+      maybe_flush_FildeshX(in_.get());
+      read_FildeshX(in_.get());
+    }
+    if (in_->off < in_->size) {
+      return in_->at[in_->off];
+    }
+    return std::streambuf::traits_type::eof();
   }
 
 private:

@@ -1,12 +1,14 @@
 
 #include "src/conflictfamily.hh"
 #include "src/cx/lgtable.hh"
+#include "src/fildesh/ifstream.hh"
+#include "src/fildesh/ofstream.hh"
 
 #include "src/namespace.hh"
 
 static
   void
-TestConflictFamily()
+TestConflictFamily(const std::string& filename)
 {
   ConflictFamily conflicts;
   LgTable< Set<uint> > delsets;
@@ -29,34 +31,49 @@ TestConflictFamily()
   bool good =
     conflicts.conflict_membs(&membs, FlatSet<uint>(action_set),
                              FlatSet<uint>(candidate_set));
-  Claim( good );
-  Claim( membs.elem_ck(5) );
-  Claim( membs.elem_ck(0) );
-  Claim( !membs.elem_ck(7) );
-  Claim( !membs.elem_ck(14) );
-  Claim( !membs.elem_ck(15) );
-  Claim( !membs.elem_ck(17) );
+  assert(good);
+  assert(membs.elem_ck(5));
+  assert(membs.elem_ck(0));
+  assert(!membs.elem_ck(7));
+  assert(!membs.elem_ck(14));
+  assert(!membs.elem_ck(15));
+  assert(!membs.elem_ck(17));
 
   candidate_set -= membs;
   membs.clear();
   good =
     conflicts.conflict_membs(&membs, FlatSet<uint>(action_set),
                              FlatSet<uint>(candidate_set));
-  Claim( good );
-  Claim( membs.empty() );
+  assert(good);
+  assert(membs.empty());
 
   conflicts.add_conflict( Set<uint>() << 1 << 3 << 16 );
   good =
     conflicts.conflict_membs(&membs, FlatSet<uint>(action_set),
                              FlatSet<uint>(candidate_set));
-  Claim( !good );
+  assert(!good);
+
+  {
+    fildesh::ofstream out(filename);
+    out << conflicts;
+  }
+  ConflictFamily result;
+  {
+    fildesh::ifstream in(filename);
+    in >> result;
+  }
+  assert(result == conflicts);
 }
 
 END_NAMESPACE
 
 int main() {
   using namespace PROTOCON_NAMESPACE;
-  TestConflictFamily();
+  const char* temporary_directory = getenv("TEST_TMPDIR");
+  assert(temporary_directory);
+  std::string filename = temporary_directory;
+  filename += "/conflictfamily_test_io.txt";
+  TestConflictFamily(filename);
   return 0;
 }
 

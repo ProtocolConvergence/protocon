@@ -6,7 +6,9 @@ add_executable(src_conflictfamily_test
   "conflictfamily_test.cc"
   )
 target_link_libraries(src_conflictfamily_test protocon_lib)
-add_test(NAME src_conflictfamily_test COMMAND src_conflictfamily_test)
+add_test(NAME src_conflictfamily_test COMMAND
+  "${CMAKE_COMMAND}" -E env "TEST_TMPDIR=${CMAKE_CURRENT_BINARY_DIR}" "$<TARGET_FILE:src_conflictfamily_test>")
+
 
 add_executable(src_pcxn_test
   "pcxn_test.cc"
