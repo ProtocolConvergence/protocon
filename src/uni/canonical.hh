@@ -2,9 +2,9 @@
 #define CANONICAL_HH_
 
 #include "uniact.hh"
-#include "cx/table.hh"
+#include "src/cx/table.hh"
 
-#include "../namespace.hh"
+#include "src/namespace.hh"
 
 bool
 minimal_unique_ck (const uint* a, uint n);

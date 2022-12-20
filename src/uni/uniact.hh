@@ -1,7 +1,7 @@
 #ifndef UniAct_HH_
 #define UniAct_HH_
 
-#include "cx/tuple.hh"
+#include "src/cx/tuple.hh"
 #include <stdlib.h>
 
 typedef byte PcState;

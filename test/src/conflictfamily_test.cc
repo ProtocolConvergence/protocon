@@ -1,8 +1,8 @@
 
 #include "src/conflictfamily.hh"
 #include "src/cx/lgtable.hh"
-#include "src/fildesh/ifstream.hh"
-#include "src/fildesh/ofstream.hh"
+#include <fildesh/ifstream.hh>
+#include <fildesh/ofstream.hh>
 
 #include "src/namespace.hh"
 

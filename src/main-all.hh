@@ -8,7 +8,7 @@ extern "C" {
 #endif
 }
 
-#include "fildesh/ofstream.hh"
+#include <fildesh/ofstream.hh>
 #include <iomanip>
 #include <ostream>
 #include <sstream>

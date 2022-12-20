@@ -1,6 +1,6 @@
 
 extern "C" {
-#include "cx/syscx.h"
+#include "src/cx/syscx.h"
 }
 
 #include "adjlist.hh"
@@ -9,16 +9,16 @@ extern "C" {
 #include "uniact.hh"
 #include "unifile.hh"
 
-#include "../pfmla.hh"
+#include "src/pfmla.hh"
 
-#include "cx/bittable.hh"
-#include "cx/table.hh"
+#include "src/cx/bittable.hh"
+#include "src/cx/table.hh"
 
 #include <algorithm>
 
-#include "fildesh/ifstream.hh"
-#include "fildesh/ofstream.hh"
-#include "../namespace.hh"
+#include <fildesh/ifstream.hh>
+#include <fildesh/ofstream.hh>
+#include "src/namespace.hh"
 
 struct SearchOpt
 {

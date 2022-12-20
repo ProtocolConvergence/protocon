@@ -26,10 +26,7 @@ cc_binary(
     ],
     deps = [
         "//src/cx:cx_lib",
-        "//src/fildesh:fildesh_cc_lib",
-    ],
-    copts = [
-        "-Iexternal/fildesh/src",
+        "@fildesh//:fildesh_cc_lib",
     ],
 )
 
@@ -45,9 +42,6 @@ cc_library(
         "@mdd-glu//:mdd_glu_cudd_lib",
         "//src/cx:cx_lib",
     ],
-    copts = [
-        "-Iexternal/fildesh/src",
-    ],
 )
 
 cc_library(
@@ -60,9 +54,6 @@ cc_library(
     ],
     deps = [
         ":pfmla_glu_lib",
-    ],
-    copts = [
-        "-Iexternal/fildesh/src",
     ],
     visibility = [
         "//src/uni:__pkg__",
@@ -77,9 +68,6 @@ cc_test(
     ],
     deps = [
         ":pfmla_lib",
-    ],
-    copts = [
-        "-Iexternal/fildesh/src",
     ],
 )
 
@@ -100,9 +88,6 @@ cc_library(
     deps = [
         ":pfmla_lib",
     ],
-    copts = [
-        "-Iexternal/fildesh/src",
-    ],
 )
 
 
@@ -120,11 +105,7 @@ cc_library(
     ],
     deps = [
         ":xnsys_lib",
-        "//src/fildesh:fildesh_cc_lib",
-    ],
-    copts = [
-        "-Isrc",
-        "-Iexternal/fildesh/src",
+        "@fildesh//:fildesh_cc_lib",
     ],
     visibility = [
         "//src/uni:__pkg__",
@@ -138,9 +119,6 @@ cc_binary(
         "namespace.hh",
     ],
     deps = [":prot_file_lib"],
-    copts = [
-        "-Iexternal/fildesh/src",
-    ],
 )
 
 cc_library(
@@ -173,9 +151,6 @@ cc_library(
     deps = [
         ":prot_file_lib",
     ],
-    copts = [
-        "-Iexternal/fildesh/src",
-    ],
     # This lets udp-ofile.cc include the generated "udp-impl/act.embed.h" file.
     # Ideally we'd use copts to avoid adding this include path to everything
     # that depends on protocon_lib.
@@ -195,9 +170,6 @@ cc_binary(
     ],
     deps = [
         ":protocon_lib",
-    ],
-    copts = [
-        "-Iexternal/fildesh/src",
     ],
     visibility = ["//visibility:public"],
 )
@@ -220,7 +192,7 @@ cc_library(
     ],
     deps = [
         "//src/cx:cx_lib",
-        "//src/fildesh:fildesh_cc_lib",
+        "@fildesh//:fildesh_cc_lib",
     ],
     testonly = 1,
 )
@@ -240,8 +212,5 @@ cc_test(
         "//examplesoln:ColorUniRing.prot",
         "//examplespec:LeaderRingHuang.prot",
         "//examplespec:SumNotTwo.prot",
-    ],
-    copts = [
-        "-Iexternal/fildesh/src",
     ],
 )

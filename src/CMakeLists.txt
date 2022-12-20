@@ -5,7 +5,6 @@ find_package(OpenMP)
 
 add_definitions(-DPROTOCON_NAMESPACE=protocon)
 
-add_subdirectory(fildesh)
 add_subdirectory(cx)
 add_subdirectory(gui)
 add_subdirectory(udp-impl)
@@ -16,7 +15,7 @@ add_subdirectory(satsyn)
 add_executable(biring
   "biring.cc"
   )
-target_link_libraries(biring fildesh_cc_lib cx_lib)
+target_link_libraries(biring cx_lib)
 
 
 add_library(pfmla_lib STATIC
@@ -71,7 +70,7 @@ add_library(prot_file_lib STATIC
   )
 set_property(TARGET prot_file_lib APPEND PROPERTY INCLUDE_DIRECTORIES
   "${CMAKE_CURRENT_SOURCE_DIR}")
-target_link_libraries(prot_file_lib xnsys_lib fildesh_cc_lib)
+target_link_libraries(prot_file_lib xnsys_lib)
 
 #### Deadlock Checking for Generalized Rings ####
 add_executable(deadfree

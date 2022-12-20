@@ -1,11 +1,11 @@
 #include "livelock.hh"
 
 #include "adjlist.hh"
-#include "cx/bittable.hh"
-#include "cx/table.hh"
-#include "cx/tuple.hh"
+#include "src/cx/bittable.hh"
+#include "src/cx/table.hh"
+#include "src/cx/tuple.hh"
 
-#include "../namespace.hh"
+#include "src/namespace.hh"
   void
 subtract_action_mask(BitTable& mask, const UniAct& mask_act, uint domsz, const BitTable& delegates)
 {

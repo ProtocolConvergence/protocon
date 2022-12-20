@@ -1,20 +1,20 @@
 
 extern "C" {
-#include "cx/syscx.h"
+#include "src/cx/syscx.h"
 }
 
 #include "uniact.hh"
 #include "unifile.hh"
-#include "../pfmla.hh"
+#include "src/pfmla.hh"
 
-#include "cx/bittable.hh"
-#include "cx/fileb.hh"
+#include "src/cx/bittable.hh"
+#include "src/cx/fileb.hh"
 #include <algorithm>
 
 #include "livelock.hh"
 
-#include "fildesh/ofstream.hh"
-#include "../namespace.hh"
+#include <fildesh/ofstream.hh>
+#include "src/namespace.hh"
 
 
 /** Given a list of actions and variables x[j-1] and x[j],

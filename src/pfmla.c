@@ -10,6 +10,7 @@ init1_PFmlaCtx (PFmlaCtx* ctx, const PFmlaVT* vt)
   init_FildeshAT(ctx->vbls);
   ctx->vbl_map = empty_map;
   ctx->alloc = open_FildeshAlloc();
+  ctx->vbl_map.alloc = ctx->alloc;
   InitTable( ctx->vbl_lists );
   ctx->vt = vt;
 }
@@ -826,9 +827,9 @@ add_vbl_PFmlaCtx (PFmlaCtx* ctx, const char* name, uint domsz)
 
   {
     char* key = strdup_FildeshAlloc(ctx->alloc, name);
-    const FildeshKV_id_t id = ensure_FildeshKV(
+    const FildeshKV_id_t id = ensuref_FildeshKV(
         &ctx->vbl_map, key, strlen(key)+1);
-    assign_at_FildeshKV(&ctx->vbl_map, id, &x, sizeof(x));
+    assign_memref_at_FildeshKV(&ctx->vbl_map, id, x);
     x->name = key;
   }
 

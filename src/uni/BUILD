@@ -16,10 +16,7 @@ cc_binary(
     ],
     deps = [
         "//src/cx:cx_lib",
-        "//src/fildesh:fildesh_cc_lib",
-    ],
-    copts = [
-        "-Isrc",
+        "@fildesh//:fildesh_cc_lib",
     ],
 )
 
@@ -38,10 +35,7 @@ cc_binary(
     deps = [
         "//src:pfmla_lib",
         "//src/cx:cx_lib",
-        "//src/fildesh:fildesh_cc_lib",
-    ],
-    copts = [
-        "-Isrc",
+        "@fildesh//:fildesh_cc_lib",
     ],
 )
 
@@ -62,10 +56,7 @@ cc_binary(
     deps = [
         "//src:pfmla_lib",
         "//src/cx:cx_lib",
-        "//src/fildesh:fildesh_cc_lib",
-    ],
-    copts = [
-        "-Isrc",
+        "@fildesh//:fildesh_cc_lib",
     ],
 )
 
@@ -82,9 +73,7 @@ cc_binary(
     deps = [
         "//src:prot_file_lib",
         "//src/cx:cx_lib",
-    ],
-    copts = [
-        "-Isrc",
+        "@fildesh//:fildesh_cc_lib",
     ],
 )
 
@@ -103,8 +92,6 @@ cc_binary(
     deps = [
         "//src:prot_file_lib",
         "//src/cx:cx_lib",
-    ],
-    copts = [
-        "-Isrc",
+        "@fildesh//:fildesh_cc_lib",
     ],
 )

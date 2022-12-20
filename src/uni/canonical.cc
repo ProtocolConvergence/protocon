@@ -1,9 +1,9 @@
 
 #include "canonical.hh"
 
-#include "cx/bittable.hh"
+#include "src/cx/bittable.hh"
 
-#include "../namespace.hh"
+#include "src/namespace.hh"
 
   bool
 minimal_unique_ck (const uint* a, uint n)

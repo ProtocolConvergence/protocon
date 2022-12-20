@@ -1,18 +1,18 @@
 
 extern "C" {
-#include "cx/syscx.h"
+#include "src/cx/syscx.h"
 }
 
 #include "unifile.hh"
 
-#include "fildesh/ifstream.hh"
-#include "fildesh/ofstream.hh"
-#include "cx/bittable.hh"
-#include "cx/fileb.hh"
-#include "cx/map.hh"
-#include "cx/table.hh"
+#include <fildesh/ifstream.hh>
+#include <fildesh/ofstream.hh>
+#include "src/cx/bittable.hh"
+#include "src/cx/fileb.hh"
+#include "src/cx/map.hh"
+#include "src/cx/table.hh"
 
-#include "../namespace.hh"
+#include "src/namespace.hh"
 
   PcState
 uniring_domsz_of(const Table<PcState>& ppgfun)

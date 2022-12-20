@@ -111,6 +111,10 @@ encode_sat(FMem_synsearch* tape)
   TableT(XnSz)* may_rules;
   FildeshKV_id_t kvid;
 
+  lstate_map->alloc = alloc;
+  xnmap->alloc = alloc;
+  pathmap->alloc = alloc;
+
   g = grow1_rules_synsearch(tape);
   may_rules = grow1_may_rules_synsearch(tape);
 
@@ -175,11 +179,9 @@ encode_sat(FMem_synsearch* tape)
 
       xnmap_v = (size_t*)lookup_value_FildeshKV(xnmap, &t, sizeof(t));
       if (!xnmap_v) {
-        XnSz2* xnmap_k = fildesh_allocate(XnSz2, 1, alloc);
         size_t idx = xns.sz;
 
-        memcpy(xnmap_k, &t, sizeof(t));
-        kvid = ensure_FildeshKV(xnmap, xnmap_k, sizeof(*xnmap_k));
+        kvid = ensure_FildeshKV(xnmap, &t, sizeof(t));
         assign_at_FildeshKV(xnmap, kvid, &idx, sizeof(idx));
 
         xn = Grow1Table( xns );
@@ -213,7 +215,7 @@ encode_sat(FMem_synsearch* tape)
       if (!rules) {
         rules = fildesh_allocate(TableT(zuint), 1, alloc);
         InitTable( *rules );
-        assign_at_FildeshKV(lstate_map, kvid, rules, sizeof(*rules));
+        assign_memref_at_FildeshKV(lstate_map, kvid, rules);
       }
       PushTable( *rules, i );
     }
@@ -271,12 +273,12 @@ encode_sat(FMem_synsearch* tape)
     for (uint j = 0; j < states.sz; ++j) {
       if (states.s[i].to.sz > 0 && states.s[j].tx.sz > 0)
       {
-        XnSz2* xn = fildesh_allocate(XnSz2, 1, alloc);
+        XnSz2 xn;
         size_t idx = fmla->nvbls ++;
-        xn->i = i;
-        xn->j = j;
+        xn.i = i;
+        xn.j = j;
 
-        kvid = ensure_FildeshKV(pathmap, xn, sizeof(*xn));
+        kvid = ensure_FildeshKV(pathmap, &xn, sizeof(xn));
         assign_at_FildeshKV(pathmap, kvid, &idx, sizeof(idx));
 
         if (i == j)

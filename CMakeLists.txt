@@ -26,8 +26,8 @@ include(ExternalProject)
 
 
 ExternalProject_Add(fildesh_project
-  URL "https://github.com/fildesh/fildesh/archive/v0.1.6.tar.gz"
-  URL_HASH "SHA256=0a176d6744992806e6376062df5a56ee55c2bc666be807a414c5bf10f2eba5d1"
+  URL "https://github.com/fildesh/fildesh/archive/v0.1.7.tar.gz"
+  URL_HASH "SHA256=e510b7a32043ade472c0d27a3ccf7613abda31fe1319245aec65dceaef3fa154"
   #GIT_REPOSITORY "https://github.com/fildesh/fildesh.git"
   #GIT_TAG "861f4d697e72be20046b6563eddf830a06b26ff3"
   #GIT_TAG "trunk"
@@ -91,6 +91,8 @@ add_dependencies (peg_leg peg_project)
 
 
 enable_testing ()
+
+include_directories("${CMAKE_SOURCE_DIR}")
 
 #### Build ####
 add_subdirectory(src)

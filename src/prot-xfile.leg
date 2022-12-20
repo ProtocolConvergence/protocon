@@ -1,11 +1,11 @@
 
 %{
-#include "cx/synhax.hh"
+#include "src/cx/synhax.hh"
 
 extern "C" {
-#include "cx/fileb.h"
+#include "src/cx/fileb.h"
 }
-#include "prot-xfile.hh"
+#include "src/prot-xfile.hh"
 
 #define YYSTYPE FinMeta
 #define YY_CTX_LOCAL

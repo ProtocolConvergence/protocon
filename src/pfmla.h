@@ -304,9 +304,8 @@ static inline
   PFmlaVbl*
 vbl_lookup_PFmlaCtx (PFmlaCtx* ctx, const char* s)
 {
-  PFmlaVbl** x = (PFmlaVbl**) lookup_value_FildeshKV(
+  return (PFmlaVbl*) lookup_value_FildeshKV(
       &ctx->vbl_map, s, strlen(s)+1);
-  return x ? *x : NULL;
 }
 
 #endif

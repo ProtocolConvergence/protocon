@@ -2,7 +2,8 @@
 #ifndef PartialSynthesis_HH_
 #define PartialSynthesis_HH_
 
-#include "fildesh/ofstream.hh"
+#include <fildesh/ofstream.hh>
+
 #include "cx/set.hh"
 #include "cx/urandom.hh"
 #include "pfmla.hh"
@@ -15,8 +16,6 @@
 #include "stabilization.hh"
 
 #include "namespace.hh"
-
-extern fildesh::ofstream dev_null_ostream;
 
 class SynthesisCtx;
 class PartialSynthesis;
@@ -68,7 +67,7 @@ public:
   SearchMethod search_method;
   NicePolicy nicePolicy;
   bool pick_back_reach;
-  std::ostream* log;
+  /* fildesh::ofstream log; */
   bool verify_found;
 
   bool randomize_pick;
@@ -99,7 +98,7 @@ public:
     , search_method( BacktrackSearch )
     , nicePolicy( NilNice )
     , pick_back_reach( false )
-    , log( &std::cerr )
+    /* , log("/dev/stderr") */
     , verify_found( true )
     , randomize_pick( true )
     , randomize_depth( 0 )
@@ -150,11 +149,14 @@ public:
 
   Table<PartialSynthesis> instances;  // Other instances of the parameterized system.
 
+private:
+  void initialize_log_as_dev_null();
+
 public:
   explicit PartialSynthesis(SynthesisCtx* _ctx, uint idx=0)
     : ctx( _ctx )
     , sys_idx( idx )
-    , log( &dev_null_ostream )
+    , log(NULL)
     , bt_level( 0 )
     , failed_bt_level( 0 )
     , directly_add_conflicts( false )
@@ -164,7 +166,9 @@ public:
     , hi_xn( false )
     , hi_invariant( false )
     , lo_nlayers( 1 )
-  {}
+  {
+    this->initialize_log_as_dev_null();
+  }
 
   /// Deadlocks ranked by how many candidate actions can resolve them.
   vector<DeadlockConstraint> mcv_deadlocks;
@@ -241,7 +245,8 @@ class SynthesisCtx {
 public:
   PartialSynthesis base_partial;
   Table<const Xn::Sys*> systems;
-  std::ostream* log;
+  mutable fildesh::ofstream log;
+  mutable fildesh::ofstream dev_null_ostream;
   PFmlaCtx csp_pfmla_ctx;
   P::Fmla csp_base_pfmla;
   URandom urandom;
@@ -254,7 +259,8 @@ public:
 
   SynthesisCtx()
     : base_partial( this )
-    , log( &dev_null_ostream )
+    , log("/dev/null")
+    , dev_null_ostream("/dev/null")
     , csp_base_pfmla(true)
     , optimal_nlayers_sum(0)
     , done_ck_fn(0)
@@ -262,7 +268,8 @@ public:
   {}
   SynthesisCtx(uint pcidx, uint npcs)
     : base_partial( this )
-    , log( &dev_null_ostream )
+    , log("/dev/null")
+    , dev_null_ostream("/dev/null")
     , csp_base_pfmla(true)
     , urandom(pcidx, npcs)
     , optimal_nlayers_sum(0)

@@ -22,9 +22,9 @@
  * It will eventually appear in a journal version.
  **/
 extern "C" {
-#include "cx/syscx.h"
+#include "src/cx/syscx.h"
 }
-#include "cx/synhax.hh"
+#include "src/cx/synhax.hh"
 
 #include "uniact.hh"
 #include "unifile.hh"
@@ -32,13 +32,13 @@ extern "C" {
 #include <iomanip>
 #include <sstream>
 
-#include "cx/alphatab.hh"
-#include "cx/map.hh"
-#include "cx/set.hh"
-#include "cx/table.hh"
+#include "src/cx/alphatab.hh"
+#include "src/cx/map.hh"
+#include "src/cx/set.hh"
+#include "src/cx/table.hh"
 
 
-#include "../namespace.hh"
+#include "src/namespace.hh"
 
 // Tile set originally from:
 //   Grunbaum and Shephard's 1986 book "Tilings and Patterns".

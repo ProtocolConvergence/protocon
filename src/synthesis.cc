@@ -1,7 +1,7 @@
 
 #include "synthesis.hh"
 
-#include "fildesh/ofstream.hh"
+#include <fildesh/ofstream.hh>
 
 #include "cx/fileb.hh"
 #include "cx/tuple.hh"
@@ -11,7 +11,6 @@
 
 #include "namespace.hh"
 
-fildesh::ofstream dev_null_ostream("/dev/null");
 
 /**
  * Check if two actions can coexist in a
@@ -550,7 +549,7 @@ pick_action_candidates(Set<uint>& ret_candidates,
     for (it = candidates.begin(); it != candidates.end(); ++it) {
       const uint actId = *it;
       PartialSynthesis next( inst );
-      next.log = &dev_null_ostream;
+      next.log = &inst.ctx->dev_null_ostream;
       uint n = inst.candidates.size();
       if (next.revise_actions(Set<uint>(actId), Set<uint>()))
       {
@@ -610,7 +609,7 @@ pick_action_candidates(Set<uint>& ret_candidates,
     for (it = minOverlapSet.begin(); it != minOverlapSet.end(); ++it) {
       const uint actId = *it;
       PartialSynthesis next( inst );
-      next.log = &dev_null_ostream;
+      next.log = &inst.ctx->dev_null_ostream;
       uint n = 0;
       if (next.revise_actions(Set<uint>(actId), Set<uint>()))
         n = next.candidates.size();
@@ -830,6 +829,10 @@ count_actions_in_cycle (const P::Fmla& scc, X::Fmla edg,
   return n;
 }
 
+void PartialSynthesis::initialize_log_as_dev_null() {
+  this->log = &this->ctx->dev_null_ostream;
+}
+
   const StabilizationOpt&
 PartialSynthesis::stabilization_opt() const
 {
@@ -868,7 +871,7 @@ PartialSynthesis::add_small_conflict_set(const Table<uint>& delpicks)
   for (uint i = 0; i < delpicks.sz(); ++i) {
     PartialSynthesis partial( this->ctx->base_partial );
     for (uint j = 0; j < partial.sz(); ++j) {
-      partial[j].log = &dev_null_ostream;
+      partial[j].log = &this->ctx->dev_null_ostream;
       partial[j].directly_add_conflicts = true;
       if (partial[j].no_conflict) {
         partial[j].no_partial = true;
@@ -1268,7 +1271,7 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
     if (!!this->ctx->opt.livelock_ofilepath && &sys == this->ctx->systems.top()) {
       bool big_livelock = true;
       for (uint i = 0; i < this->ctx->systems.sz()-1; ++i) {
-        if (!stabilization_ck(dev_null_ostream, *this->ctx->systems[i],
+        if (!stabilization_ck(this->ctx->dev_null_ostream, *this->ctx->systems[i],
                               this->ctx->stabilization_opts[i], actions))
         {
           *this->log << "still issues in system " << i << std::endl;
@@ -1490,7 +1493,7 @@ PartialSynthesis::revise_actions(const Set<uint>& adds, const Set<uint>& dels,
       partial.lo_xfmlae = base_partial.lo_xfmlae;
       partial.hi_xfmlae = base_partial.hi_xfmlae;
       partial.hi_invariant = base_partial.hi_invariant;
-      partial.log = &dev_null_ostream;
+      partial.log = &this->ctx->dev_null_ostream;
     }
 
     const Set<uint> newadds(newpicks);
@@ -1598,7 +1601,6 @@ SynthesisCtx::init(const AddConvergenceOpt& opt)
 {
   SynthesisCtx& synctx = *this;
   synctx.opt = opt;
-  synctx.log = opt.log;
   urandom.use_system_urandom(opt.system_urandom);
 
 #if 0
@@ -1641,7 +1643,7 @@ SynthesisCtx::add(const Xn::Sys& sys, const StabilizationOpt& stabilization_opt)
   synctx.stabilization_opts.push(stabilization_opt);
 
   PartialSynthesis& partial = synctx.base_partial[synctx.base_partial.sz()-1];
-  partial.log = synctx.opt.log;
+  partial.log = &synctx.log;
 
   partial.csp_pfmla = synctx.csp_base_pfmla;
 

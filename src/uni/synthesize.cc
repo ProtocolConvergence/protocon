@@ -1,21 +1,21 @@
 
 extern "C" {
-#include "cx/syscx.h"
+#include "src/cx/syscx.h"
 }
 
 #include "uniact.hh"
 #include "unifile.hh"
-#include "../prot-ofile.hh"
-#include "../prot-xfile.hh"
-#include "../xnsys.hh"
+#include "src/prot-ofile.hh"
+#include "src/prot-xfile.hh"
+#include "src/xnsys.hh"
 
-#include "cx/fileb.hh"
-#include "cx/tuple.hh"
+#include "src/cx/fileb.hh"
+#include "src/cx/tuple.hh"
 #include <vector>
 #include <queue>
 #include <stdio.h>
 
-#include "../namespace.hh"
+#include "src/namespace.hh"
 
 using std::queue;
 using std::vector;

@@ -42,12 +42,12 @@ ctx_of_Sesp (const Sesp a)
   SespKind*
 ensure_kind_SespCtx (SespCtx* ctx, const SespVT* vt)
 {
-  FildeshKV_id_t id = ensure_FildeshKV(&ctx->kindmap, vt, sizeof(*vt));
+  FildeshKV_id_t id = ensuref_FildeshKV(&ctx->kindmap, vt, sizeof(*vt));
   SespKind* kind = (SespKind*) value_at_FildeshKV(&ctx->kindmap, id);
   if (!kind) {
     kind = make_SespKind(vt);
     kind->ctx = ctx;
-    assign_at_FildeshKV(&ctx->kindmap, id, kind, sizeof(*kind));
+    assign_memref_at_FildeshKV(&ctx->kindmap, id, kind);
   }
   return kind;
 }

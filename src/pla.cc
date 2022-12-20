@@ -4,7 +4,7 @@
 extern "C" {
 #include "cx/ospc.h"
 }
-#include "fildesh/ofstream.hh"
+#include <fildesh/ofstream.hh>
 
 #include "cx/alphatab.hh"
 #include "cx/fileb.hh"

@@ -1,6 +1,6 @@
 
 #include "interactive.hh"
-#include "fildesh/ofstream.hh"
+#include <fildesh/ofstream.hh>
 #include "xnsys.hh"
 #include "cx/urandom.hh"
 #include <algorithm>

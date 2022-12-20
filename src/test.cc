@@ -217,7 +217,6 @@ TestShadowMatchRing()
   AddConvergenceOpt opt;
   opt.randomize_pick = false;
   opt.max_height = 0;
-  opt.log = &ofile;
   bool solution_found = AddStabilization(sys, opt);
   Claim( solution_found );
 }

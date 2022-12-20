@@ -1,17 +1,17 @@
 
 extern "C" {
-#include "cx/syscx.h"
+#include "src/cx/syscx.h"
 }
 
 #include "livelock.hh"
 #include "unifile.hh"
 
-#include "cx/bittable.hh"
-#include "cx/fileb.hh"
-#include "cx/table.hh"
+#include "src/cx/bittable.hh"
+#include "src/cx/fileb.hh"
+#include "src/cx/table.hh"
 
-#include "fildesh/ofstream.hh"
-#include "../namespace.hh"
+#include <fildesh/ofstream.hh>
+#include "src/namespace.hh"
 
 int main(int argc, char** argv)
 {

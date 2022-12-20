@@ -1,14 +1,14 @@
 #ifndef AdjList_HH_
 #define AdjList_HH_
 
-#include "cx/table.hh"
+#include "src/cx/table.hh"
 
 #define DoTwice( stmt ) \
   for (uint DoTwice_Index = 0; \
        DoTwice_Index < 2; \
        DoTwice_Index = DoTwice_Index==0 ? (stmt), 1 : 2)
 
-#include "../namespace.hh"
+#include "src/namespace.hh"
 template <typename T>
 class AdjList {
 private:
