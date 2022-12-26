@@ -1,209 +1,202 @@
 #include "promela.h"
 
-    void
-oput_promela_state_XnSys (OFile* of, const XnSys* sys, XnSz sidx)
+  void
+oput_promela_state_XnSys(FildeshO* out, const XnSys* sys, XnSz sidx)
 {
-    for (uint i = 0; i < sys->vbls.sz; ++i) {
-        XnEVbl x;
-        x.vbl = &sys->vbls.s[i];
-        x.val = sidx / x.vbl->stepsz;
-        sidx = sidx % x.vbl->stepsz;
-        if (i > 0)  oput_cstr_OFile (of, " && ");
-        oput_XnEVbl (of, &x, "==");
-    }
+  for (unsigned i = 0; i < sys->vbls.sz; ++i) {
+    XnEVbl x;
+    x.vbl = &sys->vbls.s[i];
+    x.val = sidx / x.vbl->stepsz;
+    sidx = sidx % x.vbl->stepsz;
+    if (i > 0)  puts_FildeshO(out, " && ");
+    oput_XnEVbl(out, &x, "==");
+  }
 }
 
-    void
-oput_promela_XnRule (OFile* of, const XnRule* g, const XnSys* sys)
+  void
+oput_promela_XnRule(FildeshO* out, const XnRule* g, const XnSys* sys)
 {
-    bool had;
-    XnPc* pc = &sys->pcs.s[g->pc];
-    TableT(uint) t;
-    oput_cstr_OFile (of, "/*P");
-    oput_uint_OFile (of, g->pc);
-    oput_cstr_OFile (of, "*/ ");
+  bool had;
+  XnPc* pc = &sys->pcs.s[g->pc];
+  TableT(uint) t;
+  puts_FildeshO(out, "/*P");
+  print_int_FildeshO(out, (int)g->pc);
+  puts_FildeshO(out, "*/ ");
 
-    t = rvbls_XnPc (pc);
-    had = false;
+  t = rvbls_XnPc (pc);
+  had = false;
 
 #if 1
-    for (uint j = 0; j < t.sz; ++j) {
-        XnEVbl x;
-        x.vbl = &sys->vbls.s[pc->vbls.s[j]];
-        x.val = g->p.s[j];
-        if (had)  oput_cstr_OFile (of, " && ");
-        had = true;
-        oput_XnEVbl (of, &x, "==");
-    }
+  for (unsigned j = 0; j < t.sz; ++j) {
+    XnEVbl x;
+    x.vbl = &sys->vbls.s[pc->vbls.s[j]];
+    x.val = g->p.s[j];
+    if (had)  puts_FildeshO(out, " && ");
+    had = true;
+    oput_XnEVbl(out, &x, "==");
+  }
 
-    oput_cstr_OFile (of, " ->");
+  puts_FildeshO(out, " ->");
 
-    t = wvbls_XnPc (pc);
-    for (uint j = 0; j < t.sz; ++j) {
-        XnEVbl x;
-        oput_char_OFile (of, ' ');
-        x.vbl = &sys->vbls.s[pc->vbls.s[j]];
-        x.val = g->q.s[j];
-        oput_XnEVbl (of, &x, "=");
-        oput_char_OFile (of, ';');
-    }
+  t = wvbls_XnPc (pc);
+  for (unsigned j = 0; j < t.sz; ++j) {
+    XnEVbl x;
+    putc_FildeshO(out, ' ');
+    x.vbl = &sys->vbls.s[pc->vbls.s[j]];
+    x.val = g->q.s[j];
+    oput_XnEVbl(out, &x, "=");
+    putc_FildeshO(out, ';');
+  }
 #else
-    for (uint i = 0; i < sys->vbls.sz; ++i) {
-      for (uint j = 0; j < t.sz; ++j) {
-            if (t.s[j] == i)
-            {
-                XnEVbl x;
-                x.vbl = &sys->vbls.s[i];
-                x.val = g->p.s[j];
-                if (had)  oput_cstr_OFile (of, " && ");
-                had = true;
-                oput_XnEVbl (of, &x, "==");
-            }
-        }
+  for (unsigned i = 0; i < sys->vbls.sz; ++i) {
+    for (unsigned j = 0; j < t.sz; ++j) {
+      if (t.s[j] == i) {
+        XnEVbl x;
+        x.vbl = &sys->vbls.s[i];
+        x.val = g->p.s[j];
+        if (had)  puts_FildeshO(out, " && ");
+        had = true;
+        oput_XnEVbl(out, &x, "==");
+      }
     }
+  }
 
-    oput_cstr_OFile (of, " ->");
+  puts_FildeshO(out, " ->");
 
-    t = wvbls_XnPc (pc);
-    for (uint i = 0; i < sys->vbls.sz; ++i) {
-      for (uint j = 0; j < t.sz; ++j) {
-            if (t.s[j] == i)
-            {
-                XnEVbl x;
-                oput_char_OFile (of, ' ');
-                x.vbl = &sys->vbls.s[i];
-                x.val = g->q.s[j];
-                oput_XnEVbl (of, &x, "=");
-                oput_char_OFile (of, ';');
-            }
-        }
+  t = wvbls_XnPc (pc);
+  for (unsigned i = 0; i < sys->vbls.sz; ++i) {
+    for (unsigned j = 0; j < t.sz; ++j) {
+      if (t.s[j] == i) {
+        XnEVbl x;
+        putc_FildeshO(out, ' ');
+        x.vbl = &sys->vbls.s[i];
+        x.val = g->q.s[j];
+        oput_XnEVbl(out, &x, "=");
+        putc_FildeshO(out, ';');
+      }
     }
+  }
 #endif
 }
-    void
-oput_promela_select (OFile* of, const XnVbl* vbl)
+  void
+oput_promela_select(FildeshO* out, const XnVbl* vbl)
 {
-    XnEVbl x;
-    x.vbl = vbl;
-    oput_cstr_OFile (of, "if\n");
-    for (uint i = 0; i < vbl->domsz; ++i) {
-        x.val = i;
-        oput_cstr_OFile (of, ":: true -> ");
-        oput_XnEVbl (of, &x, "=");
-        oput_cstr_OFile (of, ";\n");
-    }
+  XnEVbl x;
+  x.vbl = vbl;
+  puts_FildeshO(out, "if\n");
+  for (unsigned i = 0; i < vbl->domsz; ++i) {
+    x.val = i;
+    puts_FildeshO(out, ":: true -> ");
+    oput_XnEVbl(out, &x, "=");
+    puts_FildeshO(out, ";\n");
+  }
 
-    oput_cstr_OFile (of, "fi;\n");
+  puts_FildeshO(out, "fi;\n");
 }
 
-    void
-oput_promela_pc (OFile* of, const XnPc* pc, const XnSys* sys,
-                 const TableT(XnRule) rules)
+  void
+oput_promela_pc(FildeshO* out, const XnPc* pc, const XnSys* sys,
+                const TableT(XnRule) rules)
 {
-    const uint pcidx = IdxEltTable (sys->pcs, pc);
-    oput_cstr_OFile (of, "proctype P");
-    oput_uint_OFile (of, pcidx);
-    oput_cstr_OFile (of, " ()\n{\n");
+  const unsigned pcidx = IdxEltTable (sys->pcs, pc);
+  puts_FildeshO(out, "proctype P");
+  print_int_FildeshO(out, (int)pcidx);
+  puts_FildeshO(out, " ()\n{\n");
 
-    {
-        bool found = false;
-        for (XnSz i = 0; i < rules.sz; ++i)
-            if (rules.s[i].pc == pcidx)
-                found = true;
-        if (!found)
-        {
-            oput_cstr_OFile (of, "skip;\n}\n\n");
-            return;
-        }
+  {
+    bool found = false;
+    for (XnSz i = 0; i < rules.sz; ++i)
+      if (rules.s[i].pc == pcidx)
+        found = true;
+    if (!found) {
+      puts_FildeshO(out, "skip;\n}\n\n");
+      return;
     }
+  }
 
-    oput_cstr_OFile (of, "end_");
-    oput_uint_OFile (of, pcidx);
-    oput_cstr_OFile (of, ":\n");
-    oput_cstr_OFile (of, "do\n");
-    for (uint i = 0; i < rules.sz; ++i) {
-        const XnRule* g = &rules.s[i];
-        if (g->pc == pcidx)
-        {
-            oput_cstr_OFile (of, ":: atomic {");
-            oput_promela_XnRule (of, g, sys);
-            oput_cstr_OFile (of, "};\n");
-        }
+  puts_FildeshO(out, "end_");
+  print_int_FildeshO(out, (int)pcidx);
+  puts_FildeshO(out, ":\n");
+  puts_FildeshO(out, "do\n");
+  for (unsigned i = 0; i < rules.sz; ++i) {
+    const XnRule* g = &rules.s[i];
+    if (g->pc == pcidx) {
+      puts_FildeshO(out, ":: atomic {");
+      oput_promela_XnRule(out, g, sys);
+      puts_FildeshO(out, "};\n");
     }
-    oput_cstr_OFile (of, "od;\n");
-    oput_cstr_OFile (of, "}\n\n");
+  }
+  puts_FildeshO(out, "od;\n");
+  puts_FildeshO(out, "}\n\n");
 }
 
-    void
-oput_promela (OFile* of, const XnSys* sys, const TableT(XnRule) rules)
+  void
+oput_promela(FildeshO* out, const XnSys* sys, const TableT(XnRule) rules)
 {
-#define oputl(s)  oput_cstr_OFile(of, s); oput_char_OFile(of, '\n')
-    oputl( "/*** Use acceptance cycle check with the LTL claim for a full verification!" );
-    oputl( " *** Assertions, end states, and progress conditions are present to help debugging." );
-    oputl( " *** A safety check and liveness check (BOTH WITH LTL CLAIM DISABLED) should be" );
-    oputl( " *** equivalent to verifying the LTL claim holds via the acceptance cycle check." );
-    oputl( " ***/" );
-    oputl( "bool Legit = false;" );
-    for (uint i = 0; i < sys->vbls.sz; ++i) {
-        const XnVbl* x = &sys->vbls.s[i];
-        if (x->domsz <= 2)
-            oput_cstr_OFile (of, "bit");
-        else
-            oput_cstr_OFile (of, "byte");
+#define oputl(s)  puts_FildeshO(out, s); putc_FildeshO(out, '\n')
+  oputl( "/*** Use acceptance cycle check with the LTL claim for a full verification!" );
+  oputl( " *** Assertions, end states, and progress conditions are present to help debugging." );
+  oputl( " *** A safety check and liveness check (BOTH WITH LTL CLAIM DISABLED) should be" );
+  oputl( " *** equivalent to verifying the LTL claim holds via the acceptance cycle check." );
+  oputl( " ***/" );
+  oputl( "bool Legit = false;" );
+  for (unsigned i = 0; i < sys->vbls.sz; ++i) {
+    const XnVbl* x = &sys->vbls.s[i];
+    if (x->domsz <= 2)
+      puts_FildeshO(out, "bit");
+    else
+      puts_FildeshO(out, "byte");
 
-        oput_char_OFile (of, ' ');
-        oput_AlphaTab (of, &x->name );
-        oput_cstr_OFile (of, ";\n");
+    putc_FildeshO(out, ' ');
+    puts_FildeshO(out, ccstr_of_AlphaTab(&x->name));
+    puts_FildeshO(out, ";\n");
+  }
+
+  for (unsigned i = 0; i < sys->pcs.sz; ++i)
+    oput_promela_pc(out, &sys->pcs.s[i], sys, rules);
+
+  oputl( "init {" );
+  for (unsigned i = 0; i < sys->vbls.sz; ++i) {
+    const XnVbl* x = &sys->vbls.s[i];
+    oput_promela_select(out, x);
+  }
+
+  for (unsigned i = 0; i < sys->pcs.sz; ++i) {
+    puts_FildeshO(out, "run P");
+    print_int_FildeshO(out, (int)i);
+    puts_FildeshO(out, " ();\n");
+  }
+
+  oputl( "if" );
+  for (unsigned i = 0; i < sys->legit.sz; ++i) {
+    if (test_BitTable (sys->legit, i)) {
+      puts_FildeshO(out, ":: ");
+      oput_promela_state_XnSys(out, sys, i);
+      puts_FildeshO(out, " -> skip;\n");
     }
+  }
+  oputl( "fi;" );
 
-    for (uint i = 0; i < sys->pcs.sz; ++i)
-        oput_promela_pc (of, &sys->pcs.s[i], sys, rules);
+  oputl( "Legit = true;" );
+  oputl( "progress: skip;" );
 
-    oputl( "init {" );
-    for (uint i = 0; i < sys->vbls.sz; ++i) {
-        const XnVbl* x = &sys->vbls.s[i];
-        oput_promela_select (of, x);
+  oputl( "end:" );
+  oputl( "if" );
+  for (size_t i = 0; i < sys->legit.sz; ++i) {
+    if (!test_BitTable (sys->legit, i)) {
+      puts_FildeshO(out, ":: ");
+      oput_promela_state_XnSys(out, sys, i);
+      puts_FildeshO(out, " -> skip;\n");
     }
+  }
+  oputl( "fi;" );
+  oputl( "Legit = false;" );
+  oputl( "assert(0);" );
+  oputl( "}" );
 
-    for (uint i = 0; i < sys->pcs.sz; ++i) {
-        oput_cstr_OFile (of, "run P");
-        oput_uint_OFile (of, i);
-        oput_cstr_OFile (of, " ();\n");
-    }
-
-    oputl( "if" );
-    for (uint i = 0; i < sys->legit.sz; ++i) {
-        if (test_BitTable (sys->legit, i))
-        {
-            oput_cstr_OFile (of, ":: ");
-            oput_promela_state_XnSys (of, sys, i);
-            oput_cstr_OFile (of, " -> skip;\n");
-        }
-    }
-    oputl( "fi;" );
-
-    oputl( "Legit = true;" );
-    oputl( "progress: skip;" );
-
-    oputl( "end:" );
-    oputl( "if" );
-    for (zuint i = 0; i < sys->legit.sz; ++i)
-    {
-        if (!test_BitTable (sys->legit, i))
-        {
-            oput_cstr_OFile (of, ":: ");
-            oput_promela_state_XnSys (of, sys, i);
-            oput_cstr_OFile (of, " -> skip;\n");
-        }
-    }
-    oputl( "fi;" );
-    oputl( "Legit = false;" );
-    oputl( "assert(0);" );
-    oputl( "}" );
-
-    oputl( "ltl {" );
-    oputl( "<> Legit && [] (Legit -> [] Legit)" );
-    oputl( "}" );
+  oputl( "ltl {" );
+  oputl( "<> Legit && [] (Legit -> [] Legit)" );
+  oputl( "}" );
 #undef oputl
 }
 

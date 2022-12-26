@@ -21,7 +21,7 @@
 
 
 /** Use Z3 instead of MiniSat.**/
-static const bool SatSolve_Z3 = false;
+static bool SatSolve_Z3 = false;
 
 
 
@@ -96,7 +96,7 @@ main (int argc, char** argv)
         /* TokenRingDijkstraInst */
         /* TokenRingDijkstra4StateInst */
         ;
-    const bool use_synsearch_sat = false;
+    bool use_synsearch_sat = false;
     uint n_ring_pcs = 6;  /* For rings (excluding 3-SAT rings).*/
     const uint domsz = 3;
     const bool manual_soln = true;
@@ -128,6 +128,15 @@ main (int argc, char** argv)
     {
         if (eql_cstr (argv[argi], "-h")) {
            failout_sysCx ("There is no help for you.");
+        }
+        else if (eql_cstr(argv[argi], "-solver") && eql_cstr(argv[argi+1], "z3")) {
+          argi += 1;
+          use_synsearch_sat = true;
+          SatSolve_Z3 = true;
+        }
+        else if (eql_cstr(argv[argi], "-solver") && eql_cstr(argv[argi+1], "minisat")) {
+          argi += 1;
+          use_synsearch_sat = true;
         }
         else if (eql_cstr (argv[argi], "-inst")) {
             bool need_npcs = false;
@@ -272,12 +281,9 @@ main (int argc, char** argv)
         if (tape.stabilizing || (manual_soln && tape.rules.sz > 0))
         {
             // Promela.
-            OFileB pmlf[] = {DEFAULT_OFileB};
-
-            open_FileB (&pmlf->fb, 0, "model.pml");
-            oput_promela (&pmlf->of, sys, tape.rules);
-            lose_OFileB (pmlf);
-
+            FildeshO* out = open_FildeshOF("model.pml");
+            oput_promela(out, sys, tape.rules);
+            close_FildeshO(out);
 
             /* This is just a test, but should be used to
              * minimize the representation for transition rules.

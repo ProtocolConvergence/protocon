@@ -381,13 +381,13 @@ statevs_of_XnSys (TableT(XnDomSz)* t, const XnSys* sys, XnSz sidx)
 }
 
 
-    void
-oput_XnEVbl (OFile* of, const XnEVbl* ev, const char* delim)
+  void
+oput_XnEVbl(FildeshO* out, const XnEVbl* ev, const char* delim)
 {
-    oput_AlphaTab (of, &ev->vbl->name);
-    if (!delim)  delim = "=";
-    oput_cstr_OFile (of, delim);
-    oput_uint_OFile (of, ev->val);
+  puts_FildeshO(out, ccstr_of_AlphaTab(&ev->vbl->name));
+  if (!delim)  delim = "=";
+  puts_FildeshO(out, delim);
+  print_int_FildeshO(out, (int)ev->val);
 }
 
     void

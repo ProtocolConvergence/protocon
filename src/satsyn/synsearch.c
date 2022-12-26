@@ -547,10 +547,11 @@ synsearch_quicktrim_mayrules(FMem_synsearch* tape, XnSz nadded)
     }
     else if (false)
     {
-      OFile* of = stderr_OFile();
-      oput_cstr_OFile(of, "Pruned: ");
-      oput_promela_XnRule(of, g0, sys);
-      oput_char_OFile(of, '\n');
+      FildeshO* out = open_FildeshOF("/dev/stderr");
+      puts_FildeshO(out, "Pruned: ");
+      oput_promela_XnRule(out, g0, sys);
+      putc_FildeshO(out, '\n');
+      close_FildeshO(out);
     }
   }
   if (DBog_QuickTrim)
@@ -641,10 +642,11 @@ synsearch_trim(FMem_synsearch* tape)
       }
       else if (false)
       {
-        OFile* of = stderr_OFile();
-        oput_cstr_OFile(of, "Pruned: ");
-        oput_promela_XnRule(of, g, sys);
-        oput_char_OFile(of, '\n');
+        FildeshO* out = open_FildeshOF("/dev/stderr");
+        puts_FildeshO(out, "Pruned: ");
+        oput_promela_XnRule(out, g, sys);
+        putc_FildeshO(out, '\n');
+        close_FildeshO(out);
       }
 
       back1_Xn(&tape->xns, &tape->xn_stk);
@@ -903,15 +905,15 @@ synsearch(FMem_synsearch* tape)
       if (DBog_SearchStep
           || tape->may_rules.sz-1 < 40)
       {
-        OFile* of = stderr_OFile();
-        oput_cstr_OFile(of, " -- ");
-        oput_uint_OFile(of, tape->may_rules.sz - 1);
-        oput_cstr_OFile(of, " -- ");
-        oput_uint_OFile(of, may_rules->sz);
-        oput_cstr_OFile(of, " -- ");
-        oput_promela_XnRule(of, g, sys);
-        oput_char_OFile(of, '\n');
-        flush_OFile(of);
+        FildeshO* out = open_FildeshOF("/dev/stderr");
+        puts_FildeshO(out, " -- ");
+        print_int_FildeshO(out, (int)tape->may_rules.sz - 1);
+        puts_FildeshO(out, " -- ");
+        print_int_FildeshO(out, (int)may_rules->sz);
+        puts_FildeshO(out, " -- ");
+        oput_promela_XnRule(out, g, sys);
+        putc_FildeshO(out, '\n');
+        close_FildeshO(out);
       }
 
       synsearch(tape);

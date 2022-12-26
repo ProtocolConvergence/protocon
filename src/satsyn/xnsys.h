@@ -2,6 +2,7 @@
 #ifndef XnSys_H_
 #define XnSys_H_
 
+#include <fildesh/fildesh.h>
 #include "cx/bittable.h"
 #include "cx/fileb.h"
 
@@ -188,7 +189,7 @@ accept_topology_XnSys (XnSys* sys);
 void
 statevs_of_XnSys (TableT(XnDomSz)* t, const XnSys* sys, XnSz sidx);
 void
-oput_XnEVbl (OFile* of, const XnEVbl* ev, const char* delim);
+oput_XnEVbl(FildeshO* out, const XnEVbl* ev, const char* delim);
 void
 rule_XnSys (XnRule* g, const XnSys* sys, XnSz idx);
 XnSz
