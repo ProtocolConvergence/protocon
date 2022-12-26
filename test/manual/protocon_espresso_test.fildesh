@@ -1,0 +1,6 @@
+#!/bin/fildesh
+
+bazel build //src:protocon
+$(barrier)
+|< ./bazel-bin/src/protocon -x examplesynt/ColorRing.prot -o - -espresso
+|> stdout

@@ -1,55 +1,54 @@
 
+#include <fildesh/fildesh_compat_fd.h>
+#include <fildesh/fildesh_compat_sh.h>
 
-    void
-oput_dimacs_CnfFmla (OFile* of, const CnfFmla* fmla)
+  void
+oput_dimacs_CnfFmla(FildeshO* out, const CnfFmla* fmla)
 {
   CnfDisj clause[] = {DEFAULT_CnfDisj};
-  printf_OFile (of, "p cnf %u %u\n",
-                (uint) fmla->nvbls,
-                (uint) fmla->idcs.sz);
-  for (uint i = 0; i < fmla->idcs.sz; ++i) {
+  puts_FildeshO(out, "p cnf ");
+  print_int_FildeshO(out, (int)fmla->nvbls);
+  putc_FildeshO(out, ' ');
+  print_int_FildeshO(out, (int)fmla->idcs.sz);
+  putc_FildeshO(out, '\n');
+  for (unsigned i = 0; i < fmla->idcs.sz; ++i) {
     clause_of_CnfFmla (clause, fmla, i);
-    for (uint j = 0; j < clause->lits.sz; ++j) {
+    for (unsigned j = 0; j < clause->lits.sz; ++j) {
       if (!clause->lits.s[j].val)
-        oput_char_OFile (of, '-');
-      oput_uint_OFile (of, 1+clause->lits.s[j].vbl);
-      oput_char_OFile (of, ' ');
+        putc_FildeshO(out, '-');
+      print_int_FildeshO(out, (int)(1+clause->lits.s[j].vbl));
+      putc_FildeshO(out, ' ');
     }
-    oput_cstr_OFile (of, "0\n");
+    puts_FildeshO(out, "0\n");
   }
-  lose_CnfDisj (clause);
+  lose_CnfDisj(clause);
 }
 
-    void
-xget_dimacs_result (XFile* xf, bool* sat, BitTable evs)
+  void
+xget_dimacs_result (FildeshX* in, bool* sat, BitTable evs)
 {
-    const char* line = getline_XFile (xf);
-    wipe_BitTable (evs, 0);
-    if (!line)
-    {
-        *sat = false;
-        DBog0( "No output!" );
-        return;
-    }
-    if (0 == strcmp (line, "UNSAT") ||
-        0 == strcmp (line, "unsat"))
-    {
-        *sat = false;
-    }
-    else
-    {
-        int v;
-        bool good;
-        *sat = true;
+  const char* line = getline_FildeshX(in);
+  wipe_BitTable (evs, 0);
+  if (!line) {
+    *sat = false;
+    DBog0( "No output!" );
+    return;
+  }
+  if (0 == strcmp(line, "UNSAT") || 0 == strcmp(line, "unsat")) {
+    *sat = false;
+  }
+  else {
+    int v = -1;
+    bool good;
+    *sat = true;
 
-        good = xget_int_XFile (xf, &v);
-        while (good)
-        {
-            if      (v > 0)  set1_BitTable (evs, +v-1);
-            else if (v < 0)  set0_BitTable (evs, -v-1);
-            good = xget_int_XFile (xf, &v);
-        }
+    good = parse_int_FildeshX(in, &v);
+    while (good) {
+      if      (v > 0)  set1_BitTable (evs, +v-1);
+      else if (v < 0)  set0_BitTable (evs, -v-1);
+      good = parse_int_FildeshX(in, &v);
     }
+  }
 }
 
 /**
@@ -62,57 +61,72 @@ xget_dimacs_result (XFile* xf, bool* sat, BitTable evs)
  * \param evs   Result. Satisfying valuation. This should be allocated to the
  * proper size!
  **/
-    void
+  void
 extl_solve_CnfFmla (CnfFmla* fmla, bool* sat, BitTable evs)
 {
-  DeclLegit( good );
-  OSPc ospc[] = {DEFAULT_OSPc};
-  OFileB ofb[] = {DEFAULT_OFileB};
-  XFileB xfb[] = {DEFAULT_XFileB};
+  const char* const z3_argv[] = {"z3", "-dimacs", "sat.in", NULL};
+  const char* const minisat_argv[] = {"minisat", "-verb=0", "sat.in", "sat.out", NULL};
+  const char* const* argv = (SatSolve_Z3 ? z3_argv : minisat_argv);
+  fildesh_fd_t out_solver_fd = -1;
+  fildesh_fd_t from_solver_fd = -1;
+  int istat = 0;
+  fildesh_compat_pid_t pid = -1;
+  if (istat != 0) {
+    fildesh_log_error("Failed to create pipe for solver.");
+  }
 
-    *sat = false;
+  *sat = false;
 
-    open_FileB (&ofb->fb, 0, "sat.in");
-    oput_dimacs_CnfFmla (&ofb->of, fmla);
-    close_OFileB (ofb);
+  {
+    FildeshO* out = open_FildeshOF("sat.in");
+    oput_dimacs_CnfFmla(out, fmla);
+    close_FildeshO(out);
+  }
 
-    lose_CnfFmla (fmla);
-    *fmla = dflt_CnfFmla ();
+  lose_CnfFmla (fmla);
+  *fmla = dflt_CnfFmla ();
 
-    if (SatSolve_Z3)
-    {
-        stdopipe_OSPc (ospc);
-        ospc->cmd = cons1_AlphaTab ("z3");
-        PushTable( ospc->args, cons1_AlphaTab ("-dimacs") );
-        PushTable( ospc->args, cons1_AlphaTab ("sat.in") );
+  if (istat != 0) {
+  }
+  else if (SatSolve_Z3) {
+    istat = fildesh_compat_fd_pipe(&out_solver_fd, &from_solver_fd);
+    if (istat != 0) {
+      fildesh_log_error("Failed to create pipe for solver.");
     }
-    else
-    {
-        ospc->cmd = cons1_AlphaTab ("minisat");
-        PushTable( ospc->args, cons1_AlphaTab ("-verb=0") );
-        PushTable( ospc->args, cons1_AlphaTab ("sat.in") );
-        PushTable( ospc->args, cons1_AlphaTab ("sat.out") );
+  }
+
+  if (istat != 0) {
+    if (out_solver_fd >= 0) {
+      fildesh_compat_fd_close(out_solver_fd);
     }
-
-    DoLegitLine( "spawning solver" )
-      spawn_OSPc (ospc);
-
-    DoLegit( 0 )
-    {
-      if (SatSolve_Z3)
-      {
-        xget_dimacs_result (ospc->xf, sat, evs);
-      }
-      else
-      {
-        close_OSPc (ospc);
-        open_FileB (&xfb->fb, 0, "sat.out");
-        xget_dimacs_result (&xfb->xf, sat, evs);
-      }
+  }
+  else {
+    pid = fildesh_compat_fd_spawnvp(
+        -1, out_solver_fd, 2, NULL, argv);
+    if (pid < 0) {
+      istat = -1;
+      fildesh_log_errorf("Failed to spawn %s.", argv[0]);
     }
+  }
 
-    lose_OFileB (ofb);
-    lose_XFileB (xfb);
-    lose_OSPc (ospc);
+  if (istat != 0) {
+    if (from_solver_fd >= 0) {
+      fildesh_compat_fd_close(from_solver_fd);
+    }
+  }
+  else {
+    FildeshX* in = NULL;
+    if (SatSolve_Z3) {
+      in = open_fd_FildeshX(from_solver_fd);
+      xget_dimacs_result(in, sat, evs);
+      fildesh_compat_sh_wait(pid);
+    }
+    else {
+      fildesh_compat_sh_wait(pid);
+      in = open_FildeshXF("sat.out");
+      xget_dimacs_result(in, sat, evs);
+    }
+    close_FildeshX(in);
+  }
 }
 

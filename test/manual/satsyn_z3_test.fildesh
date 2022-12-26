@@ -1,0 +1,6 @@
+#!/bin/fildesh
+
+bazel build //src/satsyn:satsyn
+$(barrier)
+|< ./bazel-bin/src/satsyn/satsyn -solver z3 -inst coloring 3
+|> stdout
