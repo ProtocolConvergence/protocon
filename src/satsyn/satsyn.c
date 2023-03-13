@@ -6,7 +6,6 @@
 #include "cx/syscx.h"
 #include "cx/bittable.h"
 #include "cx/fileb.h"
-#include "cx/ospc.h"
 #include "cx/table.h"
 
 #include <assert.h>

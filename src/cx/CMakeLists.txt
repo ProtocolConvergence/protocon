@@ -9,8 +9,6 @@ add_library (cx_lib STATIC
   "lgtable.h"
   "ofile.c"
   "ofile.h"
-  "ospc.c"
-  "ospc.h"
   "synhax.h"
   "syscx.c"
   "syscx.h"
@@ -34,10 +32,6 @@ add_test(NAME fileb_test COMMAND fileb_test)
 add_executable(lgtable_test "lgtable_test.c")
 target_link_libraries(lgtable_test cx_lib)
 add_test(NAME lgtable_test COMMAND lgtable_test)
-
-add_executable(ospc_test "ospc_test.c")
-target_link_libraries(ospc_test cx_lib)
-add_test(NAME ospc_test COMMAND ospc_test)
 
 add_executable(table_test "table_test.c")
 target_link_libraries(table_test cx_lib)

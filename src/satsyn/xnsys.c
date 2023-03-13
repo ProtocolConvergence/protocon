@@ -1,6 +1,8 @@
 
 #include "xnsys.h"
 
+#include <stdio.h>
+
     XnVblSymm
 cons2_XnVblSymm (const char* name, XnDomSz domsz)
 {
@@ -141,19 +143,18 @@ dflt_XnRule ()
     return g;
 }
 
-    XnRule
-cons2_XnRule (uint np, uint nq)
+  XnRule
+cons2_XnRule(unsigned np, unsigned nq)
 {
-    XnRule g = dflt_XnRule ();
-    EnsizeTable( g.p, np );
-    EnsizeTable( g.q, nq );
-    for (uint i = 0; i < np; ++i) {
-        g.p.s[i] = 0;
-    }
-    for (uint i = 0; i < nq; ++i) {
-        g.q.s[i] = 0;
-    }
-    return g;
+  XnRule g = dflt_XnRule ();
+  unsigned i;
+  g.p.sz = np;
+  g.q.sz = nq;
+  for (i = 0; i < NMaxXnPcVbls; ++i) {
+    g.p.s[i] = 0;
+    g.q.s[i] = 0;
+  }
+  return g;
 }
 
     XnRule

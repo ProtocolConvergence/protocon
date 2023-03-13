@@ -16,8 +16,6 @@ cc_library(
         "map.hh",
         "ofile.c",
         "ofile.h",
-        "ospc.c",
-        "ospc.h",
         "sesp.c",
         "sesp.h",
         "set.hh",
@@ -64,13 +62,6 @@ cc_test(
 cc_test(
     name = "lgtable_test",
     srcs = ["lgtable_test.c"],
-    deps = [":cx_lib"],
-    size = "small",
-)
-
-cc_test(
-    name = "ospc_test",
-    srcs = ["ospc_test.c"],
     deps = [":cx_lib"],
     size = "small",
 )

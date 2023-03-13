@@ -1,4 +1,4 @@
-#!/bin/fildesh
+#!/usr/bin/env fildesh
 
 bazel build //src/satsyn:satsyn
 $(barrier)
