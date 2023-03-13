@@ -26,8 +26,8 @@ include(ExternalProject)
 
 
 ExternalProject_Add(fildesh_project
-  URL "https://github.com/fildesh/fildesh/archive/v0.1.7.tar.gz"
-  URL_HASH "SHA256=e510b7a32043ade472c0d27a3ccf7613abda31fe1319245aec65dceaef3fa154"
+  URL "https://github.com/fildesh/fildesh/releases/download/v0.1.8/fildesh-0.1.8.tar.gz"
+  URL_HASH "SHA256=09918bc72c57edd2934194c2df344b9afbbde414a87cbf30b73e53890ef4a249"
   #GIT_REPOSITORY "https://github.com/fildesh/fildesh.git"
   #GIT_TAG "861f4d697e72be20046b6563eddf830a06b26ff3"
   #GIT_TAG "trunk"
