@@ -10,7 +10,6 @@ extern "C" {
 
 namespace Cx {
 namespace C {
-  using ::OFileB;
   using ::XFileB;
 }
 

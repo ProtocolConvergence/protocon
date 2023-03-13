@@ -24,12 +24,13 @@ static bool SatSolve_Z3 = false;
 
 
 
-qual_inline
-    void
-oput_BitTable (OFile* f, const BitTable bt)
+static inline
+  void
+oput_BitTable(FildeshO* out, const BitTable bt)
 {
-    for (zuint i = 0; i < bt.sz; ++i)
-        oput_char_OFile (f, test_BitTable (bt, i) ? '1' : '0');
+  for (size_t i = 0; i < bt.sz; ++i) {
+    putc_FildeshO(out, test_BitTable (bt, i) ? '1' : '0');
+  }
 }
 
 
@@ -44,39 +45,39 @@ oput_BitTable (OFile* f, const BitTable bt)
     void
 synsearch_sat (FMem_synsearch* tape)
 {
-    CnfFmla fmla[] = {DEFAULT_CnfFmla};
-    *fmla = encode_sat(tape);
-    if (fmla->nvbls == 0) {
-      lose_CnfFmla(fmla);
-      return;
+  CnfFmla fmla[] = {DEFAULT_CnfFmla};
+  *fmla = encode_sat(tape);
+  if (fmla->nvbls == 0) {
+    lose_CnfFmla(fmla);
+    return;
+  }
+  else {
+    BitTable evs = cons2_BitTable (fmla->nvbls, 0);
+    TableT(XnSz)* may_rules = TopTable( tape->may_rules );
+    XnRule* g = TopTable( tape->rules );
+    bool sat = false;
+    extl_solve_CnfFmla (fmla, &sat, evs);
+    if (0) {
+      FildeshO* out = open_FildeshOF("/dev/stderr");
+      oput_BitTable(out, evs);
+      putc_FildeshO(out, '\n');
+      close_FildeshO(out);
     }
-    else {
-        BitTable evs = cons2_BitTable (fmla->nvbls, 0);
-        TableT(XnSz)* may_rules = TopTable( tape->may_rules );
-        XnRule* g = TopTable( tape->rules );
-        bool sat = false;
-        extl_solve_CnfFmla (fmla, &sat, evs);
-        if (0)
-        {
-            oput_BitTable (stderr_OFile (), evs);
-            oput_char_OFile (stderr_OFile (), '\n');
-        }
 
-        tape->stabilizing = sat;
-        if (sat)
-        for (uint i = 0; i < may_rules->sz; ++i) {
-            if (test_BitTable (evs, i))
-            {
-                rule_XnSys (g, tape->sys, may_rules->s[i]);
-                add_XnRule (tape, g);
-                g = grow1_rules_synsearch (tape);
-            }
+    tape->stabilizing = sat;
+    if (sat)
+      for (unsigned i = 0; i < may_rules->sz; ++i) {
+        if (test_BitTable(evs, i)) {
+          rule_XnSys(g, tape->sys, may_rules->s[i]);
+          add_XnRule(tape, g);
+          g = grow1_rules_synsearch(tape);
         }
-        lose_BitTable (&evs);
-    }
-    -- tape->rules.sz;
+      }
+    lose_BitTable(&evs);
+  }
+  -- tape->rules.sz;
 
-    lose_CnfFmla (fmla);
+  lose_CnfFmla(fmla);
 }
 
 #include "pla.h"

@@ -13,9 +13,9 @@ sat3_legit_XnSys (FMem_do_XnSys* fix,
 {
     bool ring = (npcs != 3);
 #if 0
-    OFile* of = stderr_OFile ();
-    oput_BitTable (of, sys->legit);
-    oput_char_OFile (of, '\n');
+    FildeshO* out = open_FildeshOF("/dev/stderr");
+    oput_BitTable(out, sys->legit);
+    putc_FildeshO(out, '\n');
 #endif
 
 #if 1
@@ -113,26 +113,24 @@ sat3_legit_XnSys (FMem_do_XnSys* fix,
 
 
 #if 0
-    oput_BitTable (of, sys->legit);
-    oput_char_OFile (of, '\n');
+  oput_BitTable (out, sys->legit);
+  putc_FildeshO(out, '\n');
 
-    if (false)
-    for (uint i = 0; i < sys->legit.sz; ++i) {
-        if (test_BitTable (sys->legit, i))
-        {
-            oput_char_OFile (of, '+');
-            oput_promela_state_XnSys (of, sys, i);
-            oput_char_OFile (of, '\n');
-        }
-        else
-        {
-            oput_char_OFile (of, '-');
-            oput_promela_state_XnSys (of, sys, i);
-            oput_char_OFile (of, '\n');
-        }
+  if (false)
+    for (unsigned i = 0; i < sys->legit.sz; ++i) {
+      if (test_BitTable (sys->legit, i)) {
+        putc_FildeshO(out, '+');
+        oput_promela_state_XnSys(out, sys, i);
+        putc_FildeshO(out, '\n');
+      }
+      else {
+        putc_FildeshO(out, '-');
+        oput_promela_state_XnSys(out, sys, i);
+        putc_FildeshO(out, '\n');
+      }
     }
 
-    flush_OFile (of);
+  close_FildeshO(out);
 #endif
 }
 
@@ -145,7 +143,7 @@ inst_sat3_XnSys (const CnfFmla* fmla)
     uint y_idcs[3];
     uint sat_idx;
     XnSys sys[] = {DEFAULT_XnSys};
-    OFile name[] = {DEFAULT_OFile};
+    FildeshO name[] = {DEFAULT_FildeshO};
 
     for (uint r = 0; r < 3; ++r) {
         XnVbl x = dflt_XnVbl ();
@@ -154,16 +152,20 @@ inst_sat3_XnSys (const CnfFmla* fmla)
         PushTable( sys->pcs, dflt_XnPc () );
 
         x.domsz = fmla->nvbls;
-        flush_OFile (name);
-        printf_OFile (name, "x%u", r);
-        copy_AlphaTab_OFile (&x.name, name);
+        truncate_FildeshO(name);
+        putc_FildeshO(name, 'x');
+        print_int_FildeshO(name, (int)r);
+        putc_FildeshO(name, '\0');
+        assign_cstr_AlphaTab(&x.name, name->at);
         x_idcs[r] = sys->vbls.sz;
         PushTable( sys->vbls, x );
 
         y.domsz = 2;
-        flush_OFile (name);
-        printf_OFile (name, "y%u", r);
-        copy_AlphaTab_OFile (&y.name, name);
+        truncate_FildeshO(name);
+        putc_FildeshO(name, 'y');
+        print_int_FildeshO(name, (int)r);
+        putc_FildeshO(name, '\0');
+        assign_cstr_AlphaTab(&y.name, name->at);
         y_idcs[r] = sys->vbls.sz;
         PushTable( sys->vbls, y );
     }
@@ -173,9 +175,10 @@ inst_sat3_XnSys (const CnfFmla* fmla)
     {
         XnVbl sat = dflt_XnVbl ();
         sat.domsz = 2;
-        flush_OFile (name);
-        oput_cstr_OFile (name, "sat");
-        copy_AlphaTab_OFile (&sat.name, name);
+        truncate_FildeshO(name);
+        puts_FildeshO(name, "sat");
+        putc_FildeshO(name, '\0');
+        assign_cstr_AlphaTab(&sat.name, name->at);
         sat_idx = sys->vbls.sz;
         PushTable( sys->vbls, sat );
     }
@@ -226,7 +229,7 @@ inst_sat3_XnSys (const CnfFmla* fmla)
     }
     */
 
-    lose_OFile (name);
+    close_FildeshO(name);
     return *sys;
 }
 
@@ -238,7 +241,7 @@ inst_sat3_ring_XnSys (const CnfFmla* fmla, const bool use_sat)
     uint sat_idcs[ArraySz( x_idcs )];
     const uint npcs = ArraySz( x_idcs );
     XnSys sys[] = {DEFAULT_XnSys};
-    OFile name[] = {DEFAULT_OFile};
+    FildeshO name[] = {DEFAULT_FildeshO};
 
     for (uint r = 0; r < npcs; ++r) {
         PushTable( sys->pcs, dflt_XnPc () );
@@ -267,13 +270,17 @@ inst_sat3_ring_XnSys (const CnfFmla* fmla, const bool use_sat)
         x->domsz = fmla->nvbls;
         y->domsz = (use_sat ? 2 : 3);
 
-        flush_OFile (name);
-        printf_OFile (name, "x%u", r);
-        copy_AlphaTab_OFile (&x->name, name);
+        truncate_FildeshO(name);
+        putc_FildeshO(name, 'x');
+        print_int_FildeshO(name, (int)r);
+        putc_FildeshO(name, '\0');
+        assign_cstr_AlphaTab(&x->name, name->at);
 
-        flush_OFile (name);
-        printf_OFile (name, "y%u", r);
-        copy_AlphaTab_OFile (&y->name, name);
+        truncate_FildeshO(name);
+        putc_FildeshO(name, 'y');
+        print_int_FildeshO(name, (int)r);
+        putc_FildeshO(name, '\0');
+        assign_cstr_AlphaTab(&y->name, name->at);
 
 
         /* Process r */
@@ -290,13 +297,15 @@ inst_sat3_ring_XnSys (const CnfFmla* fmla, const bool use_sat)
     }
 
     if (use_sat)
-    for (uint r = 0; r < npcs; ++r) {
+    for (unsigned r = 0; r < npcs; ++r) {
         XnVbl* sat = &sys->vbls.s[sat_idcs[r]];
         sat->domsz = 2;
 
-        flush_OFile (name);
-        printf_OFile (name, "sat%u", r);
-        copy_AlphaTab_OFile (&sat->name, name);
+        truncate_FildeshO(name);
+        puts_FildeshO(name, "sat");
+        print_int_FildeshO(name, (int)r);
+        putc_FildeshO(name, '\0');
+        assign_cstr_AlphaTab(&sat->name, name->at);
         /* Process r */
         assoc_XnSys (sys, r, sat_idcs[r], Yes);
         /* Process r+1 */
@@ -305,7 +314,7 @@ inst_sat3_ring_XnSys (const CnfFmla* fmla, const bool use_sat)
         assoc_XnSys (sys, (r + npcs - 1) % npcs, sat_idcs[r], May);
     }
 
-    lose_OFile (name);
+    close_FildeshO(name);
 
     accept_topology_XnSys (sys);
 

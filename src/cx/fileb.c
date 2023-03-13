@@ -14,24 +14,13 @@ static bool
 xget_chunk_XFileB (XFileB* xfb);
 static bool
 xget_chunk_fn_XFileB (XFile* xf);
-static bool
-oput_chunk_OFileB (OFileB* ofb);
-static void
-oputn_raw_byte_OFileB (OFileB* ofb, const byte* a, zuint n);
 
 static void
 close_fn_XFileB (XFile* xf);
 static void
-close_fn_OFileB (OFile* of);
-static void
 free_fn_XFileB (XFile* xf);
-static void
-free_fn_OFileB (OFile* of);
-static bool
-flush_fn_OFileB (OFile* of);
 
 const XFileVT FileB_XFileVT = DEFAULT3_XFileVT(xget_chunk_fn_XFileB, close_fn_XFileB, free_fn_XFileB);
-const OFileVT FileB_OFileVT = DEFAULT3_OFileVT(flush_fn_OFileB, close_fn_OFileB, free_fn_OFileB);
 
 static
   void
@@ -59,18 +48,6 @@ init_XFileB (XFileB* xfb)
   xfb->xf.ctx = &ctx;
 }
 
-  void
-init_OFileB (OFileB* ofb)
-{
-  static OFileCtx ctx;
-  init_OFile (&ofb->of);
-  ofb->of.flushsz = BUFSIZ;
-  ofb->of.mayflush = true;
-  init_FileB (&ofb->fb, true);
-  ofb->of.vt = &FileB_OFileVT;
-  ofb->of.ctx = &ctx;
-}
-
 static
   void
 close_FileB (FileB* f)
@@ -94,25 +71,9 @@ close_XFileB (XFileB* f)
 }
 
   void
-close_OFileB (OFileB* f)
-{
-  flush_OFileB (f);
-  close_FileB (&f->fb);
-  f->of.off = 0;
-  LoseTable(f->of.buf);
-  InitTable(f->of.buf);
-}
-
-  void
 close_fn_XFileB (XFile* xf)
 {
   close_XFileB (CastUp( XFileB, xf, xf ));
-}
-
-  void
-close_fn_OFileB (OFile* of)
-{
-  close_OFileB (CastUp( OFileB, of, of ));
 }
 
   void
@@ -125,36 +86,11 @@ lose_XFileB (XFileB* xfb)
 }
 
   void
-lose_OFileB (OFileB* ofb)
-{
-  close_OFileB (ofb);
-  LoseTable( ofb->of.buf );
-  lose_AlphaTab (&ofb->fb.pathname);
-  lose_AlphaTab (&ofb->fb.filename);
-}
-
-  void
 free_fn_XFileB (XFile* xf)
 {
   XFileB* xfb = CastUp( XFileB, xf, xf );
   lose_XFileB (xfb);
   free (xfb);
-}
-
-  void
-free_fn_OFileB (OFile* of)
-{
-  OFileB* ofb = CastUp( OFileB, of, of );
-  lose_OFileB (ofb);
-  free (ofb);
-}
-
-static inline
-  zuint
-chunksz_OFileB (OFileB* ofb)
-{
-  (void) ofb;
-  return BUFSIZ;
 }
 
 static inline
@@ -179,15 +115,6 @@ ensure_XFileB (XFileB* xfb, zuint n)
   return &xf->buf.s[sz];
 }
 
-  byte*
-ensure_OFileB (OFileB* ofb, zuint n)
-{
-  OFile* const of = &ofb->of;
-  oput_chunk_OFileB (ofb);
-  EnsizeTable( of->buf, of->off+n );
-  return &of->buf.s[of->off];
-}
-
   void
 setfmt_XFileB (XFileB* xfb, FileB_Format fmt)
 {
@@ -200,12 +127,6 @@ setfmt_XFileB (XFileB* xfb, FileB_Format fmt)
   if (nullt0 && !nullt1) {
     xf->buf.sz -= 1;
   }
-}
-
-  void
-setfmt_OFileB (OFileB* ofb, FileB_Format fmt)
-{
-  ofb->fb.fmt = fmt;
 }
 
 static
@@ -469,145 +390,6 @@ flush_XFileB (XFileB* xfb)
     buf->sz = 1;
   }
   f->off = 0;
-}
-
-
-static
-  bool
-foput_OFileB (OFileB* ofb, const byte* a, uint n)
-{
-  size_t nout;
-  nout = fwrite (a, 1, n, ofb->fb.f);
-  return (nout == n);
-}
-
-static inline
-  bool
-selfcont_OFileB (OFileB* ofb)
-{
-  return (!ofb->fb.f);
-}
-
-static
-  bool
-flush1_OFileB (OFileB* ofb, const byte* a, uint n)
-{
-  OFile* const of = &ofb->of;
-  bool good = true;
-  if (selfcont_OFileB (ofb))
-  {
-    if (n == 0)  return true;
-    GrowTable( of->buf, n );
-    memcpy (&of->buf.s[of->off], a, n);
-    of->off += n;
-  }
-  else
-  {
-    if (of->off > 0)
-    {
-      good = foput_OFileB (ofb, of->buf.s, of->off);
-      if (!good)  return false;
-      of->buf.sz = 1;
-      of->off = 0;
-    }
-    if (n > 0)
-    {
-      good = foput_OFileB (ofb, a, n);
-      if (!good)  return false;
-    }
-    fflush (ofb->fb.f);
-  }
-
-  return true;
-}
-
-  bool
-flush_OFileB (OFileB* ofb)
-{
-  return flush1_OFileB (ofb, 0, 0);
-}
-
-  bool
-flush_fn_OFileB (OFile* of)
-{
-  return flush_OFileB (CastUp( OFileB, of, of ));
-}
-
-  bool
-oput_chunk_OFileB (OFileB* f)
-{
-  if (f->of.off < f->of.flushsz)  return true;
-  /* In the future, we may not want to flush all the time!*/
-  /* Also, we may not wish to flush the whole buffer.*/
-  return flush_OFileB (f);
-}
-
-#if 0
-  void
-op_FileB (XOFileB* xo, FileB_Op op, FileBOpArg* arg)
-{
-  FileB* fb = CastUp( FileB, xo, xo );
-  (void) arg;
-  switch (op)
-  {
-    case FileB_XGetChunk:
-      xget_chunk_FileB (fb);
-      break;
-    case FileB_OPutChunk:
-      oput_chunk_FileB (fb);
-      break;
-    case FileB_FlushO:
-      flusho_FileB (fb);
-      break;
-    case FileB_Close:
-      close_FileB (fb);
-      break;
-    case FileB_NOps:
-      Claim(0);
-      break;
-  }
-}
-#endif
-
-  void
-oputn_raw_byte_OFileB (OFileB* ofb, const byte* a, zuint n)
-{
-  OFile* const of = &ofb->of;
-  const zuint ntotal = of->off + n;
-  if (ntotal <= AllocszTable(of->buf))
-  {
-    memcpy (&of->buf.s[of->off], a, n);
-    of->off = ntotal;
-
-    if (of->off > of->buf.sz)
-      of->buf.sz = of->off;
-  }
-  else if (ntotal <= 2*chunksz_OFileB (ofb))
-  {
-    EnsizeTable( of->buf, 2*chunksz_OFileB (ofb) );
-    memcpy (&of->buf.s[of->off], a, n);
-    of->off = ntotal;
-  }
-  else
-  {
-    flush1_OFileB (ofb, a, n);
-  }
-}
-
-  void
-oputn_byte_OFileB (OFileB* ofb, const byte* a, zuint n)
-{
-  uint i;
-  if (ofb->fb.fmt == FileB_Raw)
-  {
-    oputn_raw_byte_OFileB (ofb, a, n);
-    return;
-  }
-  for (i = 0; i < n; ++i) {
-    oput_uint_OFile (&ofb->of, a[i]);
-    if (i+1 < n)
-      oput_char_OFile (&ofb->of, ' ');
-  }
 }
 
   bool

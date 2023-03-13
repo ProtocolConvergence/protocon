@@ -118,7 +118,6 @@ TestProtoconFileAgreement()
 static void
 TestShadowMatchRing()
 {
-  std::ostream& ofile = std::cerr;
   Xn::Sys sys;
   Xn::Net& topo = sys.topology;
   const uint npcs = 3;

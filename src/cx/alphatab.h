@@ -294,6 +294,14 @@ assign2_AlphaTab (AlphaTab* dst, const AlphaTab* src, zuint beg, zuint end)
   dst->s[sz] = '\0';
 }
 
+static inline
+  void
+assign_cstr_AlphaTab(AlphaTab* dst, const char* s)
+{
+  clear_AlphaTab(dst);
+  cat_cstr_AlphaTab (dst, s);
+}
+
 char*
 itoa_dup_cstr (int x);
 char*

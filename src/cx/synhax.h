@@ -245,11 +245,11 @@ dbglog_printf3 (const char* file,
     const char* fmt,
     ...);
 
-#define DBog1(s,a)  dbglog_printf3 (__FILE__,__FUNC__,__LINE__,s,a)
-#define DBog2(s,a,b)  dbglog_printf3 (__FILE__,__FUNC__,__LINE__,s,a,b)
-#define DBog3(s,a,b,c)  dbglog_printf3 (__FILE__,__FUNC__,__LINE__,s,a,b,c)
-#define DBog4(s,a,b,c,d)  dbglog_printf3 (__FILE__,__FUNC__,__LINE__,s,a,b,c,d)
-#define DBog5(s,a,b,c,d,e)  dbglog_printf3 (__FILE__,__FUNC__,__LINE__,s,a,b,c,d,e)
+#define DBog1(s,a)  fildesh_log_warningf(s,a)
+#define DBog2(s,a,b)  fildesh_log_warningf(s,a,b)
+#define DBog3(s,a,b,c)  fildesh_log_warningf(s,a,b,c)
+#define DBog4(s,a,b,c,d)  fildesh_log_warningf(s,a,b,c,d)
+#define DBog5(s,a,b,c,d,e)  fildesh_log_warningf(s,a,b,c,d,e)
 #define DBog0(s)  DBog1("%s",s)
 #define DBog_zuint(x)  DBog2( "%s:%zu", #x, (zuint)(x) )
 #define DBog_ujint(x)  DBog2( "%s:%lu", #x, (luint)(x) )

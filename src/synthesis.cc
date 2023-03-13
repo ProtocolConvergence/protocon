@@ -3,7 +3,6 @@
 
 #include <fildesh/ofstream.hh>
 
-#include "cx/fileb.hh"
 #include "cx/tuple.hh"
 #include "prot-ofile.hh"
 

@@ -14,8 +14,6 @@ cc_library(
         "lgtable.h",
         "lgtable.hh",
         "map.hh",
-        "ofile.c",
-        "ofile.h",
         "sesp.c",
         "sesp.h",
         "set.hh",
@@ -73,9 +71,3 @@ cc_test(
     size = "small",
 )
 
-cc_test(
-    name = "tmpdir_test",
-    srcs = ["tmpdir_test.c"],
-    deps = [":cx_lib"],
-    size = "small",
-)

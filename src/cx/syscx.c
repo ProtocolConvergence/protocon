@@ -41,8 +41,6 @@ init_sysCx (int* pargc, char*** pargv)
   (void) pargc;
   ExeName = (*pargv)[0];
 
-  stderr_OFileB ();
-  stdout_OFileB ();
   stdin_XFileB ();
   signal (SIGSEGV, signal_hook_sysCx);
 #ifndef LACE_POSIX_SOURCE
@@ -88,8 +86,6 @@ lose_sysCx ()
   LoseTable( LoseFns );
 
   lose_XFileB(stdin_XFileB ());
-  lose_OFileB(stdout_OFileB ());
-  lose_OFileB(stderr_OFileB ());
   called = true;
 }
 
@@ -101,10 +97,6 @@ failout_sysCx (const char* msg)
     int err = errno;
     /* Use literal stderr just in case we have memory problems.*/
     FILE* f = stderr;
-
-    /* Flush these so the next message is last.*/
-    flush_OFileB (stdout_OFileB ());
-    flush_OFileB (stderr_OFileB ());
 
     fprintf (f, "FAILOUT: %s\n", exename_of_sysCx ());
 
@@ -130,55 +122,6 @@ failout_sysCx (const char* msg)
     exit(1);
 }
 
-  void
-dbglog_printf3 (const char* file,
-    const char* func,
-    uint line,
-    const char* fmt,
-    ...)
-{
-  va_list args;
-  int err = errno;
-  OFile* of = stderr_OFile ();
-
-  while (true) {
-    const char* tmp = strstr (file, "bld/");
-    if (!tmp)  break;
-    file = &tmp[4];
-  }
-
-  printf_OFile (of, "./%s(%u) %s: ", file, line, func);
-
-  va_start (args, fmt);
-  vprintf_OFile (of, fmt, args);
-  va_end(args);
-
-  oput_char_OFile (of, '\n');
-
-  if (err != 0)
-  {
-#if 0
-    /* Why no work? */
-    const uint n = 2048 * sizeof(char);
-    char* s;
-
-    printf_FileB (of, "^^^ errno:%d ", err);
-
-    s = (char*) ensure_OFile (of, n);
-    s[0] = '\0';
-
-    strerror_r (err, s, n);
-
-    of->off += strlen (s) * sizeof(char);
-    oput_char_File (of, '\n');
-#else
-    printf_OFile (of, "^^^ errno:%d %s\n", err, strerror (err));
-#endif
-    errno = 0;
-  }
-  flush_OFile (of);
-}
-
 static int fileno_sysCx(FILE* file) {
 #ifdef _MSC_VER
   return _fileno(file);
@@ -202,36 +145,6 @@ stdin_XFileB ()
   return xfb;
 }
 
-  OFileB*
-stdout_OFileB ()
-{
-  static bool initialized = false;
-  static OFileB ofb[1];
-  if (!initialized)
-  {
-    init_OFileB (ofb);
-    ofb->fb.f = stdout;
-    ofb->fb.fd = fileno_sysCx(stdout);
-    initialized = true;
-  }
-  return ofb;
-}
-
-  OFileB*
-stderr_OFileB ()
-{
-  static bool initialized = false;
-  static OFileB ofb[1];
-  if (!initialized)
-  {
-    init_OFileB (ofb);
-    ofb->fb.f = stderr;
-    ofb->fb.fd = fileno_sysCx(stderr);
-    initialized = true;
-  }
-  return ofb;
-}
-
   XFile*
 stdin_XFile ()
 {
@@ -239,31 +152,11 @@ stdin_XFile ()
   return &xfb->xf;
 }
 
-  OFile*
-stdout_OFile ()
-{
-  OFileB* ofb = stdout_OFileB ();
-  return &ofb->of;
-}
-
-  OFile*
-stderr_OFile ()
-{
-  OFileB* ofb = stderr_OFileB ();
-  return &ofb->of;
-}
-
   bool
 closefd_sysCx (fd_t fd)
 {
   if (fd == 0 && stdin_XFileB()->fb.f) {
     close_XFileB(stdin_XFileB());
-    return true;
-  } else if (fd == 1 && stdout_OFileB()->fb.f) {
-    close_OFileB(stdout_OFileB());
-    return true;
-  } else if (fd == 2 && stderr_OFileB()->fb.f) {
-    close_OFileB(stderr_OFileB());
     return true;
   }
   return (0 == fildesh_compat_fd_close(fd));
@@ -293,55 +186,6 @@ kill_please_sysCx(pid_t pid)
   }
   return success;
 #endif
-}
-
-/**
- * \param path  Return value. Can come in as a hint for the path name.
- **/
-  void
-mktmppath_sysCx (AlphaTab* path)
-{
-  const char* v = 0;
-#ifdef LACE_POSIX_SOURCE
-  pid_t pid = getpid ();
-#else
-  pid_t pid = _getpid ();
-#endif
-  OFile of[1] = {DEFAULT_OFile};
-  zuint i;
-
-#ifdef LACE_POSIX_SOURCE
-  v = getenv ("TMPDIR");
-  if (!v)  v = "/tmp";
-#else
-  v = getenv ("TEMP");
-#endif
-
-  if (!v)
-  {
-    path->sz = 0;
-    return;
-  }
-  oput_cstr_OFile (of, v);
-  oput_char_OFile (of, '/');
-  oput_AlphaTab (of, path);
-  oput_char_OFile (of, '-');
-  oput_luint_OFile (of, pid);
-  oput_char_OFile (of, '-');
-
-  path->sz = 0;
-  for (i = 0; i < SIZE_MAX; ++i) {
-    zuint off = of->off;
-    oput_luint_OFile (of, i);
-
-    if (mkdir_sysCx (cstr1_OFile (of, 0))) {
-      copy_AlphaTab_OFile (path, of);
-      break;
-    }
-
-    of->off = off;
-  }
-  lose_OFile (of);
 }
 
   void

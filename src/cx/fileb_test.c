@@ -23,7 +23,7 @@ testfn_skipws_FileB ()
   uint idx = 0;
   XFileB xfb[] = {DEFAULT_XFileB};
   XFile* xf = &xfb->xf;
-  OFile* of = stderr_OFile ();
+  FildeshO* out = open_FildeshOF("/dev/stderr");
   char* s;
 
 #if 0
@@ -44,9 +44,9 @@ testfn_skipws_FileB ()
         s;
         s = nextok_XFile (olay, 0, 0))
     {
-      oput_cstr_OFile (of, s);
-      oput_char_OFile (of, '\n');
-      flush_OFile (of);
+      puts_FildeshO(out, s);
+      putc_FildeshO(out, '\n');
+      flush_FildeshO(out);
       Claim2(idx ,<, ArraySz( expect_text ));
       Claim( eq_cstr (expect_text[idx], s) );
       ++ idx;
@@ -54,8 +54,8 @@ testfn_skipws_FileB ()
   }
 
   lose_XFileB (xfb);
-  oput_cstr_OFile (of, "------------\n");
-  flush_OFile (of);
+  puts_FildeshO(out, "------------\n");
+  close_FildeshO(out);
 }
 
 static
