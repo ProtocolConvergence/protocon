@@ -16,7 +16,7 @@ jobs:
         bazel-version: '5'
 
     - name: Checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Build
       run: bazel build //...
@@ -46,7 +46,7 @@ jobs:
         bazel-version: '5'
 
     - name: Checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Run tests
       run: >
