@@ -1,5 +1,5 @@
 common:bzlmod --experimental_enable_bzlmod
-common:bzlmod --registry=https://raw.githubusercontent.com/grencez/grencez_bazel_registry/trunk
+common:bzlmod --registry=https://raw.githubusercontent.com/ProtocolConvergence/bazel-registry/trunk
 common:bzlmod --registry=https://raw.githubusercontent.com/fildesh/fildesh_bazel_registry/trunk
 common:bzlmod --registry=https://raw.githubusercontent.com/bazelbuild/bazel-central-registry/main
 
