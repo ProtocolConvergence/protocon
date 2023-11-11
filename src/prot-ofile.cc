@@ -1,7 +1,8 @@
 
 #include "prot-ofile.hh"
 
-#include <fildesh/ofstream.hh>
+#include <fildesh/ostream.hh>
+
 #include "pla.hh"
 #include "xnsys.hh"
 

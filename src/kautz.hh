@@ -2,7 +2,8 @@
 #ifndef KAUTZ_HH_
 #define KAUTZ_HH_
 
-#include <fildesh/ofstream.hh>
+#include <fildesh/ostream.hh>
+
 #include "cx/table.hh"
 
 uint

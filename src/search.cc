@@ -1,10 +1,15 @@
 
 #include "search.hh"
-#include "xnsys.hh"
-#include <algorithm>
 
-#include <fildesh/ifstream.hh>
-#include <fildesh/ofstream.hh>
+#include <algorithm>
+#include <csignal>
+#include <cerrno>
+
+#include <fildesh/istream.hh>
+#include <fildesh/ostream.hh>
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
 #include "cx/fileb.hh"
 #include "cx/urandom.hh"
@@ -13,12 +18,7 @@
 #include "prot-ofile.hh"
 #include "stabilization.hh"
 #include "synthesis.hh"
-#include <signal.h>
-#include <errno.h>
-
-#ifdef _OPENMP
-#include <omp.h>
-#endif
+#include "xnsys.hh"
 
 #include "namespace.hh"
 
@@ -41,7 +41,7 @@ verify_solutions(const PartialSynthesis& inst, StabilizationCkInfo* info, uint* 
             inst.ctx->opt.n_livelock_ofiles).ccstr();
         inst.ctx->opt.n_livelock_ofiles += 1;
 
-        fildesh::ofstream livelock_out(livelock_out_filename);
+        fildesh::ofstream livelock_out(livelock_out_filename.c_str());
         oput_protocon_file(livelock_out, *inst.ctx->systems[i], inst[i].actions,
                            false, "livelock");
       }

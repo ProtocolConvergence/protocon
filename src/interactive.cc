@@ -1,13 +1,15 @@
 
 #include "interactive.hh"
-#include <fildesh/ofstream.hh>
-#include "xnsys.hh"
-#include "cx/urandom.hh"
+
 #include <algorithm>
 
+#include <fildesh/ostream.hh>
 extern "C" {
 #include <fildesh/fildesh_compat_string.h>
 }
+
+#include "xnsys.hh"
+#include "cx/urandom.hh"
 
 #include "namespace.hh"
 

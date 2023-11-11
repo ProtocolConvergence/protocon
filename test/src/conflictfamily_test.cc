@@ -1,8 +1,9 @@
-
 #include "src/conflictfamily.hh"
+
+#include <fildesh/istream.hh>
+#include <fildesh/ostream.hh>
+
 #include "src/cx/lgtable.hh"
-#include <fildesh/ifstream.hh>
-#include <fildesh/ofstream.hh>
 
 #include "src/namespace.hh"
 
@@ -54,12 +55,12 @@ TestConflictFamily(const std::string& filename)
   assert(!good);
 
   {
-    fildesh::ofstream out(filename);
+    fildesh::ofstream out(filename.c_str());
     out << conflicts;
   }
   ConflictFamily result;
   {
-    fildesh::ifstream in(filename);
+    fildesh::ifstream in(filename.c_str());
     in >> result;
   }
   assert(result == conflicts);

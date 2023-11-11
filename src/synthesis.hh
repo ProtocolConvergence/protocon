@@ -1,8 +1,7 @@
 
 #ifndef PartialSynthesis_HH_
 #define PartialSynthesis_HH_
-
-#include <fildesh/ofstream.hh>
+#include <fildesh/ostream.hh>
 
 #include "cx/set.hh"
 #include "cx/urandom.hh"
@@ -10,7 +9,6 @@
 #include "inst.hh"
 #include "promela.hh"
 #include "xnsys.hh"
-#include <fstream>
 #include "prot-xfile.hh"
 #include "conflictfamily.hh"
 #include "stabilization.hh"

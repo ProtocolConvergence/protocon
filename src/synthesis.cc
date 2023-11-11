@@ -1,12 +1,12 @@
 
 #include "synthesis.hh"
 
-#include <fildesh/ofstream.hh>
+#include <algorithm>
+
+#include <fildesh/ostream.hh>
 
 #include "cx/tuple.hh"
 #include "prot-ofile.hh"
-
-#include <algorithm>
 
 #include "namespace.hh"
 
@@ -1284,7 +1284,7 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
             this->ctx->opt.sys_pcidx + "." +
             this->ctx->opt.n_livelock_ofiles).ccstr();
         this->ctx->opt.n_livelock_ofiles += 1;
-        fildesh::ofstream livelock_out(livelock_out_filename);
+        fildesh::ofstream livelock_out(livelock_out_filename.c_str());
         oput_protocon_file(livelock_out, sys, this->actions, false, "livelock");
       }
     }

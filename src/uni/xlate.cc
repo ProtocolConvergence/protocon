@@ -1,7 +1,5 @@
 
-extern "C" {
-#include "src/cx/syscx.h"
-}
+#include <fildesh/ostream.hh>
 
 #include "livelock.hh"
 #include "unifile.hh"
@@ -10,7 +8,10 @@ extern "C" {
 #include "src/cx/fileb.hh"
 #include "src/cx/table.hh"
 
-#include <fildesh/ofstream.hh>
+extern "C" {
+#include "src/cx/syscx.h"
+}
+
 #include "src/namespace.hh"
 
 int main(int argc, char** argv)

@@ -1,7 +1,8 @@
 
-extern "C" {
-#include "src/cx/syscx.h"
-}
+#include <algorithm>
+
+#include <fildesh/istream.hh>
+#include <fildesh/ostream.hh>
 
 #include "adjlist.hh"
 #include "canonical.hh"
@@ -14,10 +15,9 @@ extern "C" {
 #include "src/cx/bittable.hh"
 #include "src/cx/table.hh"
 
-#include <algorithm>
-
-#include <fildesh/ifstream.hh>
-#include <fildesh/ofstream.hh>
+extern "C" {
+#include "src/cx/syscx.h"
+}
 #include "src/namespace.hh"
 
 struct SearchOpt
@@ -820,11 +820,10 @@ int main(int argc, char** argv)
       if (!argv[argi])
         failout_sysCx("Argument Usage: -init <id>");
 
-      FildeshX* argslice = open_FildeshXA();
+      fildesh::istream in(open_FildeshXA());
       size_t n = strlen(argv[argi]);
-      memcpy(grow_FildeshX(argslice, n), argv[argi], n);
+      memcpy(grow_FildeshX(in.c_struct(), n), argv[argi], n);
       argi += 1;
-      fildesh::ifstream in(argslice);
 
       Table<PcState> ppgfun;
       opt.domsz = xget_b64_ppgfun(in, ppgfun);

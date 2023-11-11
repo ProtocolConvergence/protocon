@@ -1,19 +1,19 @@
 
+#include <algorithm>
+
+#include <fildesh/ostream.hh>
+
+#include "livelock.hh"
+#include "uniact.hh"
+#include "unifile.hh"
+
+#include "src/pfmla.hh"
+#include "src/cx/bittable.hh"
+#include "src/cx/fileb.hh"
+
 extern "C" {
 #include "src/cx/syscx.h"
 }
-
-#include "uniact.hh"
-#include "unifile.hh"
-#include "src/pfmla.hh"
-
-#include "src/cx/bittable.hh"
-#include "src/cx/fileb.hh"
-#include <algorithm>
-
-#include "livelock.hh"
-
-#include <fildesh/ofstream.hh>
 #include "src/namespace.hh"
 
 

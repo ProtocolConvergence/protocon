@@ -1,17 +1,9 @@
 
-#include <time.h>
-
-extern "C" {
-#include "cx/syscx.h"
-#ifdef ENABLE_MEMORY_STATS
-#include "cx/benchmark.h"
-#endif
-}
-
-#include <fildesh/ofstream.hh>
+#include <ctime>
 #include <iomanip>
-#include <ostream>
 #include <sstream>
+
+#include <fildesh/ostream.hh>
 
 #include "opt.hh"
 #include "prot-ofile.hh"
@@ -19,6 +11,12 @@ extern "C" {
 #include "stabilization.hh"
 #include "synthesis.hh"
 
+extern "C" {
+#include "cx/syscx.h"
+#ifdef ENABLE_MEMORY_STATS
+#include "cx/benchmark.h"
+#endif
+}
 #include "namespace.hh"
 
   void

@@ -1,18 +1,19 @@
 
-extern "C" {
-#include "cx/syscx.h"
-#include "cx/bittable.h"
-}
-
 #include <algorithm>
 #include <sstream>
-#include "fildesh/ofstream.hh"
+
+#include <fildesh/ostream.hh>
+
 #include "cx/fileb.hh"
 #include "cx/map.hh"
 #include "cx/table.hh"
 #include "cx/bittable.hh"
 #include "cx/set.hh"
 #include "cx/tuple.hh"
+
+extern "C" {
+#include "cx/syscx.h"
+}
 
 //#include "biring-ext.cc"
 #define UseBitTableDB
@@ -577,7 +578,7 @@ oput_biring_protocon_spec(const Cx::String& ofilepath, const Cx::String& ofilena
                           const Cx::BitTable& legit, const FilterOpt& opt)
 {
   const uint domsz = opt.domsz;
-  fildesh::ofstream ofile( open_sibling_FildeshOF(ofilepath.ccstr(), ofilename.ccstr()) );
+  fildesh::ostream ofile( open_sibling_FildeshOF(ofilepath.ccstr(), ofilename.ccstr()) );
 
   ofile
     << "// " << legit

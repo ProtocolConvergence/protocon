@@ -1,7 +1,7 @@
 
 #include "pla.hh"
 
-#include <fildesh/ofstream.hh>
+#include <fildesh/ostream.hh>
 extern "C" {
 #include <fildesh/fildesh_compat_sh.h>
 #include <fildesh/fildesh_compat_fd.h>
@@ -225,7 +225,7 @@ oput_protocon_pc_acts_espresso_spawn(std::ostream& out, const Xn::PcSymm& pc_sym
     }
   }
   if (istat == 0) {
-    fildesh::ofstream to_espresso(open_fd_FildeshO(to_espresso_fd));
+    fildesh::ostream to_espresso(open_fd_FildeshO(to_espresso_fd));
     oput_pla_pc_acts(to_espresso, pc_symm, acts);
   }
 

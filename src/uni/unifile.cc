@@ -1,17 +1,17 @@
 
-extern "C" {
-#include "src/cx/syscx.h"
-}
-
 #include "unifile.hh"
 
-#include <fildesh/ifstream.hh>
-#include <fildesh/ofstream.hh>
+#include <fildesh/istream.hh>
+#include <fildesh/ostream.hh>
+
 #include "src/cx/bittable.hh"
 #include "src/cx/fileb.hh"
 #include "src/cx/map.hh"
 #include "src/cx/table.hh"
 
+extern "C" {
+#include "src/cx/syscx.h"
+}
 #include "src/namespace.hh"
 
   PcState
