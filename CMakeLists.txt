@@ -1,9 +1,12 @@
 
-cmake_minimum_required (VERSION 2.8.12)
+cmake_minimum_required(VERSION 3.8)
+# CMake 3.8 for C++17.
+
 #set(CMAKE_DISABLE_SOURCE_CHANGES ON)
 set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
-
-project (protocon)
+project(Protocon LANGUAGES "C" "CXX")
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_CXX_STANDARD 17)
 
 #SET(CMAKE_CXX_FLAGS_DEBUG "-g3")
 #SET(CMAKE_C_FLAGS_DEBUG "-g3")

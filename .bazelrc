@@ -4,6 +4,7 @@ common:bzlmod --registry=https://raw.githubusercontent.com/fildesh/fildesh_bazel
 common:bzlmod --registry=https://raw.githubusercontent.com/bazelbuild/bazel-central-registry/main
 
 common --config=bzlmod
+common --cxxopt=-std=c++17
 
 # Valgrind.
 build:valgrind --run_under='valgrind --trace-children=yes --track-fds=yes --leak-check=full --show-leak-kinds=all'
