@@ -1282,7 +1282,7 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
         const std::string livelock_out_filename = (
             this->ctx->opt.livelock_ofilepath + "." +
             this->ctx->opt.sys_pcidx + "." +
-            this->ctx->opt.n_livelock_ofiles).ccstr();
+            this->ctx->opt.n_livelock_ofiles).c_str();
         this->ctx->opt.n_livelock_ofiles += 1;
         fildesh::ofstream livelock_out(livelock_out_filename.c_str());
         oput_protocon_file(livelock_out, sys, this->actions, false, "livelock");

@@ -419,7 +419,7 @@ oput_protocon(std::ostream& ofile, const Table<UniAct>& acts, uint domsz)
   void
 oput_protocon(const String& ofilename, const Table<UniAct>& acts, uint domsz)
 {
-  fildesh::ofstream ofile(ofilename.ccstr());
+  fildesh::ofstream ofile(ofilename.c_str());
   oput_protocon(ofile, acts, domsz);
 }
 
@@ -487,7 +487,7 @@ oput_graphviz(std::ostream& ofile, const Table<UniAct>& acts)
     const String& label = it->second;
     ofile << "\n  "
       << edge[0] << " -> " << edge[1]
-      << " [label=\"" << label.ccstr() << "\"];";
+      << " [label=\"" << label.c_str() << "\"];";
   }
   ofile << "\n}\n";
 }

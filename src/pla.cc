@@ -112,7 +112,7 @@ oput_pla_file (std::ostream& ofile, const Xn::Sys& sys)
   bool
 oput_pla_file(const String& ofilename, const Xn::Sys& sys)
 {
-  fildesh::ofstream out(ofilename.ccstr());
+  fildesh::ofstream out(ofilename.c_str());
   if (out.fail()) {
     fildesh_log_error("Failed to create PLA file.");
     return false;

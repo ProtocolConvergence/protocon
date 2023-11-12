@@ -4,6 +4,7 @@
 #include <algorithm>
 
 #include <fildesh/ostream.hh>
+#include <fildesh/string.hh>
 extern "C" {
 #include <fildesh/fildesh_compat_string.h>
 }
@@ -55,7 +56,7 @@ public:
     delete cycle_pfmla;
   }
 
-  void assign(FildeshX* in);
+  void assign(std::string_view s);
   void next_options(Table<String>& ret_lines, bool fwd) const;
   void img_options(Table<String>& ret_lines) const;
   void pre_options(Table<String>& ret_lines) const;
@@ -78,7 +79,7 @@ parse_variable(FildeshX* in, const Xn::Net& topo)
   }
   while_chars_FildeshX(in, delims);
   for (uint i = 0; i < topo.vbls.sz(); ++i) {
-    if (skipstr_FildeshX(in, name_of(topo.vbls[i]).cstr())) {
+    if (skipstr_FildeshX(in, name_of(topo.vbls[i]).c_str())) {
       return &topo.vbls[i];
     }
   }
@@ -86,8 +87,10 @@ parse_variable(FildeshX* in, const Xn::Net& topo)
 }
 
   void
-Interactive::assign(FildeshX* in)
+Interactive::assign(std::string_view s)
 {
+  FildeshX in[1];
+  *in = FildeshX_of_bytestring((const unsigned char*)s.data(), s.size());
   for (const Xn::Vbl* vbl = parse_variable(in, topo);
        vbl;
        vbl = parse_variable(in, topo))
@@ -245,7 +248,7 @@ interactive(const Xn::Sys& sys)
     skipchrs_FildeshX(&line_slice, fildesh_compat_string_blank_bytes);
 
     if (skipstr_FildeshX(&line_slice, "assign") || skipstr_FildeshX(&line_slice, "a")) {
-      usim.assign(&line_slice);
+      usim.assign(fildesh::make_string_view(line_slice));
     }
     else if (skipstr_FildeshX(&line_slice, "topo")) {
       for (uint pcidx = 0; pcidx < topo.pcs.sz(); ++pcidx) {
@@ -324,12 +327,9 @@ interactive(const Xn::Sys& sys)
         }
         if (lines.sz()==0)
           break;
-        String line = lines[usim.urandom.pick(lines.sz())];
+        std::string_view line = lines[usim.urandom.pick(lines.sz())].view();
         of << line << std::endl;
-        line_slice.at = line.cstr();
-        line_slice.off = 0;
-        line_slice.size = strlen(line.cstr());
-        usim.assign(&line_slice);
+        usim.assign(line);
       }
       of << std::endl;
     }
@@ -350,12 +350,9 @@ interactive(const Xn::Sys& sys)
         if (lines.sz()==0)
           break;
         for (uint i = 0; i < lines.sz(); ++i) {
-          String line = lines[i];
+          std::string_view line = lines[i].view();
           of << line << std::endl;
-          line_slice.at = line.cstr();
-          line_slice.off = 0;
-          line_slice.size = strlen(line.cstr());
-          usim.assign(&line_slice);
+          usim.assign(line);
         }
       }
       of << std::endl;

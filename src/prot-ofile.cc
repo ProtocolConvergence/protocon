@@ -280,7 +280,7 @@ static
 oput_protocon_pc_assume (std::ostream& out, const Xn::PcSymm& pc_symm)
 {
   const String& assume_expression = pc_symm.spec->closed_assume_expression;
-  if (assume_expression.empty_ck())
+  if (assume_expression.empty())
     return true;
   out << "\n  (assume & closed)\n    (" << assume_expression << ");";
   return true;
@@ -354,7 +354,7 @@ oput_protocon_pc_invariant(std::ostream& out, const Xn::PcSymm& pc_symm,
                            const String& style_str)
 {
   const String& invariant_expression = pc_symm.spec->invariant_expression;
-  if (invariant_expression.empty_ck())
+  if (invariant_expression.empty())
     return true;
 
   out << "\n  " << style_str
@@ -401,7 +401,7 @@ oput_protocon_file(std::ostream& out, const Xn::Sys& sys,
   String style_str =
     string_of_invariant_style (sys.spec->invariant_style,
                                sys.spec->invariant_scope);
-  if (!sys.spec->invariant_expression.empty_ck()) {
+  if (!sys.spec->invariant_expression.empty()) {
     String legit_str = sys.spec->invariant_expression;
     out << "\n" << style_str << "\n  (" << legit_str << ")\n  ;";
   }
@@ -473,7 +473,7 @@ oput_protocon_file (const String& ofilename,
                     bool use_espresso,
                     const char* comment)
 {
-  fildesh::ofstream out(ofilename.ccstr());
+  fildesh::ofstream out(ofilename.c_str());
   if (!out.good()) {return false;}
   return oput_protocon_file(out, sys, o_topology, actions, use_espresso, comment);
 }

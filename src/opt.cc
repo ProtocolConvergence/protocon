@@ -38,7 +38,7 @@ ReadFileText (String& ret_text, const char* filename)
     else {
       String msg( "Could not read file: " );
       msg += filename;
-      failout_sysCx (msg.cstr());
+      failout_sysCx(msg.c_str());
     }
   }
   ret_text = text;
@@ -464,8 +464,8 @@ protocon_options_rec
       }
       ::XFileB args_xf;
       init_XFileB (&args_xf);
-      if (!open_FileB (&args_xf.fb, relpath, args_xfilepath.cstr())) {
-        of << "Could not open -x-args file: " << args_xfilepath.cstr() << std::endl;
+      if (!open_FileB (&args_xf.fb, relpath, args_xfilepath.c_str())) {
+        of << "Could not open -x-args file: " << args_xfilepath << std::endl;
         return false;
       }
       xget_XFileB (&args_xf);
@@ -785,7 +785,7 @@ protocon_options
   // Set up the chosen problem.
   switch(problem){
     case FromFileInstance:
-      ReadFileText (infile_opt.text, exec_opt.xfilepath.cstr());
+      ReadFileText(infile_opt.text, exec_opt.xfilepath.c_str());
       if (!ReadProtoconFile(sys, infile_opt))
         failout_sysCx ("");
       break;

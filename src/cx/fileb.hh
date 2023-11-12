@@ -30,7 +30,7 @@ public:
   }
 
   bool open(const String& pathname, const String& filename) {
-    return open_FileB (&xfb.fb, pathname.cstr(), filename.cstr());
+    return open_FileB (&xfb.fb, pathname.c_str(), filename.c_str());
   }
   bool open(const String& filename) {
     return this->open ("", filename);

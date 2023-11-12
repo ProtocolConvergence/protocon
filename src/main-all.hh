@@ -25,8 +25,8 @@ oput_stats(const ProtoconOpt& exec_opt,
            struct timespec endtime,
            unsigned long peak_mem)
 {
-  if (exec_opt.stats_ofilepath.empty_ck()) {return;}
-  fildesh::ofstream stats_out(exec_opt.stats_ofilepath.ccstr());
+  if (exec_opt.stats_ofilepath.empty()) {return;}
+  fildesh::ofstream stats_out(exec_opt.stats_ofilepath.c_str());
 
   if (!stats_out.good()) {return;}
 

@@ -582,7 +582,7 @@ public:
 
   uint add_vbl(const String& name, uint domsz)
   {
-    return add_vbl_PFmlaCtx (ctx, name.cstr(), domsz);
+    return add_vbl_PFmlaCtx(ctx, name.c_str(), domsz);
   }
 
   uint add_vbl_list()
@@ -602,7 +602,7 @@ public:
 
   const PFmlaVbl vbl(const String& s) const
   {
-    return PFmlaVbl( vbl_lookup_PFmlaCtx (ctx, s.cstr()) );
+    return PFmlaVbl(vbl_lookup_PFmlaCtx(ctx, s.c_str()));
   }
 
   PFmla pfmla_of_state(const uint* state, const Table<uint>& vbls) const;

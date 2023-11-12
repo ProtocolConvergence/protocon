@@ -4,6 +4,7 @@
  **/
 #ifndef AlphaTab_HH_
 #define AlphaTab_HH_
+#include <string>
 
 #include "synhax.hh"
 extern "C" {
@@ -62,7 +63,7 @@ public:
   void clear() { clear_AlphaTab (&t); }
   void flush() { flush_AlphaTab (&t); }
 
-  zuint sz() const {
+  size_t size() const {
     return t.sz;
   }
   bool operator!() const {
@@ -136,7 +137,7 @@ public:
   }
 
   AlphaTab& push_delim(const char* pfx, const char* delim) {
-    if (this->empty_ck())
+    if (this->empty())
       (*this) = pfx;
     else
       (*this) << delim;
@@ -161,19 +162,17 @@ public:
     return (0 > cmp_AlphaTab (&t, &b.t));
   }
 
-  const char* ccstr() const {
-    return ccstr_of_AlphaTab (&t);
+  std::string_view view() const {
+    if (t.sz == 0) {return "";}
+    return std::string_view(t.s, t.sz);
   }
-  const char* cstr() const {
+  const char* c_str() const {
     return ccstr_of_AlphaTab (&t);
-  }
-  char* cstr() {
-    return cstr_AlphaTab (&t);
   }
   bool null_ck() const {
     return null_ck_AlphaTab (&t);
   }
-  bool empty_ck() const {
+  bool empty() const {
     return empty_ck_AlphaTab (&t);
   }
 
@@ -184,15 +183,15 @@ public:
 inline
 C::AlphaTab& operator<<(C::AlphaTab& a, const Cx::AlphaTab& b)
 {
-  const C::AlphaTab tmp = dflt2_AlphaTab (b.cstr(), b.sz());
+  const C::AlphaTab tmp = dflt2_AlphaTab(b.c_str(), b.size());
   cat_AlphaTab (&a, &tmp);
   return a;
 }
 
 inline
 std::ostream& operator<<(ostream& out, const AlphaTab& a) {
-  if (a.sz() > 0)
-    out.write(a.cstr(), a.sz()-1);
+  if (a.size() > 0)
+    out.write(a.c_str(), a.size()-1);
   return out;
 }
 

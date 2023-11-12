@@ -578,7 +578,7 @@ oput_biring_protocon_spec(const Cx::String& ofilepath, const Cx::String& ofilena
                           const Cx::BitTable& legit, const FilterOpt& opt)
 {
   const uint domsz = opt.domsz;
-  fildesh::ostream ofile( open_sibling_FildeshOF(ofilepath.ccstr(), ofilename.ccstr()) );
+  fildesh::ostream ofile(open_sibling_FildeshOF(ofilepath.c_str(), ofilename.c_str()));
 
   ofile
     << "// " << legit

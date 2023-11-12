@@ -38,7 +38,7 @@ verify_solutions(const PartialSynthesis& inst, StabilizationCkInfo* info, uint* 
         const std::string livelock_out_filename = (
             inst.ctx->opt.livelock_ofilepath + "." +
             inst.ctx->opt.sys_pcidx + "." +
-            inst.ctx->opt.n_livelock_ofiles).ccstr();
+            inst.ctx->opt.n_livelock_ofiles).c_str();
         inst.ctx->opt.n_livelock_ofiles += 1;
 
         fildesh::ofstream livelock_out(livelock_out_filename.c_str());
@@ -366,7 +366,7 @@ rank_actions (Table< Table<uint> >& act_layers,
   void
 oput_conflicts (const ConflictFamily& conflicts, const String& ofilename)
 {
-  fildesh::ofstream conflicts_of(ofilename.cstr());
+  fildesh::ofstream conflicts_of(ofilename.c_str());
   conflicts_of << conflicts;
 }
 
@@ -449,11 +449,11 @@ try_known_solution(const ConflictFamily& conflicts,
       synctx.log << "I SKIPPED SOME\n";
 
     fildesh::ofstream working_of(
-        (String("working_conflicts.out.") + synctx.opt.sys_pcidx).ccstr());
+        (String("working_conflicts.out.") + synctx.opt.sys_pcidx).c_str());
     working_of << conflicts;
 
     fildesh::ofstream broken_of(
-        (String("broken_conflicts.out.") + synctx.opt.sys_pcidx).ccstr());
+        (String("broken_conflicts.out.") + synctx.opt.sys_pcidx).c_str());
     broken_of << synctx.conflicts;
   }
   return good;
@@ -468,10 +468,10 @@ initialize_conflicts(ConflictFamily& conflicts,
 {
   if (!!exec_opt.conflicts_xfilepath)
   {
-    fildesh::ifstream conflicts_in(exec_opt.conflicts_xfilepath.cstr());
+    fildesh::ifstream conflicts_in(exec_opt.conflicts_xfilepath.c_str());
     conflicts_in >> conflicts;
     if (!conflicts_in.good()) {
-      DBog1( "Bad read from conflicts file: %s", exec_opt.conflicts_xfilepath.cstr() );
+      DBog1( "Bad read from conflicts file: %s", exec_opt.conflicts_xfilepath.c_str() );
       return false;
     }
     conflicts.trim(global_opt.max_conflict_sz);
@@ -537,7 +537,7 @@ stabilization_search_init
     String ofilename( exec_opt.log_ofilename );
     ofilename += ".";
     ofilename += opt.sys_pcidx;
-    synctx.log.open(ofilename.ccstr());
+    synctx.log.open(ofilename.c_str());
   }
   else if (opt.sys_npcs > 1) {
     synctx.log.open("/dev/null");
@@ -562,7 +562,7 @@ stabilization_search_init
         msg << "Every process "
           << pc_symm.spec->name << "[" << pc_symm.spec->idx_name << "]"
           << " has repeated variable references!";
-        DBog0( msg.ccstr() );
+        DBog0( msg.c_str() );
         good = 0;
       }
     }
@@ -669,7 +669,7 @@ void
   const String& xfilepath = exec_opt.xfilepaths[i];
   if (xfilepath != exec_opt.xfilepath) {
     verif_infile_opt.text.moveq
-      (textfile_AlphaTab (0, xfilepath.cstr()));
+      (textfile_AlphaTab (0, xfilepath.c_str()));
   }
   log << "VERIFYING: " << xfilepath << std::endl;
   const bool lightweight = !exec_opt.conflicts_ofilepath;
@@ -685,10 +685,10 @@ void
       if (!!exec_opt.ofilepath) {
         String filepath( exec_opt.ofilepath + "." + i );
         log << "Writing system to: " << filepath  << std::endl;
-        fildesh::ofstream prot_out(filepath.ccstr());
+        fildesh::ofstream prot_out(filepath.c_str());
         oput_protocon_file(prot_out, sys, sys.actions,
                            exec_opt.use_espresso,
-                           exec_opt.argline.ccstr());
+                           exec_opt.argline.c_str());
       }
     }
     else {
@@ -945,10 +945,10 @@ stabilization_search(vector<uint>& ret_actions,
         solution_found = true;
         ret_actions = actions;
         if (global_opt.try_all && !!exec_opt.ofilepath) {
-          fildesh::ofstream prot_out((exec_opt.ofilepath + "." + PcIdx + "." + trial_idx).ccstr());
+          fildesh::ofstream prot_out((exec_opt.ofilepath + "." + PcIdx + "." + trial_idx).c_str());
           oput_protocon_file(prot_out, sys, actions,
                              exec_opt.use_espresso,
-                             exec_opt.argline.ccstr());
+                             exec_opt.argline.c_str());
         }
       }
 
@@ -1042,7 +1042,7 @@ stabilization_search(vector<uint>& ret_actions,
       String ofilename( exec_opt.conflicts_ofilepath );
       ofilename += ".";
       ofilename += i;
-      remove(ofilename.cstr());
+      remove(ofilename.c_str());
     }
   }
 

@@ -169,13 +169,13 @@ void oput_udp_include_file(std::ostream& ofile, const Xn::Sys& sys, const Xn::Ne
     }
     str << "\n    }";
     if (str != prev_str) {
-      if (!prev_str.empty_ck()) {
+      if (!prev_str.empty()) {
         ofile << "if (pc.idx < " << pcidx << ") {" << prev_str << "\n  }\n  else ";
       }
       prev_str = str;
     }
   }
-  if (!prev_str.empty_ck()) {
+  if (!prev_str.empty()) {
     ofile << "if (pc.idx < " << pcs.sz() << ") {" << prev_str << "\n  }";
   }
   ofile

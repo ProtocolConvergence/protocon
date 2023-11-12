@@ -805,7 +805,7 @@ ProtoconFile::add_pc_assume(Sesp assume_sp)
     parend_string_expression(assume_expression, assume_sp);
 
   DoLegit( "" ) {
-    if (!pc_symm_spec->closed_assume_expression.empty_ck()) {
+    if (!pc_symm_spec->closed_assume_expression.empty()) {
       pc_symm_spec->closed_assume_expression << " && ";
     }
     pc_symm_spec->closed_assume_expression << assume_expression;
@@ -841,7 +841,7 @@ ProtoconFile::add_pc_legit(Sesp legit_sp)
 
   DoLegit( "" )
   {
-    if (!pc_symm_spec->invariant_expression.empty_ck()) {
+    if (!pc_symm_spec->invariant_expression.empty()) {
       pc_symm_spec->invariant_expression =
         String("(") + pc_symm_spec->invariant_expression + ") && ";
     }
@@ -1697,7 +1697,7 @@ ProtoconFile::lookup_pfmla(P::Fmla* ret, const String& name)
     }
   }
 
-  bad_parse(name.ccstr(), "Unknown predicate name.");
+  bad_parse(name.c_str(), "Unknown predicate name.");
   return false;
 }
 
