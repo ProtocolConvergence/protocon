@@ -1,12 +1,13 @@
 
 #include "unifile.hh"
 
+#include <map>
+
 #include <fildesh/istream.hh>
 #include <fildesh/ostream.hh>
 
 #include "src/cx/bittable.hh"
 #include "src/cx/fileb.hh"
-#include "src/cx/map.hh"
 #include "src/cx/table.hh"
 
 extern "C" {
@@ -417,9 +418,9 @@ oput_protocon(std::ostream& ofile, const Table<UniAct>& acts, uint domsz)
 }
 
   void
-oput_protocon(const String& ofilename, const Table<UniAct>& acts, uint domsz)
+oput_protocon(const char* ofilename, const Table<UniAct>& acts, uint domsz)
 {
-  fildesh::ofstream ofile(ofilename.c_str());
+  fildesh::ofstream ofile(ofilename);
   oput_protocon(ofile, acts, domsz);
 }
 
@@ -476,15 +477,18 @@ oput_graphviz(std::ostream& ofile, const Table<UniAct>& acts)
       << " [label=\"" << a << "\"];";
   }
 
-  Map<UniStep,String> edges;
+  std::map<UniStep, std::string> edges;
   for (uint i = 0; i < acts.sz(); ++i) {
-    edges[UniStep(acts[i][0], acts[i][2])].push_delim("|") << acts[i][1];
+    std::string& label = edges[UniStep(acts[i][0], acts[i][2])];
+    if (!label.empty()) {
+      label += '|';
+    }
+    label += std::to_string(acts[i][1]);
   }
 
-  Map<UniStep, String>::const_iterator it;
-  for (it = edges.begin(); it != edges.end(); ++it) {
+  for (auto it = edges.begin(); it != edges.end(); ++it) {
     const UniStep& edge = it->first;
-    const String& label = it->second;
+    const std::string& label = it->second;
     ofile << "\n  "
       << edge[0] << " -> " << edge[1]
       << " [label=\"" << label.c_str() << "\"];";

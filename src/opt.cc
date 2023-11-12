@@ -164,7 +164,7 @@ handle_param_arg(ProtoconParamOpt& psys_opt, const char* arg, int& argi, int arg
       failout_sysCx("1 arguments needed for -max-nlayers.\n");
     }
     arg = argv[argi++];
-    if (!xget_uint_cstr (&x, arg))
+    if (!fildesh_parse_unsigned(&x, arg))
       failout_sysCx("Argument Usage: -max-nlayers NLAYERS\nWhere NLAYERS is an unsigned integer!");
     psys_opt.stabilization_opt.max_nlayers = x;
   }
@@ -372,7 +372,7 @@ protocon_options_rec
       exec_opt.nparallel = 0;
       if (argv[argi] && argv[argi][0] != '-') {
         arg = argv[argi++];
-        if (!xget_uint_cstr (&exec_opt.nparallel, arg)) {
+        if (!fildesh_parse_unsigned(&exec_opt.nparallel, arg)) {
           failout_sysCx("Number given to -parallel could not be parsed.\n");
         }
       }
@@ -444,7 +444,7 @@ protocon_options_rec
           }
           pathname2_AlphaTab (&tmpf, relpath, arg);
           exec_opt.xfilepaths.push(String(tmpf));
-          if (!exec_opt.xfilepath) {
+          if (exec_opt.xfilepath.empty()) {
             exec_opt.xfilepath = tmpf;
           }
         }
@@ -458,7 +458,7 @@ protocon_options_rec
     else if (eq_cstr (arg, "-x-args")) {
       copy_to_argline = false;
       String args_xfilepath( argv[argi++] );
-      if (!args_xfilepath) {
+      if (args_xfilepath.empty()) {
         of << "-x-args requires an argument!" << std::endl;
         return false;
       }
@@ -565,7 +565,7 @@ protocon_options_rec
       exec_opt.log_ofilename = tmpf;
     }
     else if (eq_cstr (arg, "-ntrials")) {
-      if (!xget_uint_cstr (&opt.ntrials, argv[argi++])) {
+      if (!fildesh_parse_unsigned(&opt.ntrials, argv[argi++])) {
         failout_sysCx("Argument Usage: -ntrials N");
       }
     }
@@ -586,14 +586,14 @@ protocon_options_rec
     }
     else if (eq_cstr (arg, "-x-conflicts")) {
       exec_opt.conflicts_xfilepath = argv[argi++];
-      if (!exec_opt.conflicts_xfilepath) {
+      if (exec_opt.conflicts_xfilepath.empty()) {
         of << "-x-conflicts requires an argument!" << std::endl;
         return false;
       }
     }
     else if (eq_cstr (arg, "-o-conflicts")) {
       exec_opt.conflicts_ofilepath = argv[argi++];
-      if (!exec_opt.conflicts_ofilepath) {
+      if (exec_opt.conflicts_ofilepath.empty()) {
         of << "-o-conflicts requires an argument!" << std::endl;
         return false;
       }
@@ -605,7 +605,7 @@ protocon_options_rec
       opt.snapshot_conflicts = true;
     }
     else if (eq_cstr (arg, "-max-conflict")) {
-      if (!xget_uint_cstr (&opt.max_conflict_sz, argv[argi++])) {
+      if (!fildesh_parse_unsigned(&opt.max_conflict_sz, argv[argi++])) {
         failout_sysCx("Argument Usage: -max-conflict N");
       }
     }
@@ -613,7 +613,7 @@ protocon_options_rec
       opt.randomize_pick = false;
     }
     else if (eq_cstr (arg, "-randomize-depth")) {
-      if (!xget_uint_cstr (&opt.randomize_depth, argv[argi++])) {
+      if (!fildesh_parse_unsigned(&opt.randomize_depth, argv[argi++])) {
         failout_sysCx("Argument Usage: -randomize-depth N");
       }
     }
@@ -650,12 +650,12 @@ protocon_options_rec
       opt.fast_deadlock_mrv = true;
     }
     else if (eq_cstr (arg, "-max-depth")) {
-      if (!xget_uint_cstr (&opt.max_depth, argv[argi++])) {
+      if (!fildesh_parse_unsigned(&opt.max_depth, argv[argi++])) {
         failout_sysCx("Argument Usage: -max-depth N");
       }
     }
     else if (eq_cstr (arg, "-max-height")) {
-      if (!xget_uint_cstr (&opt.max_height, argv[argi++])) {
+      if (!fildesh_parse_unsigned(&opt.max_height, argv[argi++])) {
         failout_sysCx("Argument Usage: -max-height N");
       }
     }
@@ -773,7 +773,7 @@ protocon_options
   }
 
   if (exec_opt.xfilepaths.sz() == 0) {
-    if (!!exec_opt.xfilepath) {
+    if (!exec_opt.xfilepath.empty()) {
       exec_opt.xfilepaths.push(exec_opt.xfilepath);
     }
   }

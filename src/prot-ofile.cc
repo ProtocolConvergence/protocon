@@ -394,7 +394,7 @@ oput_protocon_file(std::ostream& out, const Xn::Sys& sys,
       << " :=\n  " << sys.predicate_map.expressions[i] << ";";
   }
 
-  if (!!sys.spec->closed_assume_expression) {
+  if (!sys.spec->closed_assume_expression.empty()) {
     out << "\n(assume & closed)\n  (" << sys.spec->closed_assume_expression << ")\n  ;";
   }
 
@@ -427,7 +427,7 @@ oput_protocon_file(std::ostream& out, const Xn::Sys& sys,
     out << "\nprocess " << pc_symm.spec->name
       << "[" << pc_symm.spec->idx_name
       ;
-    if (!!pc_symm.spec->idxmap_name) {
+    if (!pc_symm.spec->idxmap_name.empty()) {
       out << " <- map " << pc_symm.spec->idxmap_name
         << " < " << o_topology.pc_symms[i].spec->nmembs_expression
         << " : " << pc_symm.spec->idxmap_expression;

@@ -745,17 +745,17 @@ int main(int argc, char** argv)
   while (argi < argc) {
     const char* arg = argv[argi++];
     if (eq_cstr ("-domsz", arg)) {
-      if (!xget_uint_cstr (&opt.domsz, argv[argi++]) || opt.domsz == 0)
+      if (!fildesh_parse_unsigned(&opt.domsz, argv[argi++]) || opt.domsz == 0)
         failout_sysCx("Argument Usage: -domsz <M>\nWhere <M> is a positive integer!");
     }
     else if (eq_cstr ("-bfs", arg)) {
       opt.bfs_ofile = &std::cout;
-      if (!xget_uint_cstr (&opt.max_depth, argv[argi++]))
+      if (!fildesh_parse_unsigned(&opt.max_depth, argv[argi++]))
         failout_sysCx("Argument Usage: -bfs <limit>\nWhere <limit> is a nonnegative integer!");
     }
     else if (eq_cstr ("-dfs-within", arg)) {
       // Only positive integers are useful, but let zero slip through.
-      if (!xget_uint_cstr (&opt.dfs_threshold, argv[argi++]))
+      if (!fildesh_parse_unsigned(&opt.dfs_threshold, argv[argi++]))
         failout_sysCx("Argument Usage: -dfs-within <threshold>\nWhere <threshold> is a positive integer!");
     }
     else if (eq_cstr ("-o", arg)) {
@@ -767,13 +767,13 @@ int main(int argc, char** argv)
       opt.id_ofile = &id_out;
     }
     else if (eq_cstr ("-max-depth", arg)) {
-      if (!xget_uint_cstr (&opt.max_depth, argv[argi++]) || opt.max_depth == 0)
+      if (!fildesh_parse_unsigned(&opt.max_depth, argv[argi++]) || opt.max_depth == 0)
         failout_sysCx("Argument Usage: -max-depth <limit>\nWhere <limit> is a positive integer!");
     }
     else if (eq_cstr("-bound", arg) ||
              eq_cstr("-cutoff", arg)) {
-      uint cutoff = 0;
-      if (!xget_uint_cstr (&cutoff, argv[argi++]) || cutoff == 0)
+      unsigned cutoff = 0;
+      if (!fildesh_parse_unsigned(&cutoff, argv[argi++]) || cutoff == 0)
         failout_sysCx("Argument Usage: -cutoff <limit>\nWhere <limit> is a positive integer!");
       opt.max_period = cutoff;
       opt.max_propagations = cutoff;
@@ -788,12 +788,12 @@ int main(int argc, char** argv)
       opt.trust_given = true;
     }
     else if (eq_cstr ("-max-period", arg)) {
-      if (!xget_uint_cstr (&opt.max_period, argv[argi++]) || opt.max_period == 0)
+      if (!fildesh_parse_unsigned(&opt.max_period, argv[argi++]) || opt.max_period == 0)
         failout_sysCx("Argument Usage: -max-period <limit>\nWhere <limit> is a positive integer!");
     }
     else if (eq_cstr ("-max-ppgs", arg) ||
              eq_cstr ("-max-propagations", arg)) {
-      if (!xget_uint_cstr (&opt.max_propagations, argv[argi++]) || opt.max_propagations == 0)
+      if (!fildesh_parse_unsigned(&opt.max_propagations, argv[argi++]) || opt.max_propagations == 0)
         failout_sysCx("Argument Usage: -max-ppgs <limit>\nWhere <limit> is a positive integer!");
     }
     else if (eq_cstr ("-nw-disabling", arg)) {

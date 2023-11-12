@@ -2,7 +2,6 @@
 #ifndef FileB_HH_
 #define FileB_HH_
 
-#include "alphatab.hh"
 #include "xfile.hh"
 extern "C" {
 #include "fileb.h"
@@ -29,10 +28,10 @@ public:
     lose_XFileB (&xfb);
   }
 
-  bool open(const String& pathname, const String& filename) {
-    return open_FileB (&xfb.fb, pathname.c_str(), filename.c_str());
+  bool open(const char* pathname, const char* filename) {
+    return open_FileB(&xfb.fb, pathname, filename);
   }
-  bool open(const String& filename) {
+  bool open(const char* filename) {
     return this->open ("", filename);
   }
 
@@ -41,8 +40,8 @@ public:
    * \return The output file that must be used.
    *   It is wise to construct a Cx::XFile object with this.
    **/
-  C::XFile* uopen(const String& dirname, const String& filename) {
-    if (filename == "-") {
+  C::XFile* uopen(const char* dirname, const char* filename) {
+    if (filename[0] == '-' && filename[1] == '\0') {
       return stdin_XFile ();
     }
     if (this->open(dirname, filename)) {
@@ -51,7 +50,7 @@ public:
     return 0;
   }
 
-  C::XFile* uopen(const String& filename) {
+  C::XFile* uopen(const char* filename) {
     return this->uopen("", filename);
   }
 

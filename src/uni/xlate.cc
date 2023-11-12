@@ -54,11 +54,11 @@ int main(int argc, char** argv)
       xfile = 0;
     }
     else if (eq_cstr ("-domsz", arg)) {
-      if (!xget_uint_cstr (&domsz_override, argv[argi++]) || domsz_override == 0)
+      if (!fildesh_parse_unsigned(&domsz_override, argv[argi++]) || domsz_override == 0)
         failout_sysCx("Argument Usage: -domsz <M>\nWhere <M> is a positive integer!");
     }
     else if (eq_cstr ("-cutoff", arg)) {
-      if (!xget_uint_cstr (&cutoff, argv[argi++]) || cutoff == 0)
+      if (!fildesh_parse_unsigned(&cutoff, argv[argi++]) || cutoff == 0)
         failout_sysCx("Argument Usage: -cutoff <limit>\nWhere <limit> is a positive integer!");
     }
     else if (eq_cstr ("-o-id", arg)) {

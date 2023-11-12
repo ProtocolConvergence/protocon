@@ -171,7 +171,7 @@ main (int argc, char** argv)
             ++argi;
             if (need_npcs) {
 
-                if (xget_uint_cstr (&n_ring_pcs, argv[argi])) {
+                if (fildesh_parse_unsigned(&n_ring_pcs, argv[argi])) {
                     ++argi;
                 }
                 else {

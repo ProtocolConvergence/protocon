@@ -12,24 +12,6 @@ itoa_dup_cstr (int x)
 }
 
   char*
-xget_uint_cstr (uint* ret, const char* in)
-{
-  zuint x = 0;
-  char* s =
-    xget_ujint_cstr (&x, in);
-  if (!s)  return 0;
-  if (x > UINT_MAX)  return 0;
-  *ret = x;
-  return s;
-}
-
-  char*
-xget_int_cstr (int* ret, const char* in)
-{
-  return fildesh_parse_int(ret, in);
-}
-
-  char*
 xget_luint_cstr (luint* ret, const char* in)
 {
   unsigned long v;

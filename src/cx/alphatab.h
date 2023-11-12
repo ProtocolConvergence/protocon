@@ -305,10 +305,6 @@ assign_cstr_AlphaTab(AlphaTab* dst, const char* s)
 char*
 itoa_dup_cstr (int x);
 char*
-xget_uint_cstr (uint* ret, const char* in);
-char*
-xget_int_cstr (int* ret, const char* in);
-char*
 xget_luint_cstr (luint* ret, const char* in);
 char*
 xget_ujint_cstr (ujint* ret, const char* in);

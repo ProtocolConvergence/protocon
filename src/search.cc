@@ -34,7 +34,9 @@ verify_solutions(const PartialSynthesis& inst, StabilizationCkInfo* info, uint* 
     if (!stabilization_ck(*inst[i].log, *inst[i].ctx->systems[i], inst[i].stabilization_opt(),
                           inst[i].actions, info))
     {
-      if (i == inst.sz()-1 && info && info->livelock_exists && !!inst.ctx->opt.livelock_ofilepath) {
+      if (i == inst.sz()-1 && info &&
+          info->livelock_exists &&
+          !inst.ctx->opt.livelock_ofilepath.empty()) {
         const std::string livelock_out_filename = (
             inst.ctx->opt.livelock_ofilepath + "." +
             inst.ctx->opt.sys_pcidx + "." +
@@ -466,8 +468,7 @@ initialize_conflicts(ConflictFamily& conflicts,
                      const AddConvergenceOpt& global_opt,
                      bool do_output)
 {
-  if (!!exec_opt.conflicts_xfilepath)
-  {
+  if (!exec_opt.conflicts_xfilepath.empty()) {
     fildesh::ifstream conflicts_in(exec_opt.conflicts_xfilepath.c_str());
     conflicts_in >> conflicts;
     if (!conflicts_in.good()) {
@@ -533,7 +534,7 @@ stabilization_search_init
 {
   DeclLegit( good );
 
-  if (!!exec_opt.log_ofilename) {
+  if (!exec_opt.log_ofilename.empty()) {
     String ofilename( exec_opt.log_ofilename );
     ofilename += ".";
     ofilename += opt.sys_pcidx;
@@ -672,7 +673,7 @@ void
       (textfile_AlphaTab (0, xfilepath.c_str()));
   }
   log << "VERIFYING: " << xfilepath << std::endl;
-  const bool lightweight = !exec_opt.conflicts_ofilepath;
+  const bool lightweight = exec_opt.conflicts_ofilepath.empty();
   sys.topology.lightweight = lightweight;
   if (ReadProtoconFile(sys, verif_infile_opt)) {
     StabilizationCkInfo info;
@@ -682,7 +683,7 @@ void
       ret_actions = sys.actions;
       log << "System is stabilizing." << std::endl;
 
-      if (!!exec_opt.ofilepath) {
+      if (!exec_opt.ofilepath.empty()) {
         String filepath( exec_opt.ofilepath + "." + i );
         log << "Writing system to: " << filepath  << std::endl;
         fildesh::ofstream prot_out(filepath.c_str());
@@ -944,7 +945,7 @@ stabilization_search(vector<uint>& ret_actions,
         log << "SOLUTION FOUND!" << std::endl;
         solution_found = true;
         ret_actions = actions;
-        if (global_opt.try_all && !!exec_opt.ofilepath) {
+        if (global_opt.try_all && !exec_opt.ofilepath.empty()) {
           fildesh::ofstream prot_out((exec_opt.ofilepath + "." + PcIdx + "." + trial_idx).c_str());
           oput_protocon_file(prot_out, sys, actions,
                              exec_opt.use_espresso,
@@ -969,7 +970,9 @@ stabilization_search(vector<uint>& ret_actions,
       synctx.optimal_nlayers_sum = 0;
     }
 
-    if (!synctx.done_ck() || !!exec_opt.conflicts_ofilepath || try_known_solution_ck)
+    if (!synctx.done_ck() ||
+        !exec_opt.conflicts_ofilepath.empty() ||
+        try_known_solution_ck)
     {
       if (try_known_solution_ck &&
           !try_known_solution (conflicts, synctx))
@@ -1013,7 +1016,7 @@ stabilization_search(vector<uint>& ret_actions,
         << " nlayers_sum:" << solution_nlayers_sum << '\n';
     log.flush();
 
-    if (global_opt.snapshot_conflicts && !!exec_opt.conflicts_ofilepath)
+    if (global_opt.snapshot_conflicts && !exec_opt.conflicts_ofilepath.empty())
       oput_conflicts (synctx.conflicts, exec_opt.conflicts_ofilepath, PcIdx);
 
     if (!synctx.done_ck()) {
@@ -1033,10 +1036,10 @@ stabilization_search(vector<uint>& ret_actions,
   }
 
   conflicts.trim(global_opt.max_conflict_sz);
-  if (!!exec_opt.conflicts_ofilepath)
+  if (!exec_opt.conflicts_ofilepath.empty())
     oput_conflicts (conflicts, exec_opt.conflicts_ofilepath);
 
-  if (global_opt.snapshot_conflicts && !!exec_opt.conflicts_ofilepath)
+  if (global_opt.snapshot_conflicts && !exec_opt.conflicts_ofilepath.empty())
   {
     for (uint i = 0; i < NPcs; ++i) {
       String ofilename( exec_opt.conflicts_ofilepath );

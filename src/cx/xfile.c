@@ -443,7 +443,7 @@ xget_int_XFile (XFile* xf, int* x)
   const char* s;
   skipds_XFile (xf, WhiteSpaceChars);
   tods_XFile (xf, WhiteSpaceChars);
-  s = xget_int_cstr (x, (char*)&xf->buf.s[xf->off]);
+  s = fildesh_parse_int(x, (char*)&xf->buf.s[xf->off]);
   if (!s)  return false;
   xf->off = IdxElt( xf->buf.s, s );
   return true;
@@ -455,7 +455,7 @@ xget_uint_XFile (XFile* xf, uint* x)
   const char* s;
   skipds_XFile (xf, WhiteSpaceChars);
   tods_XFile (xf, WhiteSpaceChars);
-  s = xget_uint_cstr (x, (char*)&xf->buf.s[xf->off]);
+  s = fildesh_parse_unsigned(x, (char*)&xf->buf.s[xf->off]);
   if (!s)  return false;
   xf->off = IdxElt( xf->buf.s, s );
   return true;

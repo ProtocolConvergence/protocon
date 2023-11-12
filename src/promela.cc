@@ -97,7 +97,7 @@ OPutPromelaPc(std::ostream& ofile, const Xn::PcSymm& pc_symm, const Table<Xn::Ac
     << pc_symm_spec.name << "()"
     << "\n{"
     ;
-  if (!!pc_symm_spec.idxmap_name) {
+  if (!pc_symm_spec.idxmap_name.empty()) {
 
     ofile
       << "\n#define " << pc_symm_spec.idxmap_name

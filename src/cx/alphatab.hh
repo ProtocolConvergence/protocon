@@ -59,15 +59,10 @@ public:
     t = b;
   }
 
-  char* forget() { return forget_AlphaTab (&t); }
   void clear() { clear_AlphaTab (&t); }
-  void flush() { flush_AlphaTab (&t); }
 
   size_t size() const {
     return t.sz;
-  }
-  bool operator!() const {
-    return null_ck_AlphaTab (&t);
   }
 
   AlphaTab& operator<<(char c) {
@@ -168,9 +163,6 @@ public:
   }
   const char* c_str() const {
     return ccstr_of_AlphaTab (&t);
-  }
-  bool null_ck() const {
-    return null_ck_AlphaTab (&t);
   }
   bool empty() const {
     return empty_ck_AlphaTab (&t);

@@ -4,12 +4,12 @@
 
 #include <fildesh/ostream.hh>
 
-#include "cx/fileb.hh"
 #include "cx/map.hh"
 #include "cx/table.hh"
 #include "cx/bittable.hh"
 #include "cx/set.hh"
 #include "cx/tuple.hh"
+#include "cx/xfile.hh"
 
 extern "C" {
 #include "cx/syscx.h"
@@ -574,11 +574,11 @@ oput_biring_invariant(std::ostream& ofile, const Cx::BitTable& legit, const uint
 }
 
   void
-oput_biring_protocon_spec(const Cx::String& ofilepath, const Cx::String& ofilename,
+oput_biring_protocon_spec(const char* ofilepath, const char* ofilename,
                           const Cx::BitTable& legit, const FilterOpt& opt)
 {
   const uint domsz = opt.domsz;
-  fildesh::ostream ofile(open_sibling_FildeshOF(ofilepath.c_str(), ofilename.c_str()));
+  fildesh::ostream ofile(open_sibling_FildeshOF(ofilepath, ofilename));
 
   ofile
     << "// " << legit
@@ -623,11 +623,11 @@ recurse(BitTable set, uint q,
 {
   biring_fixpoint (set, opt.domsz);
 
-  Cx::String ofilename;
+  std::string ofilename;
   {
     std::stringstream tmp_ss;
     tmp_ss << set;
-    ofilename = tmp_ss.str().c_str();
+    ofilename = tmp_ss.str();
   }
 
   if (!biring_sat_ck (set, opt.domsz, opt.minsz)) {
@@ -1058,11 +1058,11 @@ int main(int argc, char** argv)
   while (argi < argc) {
     const char* arg = argv[argi++];
     if (eq_cstr ("-domsz", arg)) {
-      if (!xget_uint_cstr (&opt.domsz, argv[argi++]))
+      if (!fildesh_parse_unsigned(&opt.domsz, argv[argi++]))
         failout_sysCx("Argument Usage: -domsz n\nWhere n is an unsigned integer!");
     }
     else if (eq_cstr ("-minsz", arg)) {
-      if (!xget_uint_cstr (&opt.minsz, argv[argi++]))
+      if (!fildesh_parse_unsigned(&opt.minsz, argv[argi++]))
         failout_sysCx("Argument Usage: -minsz n\nWhere n is an unsigned integer!");
     }
     else if (eq_cstr ("-pair", arg)) {

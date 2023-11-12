@@ -64,7 +64,7 @@ oput_uniring_invariant(std::ostream& ofile, const BitTable& set, const uint doms
 void
 oput_protocon(std::ostream& ofile, const Table<UniAct>& acts, uint domsz = 0);
 void
-oput_protocon(const String& ofilename,
+oput_protocon(const char* ofilename,
               const Table<UniAct>& acts, uint domsz = 0);
 void
 oput_promela(std::ostream& ofile, const Table<UniAct>& acts, uint domsz);

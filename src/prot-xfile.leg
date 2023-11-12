@@ -586,8 +586,8 @@ NatDom =
 
 NAT = < [0-9]+ >
   {
-    uint u;
-    xget_uint_cstr (&u, yytext);
+    unsigned u;
+    fildesh_parse_unsigned(&u, yytext);
     $$.sp = make_Nat_Sesp (yy->st->spctx, u);
     $$.int_ck = 1;
   }
@@ -738,7 +738,7 @@ ReadProtoconFile(Xn::Sys& sys, const ProtoconFileOpt& opt)
        ++itr)
   {
     Xn::NatMap x( itr->second );
-    if (!x.expression) {
+    if (x.expression.empty()) {
       x.expression = x.membs[0];
     }
     yyctx.st->sys->spec->constant_map.add(itr->first, x);

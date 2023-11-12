@@ -225,7 +225,7 @@ open_FileB (FileB* f, const char* pathname, const char* filename)
 
   if (pfxeq_cstr(dev_fd_prefix, f->pathname.s)) {
     int fd = -1;
-    xget_int_cstr(&fd, &f->pathname.s[strlen(dev_fd_prefix)]);
+    fildesh_parse_int(&fd, &f->pathname.s[strlen(dev_fd_prefix)]);
     if (fd >= 0) {
       openfd_FileB(f, fd);
     }
@@ -403,7 +403,7 @@ xget_uint_XFileB (XFileB* xfb, uint* x)
     skipds_XFile (xf, 0);
     if (xf->buf.sz - xf->off < 50)
       xget_chunk_XFileB (xfb);
-    s = xget_uint_cstr (x, cstr_XFile (xf));
+    s = fildesh_parse_unsigned(x, cstr_XFile (xf));
     xfb->fb.good = !!s;
     if (!xfb->fb.good)  return false;
     xf->off = IdxElt( xf->buf.s, s );

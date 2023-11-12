@@ -156,16 +156,16 @@ int main(int argc, char** argv) {
     else if (eq_cstr ("-domsz", arg)) {
       arg = argv[argi++];
       if (!arg) {failout_sysCx("Give a file for -domsz!");}
-      if (!xget_uint_cstr (&domsz, arg) || domsz == 0)
+      if (!fildesh_parse_unsigned(&domsz, arg) || domsz == 0)
         failout_sysCx("Usage: -domsz <domsz>\nWhere <domsz> is a positive integer.");
     }
     else if (max_period == 0) {
-      if (!xget_uint_cstr (&max_period, arg) || max_period == 0)
+      if (!fildesh_parse_unsigned(&max_period, arg) || max_period == 0)
         failout_sysCx("Failed to parse period.");
     }
     else if (min_period == 0) {
       min_period = max_period;
-      if (!xget_uint_cstr (&max_period, arg) || max_period < min_period)
+      if (!fildesh_parse_unsigned(&max_period, arg) || max_period < min_period)
         failout_sysCx("Failed to parse period.");
     }
     else {

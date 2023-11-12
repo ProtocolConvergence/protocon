@@ -1267,7 +1267,7 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
         *this->log << "cycle conflict size:" << conflict_set.sz() << std::endl;
       }
     }
-    if (!!this->ctx->opt.livelock_ofilepath && &sys == this->ctx->systems.top()) {
+    if (!this->ctx->opt.livelock_ofilepath.empty() && &sys == this->ctx->systems.top()) {
       bool big_livelock = true;
       for (uint i = 0; i < this->ctx->systems.sz()-1; ++i) {
         if (!stabilization_ck(this->ctx->dev_null_ostream, *this->ctx->systems[i],
