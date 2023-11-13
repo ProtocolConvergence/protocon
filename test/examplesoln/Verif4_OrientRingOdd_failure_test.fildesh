@@ -1,6 +1,6 @@
 #!/usr/bin/env fildesh
 
-zec -o $(OF OrientRingOdd) / / $(XA 1)
+(: OrientRingOdd_file Filename .self.opt.input_file)
 
-$(O? status) protocon -verify -x $(XF OrientRingOdd) -param N 4
+$(O? status) protocon -verify -x $(XOF OrientRingOdd_file) -param N 4
 expect_failure -x? $(XF status)

@@ -243,7 +243,7 @@ push_instances(Table< ProtoconParamOpt >& instances,
   {
     ProtoconParamOpt& instance = instances.grow1();
     instance = instdef;
-    Map<String, Xn::NatMap>::iterator param_it = instance.constant_map.begin();
+    auto param_it = instance.constant_map.begin();
     while (param_it != instance.constant_map.end()) {
       Xn::NatMap& tup = param_it->second;
       if (tup.scalar) {
@@ -253,9 +253,9 @@ push_instances(Table< ProtoconParamOpt >& instances,
     }
   }
 
-  Map<String, Xn::NatMap>::const_iterator param_it = instdef.constant_map.begin();
+  auto param_it = instdef.constant_map.begin();
   while (param_it != instdef.constant_map.end()) {
-    const String& key = param_it->first;
+    const auto& key = param_it->first;
     const Xn::NatMap& param_range = param_it->second;
     const uint endidx = instances.sz();
     if (param_range.scalar) {

@@ -61,7 +61,16 @@ public:
 
   void clear() { clear_AlphaTab (&t); }
 
+  const char* data() const {
+    return (char*)t.s;
+  }
+
   size_t size() const {
+    if (t.sz > 0) {
+      if (t.s[t.sz-1] == '\0') {
+        return t.sz-1;
+      }
+    }
     return t.sz;
   }
 
@@ -158,14 +167,14 @@ public:
   }
 
   std::string_view view() const {
-    if (t.sz == 0) {return "";}
-    return std::string_view(t.s, t.sz);
+    if (this->empty()) {return "";}
+    return std::string_view(this->data(), this->size());
   }
   const char* c_str() const {
     return ccstr_of_AlphaTab (&t);
   }
   bool empty() const {
-    return empty_ck_AlphaTab (&t);
+    return (this->size() == 0);
   }
 
   friend class OFile;
@@ -183,7 +192,7 @@ C::AlphaTab& operator<<(C::AlphaTab& a, const Cx::AlphaTab& b)
 inline
 std::ostream& operator<<(ostream& out, const AlphaTab& a) {
   if (a.size() > 0)
-    out.write(a.c_str(), a.size()-1);
+    out.write(a.data(), a.size());
   return out;
 }
 

@@ -1,8 +1,10 @@
 #!/usr/bin/env fildesh
 
-zec -o $(OF expect) / / $(XA 1)
-zec -o $(OF MatchRingThreeState) / / $(XA 2)
+(: expect_file Filename .self.opt.expect_file)
+(: MatchRingThreeState_file Filename .self.opt.input_file)
 
-|< protocon -nop -x $(XF MatchRingThreeState) -o-pla -
-|> cmp $(XF expect)
+|< protocon -nop -x $(XOF MatchRingThreeState_file) -o-pla -
+|- tee /tmp/out2
+|- cmp $(XOF expect_file)
+|> stderr
 

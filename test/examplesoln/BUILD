@@ -1,10 +1,10 @@
-load("@fildesh//:def.bzl", "fildesh_test")
+load("@fildesh//tool/bazel:fildesh.bzl", "fildesh_test")
 
 fildesh_test(
     name = "Verif4_Sync_OrientRing_test",
     srcs = ["Verif4_Sync_OrientRing_test.fildesh"],
     aliases = {"protocon": "//src:protocon"},
-    args = ["$(location //examplesoln:OrientRing.prot)"],
+    args = ["--input_file=$(location //examplesoln:OrientRing.prot)"],
     data = [
         "//examplesoln:OrientRing.prot",
     ],
@@ -14,7 +14,7 @@ fildesh_test(
     name = "Verif4_OrientRingOdd_failure_test",
     srcs = ["Verif4_OrientRingOdd_failure_test.fildesh"],
     aliases = {"protocon": "//src:protocon"},
-    args = ["$(location //examplesoln:OrientRingOdd.prot)"],
+    args = ["--input_file=$(location //examplesoln:OrientRingOdd.prot)"],
     data = [
         "//examplesoln:OrientRingOdd.prot",
     ],
@@ -26,8 +26,8 @@ fildesh_test(
     srcs = ["PLA_MatchRingThreeState_test.fildesh"],
     aliases = {"protocon": "//src:protocon"},
     args = [
-        "$(location :MatchRingThreeState.pla)",
-        "$(location //examplesoln:MatchRingThreeState.prot)",
+        "--expect_file=$(location :MatchRingThreeState.pla)",
+        "--input_file=$(location //examplesoln:MatchRingThreeState.prot)",
     ],
     data = [
         ":MatchRingThreeState.pla",
@@ -41,8 +41,8 @@ fildesh_test(
     srcs = ["Promela_OrientDaisy_test.fildesh"],
     aliases = {"protocon": "//src:protocon"},
     args = [
-        "$(location :OrientDaisy.pml)",
-        "$(location //examplesoln:OrientDaisy.prot)",
+        "--expect_file=$(location :OrientDaisy.pml)",
+        "--input_file=$(location //examplesoln:OrientDaisy.prot)",
     ],
     data = [
         ":OrientDaisy.pml",
@@ -56,8 +56,8 @@ fildesh_test(
     srcs = ["UDP_TokenRingRand_test.fildesh"],
     aliases = {"protocon": "//src:protocon"},
     args = [
-        "$(location :TokenRingRand.h)",
-        "$(location //examplesoln:TokenRingRand.prot)",
+        "--expect_file=$(location :TokenRingRand.h)",
+        "--input_file=$(location //examplesoln:TokenRingRand.prot)",
     ],
     data = [
         ":TokenRingRand.h",

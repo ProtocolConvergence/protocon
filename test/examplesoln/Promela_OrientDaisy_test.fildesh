@@ -1,8 +1,9 @@
 #!/usr/bin/env fildesh
 
-zec -o $(OF expect) / / $(XA 1)
-zec -o $(OF OrientDaisy) / / $(XA 2)
+(: expect_file Filename .self.opt.expect_file)
+(: OrientDaisy_file Filename .self.opt.input_file)
 
-|< protocon -nop -x $(XF OrientDaisy) -param N 5 -o-pml -
-|> cmp $(XF expect)
+|< protocon -nop -x $(XOF OrientDaisy_file) -param N 5 -o-pml -
+|- cmp $(XOF expect_file)
+|> stderr
 

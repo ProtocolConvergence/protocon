@@ -37,31 +37,26 @@ ExternalProject_Add(fildesh_project
   CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>"
   BUILD_BYPRODUCTS
   "<BINARY_DIR>/tool/cembed"
-  "<BINARY_DIR>/tool/comparispawn"
   "<BINARY_DIR>/tool/cswitch"
-  )
+)
 add_executable(fildesh IMPORTED)
 add_executable(cembed IMPORTED)
-add_executable(comparispawn IMPORTED)
 add_executable(cswitch IMPORTED)
 add_library (fildesh_lib STATIC IMPORTED)
-add_library (fildesh_compat_lib STATIC IMPORTED)
 ExternalProject_Get_Property(fildesh_project INSTALL_DIR)
 set_target_properties(fildesh PROPERTIES IMPORTED_LOCATION "${INSTALL_DIR}/bin/fildesh")
 set_target_properties(fildesh_lib PROPERTIES IMPORTED_LOCATION "${INSTALL_DIR}/lib/fildesh/libfildesh.a")
-set_target_properties(fildesh_compat_lib PROPERTIES IMPORTED_LOCATION "${INSTALL_DIR}/lib/fildesh/libfildeshcompat.a")
-include_directories("${INSTALL_DIR}/include")
 
 ExternalProject_Get_Property(fildesh_project BINARY_DIR)
 set_target_properties(cembed PROPERTIES IMPORTED_LOCATION "${BINARY_DIR}/tool/cembed")
-set_target_properties(comparispawn PROPERTIES IMPORTED_LOCATION "${BINARY_DIR}/tool/comparispawn")
 set_target_properties(cswitch PROPERTIES IMPORTED_LOCATION "${BINARY_DIR}/tool/cswitch")
 add_dependencies (fildesh fildesh_project)
 add_dependencies (fildesh_lib fildesh_project)
-add_dependencies (fildesh_compat_lib fildesh_project)
 add_dependencies (cembed fildesh_project)
-add_dependencies (comparispawn fildesh_project)
 add_dependencies (cswitch fildesh_project)
+set(Fildesh_EXECUTABLE "$<TARGET_FILE:fildesh>")
+set(Fildesh_LIBRARIES "$<TARGET_NAME:fildesh_lib>")
+set(Fildesh_INCLUDE_DIRS "${INSTALL_DIR}/include")
 
 
 ExternalProject_Add(mdd_glu_project
@@ -95,7 +90,10 @@ add_dependencies (peg_leg peg_project)
 
 enable_testing ()
 
-include_directories("${CMAKE_SOURCE_DIR}")
+include_directories(
+  "${CMAKE_SOURCE_DIR}"
+  ${Fildesh_INCLUDE_DIRS}
+)
 
 #### Build ####
 add_subdirectory(src)

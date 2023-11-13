@@ -1,10 +1,5 @@
 
 %{
-#include "src/cx/synhax.hh"
-
-extern "C" {
-#include "src/cx/fileb.h"
-}
 #include "src/prot-xfile.hh"
 
 #define YYSTYPE FinMeta
@@ -14,7 +9,12 @@ extern "C" {
 
 #define YY_INPUT(yy, buf, result, max_size) \
 { \
-  result = xget_char_XFile (&yy->st->xf, buf) ? 1 : 0; \
+  result = 0; \
+  if (peek_bytestring_FildeshX(yy->st->in_, NULL, 1)) { \
+    result = 1; \
+    buf[0] = yy->st->in_->at[yy->st->in_->off]; \
+    skip_bytestring_FildeshX(yy->st->in_, NULL, 1); \
+  } \
 }
 
 #ifndef PROTOCON_NAMESPACE
@@ -35,7 +35,7 @@ ProtoconFile =
     | GlobalLegit
     | GlobalLegitBehav
     | ProcDecl
-    | < . .* >  {yy->st->bad_parse(0, "Unknown.");}
+    | < . .* >  {yy->st->bad_parse(yytext, "Unknown.");}
    )
    WS?
   )*
@@ -728,12 +728,12 @@ ReadProtoconFile(Xn::Sys& sys, const ProtoconFileOpt& opt)
   bool good = true;
   yycontext yyctx;
   memset (&yyctx, 0, sizeof (yyctx));
-  ::AlphaTab text = dflt_AlphaTab ();
-  text << opt.text;
-  ::XFile xfile[1];
-  init_XFile_olay_AlphaTab (xfile, &text);
-  yyctx.st = new ProtoconFile(&sys, xfile);
-  for (Map<String,Xn::NatMap>::const_iterator itr = opt.constant_map.begin();
+  FildeshX in[1];
+  *in = FildeshX_of_bytestring(
+      (const unsigned char*)opt.text.data(),
+      opt.text.size());
+  yyctx.st = new ProtoconFile(&sys, in);
+  for (auto itr = opt.constant_map.begin();
        itr != opt.constant_map.end();
        ++itr)
   {
@@ -746,7 +746,6 @@ ReadProtoconFile(Xn::Sys& sys, const ProtoconFileOpt& opt)
   if (!yyparse(&yyctx) || !yyctx.st->allgood) {
     good = false;
   }
-  lose_AlphaTab (&text);
   delete yyctx.st;
   yyrelease(&yyctx);
 

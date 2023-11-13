@@ -59,8 +59,8 @@ private:
 
 public:
   bool allgood;
-  uint text_nlines;
-  ::XFile xf;
+  unsigned text_nlines;
+  FildeshX* in_;
   // TODO:
   //Table<ProtoconFilePcSymm> pcsymm_fmlas;
 
@@ -77,9 +77,10 @@ public:
   Table<Xn::ActSymm> conflict;
   bool legit_mode_assigned;
 
-  ProtoconFile(Xn::Sys* sys, ::XFile* xf)
+  ProtoconFile(Xn::Sys* sys, FildeshX* in)
     : allgood( true )
     , text_nlines(0)
+    , in_(in)
     , pc_symm(0)
     , pc_symm_spec(0)
     , pc_in_use(0)
@@ -90,9 +91,6 @@ public:
     this->spec = sys->spec;
     this->sys->invariant = true;
     spctx = make_SespCtx ();
-    xget_XFile (xf);
-    xf->off = xf->buf.sz-1;
-    olay_txt_XFile (&this->xf, xf, 0);
   }
 
   ~ProtoconFile() {

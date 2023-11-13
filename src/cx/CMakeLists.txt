@@ -17,7 +17,7 @@ add_library (cx_lib STATIC
   "xfile.h"
   )
 
-target_link_libraries (cx_lib fildesh_lib fildesh_compat_lib)
+target_link_libraries (cx_lib ${Fildesh_LIBRARIES})
 
 add_executable(bittable_test "bittable_test.c")
 target_link_libraries(bittable_test cx_lib)

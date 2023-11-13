@@ -1,6 +1,6 @@
 #!/usr/bin/env fildesh
 
-zec -o $(OF OrientRing) / / $(XA 1)
+(: OrientRing_file Filename .self.opt.input_file)
 
-protocon -verify -synchronous -x $(XF OrientRing) -param N 4
+protocon -verify -synchronous -x $(XOF OrientRing_file) -param N 4
 
