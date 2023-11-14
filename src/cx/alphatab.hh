@@ -54,11 +54,6 @@ public:
     lose_AlphaTab (&t);
   }
 
-  void moveq(const C::AlphaTab& b) {
-    lose_AlphaTab (&t);
-    t = b;
-  }
-
   void clear() { clear_AlphaTab (&t); }
 
   const char* data() const {

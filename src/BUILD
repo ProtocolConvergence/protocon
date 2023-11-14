@@ -105,6 +105,7 @@ cc_library(
     ],
     deps = [
         ":xnsys_lib",
+        "//src/inline:inline_cc_lib",
         "@fildesh//:fildesh_cc_lib",
     ],
     visibility = [

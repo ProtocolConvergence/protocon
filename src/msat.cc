@@ -1,27 +1,32 @@
+#include <vector>
 
-extern "C" {
-#include "cx/syscx.h"
-#include "cx/fileb.h"
-}
+#include <fildesh/ostream.hh>
+#include <fildesh/string.hh>
 #define __STDC_LIMIT_MACROS
 #define __STDC_FORMAT_MACROS
-//#include <core/Solver.h>
-#include <simp/SimpSolver.h>
-#include <vector>
-using std::vector;
+//#include <minisat/core/Solver.h>
+#include <minisat/simp/SimpSolver.h>
 
-#include <fildesh/ofstream.hh>
-
-#include "cx/alphatab.hh"
 #include "prot-xfile.hh"
 #include "prot-ofile.hh"
 #include "conflictfamily.hh"
+#include "stabilization.hh"
 #include "synthesis.hh"
+#include "cx/table.hh"
+
+#include "src/inline/slurp_file_to_string.hh"
+
+extern "C" {
+#include "cx/syscx.h"
+}
+
+using std::vector;
 
 //#define WITH_PRE
 
 int main(int argc, char** argv)
 {
+  using namespace protocon;
   int argi = init_sysCx (&argc, &argv);
   (void) argi;
   //const char filename[] = "examplespec/SumNotTwo.prot";
@@ -34,8 +39,7 @@ int main(int argc, char** argv)
   Xn::Sys sys;
   Xn::Net& topo = sys.topology;
   ProtoconFileOpt infile_opt;
-  infile_opt.text.moveq
-    (textfile_AlphaTab (0, filename));
+  slurp_file_to_string(infile_opt.text, filename);
 
   if (!ReadProtoconFile(sys, infile_opt)) {
     Claim( 0 && "Can't parse file" );
@@ -124,7 +128,7 @@ int main(int argc, char** argv)
 
   uint ntries = 0;
   while (solv.solve()) {
-    X::Fmla xn(false);
+    ::X::Fmla xn(false);
     vector<uint> actions;
 #ifdef WITH_PRE
     Cx::Table<bool> model(topo.n_possible_acts + topo.total_pre_domsz);
@@ -151,10 +155,14 @@ int main(int argc, char** argv)
     StabilizationOpt opt;
     StabilizationCkInfo info;
     info.find_livelock_actions = true;
-    if (stabilization_ck(fildesh::ofstream("/dev/null"), sys, opt, actions, &info)) {
-      DBog0("solution found!");
-      oput_protocon_file ("myoutput.prot", sys, actions, false, "from sat");
-      break;
+    {
+      fildesh::ofstream dev_null("/dev/null");
+      if (stabilization_ck(dev_null, sys, opt, actions, &info)) {
+        DBog0("solution found!");
+        fildesh::ofstream out("myoutput.prot");
+        oput_protocon_file(out, sys, actions, false, "from sat");
+        break;
+      }
     }
     clause.clear();
     if (info.livelock_exists) {

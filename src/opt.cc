@@ -1,18 +1,20 @@
 
-extern "C" {
-#include "cx/syscx.h"
-}
+#include <fildesh/string.hh>
 
 #include "opt.hh"
 #include "synthesis.hh"
 #include "prot-ofile.hh"
-#include "cx/fileb.hh"
 #include "search.hh"
+#include "src/cx/fileb.hh"
+#include "src/inline/slurp_file_to_string.hh"
 
 #ifndef _WIN32
 #include <sys/resource.h>
 #endif
 
+extern "C" {
+#include "cx/syscx.h"
+}
 #include "namespace.hh"
 
 enum ProblemInstance {
@@ -27,22 +29,13 @@ enum ProblemInstance {
 
 static
   void
-ReadFileText (String& ret_text, const char* filename)
+ReadFileText(std::string& ret_text, const char* filename)
 {
-  const bool use_stdin = eq_cstr ("-", filename);
-  AlphaTab text = textfile_AlphaTab (0, use_stdin ? 0 : filename);
-  if (text.sz == 0) {
-    if (use_stdin) {
-      failout_sysCx ("Could not read standard input.");
-    }
-    else {
-      String msg( "Could not read file: " );
-      msg += filename;
-      failout_sysCx(msg.c_str());
-    }
+  if (!slurp_file_to_string(ret_text, filename)) {
+    std::string msg = "Could not read file: ";
+    msg += filename;
+    failout_sysCx(msg.c_str());
   }
-  ret_text = text;
-  lose_AlphaTab( &text );
 }
 
 static

@@ -14,7 +14,7 @@ extern "C" {
 class ProtoconFileOpt
 {
 public:
-  String text;
+  std::string text;
   Map< String, Xn::NatMap > constant_map;
   Xn::InvariantStyle invariant_style;
   Xn::InvariantScope invariant_scope;

@@ -1,7 +1,8 @@
+#include <cstdio>
+#include <queue>
+#include <vector>
 
-extern "C" {
-#include "src/cx/syscx.h"
-}
+#include <fildesh/string.hh>
 
 #include "uniact.hh"
 #include "unifile.hh"
@@ -9,12 +10,13 @@ extern "C" {
 #include "src/prot-xfile.hh"
 #include "src/xnsys.hh"
 
-#include "src/cx/fileb.hh"
 #include "src/cx/tuple.hh"
-#include <vector>
-#include <queue>
-#include <stdio.h>
 
+#include "src/inline/slurp_file_to_string.hh"
+
+extern "C" {
+#include "src/cx/syscx.h"
+}
 #include "src/namespace.hh"
 
 using std::queue;
@@ -202,7 +204,7 @@ ReadUniRing(const char* filepath, Xn::Sys& sys, vector<UniStep>& legits)
   legits.clear();
   sys.topology.lightweight = true;
   ProtoconFileOpt infile_opt;
-  infile_opt.text.moveq(textfile_AlphaTab (0, filepath));
+  slurp_file_to_string(infile_opt.text, filepath);
   if (!ReadProtoconFile(sys, infile_opt))
     BailOut(0, "Cannot read file!");
   const Xn::Net& topo = sys.topology;

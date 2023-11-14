@@ -1,28 +1,21 @@
+#include <cstdio>
 
-#define TestClaim
+#include <fildesh/string.hh>
 
-extern "C" {
-#include "cx/syscx.h"
-}
-
-#include "cx/synhax.hh"
-
-extern "C" {
-#include "cx/fileb.h"
-#include "cx/sesp.h"
-}
-#include "cx/alphatab.hh"
-#include "cx/map.hh"
-#include "cx/set.hh"
-#include "cx/table.hh"
 #include "inst.hh"
-#include "xnsys.hh"
 #include "prot-xfile.hh"
 #include "stabilization.hh"
 #include "search.hh"
 #include "synthesis.hh"
-#include <stdio.h>
+#include "xnsys.hh"
 
+#include "src/inline/slurp_file_to_string.hh"
+
+#define TestClaim
+#include "cx/synhax.hh"
+extern "C" {
+#include "cx/syscx.h"
+}
 #include "namespace.hh"
 
 static void
@@ -36,8 +29,7 @@ TestXFmlae()
   const char* filename = "examplespec/SumNotTwo.prot";
 
   ProtoconFileOpt infile_opt;
-  infile_opt.text.moveq
-    (textfile_AlphaTab (0, filename));
+  slurp_file_to_string(infile_opt.text, filename);
 
   topo.lightweight = true;
 
@@ -76,8 +68,7 @@ TestProtoconFile(bool agreement)
     filename = "examplespec/SumNotTwo.prot";
 
   ProtoconFileOpt infile_opt;
-  infile_opt.text.moveq
-    (textfile_AlphaTab (0, filename));
+  slurp_file_to_string(infile_opt.text, filename);
 
   if (!ReadProtoconFile(sys_f, infile_opt)) {
     Claim( 0 && "Can't parse file" );
@@ -224,8 +215,7 @@ static void TestProbabilisticLivelock()
 {
   Xn::Sys sys;
   ProtoconFileOpt infile_opt;
-  infile_opt.text.moveq
-    (textfile_AlphaTab (0, "examplesoln/ColorUniRing.prot"));
+  slurp_file_to_string(infile_opt.text, "examplesoln/ColorUniRing.prot");
 
   if (!ReadProtoconFile(sys, infile_opt)) {
     Claim( 0 && "Can't parse file" );

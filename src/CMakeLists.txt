@@ -5,6 +5,7 @@ find_package(OpenMP)
 
 add_definitions(-DPROTOCON_NAMESPACE=protocon)
 
+add_subdirectory(inline)
 add_subdirectory(cx)
 add_subdirectory(gui)
 add_subdirectory(udp-impl)
@@ -67,6 +68,7 @@ add_library(prot_file_lib STATIC
   "${CMAKE_CURRENT_BINARY_DIR}/prot-xfile.leg.cc"
   "cx/sesp.c"
   "cx/sesp.h"
+  ${INLINE_CC_LIB_HDRS}
   )
 set_property(TARGET prot_file_lib APPEND PROPERTY INCLUDE_DIRECTORIES
   "${CMAKE_CURRENT_SOURCE_DIR}")

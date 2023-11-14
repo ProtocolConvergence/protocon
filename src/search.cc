@@ -7,11 +7,11 @@
 
 #include <fildesh/istream.hh>
 #include <fildesh/ostream.hh>
+#include <fildesh/string.hh>
 #ifdef _OPENMP
 #include <omp.h>
 #endif
 
-#include "cx/fileb.hh"
 #include "cx/urandom.hh"
 #include "opt.hh"
 #include "prot-xfile.hh"
@@ -19,6 +19,8 @@
 #include "stabilization.hh"
 #include "synthesis.hh"
 #include "xnsys.hh"
+
+#include "src/inline/slurp_file_to_string.hh"
 
 #include "namespace.hh"
 
@@ -669,8 +671,7 @@ void
   verif_infile_opt.constant_map = exec_opt.instances[0].constant_map;
   const String& xfilepath = exec_opt.xfilepaths[i];
   if (xfilepath != exec_opt.xfilepath) {
-    verif_infile_opt.text.moveq
-      (textfile_AlphaTab (0, xfilepath.c_str()));
+    slurp_file_to_string(verif_infile_opt.text, xfilepath.c_str());
   }
   log << "VERIFYING: " << xfilepath << std::endl;
   const bool lightweight = exec_opt.conflicts_ofilepath.empty();

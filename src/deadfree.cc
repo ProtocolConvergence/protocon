@@ -1,14 +1,17 @@
+#include <queue>
+#include <stack>
+
+#include <fildesh/istream.hh>
+#include <fildesh/string.hh>
+
+#include "prot-xfile.hh"
+#include "xnsys.hh"
+
+#include "src/inline/slurp_file_to_string.hh"
 
 extern "C" {
 #include "cx/syscx.h"
 }
-
-#include "cx/fileb.hh"
-#include "prot-xfile.hh"
-#include "xnsys.hh"
-#include <queue>
-#include <stack>
-
 #include "namespace.hh"
 
 struct LCNode {
@@ -171,9 +174,7 @@ int main(int argc, char** argv) {
   sys.topology.lightweight = true;
   ProtoconFileOpt infile_opt;
 
-  // infile_opt.text = read_all_text(in_filepath)
-  infile_opt.text.moveq(textfile_AlphaTab (0, in_filepath));
-
+  slurp_file_to_string(infile_opt.text, in_filepath);
   if (!ReadProtoconFile(sys, infile_opt))
     failout_sysCx("Cannot read file!");
 

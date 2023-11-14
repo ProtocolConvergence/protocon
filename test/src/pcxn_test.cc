@@ -128,9 +128,9 @@ TestPcXn_rryy_file()
   sys.topology.lightweight = true;
   ProtoconFileOpt infile_opt;
   infile_opt.constant_map["N"] = 1;
-#define WL << '\n' <<
+#define WL "\n"
   infile_opt.text
-    << "variable x[N]   < 2;"
+    = "variable x[N]   < 2;"
     WL "variable c[N+1] < 2;"
     WL "variable y[N]   < 2;"
     WL "(future & future silent) (true);"

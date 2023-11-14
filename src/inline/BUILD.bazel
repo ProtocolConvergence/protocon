@@ -1,0 +1,7 @@
+cc_library(
+    name = "inline_cc_lib",
+    srcs = [
+        "slurp_file_to_string.hh",
+    ],
+    visibility = ["//visibility:public"],
+)
