@@ -149,6 +149,7 @@ commute_action_id(unsigned id, unsigned domsz)
   return id_of3(act[1], act[0], act[2], domsz);
 }
 
+static
   Trit
 periodic_leads_semick(const BitTable& delegates,
                       const Table<PcState>& ppgfun,
@@ -732,8 +733,6 @@ searchit(const SearchOpt& opt)
 #undef RECURSE
 }
 
-static bool TestKnownAperiodic();
-
 int main(int argc, char** argv)
 {
   int argi = init_sysCx (&argc, &argv);
@@ -741,6 +740,7 @@ int main(int argc, char** argv)
 
   fildesh::ifstream given_in;
   fildesh::ofstream id_out;
+  bool periodic_leads_semick_test = false;
 
   while (argi < argc) {
     const char* arg = argv[argi++];
@@ -804,25 +804,15 @@ int main(int argc, char** argv)
       opt.nn_ww_disabling = true;
       opt.nw_commutative = true;
     }
-    else if (eq_cstr ("-test", arg)) {
-      bool passed = TestKnownAperiodic();
-      if (passed) {
-        DBog0("PASS");
-      }
-      else {
-        DBog0("FAIL");
-      }
-      lose_sysCx();
-      return (passed ? 0 : 1);
-    }
     else if (eq_cstr ("-init", arg) ||
              eq_cstr ("-id", arg)) {
       if (!argv[argi])
         failout_sysCx("Argument Usage: -init <id>");
 
-      fildesh::istream in(open_FildeshXA());
-      size_t n = strlen(argv[argi]);
-      memcpy(grow_FildeshX(in.c_struct(), n), argv[argi], n);
+      FildeshX in[1];
+      *in = FildeshX_of_bytestring(
+          (const unsigned char*)argv[argi],
+          strlen(argv[argi]));
       argi += 1;
 
       Table<PcState> ppgfun;
@@ -841,11 +831,14 @@ int main(int argc, char** argv)
       argi += 1;
 
       Table<PcState> ppgfun;
-      opt.domsz = xget_b64_ppgfun(given_in, ppgfun);
+      opt.domsz = xget_b64_ppgfun(given_in.c_struct(), ppgfun);
       if (opt.domsz == 0) {
         failout_sysCx (0);
       }
       opt.given_acts = uniring_actions_of(ppgfun, opt.domsz);
+    }
+    else if (0 == strcmp("--periodic_leads_semick_test", arg)) {
+      periodic_leads_semick_test = true;
     }
     else  {
       DBog1( "Unrecognized option: %s", arg );
@@ -863,60 +856,41 @@ int main(int argc, char** argv)
   }
   opt.commit_domsz();
 
-  while (true) {
+  if (periodic_leads_semick_test) {
+    const unsigned domsz = opt.domsz;
+    BitTable delegates( domsz*domsz*domsz, 0 );
+    for (unsigned i = 0; i < opt.given_acts.size(); ++i) {
+      delegates.set1(id_of(opt.given_acts[i], domsz));
+    }
+    Table<PcState> ppgfun;
+    init_ppgfun(ppgfun, delegates, domsz);
+    BitTable mask( domsz*domsz*domsz, 0 );
+    const unsigned depth = opt.given_acts.sz();
+    Table<BitTable> candidates_stack(depth+1, mask);
+    opt.check_ppg_overapprox = false;
+    switch (periodic_leads_semick(delegates, ppgfun, mask,
+                                  candidates_stack, depth, opt)) {
+      case Nil: {std::cout << "livelock\n"; break;}
+      case May: {std::cout << "deadlock\n"; break;}
+      case Yes: {std::cout << "unknown\n"; break;}
+    }
+  }
+  else do {
     searchit(opt);
 
     if (!given_in.good())  break;
 
     Table<PcState> ppgfun;
-    uint domsz = xget_b64_ppgfun(given_in, ppgfun);
+    unsigned domsz = xget_b64_ppgfun(given_in.c_struct(), ppgfun);
     if (opt.domsz != domsz) {
       if (domsz == 0)  break;
       failout_sysCx ("Use the same domain size for all inputs.");
     }
     opt.given_acts = uniring_actions_of(ppgfun, opt.domsz);
-  }
+  } while(true);
   lose_sysCx ();
   return 0;
 }
-
-  bool
-TestKnownAperiodic()
-{
-  Table<UniAct> acts;
-  const uint domsz = tilings_and_patterns_aperiodic_uniring(acts);
-
-  BitTable delegates( domsz*domsz*domsz, 0 );
-  for (uint i = 0; i < acts.sz(); ++i) {
-    delegates.set1(id_of(acts[i], domsz));
-  }
-
-  Table<PcState> ppgfun;
-  init_ppgfun(ppgfun, delegates, domsz);
-
-  switch (livelock_semick(15, ppgfun, domsz)) {
-    case Nil: DBog0("livelock: Nil");  return false;
-    case May: break;
-    case Yes: DBog0("livelock: Yes");  return false;
-  }
-
-  BitTable mask( domsz*domsz*domsz, 0 );
-  const uint depth = acts.sz();
-  Table<BitTable> candidates_stack(depth+1, mask);
-  SearchOpt opt;
-  opt.domsz = domsz;
-  opt.max_period = 10;
-  opt.check_ppg_overapprox = false;
-  opt.commit_domsz();
-  switch (periodic_leads_semick(delegates, ppgfun, mask,
-                                candidates_stack, depth, opt)) {
-    case Nil: DBog0("hard: Nil");  return false;
-    case May: DBog0("hard: May");  return false;
-    case Yes: break;
-  }
-  return true;
-}
-
 
 END_NAMESPACE
 

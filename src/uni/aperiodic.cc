@@ -21,22 +21,14 @@
  * but see the comment above ReduceToActionTiles() for the new reduction.
  * It will eventually appear in a journal version.
  **/
-extern "C" {
-#include "src/cx/syscx.h"
-}
-#include "src/cx/synhax.hh"
+#include <iostream>
 
-#include "uniact.hh"
-#include "unifile.hh"
+#include <fildesh/fildesh.h>
 
-#include <iomanip>
-#include <sstream>
-
-#include "src/cx/alphatab.hh"
 #include "src/cx/map.hh"
 #include "src/cx/set.hh"
 #include "src/cx/table.hh"
-
+#include "src/uni/uniact.hh"
 
 #include "src/namespace.hh"
 
@@ -266,18 +258,16 @@ do { \
 /** Execute me now!**/
 int main (int argc, char** argv)
 {
-  int argi = init_sysCx (&argc, &argv);
+  int argi = 1;
   const char* arg = argv[argi];
 
   bool commutative = false;
-  if (eq_cstr (arg, "-commute") ||
-      eq_cstr (arg, "-commutative")) {
+  if (arg &&
+      (0 == strcmp(arg, "-commute") ||
+       0 == strcmp(arg, "-commutative")))
+  {
     arg = argv[++argi];
     commutative = true;
-  }
-
-  if (argi+1 != argc || eq_cstr("-h", arg)) {
-    failout_sysCx ("Expect one argument of: -id, -gv, -list, -pml, -prot");
   }
 
   Table< Tuple<uint,4> > wtiles;
@@ -292,36 +282,16 @@ int main (int argc, char** argv)
     commutative
     ? ReduceToCommutativeTiles(acts, wtiles)
     : ReduceToActionTiles(acts, wtiles);
+  assert(domsz > 0);
 
   if (!check_constraints(acts, commutative)) {
-    failout_sysCx("Reduction does not preserve good properties.");
+    fildesh_log_error("Reduction does not preserve good properties.");
+    return 1;
   }
 
-  std::ostream& ofile = std::cout;
-  if (eq_cstr ("-id", arg) || eq_cstr ("-o-id", arg)) {
-    oput_b64_ppgfun(ofile, uniring_ppgfun_of(acts, domsz), domsz);
-    ofile << std::endl;
+  for (unsigned i = 0; i < acts.size(); ++i) {
+    std::cout << acts[i][0] << '\t' << acts[i][1] << '\t' << acts[i][2] << '\n';
   }
-  else if (eq_cstr ("-list", arg) || eq_cstr ("-o-list", arg)) {
-    for (uint i = 0; i < acts.sz(); ++i) {
-      std::stringstream tmp_ss;
-      tmp_ss << std::setfill(' ') << std::setw(3) << (unsigned)acts[i][0]
-        << " " << std::setw(3) << (unsigned)acts[i][1]
-        << " " << std::setw(3) << (unsigned)acts[i][2] << "\n";
-      ofile << tmp_ss.str();
-    }
-  }
-  else if (eq_cstr ("-gv", arg) || eq_cstr ("-o-graphviz", arg) || eq_cstr ("-o-gv", arg)) {
-    oput_graphviz(ofile, acts);
-  }
-  else if (eq_cstr ("-pml", arg) || eq_cstr ("-o-pml", arg)) {
-    oput_promela(ofile, acts, domsz);
-  }
-  else if (eq_cstr ("-prot", arg) || eq_cstr ("-o-prot", arg)) {
-    oput_protocon(ofile, acts, domsz);
-  }
-
-  lose_sysCx ();
   return 0;
 }
 

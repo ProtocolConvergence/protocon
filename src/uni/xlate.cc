@@ -24,8 +24,7 @@ int main(int argc, char** argv)
   const char* svg_livelock_ofilename = 0;
   const char* list_ofilename = 0;
 
-  C::XFile xfile_olay[1];
-  C::XFile* xfile = stdin_XFile ();
+  FildeshX* in = NULL;
 
   Table<PcState> ppgfun;
   Table<UniAct> acts;
@@ -38,20 +37,23 @@ int main(int argc, char** argv)
     if (eq_cstr ("-id", arg)) {
       if (!argv[argi])
         failout_sysCx("Argument Usage: -id <id>");
-      init_XFile_olay_cstr (xfile_olay, argv[argi++]);
-      xfile = xfile_olay;
+      close_FildeshX(in);
+      in = open_FildeshXA();
+      size_t n = strlen(argv[argi]);
+      memcpy(grow_FildeshX(in, n), argv[argi], n);
+      argi += 1;
     }
     else if (eq_cstr ("-x-list", arg)) {
       if (!argv[argi])
         failout_sysCx("Argument Usage: -x-list <filename>");
-      XFileB list_xfileb;
-      xfile = list_xfileb.uopen(0, argv[argi++]);
-      if (!xfile)
+      in = open_FildeshXF(argv[argi++]);
+      if (!in)
         failout_sysCx("Cannot open -x-list file.");
-      domsz = xget_list(xfile, acts);
+      domsz = xget_list(in, acts);
       if (domsz == 0)
         failout_sysCx ("Failed to read protocol.");
-      xfile = 0;
+      close_FildeshX(in);
+      in = NULL;
     }
     else if (eq_cstr ("-domsz", arg)) {
       if (!fildesh_parse_unsigned(&domsz_override, argv[argi++]) || domsz_override == 0)
@@ -96,7 +98,7 @@ int main(int argc, char** argv)
 
   if (domsz_override > 0) {
     // Override domain size.
-    if (xfile) {
+    if (in) {
       failout_sysCx ("-domsz only works with -x-list.");
     }
     if (domsz > domsz_override) {
@@ -105,16 +107,20 @@ int main(int argc, char** argv)
     domsz = domsz_override;
   }
 
-  if (xfile) {
+  if (acts.sz() > 0) {
+    // Protocol given as a list of actions.
+    ppgfun = uniring_ppgfun_of(acts, domsz);
+  }
+  else {
+    if (!in) {
+      in = open_FildeshXF("-");
+    }
     // Protocol given as an ID.
-    domsz = xget_b64_ppgfun(xfile, ppgfun);
+    domsz = xget_b64_ppgfun(in, ppgfun);
     if (domsz == 0)
       failout_sysCx ("Failed to read protocol.");
     acts = uniring_actions_of(ppgfun);
-  }
-  else {
-    // Protocol given as a list of actions.
-    ppgfun = uniring_ppgfun_of(acts, domsz);
+    close_FildeshX(in);
   }
 
   if (svg_livelock_ofilename) {

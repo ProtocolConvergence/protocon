@@ -4,7 +4,8 @@
 #include "src/cx/tuple.hh"
 #include <stdlib.h>
 
-typedef byte PcState;
+typedef unsigned short PcState;
+typedef unsigned short UniAct_id;
 
 class UniAct;
 class UniStep;
@@ -72,13 +73,13 @@ id_of3(uint a, uint b, uint c, uint domsz)
 inline uint id_of(const Cx::Tuple<uint,2>& u, const uint domsz)
 { return id_of2(u[0], u[1], domsz); }
 
-inline uint id_of(const Cx::Tuple<byte,2>& u, const uint domsz)
+inline UniAct_id id_of(const Cx::Tuple<PcState,2>& u, const uint domsz)
 { return id_of2(u[0], u[1], domsz); }
 
 inline uint id_of(const Cx::Tuple<uint,3>& u, const uint domsz)
 { return id_of3(u[0], u[1], u[2], domsz); }
 
-inline uint id_of(const Cx::Tuple<byte,3>& u, const uint domsz)
+inline UniAct_id id_of(const Cx::Tuple<PcState,3>& u, const uint domsz)
 { return id_of3(u[0], u[1], u[2], domsz); }
 
 #endif

@@ -1,0 +1,9 @@
+
+|< aperiodic
+|> xlate -x-list - -o-id $(OF id)
+
+zec -o $(OF expect) / "unknown\n" /
+
+|< classify 15 -id $(XA id)
+|- cmp - $(XF expect)
+|> stdout

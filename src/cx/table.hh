@@ -77,8 +77,8 @@ public:
   zuint sz() const {
     return t.sz;
   }
-  zuint size() const { return this->sz(); }
-
+  size_t size() const {return t.sz;}
+  bool empty() const {return (this->size() == 0);}
   bool empty_ck() const
   { return (t.sz == 0); }
 
@@ -158,13 +158,16 @@ public:
     new (e) T();
     return *e;
   }
-  T& push(const T& x) {
+  T& push_back(const T& x) {
     T* e = (T*) grow1_Table (&t);
     new (e) T(x);
     return *e;
   }
+  T& push(const T& x) {
+    return this->push_back(x);
+  }
   Table<T>& operator<<(const T& x) {
-    this->push(x);
+    this->push_back(x);
     return *this;
   }
   void mpop(zuint n = 1) {
@@ -178,12 +181,14 @@ public:
     cpop_Table (&t, n);
   }
 
-  T& top() {
+  T& back() {
     return *(T*) top_Table (&t);
   }
-  const T& top() const {
+  const T& back() const {
     return *(T*) top_Table ((C::Table*)&t);
   }
+  T& top() {return this->back();}
+  const T& top() const {return this->back();}
 
   bool operator==(const Table<T>& b) const {
     const Table<T>& a = *this;

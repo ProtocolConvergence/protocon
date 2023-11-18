@@ -335,6 +335,11 @@ interactive(const Xn::Sys& sys)
     }
     else if (skipstr_FildeshX(&line_slice, "sstep")) {
       skipchrs_FildeshX(&line_slice, fildesh_compat_string_blank_bytes);
+      bool print_change_on = true;
+      if (skipstr_FildeshX(&line_slice, "quiet")) {
+        print_change_on = false;
+        skipchrs_FildeshX(&line_slice, fildesh_compat_string_blank_bytes);
+      }
       bool forward = true;
       unsigned n = 1; /* default */
       int x = -1;
@@ -349,13 +354,17 @@ interactive(const Xn::Sys& sys)
         }
         if (lines.sz()==0)
           break;
-        for (uint i = 0; i < lines.sz(); ++i) {
+        for (unsigned i = 0; i < lines.sz(); ++i) {
           std::string_view line = lines[i].view();
-          of << line << std::endl;
+          if (print_change_on) {
+            of << line << std::endl;
+          }
           usim.assign(line);
         }
       }
-      of << std::endl;
+      if (print_change_on) {
+        of << std::endl;
+      }
     }
     else if (skipstr_FildeshX(&line_slice, "show-state"))
     {
@@ -414,6 +423,9 @@ interactive(const Xn::Sys& sys)
             std::string(predicate_name.at, predicate_name.size).c_str());
       }
       usim.reset_mask_pfmla();
+    }
+    else if (skipstr_FildeshX(&line_slice, "show-newline")) {
+      of << std::endl;
     }
     else if (skipstr_FildeshX(&line_slice, "exit"))
     {

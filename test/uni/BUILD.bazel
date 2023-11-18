@@ -1,4 +1,44 @@
-load("@fildesh//:def.bzl", "fildesh_test")
+load("@fildesh//tool/bazel:fildesh.bzl", "fildesh_test")
+load("@fildesh//tool/bazel:spawn.bzl", "spawn_test")
+
+fildesh_test(
+    name = "aperiodic_expect_test",
+    srcs = ["aperiodic_expect_test.fildesh"],
+    aliases = {
+        "aperiodic": "//src/uni:aperiodic",
+        "xlate": "//src/uni:xlate",
+    },
+)
+
+fildesh_test(
+    name = "aperiodic_classify_test",
+    srcs = ["aperiodic_classify_test.fildesh"],
+    aliases = {
+        "aperiodic": "//src/uni:aperiodic",
+        "classify": "//src/uni:classify",
+        "xlate": "//src/uni:xlate",
+    },
+)
+
+fildesh_test(
+    name = "aperiodic_semick_test",
+    srcs = ["aperiodic_semick_test.fildesh"],
+    aliases = {
+        "aperiodic": "//src/uni:aperiodic",
+        "generate": "//src/uni:generate",
+        "xlate": "//src/uni:xlate",
+    },
+)
+
+fildesh_test(
+    name = "ppgfun_livelock_test",
+    srcs = ["ppgfun_livelock_test.fildesh"],
+    aliases = {
+        "classify": "//src/uni:classify",
+        "protocon": "//src:protocon",
+        "xlate": "//src/uni:xlate",
+    },
+)
 
 fildesh_test(
     name = "g_d7_b3_c20_test",

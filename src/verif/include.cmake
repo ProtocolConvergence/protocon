@@ -200,6 +200,3 @@ foreach (f ${VerifyBySynthesis})
     COMMAND protocon -x ${SolnPath}/${f}.prot -param N 5)
 endforeach ()
 
-## Unidirectional ring sanity check.
-add_test (NAME Uniring_Generate COMMAND uni_generate -test)
-

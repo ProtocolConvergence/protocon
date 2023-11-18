@@ -100,8 +100,7 @@ int main(int argc, char** argv) {
   fildesh::ofstream livelock_ofile;
   fildesh::ofstream unknown_ofile;
 
-  C::XFile xfile_olay[1];
-  C::XFile* xfile = stdin_XFile ();
+  FildeshX* in = NULL;
   std::ostream& ofile = std::cout;
 
   bool line_flush = true;
@@ -111,8 +110,11 @@ int main(int argc, char** argv) {
     if (eq_cstr ("-id", arg)) {
       if (!argv[argi])
         failout_sysCx("Argument Usage: -id <id>");
-      init_XFile_olay_cstr (xfile_olay, argv[argi++]);
-      xfile = xfile_olay;
+      close_FildeshX(in);
+      in = open_FildeshXA();
+      size_t n = strlen(argv[argi]);
+      memcpy(grow_FildeshX(in, n), argv[argi], n);
+      argi += 1;
     }
     else if (eq_cstr ("-nobdd", arg)) {
       use_bdds = false;
@@ -182,6 +184,10 @@ int main(int argc, char** argv) {
     min_period = 1;
   }
 
+  if (!in) {
+    in = open_FildeshXF("-");
+  }
+
   PFmlaCtx pfmla_ctx;
   Table<PFmlaVbl> vbls;
   if (domsz > 0 && use_bdds) {
@@ -193,8 +199,7 @@ int main(int argc, char** argv) {
 
   while (true) {
     Table<PcState> ppgfun;
-    uint read_domsz =
-      xget_b64_ppgfun(xfile, ppgfun);
+    unsigned read_domsz = xget_b64_ppgfun(in, ppgfun);
     if (read_domsz == 0)  break;
     if (domsz == 0) {
       domsz = read_domsz;
@@ -242,6 +247,7 @@ int main(int argc, char** argv) {
     }
   }
 
+  close_FildeshX(in);
   lose_sysCx();
   return 0;
 }

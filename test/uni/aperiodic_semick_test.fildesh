@@ -1,0 +1,9 @@
+
+|< aperiodic
+|> xlate -x-list - -o-id $(OF id)
+
+zec -o $(OF expect) / "unknown\n" /
+
+|< generate --periodic_leads_semick_test -id $(XA id) -cutoff 10
+|- cmp - $(XF expect)
+|> stdout

@@ -2,20 +2,9 @@
 #define UNIFILE_HH_
 
 #include "uniact.hh"
-#include <istream>
 #include <ostream>
 
-struct XFile;
-namespace Cx {
-  class XFileB;
-}
-
 #include "../namespace.hh"
-
-namespace C {
-  using ::XFile;
-}
-using Cx::XFileB;
 
 PcState
 uniring_domsz_of(const Table<PcState>& ppgfun);
@@ -39,16 +28,12 @@ std::ostream& operator<<(std::ostream& of, const BitTable& bt);
 std::ostream&
 oput_b64_ppgfun(std::ostream& ofile, const Table<PcState>& ppgfun, uint domsz=0);
 PcState
-xget_b64_ppgfun(C::XFile* xfile, Table<PcState>& ppgfun);
-PcState
-xget_b64_ppgfun(std::istream& in, Table<PcState>& ppgfun);
+xget_b64_ppgfun(FildeshX* in, Table<PcState>& ppgfun);
 
 PcState
-xget_list(C::XFile* xfile, Table<UniAct>& acts);
+xget_list(FildeshX* in, Table<UniAct>& acts);
 void
 oput_list(std::ostream& ofile, const Table<UniAct>& acts);
-PcState
-xget_actions(C::XFile* xfile, BitTable& actset);
 
 void
 map_livelock_ppgs(void (*f) (void**, const UniAct&, uint, uint),
@@ -76,9 +61,6 @@ oput_svg_livelock(std::ostream& ofile, const Table<PcState>& ppgfun,
                   const Table<PcState>& bot,
                   const Table<PcState>& col,
                   const PcState domsz);
-
-PcState
-tilings_and_patterns_aperiodic_uniring(Table<UniAct>& acts);
 
 END_NAMESPACE
 #endif

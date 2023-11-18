@@ -5,6 +5,7 @@
 
 #include <fildesh/istream.hh>
 #include <fildesh/ostream.hh>
+#include <fildesh/string.hh>
 
 #include "src/cx/bittable.hh"
 #include "src/cx/fileb.hh"
@@ -140,27 +141,6 @@ std::ostream& operator<<(std::ostream& of, const BitTable& bt)
   return of;
 }
 
-static
-  bool
-xget_triple(C::XFile* xfile, UniAct& act)
-{
-  C::XFile olay[1];
-  if (!getlined_olay_XFile (olay, xfile, "\n"))
-    return false;
-  uint a, b, c;
-  if (xget_uint_XFile (olay, &a)) {
-    if (xget_uint_XFile (olay, &b) &&
-        xget_uint_XFile (olay, &c)) {
-      act = UniAct(a, b, c);
-      return true;
-    }
-    else {
-      failout_sysCx("I didn't read a full triple. Malformed input?");
-    }
-  }
-  return false;
-}
-
   std::ostream&
 oput_b64_ppgfun(std::ostream& ofile, const Table<PcState>& ppgfun, uint domsz)
 {
@@ -191,53 +171,12 @@ oput_b64_ppgfun(std::ostream& ofile, const Table<PcState>& ppgfun, uint domsz)
 }
 
   PcState
-xget_b64_ppgfun(C::XFile* xfile, Table<PcState>& ppgfun)
+xget_b64_ppgfun(FildeshX* in, Table<PcState>& ppgfun)
 {
-  const char* s = nextok_XFile(xfile, 0, 0);
-  if (!s)  return 0;
-  const zuint n = strlen(s);
-  zuint domsz = 1;
-  uint elgsz = 1;
-  while (domsz * domsz * elgsz + 5 < 6 * n) {
-    domsz += 1;
-    elgsz = 1+lg_luint(domsz);
-  }
-  if ((domsz * domsz * elgsz + 5) / 6 != n) {
-    DBog2("B64 encoding has %zu bits, which is not close to %s.",
-          6*n, "a valid length (domsz^2*lg(domsz+1))");
-    return 0;
-  }
-  BitTable bt(domsz*domsz*elgsz, 0);
-  for (zuint i = 0; i < n; ++i) {
-    const char c = s[i];
-    const uint w
-      = ('A' <= c && c <= 'Z') ? (uint) (c-'A')
-      : ('a' <= c && c <= 'z') ? (uint) (c-'a') + 26
-      : ('0' <= c && c <= '9') ? (uint) (c-'0') + 52
-      : ('-' == c) ? 62
-      : ('_' == c) ? 63
-      : 64;
-    if (w >= 64) {
-      DBog1( "Error reading B64 encoding, get char '%c'.", c );
-      return 0;
-    }
-    bt.set(6*i, 6, w);
-  }
-
-  ppgfun.resize(domsz*domsz);
-  for (zuint i = 0; i < ppgfun.sz(); ++i) {
-    const PcState c = bt.get(elgsz*i, elgsz);
-    ppgfun[i] = (c < domsz ? c : domsz);
-  }
-  return (PcState) domsz;
-}
-
-  PcState
-xget_b64_ppgfun(std::istream& in, Table<PcState>& ppgfun)
-{
-  std::string s;
-  std::getline(in, s);
-  if (s.empty())  return 0;
+  skipchrs_FildeshX(in, " \t\r\n");
+  std::string_view s = fildesh::make_string_view(
+      until_char_FildeshX(in, '\n'));
+  if (s.empty()) {return 0;}
   const size_t n = s.size();
   size_t domsz = 1;
   unsigned elgsz = 1;
@@ -276,15 +215,31 @@ xget_b64_ppgfun(std::istream& in, Table<PcState>& ppgfun)
 }
 
   PcState
-xget_list(C::XFile* xfile, Table<UniAct>& acts)
+xget_list(FildeshX* in, Table<UniAct>& acts)
 {
+  const char* err_msg = NULL;
   UniAct act;
-  while (xget_triple(xfile, act)) {
-    acts << act;
+  for (FildeshX slice = until_char_FildeshX(in, '\n');
+       slice.at;
+       slice = until_char_FildeshX(in, '\n'))
+  {
+    unsigned a = 0, b = 0, c = 0;
+    if (parse_unsigned_FildeshX(&slice, &a)) {
+      if (parse_unsigned_FildeshX(&slice, &b) &&
+          parse_unsigned_FildeshX(&slice, &c)) {
+        acts.push_back(UniAct(a, b, c));
+      }
+      else {
+        err_msg = "I didn't read a full triple. Malformed input?";
+        break;
+      }
+    }
+    skip_bytestring_FildeshX(in, NULL, 1);
   }
-  if (acts.sz()==0) {
-    failout_sysCx("No actions given! Please provide triples on standard input.");
+  if (!err_msg && acts.size() == 0) {
+    err_msg = "No actions given! Please provide triples on standard input.";
   }
+  if (err_msg) {failout_sysCx(err_msg);}
   uint domsz = 0;
   for (uint i = 0; i < acts.sz(); ++i) {
     for (uint j = 0; j < 3; ++j) {
@@ -305,34 +260,6 @@ oput_list(std::ostream& ofile, const Table<UniAct>& acts)
       << acts[i][1] << '\t'
       << acts[i][2] << '\n';
   }
-}
-
-  PcState
-xget_actions(C::XFile* xfile, BitTable& actset)
-{
-  const char* line = getline_XFile(xfile);
-  if (!line)
-    return 0;
-
-  actset.resize(strlen(line));
-  actset.wipe(0);
-
-  UniAct act;
-  for (uint i = 0; i < actset.size(); ++i) {
-    if (line[i] == '1') {
-      actset.set1(i);
-    }
-    else if (line[i] != '0') {
-      failout_sysCx("Only ones and zeros please.");
-    }
-  }
-
-  const uint domsz = uniring_domsz_of(actset);
-  if (domsz == 0) {
-    failout_sysCx("Incorrect bitstring size!");
-  }
-
-  return domsz;
 }
 
   void
@@ -389,32 +316,47 @@ oput_uniring_invariant(std::ostream& ofile, const BitTable& set, const uint doms
 }
 
   void
-oput_protocon(std::ostream& ofile, const Table<UniAct>& acts, uint domsz)
+oput_protocon(std::ostream& out, const Table<UniAct>& acts, unsigned domsz)
 {
+  const bool direct_invariant_on = true;
   if (domsz == 0) {
     domsz = uniring_domsz_of(acts);
   }
 
-  ofile
+  out
     << "constant N := 2;"
     << "\nconstant M := " << domsz << ";"
     << "\nvariable x[N] < M;"
-    << "\n(future & future silent) (true);"
+    << (direct_invariant_on ? "" : "\n(future & future silent) (true);")
     << "\nprocess P[i < N]"
     << "\n{"
     << "\n  read: x[i-1];"
-    << "\n  write: x[i];"
-    ;
-  ofile << "\n  puppet:";
+    << "\n  write: x[i];";
+  if (direct_invariant_on) {
+    out
+      << "\n  (future & silent)"
+      << "\n    (true";
+    oput_uniring_invariant(
+        out,
+        uniring_actset_of(uniring_ppgfun_of(acts, domsz), domsz),
+        domsz,
+        "\n     && ",
+        NULL);
+    out
+      << ");";
+  }
+  out
+    << "\n  puppet:";
   for (uint i = 0; i < acts.sz(); ++i) {
     const UniAct& act = acts[i];
-    ofile << "\n    "
+    out << "\n    "
       << "( x[i-1]==" << act[0]
       << " && x[i]==" << act[1]
       << " --> x[i]:=" << act[2] << "; )";
   }
-  ofile << "\n    ;";
-  ofile << "\n}\n";
+  out
+    << "\n    ;"
+    << "\n}\n";
 }
 
   void
@@ -562,52 +504,6 @@ oput_svg_livelock(std::ostream& ofile, const Table<PcState>& ppgfun,
   }
 
   ofile << "\n</svg>";
-}
-
-  PcState
-tilings_and_patterns_aperiodic_uniring(Table<UniAct>& acts)
-{
-  const uint domsz = 29;
-  static const uint AperiodicTileset[][3] = {
-    {  0, 13,  8 }, {  0, 14, 10 }, {  0, 15, 12 }, {  0, 16, 12 },
-    {  0, 17,  9 }, {  0, 18,  8 }, {  0, 19, 10 }, {  0, 20, 10 },
-    {  0, 21, 10 }, {  0, 22,  7 }, {  0, 23, 11 }, {  0, 24, 11 },
-    {  0, 25,  7 }, {  0, 26,  7 }, {  0, 27,  9 }, {  0, 28,  9 },
-    {  1,  7, 13 }, {  1, 11, 14 },
-    {  2,  9, 15 }, {  2, 10, 16 }, {  2, 11, 17 },
-    {  3,  8, 18 }, {  3,  9, 19 }, {  3, 10, 20 }, {  3, 12, 21 },
-    {  4,  8, 22 }, {  4,  9, 23 }, {  4, 10, 24 },
-    {  5,  7, 25 }, {  5,  8, 26 },
-    {  6,  9, 27 }, {  6, 12, 28 },
-    {  7,  3,  0 }, {  7,  4,  0 }, {  7,  6,  0 },
-    {  8,  2,  0 }, {  8,  6,  0 },
-    {  9,  1,  0 }, {  9,  3,  0 }, {  9,  4,  0 },
-    { 10,  1,  0 }, { 10,  3,  0 }, { 10,  4,  0 }, { 10,  5,  0 },
-    { 11,  4,  0 }, { 11,  5,  0 },
-    { 12,  1,  0 }, { 12,  2,  0 },
-    { 13,  0,  2 },
-    { 14,  0,  1 },
-    { 15,  0,  2 },
-    { 16,  0,  1 },
-    { 17,  0,  1 },
-    { 18,  0,  6 },
-    { 19,  0,  4 },
-    { 20,  0,  5 },
-    { 21,  0,  3 },
-    { 22,  0,  6 },
-    { 23,  0,  4 },
-    { 24,  0,  5 },
-    { 25,  0,  4 },
-    { 26,  0,  3 },
-    { 27,  0,  4 },
-    { 28,  0,  3 }
-  };
-  acts.affysz(ArraySz(AperiodicTileset));
-  for (uint i = 0; i < ArraySz(AperiodicTileset); ++i) {
-    const uint* tile = AperiodicTileset[i];
-    acts[i] = UniAct(tile[0], tile[1], tile[2]);
-  }
-  return domsz;
 }
 
 END_NAMESPACE
