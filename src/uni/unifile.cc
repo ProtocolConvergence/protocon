@@ -8,7 +8,6 @@
 #include <fildesh/string.hh>
 
 #include "src/cx/bittable.hh"
-#include "src/cx/fileb.hh"
 #include "src/cx/table.hh"
 
 extern "C" {

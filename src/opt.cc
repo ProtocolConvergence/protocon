@@ -5,7 +5,8 @@
 #include "synthesis.hh"
 #include "prot-ofile.hh"
 #include "search.hh"
-#include "src/cx/fileb.hh"
+
+#include "src/inline/eq_cstr.h"
 #include "src/inline/slurp_file_to_string.hh"
 
 #ifndef _WIN32
@@ -36,6 +37,37 @@ ReadFileText(std::string& ret_text, const char* filename)
     msg += filename;
     failout_sysCx(msg.c_str());
   }
+}
+
+/** Construct a path relative to a directory.
+ *
+ * \param opt_dir  Optional directory name that the file is relative to.
+ * \param filename  Relative or absolute path to a file/directory.
+ **/
+static
+  std::string
+pathname2(std::string_view opt_dir, std::string_view filename)
+{
+  const auto slash_index = filename.rfind('/');
+  const unsigned pflen = (slash_index < filename.size() ? slash_index+1 : 0);
+  const unsigned flen = filename.size() - pflen;
+  unsigned plen = opt_dir.size();
+
+  if (pflen > 0 && filename[0] == '/') {
+    plen = 0;
+  }
+
+  if (plen > 0 && opt_dir[plen-1] != '/') {
+    plen += 1;
+  }
+
+  std::string pathname;
+  if (plen > 0) {
+    pathname += opt_dir.substr(0, plen-1);
+    pathname += '/';
+  }
+  pathname += filename.substr(0, pflen+flen);
+  return pathname;
 }
 
 static
@@ -171,28 +203,29 @@ static
   bool
 parse_NatMap (Xn::NatMap& tup, const char* line)
 {
-  DeclLegit( good );
+  bool good = true;
   tup = Xn::NatMap();
-  ::XFile xf[1];
-  init_XFile_olay_cstr (xf, (char*)line);
-  if (line[0] == '(') {
+  FildeshX in[1];
+  *in = FildeshX_of_bytestring(
+      (const unsigned char*)line,
+      strlen(line));
+  if (skipstr_FildeshX(in, "(")) {
     tup.scalar = false;
   }
-  skipds_XFile (xf, "(");
-  int x = 0;
 
   if (strstr(line, "..")) {
     int begval = 0;
     int endval = 0;
 
-    DoLegitLine("")
-      xget_int_XFile (xf, &begval);
-    skipds_XFile (xf, 0);
-    skipds_XFile (xf, ".");
-    DoLegitLine("")
-      xget_int_XFile (xf, &endval);
+    if (!parse_int_FildeshX(in, &begval)) {
+      good = false;
+    }
+    skipchrs_FildeshX(in, " .");
+    if (!parse_int_FildeshX(in, &endval)) {
+      good = false;
+    }
 
-    DoLegit("") {
+    if (good) {
       int diff = (begval < endval ? 1 : -1);
       for (int val = begval; val != endval + diff; val += diff) {
         tup.membs << val;
@@ -200,16 +233,16 @@ parse_NatMap (Xn::NatMap& tup, const char* line)
     }
   }
   else {
-    while (xget_int_XFile (xf, &x)) {
+    int x = 0;
+    while (parse_int_FildeshX(in, &x)) {
       tup.membs << x;
-      skipds_XFile (xf, 0);
-      skipds_XFile (xf, ",)");
+      skipchrs_FildeshX(in, " ,)");
     }
 
-    good = (tup.membs.sz() > 0 || line[0]=='(');
+    good = (tup.membs.sz() > 0 || !tup.scalar);
   }
 
-  DoLegit( "" ) {
+  if (good) {
     if (tup.membs.sz() == 1) {
       tup.expression << tup.membs[0];
     }
@@ -223,7 +256,7 @@ parse_NatMap (Xn::NatMap& tup, const char* line)
       tup.expression << ')';
     }
   }
-  return !!good;
+  return good;
 }
 
 static
@@ -323,7 +356,7 @@ protocon_options_rec
   (int& argi,
    int argc,
    char** argv,
-   const char* relpath,
+   std::string_view relpath,
    AddConvergenceOpt& opt,
    ProtoconFileOpt& infile_opt,
    ProtoconOpt& exec_opt,
@@ -331,7 +364,6 @@ protocon_options_rec
 {
   std::ostream& of = std::cerr;
   while (pfxeq_cstr ("-", argv[argi])) {
-    ::AlphaTab tmpf = dflt_AlphaTab ();
     const int prev_argi = argi;
     bool copy_to_argline = true;
 
@@ -435,81 +467,77 @@ protocon_options_rec
           if (eq_cstr(arg, ".")) {
             break;
           }
-          pathname2_AlphaTab (&tmpf, relpath, arg);
-          exec_opt.xfilepaths.push(String(tmpf));
+          exec_opt.xfilepaths.push_back(
+              pathname2(relpath, arg));
           if (exec_opt.xfilepath.empty()) {
-            exec_opt.xfilepath = tmpf;
+            exec_opt.xfilepath = exec_opt.xfilepaths.back();
           }
         }
       }
       else {
-        pathname2_AlphaTab (&tmpf, relpath, arg);
-        exec_opt.xfilepath = tmpf;
+        exec_opt.xfilepath = pathname2(relpath, arg);
       }
       infile_opt.constant_map = exec_opt.instance_def.constant_map;
     }
     else if (eq_cstr (arg, "-x-args")) {
       copy_to_argline = false;
-      String args_xfilepath( argv[argi++] );
-      if (args_xfilepath.empty()) {
+      std::string filepath = pathname2(relpath, argv[argi++]);
+      if (filepath.empty()) {
         of << "-x-args requires an argument!" << std::endl;
         return false;
       }
-      ::XFileB args_xf;
-      init_XFileB (&args_xf);
-      if (!open_FileB (&args_xf.fb, relpath, args_xfilepath.c_str())) {
-        of << "Could not open -x-args file: " << args_xfilepath << std::endl;
+      FildeshX* in = open_FildeshXF(filepath.c_str());
+      if (!in) {
+        of << "Could not open -x-args file: " << filepath << std::endl;
         return false;
       }
-      xget_XFileB (&args_xf);
 
-      ::XFile olay;
-      olay_txt_XFile (&olay, &args_xf.xf, 0);
-      Table<char*> xargs;
-      char* xarg;
-      do {
-        char matched_delim = '\0';
-        xarg = nextok_XFile (&olay, &matched_delim, WhiteSpaceChars);
-        if (pfxeq_cstr("#", xarg)) {
-          if (matched_delim != '\n') {
-            skiplined_XFile (&olay, "\n");
-          }
+      std::vector<std::string> xargs;
+      for (skipchrs_FildeshX(in, WhiteSpaceChars);
+           peek_bytestring_FildeshX(in, NULL, 1);
+           skipchrs_FildeshX(in, WhiteSpaceChars))
+      {
+        if (peek_char_FildeshX(in, '#')) {
+          until_char_FildeshX(in, '\n');
         }
-        else if (pfxeq_cstr("'", xarg)) {
-          putlast_char_XFile (&olay, matched_delim);
-          offto_XFile (&olay, xarg);
-          xarg = nextok_XFile (&olay, 0, "'");
-          xargs.push(xarg);
+        else if (peek_char_FildeshX(in, '\'')) {
+          skip_bytestring_FildeshX(in, NULL, 1);
+          FildeshX slice = until_char_FildeshX(in, '\'');
+          xargs.push_back(fildesh::make_string(slice));
+          skip_bytestring_FildeshX(in, NULL, 1);
         }
-        else if (pfxeq_cstr("\"", xarg)) {
-          putlast_char_XFile (&olay, matched_delim);
-          offto_XFile (&olay, xarg);
-          xarg = nextok_XFile (&olay, 0, "\"");
-          xargs.push(xarg);
+        else if (peek_char_FildeshX(in, '"')) {
+          skip_bytestring_FildeshX(in, NULL, 1);
+          FildeshX slice = until_char_FildeshX(in, '"');
+          xargs.push_back(fildesh::make_string(slice));
+          skip_bytestring_FildeshX(in, NULL, 1);
         }
         else {
-          xargs.push(xarg);
+          FildeshX slice = until_chars_FildeshX(in, WhiteSpaceChars);
+          xargs.push_back(fildesh::make_string(slice));
         }
-      } while (xarg);
+      }
+      std::vector<char*> cstr_xargs;
+      for (const auto& s : xargs) {
+        cstr_xargs.push_back((char*)s.c_str());
+      }
+      cstr_xargs.push_back(NULL);
       int tmp_argi = 0;
-      int tmp_argc = xargs.sz()-1;
       if (!protocon_options_rec
-          (tmp_argi, tmp_argc, &xargs[0],
-           ccstr_of_AlphaTab (&args_xf.fb.pathname),
+          (tmp_argi, (int)xargs.size(), cstr_xargs.data(),
+           filepath.substr(0, filepath.rfind('/')),
            opt, infile_opt, exec_opt, problem))
       {
         return false;
       }
-      lose_XFile (&olay);
-      lose_XFileB (&args_xf);
+      close_FildeshX(in);
     }
     else if (eq_cstr (arg, "-o")) {
       if (!argv[argi]) {
         failout_sysCx("Not enuff arguments.");
       }
 
-      pathname2_AlphaTab (&tmpf, relpath, argv[argi++]);
-      exec_opt.ofilepath = tmpf;
+      exec_opt.ofilepath = pathname2(relpath, argv[argi++]);
     }
     else if (eq_cstr (arg, "-espresso")) {
       exec_opt.use_espresso = true;
@@ -522,8 +550,8 @@ protocon_options_rec
       if (!filename) {
         failout_sysCx("Not enuff arguments for -x-test-known.");
       }
-      pathname2_AlphaTab (&tmpf, relpath, filename);
-      ReadFileText (file_opt.text, ccstr_of_AlphaTab (&tmpf));
+      ReadFileText(file_opt.text, pathname2(relpath, filename).c_str());
+
       if (!ReadProtoconFile(test_sys, file_opt)) {
         failout_sysCx("Reading -x-test-known file.");
       }
@@ -539,8 +567,7 @@ protocon_options_rec
         failout_sysCx("Not enuff arguments for -x-try.");
       }
 
-      pathname2_AlphaTab (&tmpf, relpath, filename);
-      ReadFileText (file_opt.text, ccstr_of_AlphaTab (&tmpf));
+      ReadFileText(file_opt.text, pathname2(relpath, filename).c_str());
       if (!ReadProtoconFile(try_sys, file_opt)) {
         failout_sysCx("Reading -x-try file.");
       }
@@ -554,8 +581,7 @@ protocon_options_rec
         of << "-o-log requires an argument!" << std::endl;
         return false;
       }
-      pathname2_AlphaTab (&tmpf, relpath, argv[argi++]);
-      exec_opt.log_ofilename = tmpf;
+      exec_opt.log_ofilename = pathname2(relpath, argv[argi++]);
     }
     else if (eq_cstr (arg, "-ntrials")) {
       if (!fildesh_parse_unsigned(&opt.ntrials, argv[argi++])) {
@@ -696,7 +722,6 @@ protocon_options_rec
         exec_opt.argline << " " << argv[i];
       }
     }
-    lose_AlphaTab (&tmpf);
   }
   return true;
 }
@@ -715,7 +740,7 @@ protocon_options
   ProblemInstance problem = NProblemInstances;
   exec_opt.argline = exename_of_sysCx ();
   uint npcs = 4;
-  if (!protocon_options_rec (argi, argc, argv, 0,
+  if (!protocon_options_rec (argi, argc, argv, /*relpath=*/"",
                              opt, infile_opt, exec_opt, problem))
     return false;
 
@@ -765,7 +790,7 @@ protocon_options
     failout_sysCx("Too many arguments!");
   }
 
-  if (exec_opt.xfilepaths.sz() == 0) {
+  if (exec_opt.xfilepaths.size() == 0) {
     if (!exec_opt.xfilepath.empty()) {
       exec_opt.xfilepaths.push(exec_opt.xfilepath);
     }

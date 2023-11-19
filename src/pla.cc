@@ -9,7 +9,6 @@ extern "C" {
 }
 
 #include "cx/alphatab.hh"
-#include "cx/fileb.hh"
 #include "cx/table.hh"
 #include "xnsys.hh"
 

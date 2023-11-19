@@ -5,13 +5,13 @@
 #include "unifile.hh"
 
 #include "src/cx/bittable.hh"
-#include "src/cx/fileb.hh"
 #include "src/cx/table.hh"
+
+#include "src/inline/eq_cstr.h"
 
 extern "C" {
 #include "src/cx/syscx.h"
 }
-
 #include "src/namespace.hh"
 
 int main(int argc, char** argv)

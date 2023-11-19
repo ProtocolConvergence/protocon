@@ -15,7 +15,8 @@ add_subdirectory(satsyn)
 #### Bidirectional Ring Instance Enumeration ####
 add_executable(biring
   "biring.cc"
-  )
+  ${INLINE_CC_LIB_HDRS}
+)
 target_link_libraries(biring cx_lib)
 
 

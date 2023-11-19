@@ -10,7 +10,6 @@ cc_library(
         "def.h",
         "fileb.c",
         "fileb.h",
-        "fileb.hh",
         "lgtable.h",
         "lgtable.hh",
         "map.hh",

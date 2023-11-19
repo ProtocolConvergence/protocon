@@ -537,10 +537,9 @@ stabilization_search_init
   DeclLegit( good );
 
   if (!exec_opt.log_ofilename.empty()) {
-    String ofilename( exec_opt.log_ofilename );
-    ofilename += ".";
-    ofilename += opt.sys_pcidx;
-    synctx.log.open(ofilename.c_str());
+    synctx.log.open(
+        (exec_opt.log_ofilename + "." +
+         std::to_string(opt.sys_pcidx)).c_str());
   }
   else if (opt.sys_npcs > 1) {
     synctx.log.open("/dev/null");
@@ -669,7 +668,7 @@ void
   Xn::Sys sys;
   ProtoconFileOpt verif_infile_opt( infile_opt );
   verif_infile_opt.constant_map = exec_opt.instances[0].constant_map;
-  const String& xfilepath = exec_opt.xfilepaths[i];
+  const std::string& xfilepath = exec_opt.xfilepaths[i];
   if (xfilepath != exec_opt.xfilepath) {
     slurp_file_to_string(verif_infile_opt.text, xfilepath.c_str());
   }
@@ -685,7 +684,7 @@ void
       log << "System is stabilizing." << std::endl;
 
       if (!exec_opt.ofilepath.empty()) {
-        String filepath( exec_opt.ofilepath + "." + i );
+        std::string filepath = exec_opt.ofilepath + "." + std::to_string(i);
         log << "Writing system to: " << filepath  << std::endl;
         fildesh::ofstream prot_out(filepath.c_str());
         oput_protocon_file(prot_out, sys, sys.actions,
@@ -947,7 +946,10 @@ stabilization_search(vector<uint>& ret_actions,
         solution_found = true;
         ret_actions = actions;
         if (global_opt.try_all && !exec_opt.ofilepath.empty()) {
-          fildesh::ofstream prot_out((exec_opt.ofilepath + "." + PcIdx + "." + trial_idx).c_str());
+          fildesh::ofstream prot_out(
+              (exec_opt.ofilepath + "." +
+               std::to_string(PcIdx) + "." +
+               std::to_string(trial_idx)).c_str());
           oput_protocon_file(prot_out, sys, actions,
                              exec_opt.use_espresso,
                              exec_opt.argline.c_str());

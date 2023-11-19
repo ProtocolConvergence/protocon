@@ -9,7 +9,8 @@
 
 #include "src/pfmla.hh"
 #include "src/cx/bittable.hh"
-#include "src/cx/fileb.hh"
+
+#include "src/inline/eq_cstr.h"
 
 extern "C" {
 #include "src/cx/syscx.h"

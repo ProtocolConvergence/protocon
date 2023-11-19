@@ -26,6 +26,7 @@ cc_binary(
     ],
     deps = [
         "//src/cx:cx_lib",
+        "//src/inline:inline_cc_lib",
         "@fildesh//:fildesh_cc_lib",
     ],
 )

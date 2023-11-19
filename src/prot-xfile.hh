@@ -2,13 +2,10 @@
 #ifndef ProtoconFile_HH_
 #define ProtoconFile_HH_
 
-#include "cx/synhax.hh"
-extern "C" {
-#include "cx/sesp.h"
-#include "cx/xfile.h"
-}
 #include "xnsys.hh"
+#include "cx/sesp.h"
 
+#include "cx/synhax.hh"
 #include "namespace.hh"
 
 class ProtoconFileOpt

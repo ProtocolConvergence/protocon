@@ -55,11 +55,11 @@ public:
   uint nparallel;
   ProtoconParamOpt instance_def;
   Table< ProtoconParamOpt > instances;
-  String log_ofilename;
-  String xfilepath;
-  String ofilepath;
+  std::string log_ofilename;
+  std::string xfilepath;
+  std::string ofilepath;
   bool use_espresso;
-  Table< String > xfilepaths;
+  Table<std::string> xfilepaths;
   String model_ofilepath;
   String graphviz_ofilepath;
   String udp_ofilepath;

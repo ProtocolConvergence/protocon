@@ -35,6 +35,7 @@ cc_binary(
     deps = [
         "//src:pfmla_lib",
         "//src/cx:cx_lib",
+        "//src/inline:inline_cc_lib",
         "@fildesh//:fildesh_cc_lib",
     ],
 )

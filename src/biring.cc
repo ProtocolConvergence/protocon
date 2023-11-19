@@ -2,14 +2,17 @@
 #include <algorithm>
 #include <sstream>
 
+#include <fildesh/istream.hh>
 #include <fildesh/ostream.hh>
+#include <fildesh/string.hh>
 
-#include "cx/map.hh"
-#include "cx/table.hh"
 #include "cx/bittable.hh"
+#include "cx/map.hh"
 #include "cx/set.hh"
+#include "cx/table.hh"
 #include "cx/tuple.hh"
-#include "cx/xfile.hh"
+
+#include "src/inline/eq_cstr.h"
 
 extern "C" {
 #include "cx/syscx.h"
@@ -812,25 +815,29 @@ oput_graphviz(std::ostream& ofile, const BitTable set, uint domsz, bool pair)
 }
 
 static bool
-xget_BitTable (XFile* xfile, BitTable set)
+read_next_BitTable(fildesh::istream& in, BitTable set)
 {
-  XFile olay[1];
-  if (!getlined_olay_XFile (olay, xfile, "\n"))
+  skipchrs_FildeshX(in.c_struct(), " \t\r\n");
+  std::string_view s;
+  if (in.c_struct()->off < in.c_struct()->size) {
+    s = fildesh::make_string_view(
+        until_char_FildeshX(in.c_struct(), '\n'));
+  }
+  if (s.empty()) {return false;}
+  if (s.size() < set.sz) {
+    fildesh_log_error("Not enough characters in the bitstring.");
     return false;
-  skipds_XFile (olay, 0);
-  wipe_BitTable (set, 0);
-  for (uint i = 0; i < set.sz; ++i) {
-    char c;
-    if (!xget_char_XFile (olay, &c)) {
-      if (i == 0) {
-        return false;
-      }
-      else {
-        failout_sysCx ("not enough characters!");
-      }
+  }
+  for (unsigned i = 0; i < set.sz; ++i) {
+    if (s[i] == '0') {
+      set0_BitTable(set, i);
     }
-    if (c == '1') {
-      set1_BitTable (set, i);
+    else if (s[i] == '1') {
+      set1_BitTable(set, i);
+    }
+    else {
+      fildesh_log_error("Unexpected characters in bitstring.");
+      return false;
     }
   }
   return true;
@@ -1004,10 +1011,10 @@ echo_subsets (const BitTable bt, const FilterOpt& opt, std::ostream& ofile)
 static void
 filter_stdin (const FilterOpt& opt, std::ostream& ofile)
 {
-  const uint domsz = opt.domsz;
-  BitTable set = cons1_BitTable (domsz*domsz*domsz);
-  XFile* xfile = stdin_XFile ();
-  while (xget_BitTable (xfile, set)) {
+  const unsigned domsz = opt.domsz;
+  BitTable set = cons2_BitTable(domsz*domsz*domsz, 0);
+  fildesh::ifstream in("/dev/stdin");
+  while (read_next_BitTable(in, set)) {
     if (opt.echo_bits) {
       ofile << set;
 

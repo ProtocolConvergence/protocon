@@ -466,12 +466,13 @@ oput_protocon_file(std::ostream& out, const Xn::Sys& sys,
 }
 
   bool
-oput_protocon_file (const String& ofilename,
-                    const Xn::Sys& sys,
-                    const Xn::Net& o_topology,
-                    const vector<uint>& actions,
-                    bool use_espresso,
-                    const char* comment)
+oput_protocon_file(
+    const std::string& ofilename,
+    const Xn::Sys& sys,
+    const Xn::Net& o_topology,
+    const vector<uint>& actions,
+    bool use_espresso,
+    const char* comment)
 {
   fildesh::ofstream out(ofilename.c_str());
   if (!out.good()) {return false;}
@@ -479,9 +480,11 @@ oput_protocon_file (const String& ofilename,
 }
 
   bool
-oput_protocon_file (const String& ofilename, const Xn::Sys& sys,
-                    bool use_espresso,
-                    const char* comment)
+oput_protocon_file(
+    const std::string& ofilename,
+    const Xn::Sys& sys,
+    bool use_espresso,
+    const char* comment)
 {
   return oput_protocon_file (ofilename, sys, sys.topology, sys.actions, use_espresso, comment);
 }
