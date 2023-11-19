@@ -142,12 +142,12 @@ oput_protocon_pc_act(std::ostream& out, const Xn::ActSymm& act)
   out << ")";
 }
 
+static
   bool
 oput_protocon_pc_acts(std::ostream& out, const Xn::PcSymm& pc_symm,
-                      const Table<Xn::ActSymm>& acts,
+                      const std::vector<Xn::ActSymm>& acts,
                       bool use_espresso)
 {
-  DeclLegit( good );
   const Xn::PcSymmSpec& pc_symm_spec = *pc_symm.spec;
   if (pc_symm_spec.shadow_act_strings.sz() > 0) {
     out << "\n  shadow:";
@@ -183,8 +183,8 @@ oput_protocon_pc_acts(std::ostream& out, const Xn::PcSymm& pc_symm,
   // Return early if there are no puppet actions.
   {
     bool have_actions = false;
-    for (uint i = 0; i < acts.sz(); ++i) {
-      if (acts[i].pc_symm == &pc_symm) {
+    for (const auto& act : acts) {
+      if (act.pc_symm == &pc_symm) {
         have_actions = true;
         break;
       }
@@ -195,14 +195,14 @@ oput_protocon_pc_acts(std::ostream& out, const Xn::PcSymm& pc_symm,
 
   out << "\n  puppet:";
 
+  bool good = true;
   if (use_espresso) {
-    DoLegitLine( "" )
-      oput_protocon_pc_acts_espresso(out, pc_symm, acts);
+    good = oput_protocon_pc_acts_espresso(out, pc_symm, acts);
   }
   else {
-    for (uint i = 0; i < acts.sz(); ++i) {
-      if (acts[i].pc_symm == &pc_symm) {
-        oput_protocon_pc_act (out, acts[i]);
+    for (const auto& act : acts) {
+      if (act.pc_symm == &pc_symm) {
+        oput_protocon_pc_act (out, act);
       }
     }
   }
@@ -348,10 +348,10 @@ oput_protocon_file(std::ostream& out, const Xn::Sys& sys,
   }
 
 
-  Table<Xn::ActSymm> acts;
-  for (uint i = 0; i < actions.size(); ++i) {
-    for (uint j = 0; j < sys.topology.represented_actions[actions[i]].sz(); ++j) {
-      sys.topology.action(acts.grow1(), sys.topology.represented_actions[actions[i]][j]);
+  std::vector<Xn::ActSymm> acts;
+  for (auto act_id : actions) {
+    for (const auto& a : topo.represented_actions[act_id]) {
+      sys.topology.action(acts.emplace_back(), a);
     }
   }
   std::sort(acts.begin(), acts.end());

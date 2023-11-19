@@ -161,7 +161,7 @@ public:
     return (0 > cmp_AlphaTab (&t, &b.t));
   }
 
-  std::string_view view() const {
+  operator std::string_view() const {
     if (this->empty()) {return "";}
     return std::string_view(this->data(), this->size());
   }

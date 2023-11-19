@@ -154,6 +154,9 @@ public:
   }
 
   T& grow1() {
+    return this->emplace_back();
+  }
+  T& emplace_back() {
     T* e = (T*) grow1_Table (&t);
     new (e) T();
     return *e;
