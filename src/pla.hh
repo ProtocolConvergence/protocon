@@ -12,7 +12,7 @@ oput_pla_pc_acts(std::ostream& ofile, const Xn::PcSymm& pc_symm,
 bool
 oput_pla_file(std::ostream& ofile, const Xn::Sys& sys);
 bool
-oput_pla_file(const String& ofilename, const Xn::Sys& sys);
+oput_pla_file(const std::string& ofilename, const Xn::Sys& sys);
 bool
 oput_protocon_pc_acts_espresso(std::ostream& ofile,
                                const Xn::PcSymm& pc_symm,

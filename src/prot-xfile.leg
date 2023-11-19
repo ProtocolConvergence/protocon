@@ -741,7 +741,7 @@ ReadProtoconFile(Xn::Sys& sys, const ProtoconFileOpt& opt)
     if (x.expression.empty()) {
       x.expression = x.membs[0];
     }
-    yyctx.st->sys->spec->constant_map.add(itr->first, x);
+    yyctx.st->sys->spec->constant_map.add(itr->first.c_str(), x);
   }
   if (!yyparse(&yyctx) || !yyctx.st->allgood) {
     good = false;

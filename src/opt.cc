@@ -261,13 +261,13 @@ parse_NatMap (Xn::NatMap& tup, const char* line)
 
 static
   void
-push_instances(Table< ProtoconParamOpt >& instances,
+push_instances(std::vector<ProtoconParamOpt>& instances,
                const ProtoconParamOpt& instdef)
 {
-  const uint begidx = instances.sz();
+  const unsigned begidx = instances.size();
 
   {
-    ProtoconParamOpt& instance = instances.grow1();
+    ProtoconParamOpt& instance = instances.emplace_back();
     instance = instdef;
     auto param_it = instance.constant_map.begin();
     while (param_it != instance.constant_map.end()) {
@@ -283,11 +283,11 @@ push_instances(Table< ProtoconParamOpt >& instances,
   while (param_it != instdef.constant_map.end()) {
     const auto& key = param_it->first;
     const Xn::NatMap& param_range = param_it->second;
-    const uint endidx = instances.sz();
+    const unsigned endidx = instances.size();
     if (param_range.scalar) {
       for (uint i = 1; i < param_range.sz(); ++i) {
         for (uint j = begidx; j < endidx; ++j) {
-          ProtoconParamOpt& instance = instances.grow1();
+          ProtoconParamOpt& instance = instances.emplace_back();
           instance = instances[j];
           instance.constant_map[key] = param_range.eval(i);
         }
@@ -792,11 +792,11 @@ protocon_options
 
   if (exec_opt.xfilepaths.size() == 0) {
     if (!exec_opt.xfilepath.empty()) {
-      exec_opt.xfilepaths.push(exec_opt.xfilepath);
+      exec_opt.xfilepaths.push_back(exec_opt.xfilepath);
     }
   }
 
-  if (exec_opt.instances.sz() == 0) {
+  if (exec_opt.instances.empty()) {
     push_instances(exec_opt.instances, exec_opt.instance_def);
   }
 

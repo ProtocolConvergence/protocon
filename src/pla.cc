@@ -109,7 +109,7 @@ oput_pla_file (std::ostream& ofile, const Xn::Sys& sys)
 }
 
   bool
-oput_pla_file(const String& ofilename, const Xn::Sys& sys)
+oput_pla_file(const std::string& ofilename, const Xn::Sys& sys)
 {
   fildesh::ofstream out(ofilename.c_str());
   if (out.fail()) {

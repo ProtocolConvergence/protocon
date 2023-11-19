@@ -12,7 +12,7 @@ class ProtoconFileOpt
 {
 public:
   std::string text;
-  Map< String, Xn::NatMap > constant_map;
+  Map< std::string, Xn::NatMap > constant_map;
   Xn::InvariantStyle invariant_style;
   Xn::InvariantScope invariant_scope;
   Xn::InvariantBehav invariant_behav;

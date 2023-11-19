@@ -38,7 +38,7 @@ int main(int argc, char** argv)
     interactive(sys);
   }
   else if (exec_opt.task == ProtoconOpt::VerifyTask) {
-    if (exec_opt.instances.sz() > 1) {
+    if (exec_opt.instances.size() > 1) {
       failout_sysCx ("The -verify mode does not allow -param flags!");
     }
     found =

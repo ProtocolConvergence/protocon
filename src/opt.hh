@@ -1,13 +1,14 @@
 
 #ifndef OPT_HH_
 #define OPT_HH_
-#include "cx/synhax.hh"
+#include <vector>
+
 #include "cx/alphatab.hh"
-#include "cx/map.hh"
-#include "cx/table.hh"
 #include "stabilization.hh"
 #include "xnspec.hh"
+#include "cx/map.hh"
 
+#include "cx/synhax.hh"
 #include "namespace.hh"
 
 class AddConvergenceOpt;
@@ -17,7 +18,7 @@ class ProtoconOpt;
 
 class ProtoconParamOpt {
 public:
-  Map<String, Xn::NatMap> constant_map;
+  Map<std::string, Xn::NatMap> constant_map;
   bool conflict;
   bool partial;
   StabilizationOpt stabilization_opt;
@@ -54,17 +55,17 @@ public:
   ExecTask task;
   uint nparallel;
   ProtoconParamOpt instance_def;
-  Table< ProtoconParamOpt > instances;
+  std::vector<ProtoconParamOpt> instances;
   std::string log_ofilename;
   std::string xfilepath;
   std::string ofilepath;
   bool use_espresso;
-  Table<std::string> xfilepaths;
-  String model_ofilepath;
+  std::vector<std::string> xfilepaths;
+  std::string model_ofilepath;
   String graphviz_ofilepath;
   String udp_ofilepath;
   bool only_udp_include;
-  String pla_ofilepath;
+  std::string pla_ofilepath;
   String conflicts_xfilepath;
   String conflicts_ofilepath;
   String stats_ofilepath;

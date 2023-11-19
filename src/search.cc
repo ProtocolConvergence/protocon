@@ -583,7 +583,7 @@ stabilization_search_init
   }
 
   if (exec_opt.task != ProtoconOpt::VerifyTask)
-  for (uint i = 0; good && i < exec_opt.instances.sz(); ++i) {
+  for (unsigned i = 0; good && i < exec_opt.instances.size(); ++i) {
     ProtoconFileOpt param_infile_opt = infile_opt;
     param_infile_opt.constant_map = exec_opt.instances[i].constant_map;
 
@@ -621,7 +621,7 @@ stabilization_search_init
 
   PartialSynthesis& synlvl = synctx.base_partial;
 
-  for (uint i = 0; good && i < exec_opt.instances.sz(); ++i) {
+  for (unsigned i = 0; good && i < exec_opt.instances.size(); ++i) {
     synlvl[i].no_conflict = !exec_opt.instances[i].conflict_ck();
     synlvl[i].no_partial = !exec_opt.instances[i].partial_ck();
   }
@@ -789,7 +789,7 @@ stabilization_search(vector<uint>& ret_actions,
   if (exec_opt.task == ProtoconOpt::VerifyTask)
   {
 #pragma omp for schedule(dynamic)
-    for (uint i = 0; i < exec_opt.xfilepaths.sz(); ++i) {
+    for (unsigned i = 0; i < exec_opt.xfilepaths.size(); ++i) {
       if (synctx.done_ck())  continue;
       multi_verify_stabilization
         (i, synctx, ret_actions,
