@@ -30,9 +30,9 @@ rank_actions (Table< Table<uint> >& act_layers,
               const X::Fmla& xn,
               const P::Fmla& legit);
 void
-oput_conflicts (const ConflictFamily& conflicts, const String& ofilename);
+oput_conflicts(const ConflictFamily& conflicts, const std::string& ofilename);
 void
-oput_conflicts (const ConflictFamily& conflicts, String ofilename, uint pcidx);
+oput_conflicts(const ConflictFamily& conflicts, const std::string& ofilename, uint pcidx);
 bool
 initialize_conflicts(ConflictFamily& conflicts,
                      Table< FlatSet<uint> >& flat_conflicts,

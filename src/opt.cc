@@ -719,7 +719,8 @@ protocon_options_rec
     }
     if (copy_to_argline) {
       for (int i = prev_argi; i < argi; ++i) {
-        exec_opt.argline << " " << argv[i];
+        exec_opt.argline += ' ';
+        exec_opt.argline += argv[i];
       }
     }
   }

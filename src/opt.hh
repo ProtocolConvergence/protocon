@@ -3,7 +3,6 @@
 #define OPT_HH_
 #include <vector>
 
-#include "cx/alphatab.hh"
 #include "stabilization.hh"
 #include "xnspec.hh"
 #include "cx/map.hh"
@@ -62,14 +61,14 @@ public:
   bool use_espresso;
   std::vector<std::string> xfilepaths;
   std::string model_ofilepath;
-  String graphviz_ofilepath;
-  String udp_ofilepath;
+  std::string graphviz_ofilepath;
+  std::string udp_ofilepath;
   bool only_udp_include;
   std::string pla_ofilepath;
-  String conflicts_xfilepath;
-  String conflicts_ofilepath;
-  String stats_ofilepath;
-  String argline;
+  std::string conflicts_xfilepath;
+  std::string conflicts_ofilepath;
+  std::string stats_ofilepath;
+  std::string argline;
 
   MinimizeConflictsOrder conflict_order;
 

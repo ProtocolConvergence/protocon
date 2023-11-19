@@ -368,18 +368,16 @@ rank_actions (Table< Table<uint> >& act_layers,
 }
 
   void
-oput_conflicts (const ConflictFamily& conflicts, const String& ofilename)
+oput_conflicts (const ConflictFamily& conflicts, const std::string& ofilename)
 {
   fildesh::ofstream conflicts_of(ofilename.c_str());
   conflicts_of << conflicts;
 }
 
   void
-oput_conflicts (const ConflictFamily& conflicts, String ofilename, uint pcidx)
+oput_conflicts(const ConflictFamily& conflicts, const std::string& ofilename, uint pcidx)
 {
-  ofilename += ".";
-  ofilename += pcidx;
-  oput_conflicts(conflicts, ofilename);
+  oput_conflicts(conflicts, ofilename + "." + std::to_string(pcidx));
 }
 
 static volatile Bool done_flag = 0;
@@ -1045,10 +1043,7 @@ stabilization_search(vector<uint>& ret_actions,
   if (global_opt.snapshot_conflicts && !exec_opt.conflicts_ofilepath.empty())
   {
     for (uint i = 0; i < NPcs; ++i) {
-      String ofilename( exec_opt.conflicts_ofilepath );
-      ofilename += ".";
-      ofilename += i;
-      remove(ofilename.c_str());
+      remove((exec_opt.conflicts_ofilepath + "." + std::to_string(i)).c_str());
     }
   }
 
