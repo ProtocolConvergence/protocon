@@ -729,7 +729,7 @@ stabilization_search(vector<uint>& ret_actions,
 #ifdef _OPENMP
   if (exec_opt.nparallel != 0)
     omp_set_num_threads(exec_opt.nparallel);
-  if (exec_opt.task == ProtoconOpt::VerifyTask && exec_opt.xfilepaths.sz()==1)
+  if (exec_opt.task == ProtoconOpt::VerifyTask && exec_opt.xfilepaths.size()==1)
     omp_set_num_threads(1);
 #endif
 
