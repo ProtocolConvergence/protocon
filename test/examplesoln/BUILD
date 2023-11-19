@@ -35,6 +35,27 @@ fildesh_test(
     ],
 )
 
+## Protocon file output minimized by Espresso (which speaks in PLA format).
+cc_binary(
+    name = "Espresso_MatchRingThreeState",
+    srcs = ["Espresso_MatchRingThreeState.c"],
+    deps = ["@fildesh//:fildesh_lib"],
+    testonly = 1,
+)
+fildesh_test(
+    name = "Espresso_MatchRingThreeState_test",
+    srcs = ["Espresso_MatchRingThreeState_test.fildesh"],
+    aliases = {"protocon": "//src:protocon"},
+    args = [
+        "--espresso=$(location :Espresso_MatchRingThreeState)",
+        "--input_file=$(location //examplesoln:MatchRingThreeState.prot)",
+    ],
+    data = [
+        ":Espresso_MatchRingThreeState",
+        "//examplesoln:MatchRingThreeState.prot",
+    ],
+)
+
 ## Promela file output.
 fildesh_test(
     name = "Promela_OrientDaisy_test",

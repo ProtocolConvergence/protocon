@@ -717,6 +717,10 @@ protocon_options_rec
         failout_sysCx("Bad -style");
       }
     }
+    else if (eq_cstr(arg, "-forget-argline")) {
+      copy_to_argline = false;
+      exec_opt.argline.clear();
+    }
     else {
       failout_sysCx(arg);
     }

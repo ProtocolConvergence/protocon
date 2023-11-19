@@ -1,5 +1,6 @@
 exports_files([
     "ColorUniRing.prot",
+    "LeaderTree.prot",
     "MatchRingThreeState.prot",
     "OrientDaisy.prot",
     "OrientRing.prot",

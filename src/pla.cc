@@ -159,7 +159,7 @@ oput_protocon_pc_act(std::ostream& out, FildeshX* in,
 
     if (vals.size() == m-1 && m > 2) {
       for (unsigned j = 0; j < m; ++j) {
-        if (std::find(vals.begin(), vals.end(), j) != vals.end()) {
+        if (std::find(vals.begin(), vals.end(), j) == vals.end()) {
           out << guard_vbls[i] << "!=" << j;
           break;
         }
@@ -250,10 +250,9 @@ oput_protocon_pc_acts_espresso_spawn(std::ostream& out, const Xn::PcSymm& pc_sym
     FildeshX slice = sliceline_FildeshX(from_espresso);
     oput_protocon_pc_act(out, &slice, guard_vbls, assign_vbls);
   }
-  out << "\n    ;";
 
   close_FildeshX(from_espresso);
-  fildesh_log_errorf("istat %d");
+  fildesh_log_tracef("istat %d");
   return (istat == 0);
 }
 
