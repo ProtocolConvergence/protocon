@@ -8,8 +8,6 @@ cc_library(
         "bittable.h",
         "bittable.hh",
         "def.h",
-        "fileb.c",
-        "fileb.h",
         "lgtable.h",
         "lgtable.hh",
         "map.hh",
@@ -45,13 +43,6 @@ cc_test(
 cc_test(
     name = "bittable_test",
     srcs = ["bittable_test.c"],
-    deps = [":cx_lib"],
-    size = "small",
-)
-
-cc_test(
-    name = "fileb_test",
-    srcs = ["fileb_test.c"],
     deps = [":cx_lib"],
     size = "small",
 )
