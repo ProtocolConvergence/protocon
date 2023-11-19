@@ -20,7 +20,6 @@ namespace Cx {
   template <class T, unsigned N> class Tuple;
   template <class T> class Triple;
   class URandom;
-  class XFile;
 
   template <class T> const Tuple<T,2> mk_Tuple(const T& e0, const T& e1);
 }
@@ -46,7 +45,6 @@ namespace PROTOCON_NAMESPACE {
   using Cx::Triple;
 
   using Cx::URandom;
-  using Cx::XFile;
 
   using Cx::IntPFmla;
   using Cx::PFmlaVbl;

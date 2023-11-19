@@ -24,9 +24,6 @@ cc_library(
         "urandom.c",
         "urandom.h",
         "urandom.hh",
-        "xfile.c",
-        "xfile.h",
-        "xfile.hh",
     ],
     deps = [
         "@fildesh//:fildesh_lib",

@@ -11,8 +11,6 @@ add_library (cx_lib STATIC
   "table.h"
   "urandom.c"
   "urandom.h"
-  "xfile.c"
-  "xfile.h"
   )
 
 target_link_libraries (cx_lib ${Fildesh_LIBRARIES})
