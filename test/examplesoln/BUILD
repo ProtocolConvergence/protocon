@@ -38,8 +38,8 @@ fildesh_test(
 ## Protocon file output minimized by Espresso (which speaks in PLA format).
 cc_binary(
     name = "Espresso_MatchRingThreeState",
-    srcs = ["Espresso_MatchRingThreeState.c"],
-    deps = ["@fildesh//:fildesh_lib"],
+    srcs = ["Espresso_MatchRingThreeState.cc"],
+    deps = ["@fildesh//:fildesh_cc_lib"],
     testonly = 1,
 )
 fildesh_test(
