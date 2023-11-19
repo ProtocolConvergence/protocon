@@ -88,7 +88,10 @@ add_subdirectory(uni)
 # This is an added dependency to the main executable.
 add_custom_command(
   OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/udp-impl/act.embed.h"
-  COMMAND cembed -o "${CMAKE_CURRENT_BINARY_DIR}/udp-impl/act.embed.h" "${CMAKE_CURRENT_SOURCE_DIR}/udp-impl/protocol.h" "${CMAKE_CURRENT_SOURCE_DIR}/udp-impl/protocol.c"
+  COMMAND ${FildeshTool_cembed_EXECUTABLE}
+  -o "${CMAKE_CURRENT_BINARY_DIR}/udp-impl/act.embed.h"
+  "${CMAKE_CURRENT_SOURCE_DIR}/udp-impl/protocol.h"
+  "${CMAKE_CURRENT_SOURCE_DIR}/udp-impl/protocol.c"
   DEPENDS "udp-impl/protocol.h" "udp-impl/protocol.c")
 
 #### Main Executable Lib without Search ####
@@ -123,7 +126,7 @@ target_link_libraries(protocon_lib prot_file_lib)
 ## Code for unit test executable.
 add_custom_command (
   OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/test.embed.h"
-  COMMAND cswitch testname
+  COMMAND ${FildeshTool_cswitch_EXECUTABLE} testname
   -case-pfx "fn = Test"
   -array AllTests
   -x "${CMAKE_CURRENT_SOURCE_DIR}/testlist.txt"
@@ -223,7 +226,7 @@ endfunction ()
 
 
 #### Tests ####
-set (TopPath ${CMAKE_SOURCE_DIR})
+set (TopPath ${PROJECT_SOURCE_DIR})
 include (${CMAKE_CURRENT_SOURCE_DIR}/verif/include.cmake)
 
 
@@ -233,22 +236,22 @@ if(MPI_FOUND)
   install(TARGETS protocon-mpi DESTINATION bin)
 endif()
 
-cat_parenthesized(DistribSpecs "${CMAKE_SOURCE_DIR}/meta/examplespec.files")
+cat_parenthesized(DistribSpecs "${PROJECT_SOURCE_DIR}/meta/examplespec.files")
 foreach(f ${DistribSpecs})
-  install(FILES "${CMAKE_SOURCE_DIR}/examplespec/${f}.prot" DESTINATION examplespec)
+  install(FILES "${PROJECT_SOURCE_DIR}/examplespec/${f}.prot" DESTINATION examplespec)
 endforeach()
 
-cat_parenthesized(DistribSetts "${CMAKE_SOURCE_DIR}/meta/examplesett.files")
+cat_parenthesized(DistribSetts "${PROJECT_SOURCE_DIR}/meta/examplesett.files")
 foreach(f ${DistribSetts})
-  install(FILES "${CMAKE_SOURCE_DIR}/examplesett/${f}.args" DESTINATION examplesett)
+  install(FILES "${PROJECT_SOURCE_DIR}/examplesett/${f}.args" DESTINATION examplesett)
 endforeach()
 
-cat_parenthesized(DistribSynts "${CMAKE_SOURCE_DIR}/meta/examplesynt.files")
+cat_parenthesized(DistribSynts "${PROJECT_SOURCE_DIR}/meta/examplesynt.files")
 foreach(f ${DistribSynts})
-  install(FILES "${CMAKE_SOURCE_DIR}/examplesynt/${f}.prot" DESTINATION examplesynt)
+  install(FILES "${PROJECT_SOURCE_DIR}/examplesynt/${f}.prot" DESTINATION examplesynt)
 endforeach()
 
-cat_parenthesized(DistribSolns "${CMAKE_SOURCE_DIR}/meta/examplesoln.files")
+cat_parenthesized(DistribSolns "${PROJECT_SOURCE_DIR}/meta/examplesoln.files")
 foreach(f ${DistribSolns})
-  install(FILES "${CMAKE_SOURCE_DIR}/examplesoln/${f}.prot" DESTINATION examplesoln)
+  install(FILES "${PROJECT_SOURCE_DIR}/examplesoln/${f}.prot" DESTINATION examplesoln)
 endforeach()

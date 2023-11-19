@@ -1,7 +1,4 @@
 
-include_directories("${CMAKE_SOURCE_DIR}")
-
-
 add_executable(src_conflictfamily_test
   "conflictfamily_test.cc"
   )
@@ -24,8 +21,8 @@ add_test(NAME src_stabilization_test COMMAND src_stabilization_test)
 
 add_executable(src_xnsys_test
   "xnsys_test.cc"
-  "${CMAKE_SOURCE_DIR}/src/inst.cc"
-  )
+  "${PROJECT_SOURCE_DIR}/src/inst.cc"
+)
 target_link_libraries(src_xnsys_test xnsys_lib)
 add_test(NAME src_xnsys_test COMMAND src_xnsys_test)
 
