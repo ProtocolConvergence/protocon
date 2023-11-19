@@ -540,7 +540,10 @@ protocon_options_rec
       exec_opt.ofilepath = pathname2(relpath, argv[argi++]);
     }
     else if (eq_cstr (arg, "-espresso")) {
-      exec_opt.use_espresso = true;
+      if (!argv[argi]) {
+        failout_sysCx("Not enuff arguments.");
+      }
+      exec_opt.maybe_espresso = argv[argi++];
     }
     else if (eq_cstr (arg, "-x-test-known")) {
       Xn::Sys test_sys;

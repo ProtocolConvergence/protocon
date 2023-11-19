@@ -134,11 +134,12 @@ int main(int argc, char** argv)
     }
     if (!exec_opt.ofilepath.empty())
     {
-      oput_protocon_file (exec_opt.ofilepath,
-                          sys, *o_topology,
-                          sys.actions,
-                          exec_opt.use_espresso,
-                          exec_opt.argline.c_str());
+      oput_protocon_file
+        (exec_opt.ofilepath,
+         sys, *o_topology,
+         sys.actions,
+         exec_opt.maybe_espresso,
+         exec_opt.argline.c_str());
     }
   }
   std::cerr.flush();

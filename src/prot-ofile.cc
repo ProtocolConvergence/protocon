@@ -146,7 +146,7 @@ static
   bool
 oput_protocon_pc_acts(std::ostream& out, const Xn::PcSymm& pc_symm,
                       const std::vector<Xn::ActSymm>& acts,
-                      bool use_espresso)
+                      const std::string& maybe_espresso)
 {
   const Xn::PcSymmSpec& pc_symm_spec = *pc_symm.spec;
   if (pc_symm_spec.shadow_act_strings.sz() > 0) {
@@ -196,8 +196,8 @@ oput_protocon_pc_acts(std::ostream& out, const Xn::PcSymm& pc_symm,
   out << "\n  puppet:";
 
   bool good = true;
-  if (use_espresso) {
-    good = oput_protocon_pc_acts_espresso(out, pc_symm, acts);
+  if (!maybe_espresso.empty()) {
+    good = oput_protocon_pc_acts_espresso(out, pc_symm, acts, maybe_espresso);
   }
   else {
     for (const auto& act : acts) {
@@ -302,7 +302,7 @@ oput_protocon_pc_invariant(std::ostream& out, const Xn::PcSymm& pc_symm,
 oput_protocon_file(std::ostream& out, const Xn::Sys& sys,
                    const Xn::Net& o_topology,
                    const vector<uint>& actions,
-                   bool use_espresso,
+                   const std::string& maybe_espresso,
                    const char* comment)
 {
   DeclLegit( good );
@@ -380,7 +380,7 @@ oput_protocon_file(std::ostream& out, const Xn::Sys& sys,
     DoLegitLine("output invariant")
       oput_protocon_pc_invariant(out, pc_symm, style_str);
     DoLegitLine("output actions")
-      oput_protocon_pc_acts(out, pc_symm, acts, use_espresso);
+      oput_protocon_pc_acts(out, pc_symm, acts, maybe_espresso);
     out << "\n}\n";
   }
 
@@ -389,16 +389,16 @@ oput_protocon_file(std::ostream& out, const Xn::Sys& sys,
 
   bool
 oput_protocon_file(std::ostream& out, const Xn::Sys& sys, const vector<uint>& actions,
-                   bool use_espresso, const char* comment)
+                   const std::string& maybe_espresso, const char* comment)
 {
-  return oput_protocon_file(out, sys, sys.topology, actions, use_espresso, comment);
+  return oput_protocon_file(out, sys, sys.topology, actions, maybe_espresso, comment);
 }
 
   bool
 oput_protocon_file(std::ostream& out, const Xn::Sys& sys,
-                   bool use_espresso, const char* comment)
+                   const std::string& maybe_espresso, const char* comment)
 {
-  return oput_protocon_file(out, sys, sys.actions, use_espresso, comment);
+  return oput_protocon_file(out, sys, sys.actions, maybe_espresso, comment);
 }
 
   bool
@@ -407,22 +407,23 @@ oput_protocon_file(
     const Xn::Sys& sys,
     const Xn::Net& o_topology,
     const vector<uint>& actions,
-    bool use_espresso,
+    const std::string& maybe_espresso,
     const char* comment)
 {
   fildesh::ofstream out(ofilename.c_str());
   if (!out.good()) {return false;}
-  return oput_protocon_file(out, sys, o_topology, actions, use_espresso, comment);
+  return oput_protocon_file(out, sys, o_topology, actions, maybe_espresso, comment);
 }
 
   bool
 oput_protocon_file(
     const std::string& ofilename,
     const Xn::Sys& sys,
-    bool use_espresso,
+    const std::string& maybe_espresso,
     const char* comment)
 {
-  return oput_protocon_file (ofilename, sys, sys.topology, sys.actions, use_espresso, comment);
+  return oput_protocon_file(
+      ofilename, sys, sys.topology, sys.actions, maybe_espresso, comment);
 }
 
 END_NAMESPACE

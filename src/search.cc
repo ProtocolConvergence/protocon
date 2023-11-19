@@ -47,7 +47,7 @@ verify_solutions(const PartialSynthesis& inst, StabilizationCkInfo* info, uint* 
 
         fildesh::ofstream livelock_out(livelock_out_filename.c_str());
         oput_protocon_file(livelock_out, *inst.ctx->systems[i], inst[i].actions,
-                           false, "livelock");
+                           "", "livelock");
       }
       *inst[i].log << "Solution was NOT self-stabilizing." << std::endl;
       return false;
@@ -686,7 +686,7 @@ void
         log << "Writing system to: " << filepath  << std::endl;
         fildesh::ofstream prot_out(filepath.c_str());
         oput_protocon_file(prot_out, sys, sys.actions,
-                           exec_opt.use_espresso,
+                           exec_opt.maybe_espresso,
                            exec_opt.argline.c_str());
       }
     }
@@ -949,7 +949,7 @@ stabilization_search(vector<uint>& ret_actions,
                std::to_string(PcIdx) + "." +
                std::to_string(trial_idx)).c_str());
           oput_protocon_file(prot_out, sys, actions,
-                             exec_opt.use_espresso,
+                             exec_opt.maybe_espresso,
                              exec_opt.argline.c_str());
         }
       }

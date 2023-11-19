@@ -58,7 +58,7 @@ public:
   std::string log_ofilename;
   std::string xfilepath;
   std::string ofilepath;
-  bool use_espresso;
+  std::string maybe_espresso;
   std::vector<std::string> xfilepaths;
   std::string model_ofilepath;
   std::string graphviz_ofilepath;
@@ -75,7 +75,6 @@ public:
   ProtoconOpt()
     : task(SearchTask)
     , nparallel( 1 )
-    , use_espresso( false )
     , only_udp_include( false )
     , conflict_order( HiLoOrder )
   {}

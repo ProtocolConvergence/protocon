@@ -260,11 +260,12 @@ oput_protocon_pc_acts_espresso_spawn(std::ostream& out, const Xn::PcSymm& pc_sym
   bool
 oput_protocon_pc_acts_espresso(std::ostream& out,
                                const Xn::PcSymm& pc_symm,
-                               const std::vector<Xn::ActSymm>& acts)
+                               const std::vector<Xn::ActSymm>& acts,
+                               const std::string& espresso_name)
 {
   const char* const argv[] = {
 #if 1
-    "espresso",
+    espresso_name.c_str(),
     // Using -Dexact can take a long time.
     // "-Dexact",
 #else
