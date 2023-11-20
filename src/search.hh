@@ -29,10 +29,6 @@ rank_actions (Table< Table<uint> >& act_layers,
               const vector<uint>& candidates,
               const X::Fmla& xn,
               const P::Fmla& legit);
-void
-oput_conflicts (const ConflictFamily& conflicts, const String& ofilename);
-void
-oput_conflicts (const ConflictFamily& conflicts, String ofilename, uint pcidx);
 bool
 initialize_conflicts(ConflictFamily& conflicts,
                      Table< FlatSet<uint> >& flat_conflicts,

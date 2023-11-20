@@ -20,7 +20,6 @@ namespace Cx {
   template <class T, unsigned N> class Tuple;
   template <class T> class Triple;
   class URandom;
-  class XFile;
 
   template <class T> const Tuple<T,2> mk_Tuple(const T& e0, const T& e1);
 }
@@ -34,6 +33,8 @@ namespace X {
 #define PROTOCON_NAMESPACE protocon
 #endif
 namespace PROTOCON_NAMESPACE {
+  typedef unsigned Action_id;
+
   typedef Cx::AlphaTab String;
   using Cx::BitTable;
   using Cx::FlatSet;
@@ -46,7 +47,6 @@ namespace PROTOCON_NAMESPACE {
   using Cx::Triple;
 
   using Cx::URandom;
-  using Cx::XFile;
 
   using Cx::IntPFmla;
   using Cx::PFmlaVbl;

@@ -1,6 +1,8 @@
 
 #include "prot-ofile.hh"
 
+#include <sstream>
+
 #include <fildesh/ostream.hh>
 
 #include "pla.hh"
@@ -69,7 +71,7 @@ string_of_access_type(Xn::VariableAccessType type)
 static
   void
 oput_protocon_pc_vbl(std::ostream& ofile, const Xn::PcSymm& pc_symm,
-                     unsigned vidx, const String& idxname)
+                     unsigned vidx, std::string_view idxname)
 {
   const Xn::VblSymmAccessSpec& access = pc_symm.spec->access[vidx];
   ofile
@@ -108,70 +110,6 @@ oput_protocon_pc_vbls(std::ostream& ofile, const Xn::PcSymm& pc_symm)
   }
 }
 
-#if 0
-  bool
-oput_protocon_pc_act(std::ostream& out, ::XFile* xf,
-                     const Table<String>& guard_vbls,
-                     const Table<String>& assign_vbls)
-{
-  DeclLegit( good );
-  bool clause = false;
-  out << "\n    ( ";
-  for (uint i = 0;
-       good && i < (guard_vbls.sz() + assign_vbls.sz());
-       ++i)
-  {
-    const char* tok;
-    DoLegitLineP(tok, "read token")
-      nextok_XFile (xf, 0, 0);
-
-    uint m = 0;
-    Table<uint> vals;
-    while (good && tok[m])
-    {
-      Claim( tok[m] == '0' || tok[m] == '1' );
-      if (tok[m] == '1')
-        vals.push(m);
-      ++ m;
-    }
-
-    if (i >= guard_vbls.sz()) {
-      if (i == guard_vbls.sz()) {
-        out << " -->";
-      }
-      Claim2( vals.sz() ,==, 1 );
-      out << ' ' << assign_vbls[i-guard_vbls.sz()] << ":=" << vals[0] << ';';
-      continue;
-    }
-
-    if (vals.sz() == m)  continue;
-
-    if (clause)
-      out << " && ";
-    clause = true;
-
-    if (vals.sz() == m-1 && m > 2) {
-      for (uint j = 0; j < m; ++j) {
-        if (!vals.elem_ck(j)) {
-          out << guard_vbls[i] << "!=" << j;
-          break;
-        }
-      }
-      continue;
-    }
-
-    if (vals.sz() > 1)  out << "(";
-    for (uint j = 0; good && j < vals.sz(); ++j) {
-      if (j > 0)  out << " || ";
-      out << guard_vbls[i] << "==" << vals[j];
-    }
-    if (vals.sz() > 1)  out << ")";
-  }
-  out << " )";
-  return good;
-}
-#endif
-
   void
 oput_protocon_pc_act(std::ostream& out, const Xn::ActSymm& act)
 {
@@ -206,12 +144,12 @@ oput_protocon_pc_act(std::ostream& out, const Xn::ActSymm& act)
   out << ")";
 }
 
+static
   bool
 oput_protocon_pc_acts(std::ostream& out, const Xn::PcSymm& pc_symm,
-                      const Table<Xn::ActSymm>& acts,
-                      bool use_espresso)
+                      const std::vector<Xn::ActSymm>& acts,
+                      std::string_view maybe_espresso)
 {
-  DeclLegit( good );
   const Xn::PcSymmSpec& pc_symm_spec = *pc_symm.spec;
   if (pc_symm_spec.shadow_act_strings.sz() > 0) {
     out << "\n  shadow:";
@@ -247,8 +185,8 @@ oput_protocon_pc_acts(std::ostream& out, const Xn::PcSymm& pc_symm,
   // Return early if there are no puppet actions.
   {
     bool have_actions = false;
-    for (uint i = 0; i < acts.sz(); ++i) {
-      if (acts[i].pc_symm == &pc_symm) {
+    for (const auto& act : acts) {
+      if (act.pc_symm == &pc_symm) {
         have_actions = true;
         break;
       }
@@ -259,14 +197,14 @@ oput_protocon_pc_acts(std::ostream& out, const Xn::PcSymm& pc_symm,
 
   out << "\n  puppet:";
 
-  if (use_espresso) {
-    DoLegitLine( "" )
-      oput_protocon_pc_acts_espresso(out, pc_symm, acts);
+  bool good = true;
+  if (!maybe_espresso.empty()) {
+    good = oput_protocon_pc_acts_espresso(out, pc_symm, acts, maybe_espresso);
   }
   else {
-    for (uint i = 0; i < acts.sz(); ++i) {
-      if (acts[i].pc_symm == &pc_symm) {
-        oput_protocon_pc_act (out, acts[i]);
+    for (const auto& act : acts) {
+      if (act.pc_symm == &pc_symm) {
+        oput_protocon_pc_act (out, act);
       }
     }
   }
@@ -279,7 +217,7 @@ static
   bool
 oput_protocon_pc_assume (std::ostream& out, const Xn::PcSymm& pc_symm)
 {
-  const String& assume_expression = pc_symm.spec->closed_assume_expression;
+  const auto& assume_expression = pc_symm.spec->closed_assume_expression;
   if (assume_expression.empty())
     return true;
   out << "\n  (assume & closed)\n    (" << assume_expression << ");";
@@ -287,10 +225,10 @@ oput_protocon_pc_assume (std::ostream& out, const Xn::PcSymm& pc_symm)
 }
 
 static
-  String
+  std::string
 string_of_invariant_style (Xn::InvariantStyle style, Xn::InvariantScope scope)
 {
-  String s = "";
+  std::ostringstream oss;
   const char* pfx = "";
   const char* sfx = "";
 
@@ -299,7 +237,7 @@ string_of_invariant_style (Xn::InvariantStyle style, Xn::InvariantScope scope)
     case Xn::DirectInvariant:
       break;
     case Xn::ShadowInvariant:
-      s = "(";
+      oss << "(";
       sfx = " % puppet)";
       break;
     case Xn::FutureInvariant:
@@ -309,26 +247,26 @@ string_of_invariant_style (Xn::InvariantStyle style, Xn::InvariantScope scope)
       Claim( 0 );
   }
 
-  s << "(future & " << pfx;
+  oss << "(future & " << pfx;
   switch (style)
   {
     case Xn::FutureAndClosed:
-      s << "closed";
+      oss << "closed";
       break;
     case Xn::FutureAndSilent:
-      s << "silent";
+      oss << "silent";
       break;
     case Xn::FutureAndShadow:
-      s << "shadow";
+      oss << "shadow";
       break;
     case Xn::FutureAndActiveShadow:
-      s << "active shadow";
+      oss << "active shadow";
       break;
     case Xn::NInvariantStyles:
       Claim( 0 );
   }
-  s << ")" << sfx;
-  return s;
+  oss << ")" << sfx;
+  return oss.str();
 }
 
 static
@@ -351,9 +289,9 @@ string_of_invariant_behav (Xn::InvariantBehav behav)
 static
   bool
 oput_protocon_pc_invariant(std::ostream& out, const Xn::PcSymm& pc_symm,
-                           const String& style_str)
+                           const std::string_view style_str)
 {
-  const String& invariant_expression = pc_symm.spec->invariant_expression;
+  const auto& invariant_expression = pc_symm.spec->invariant_expression;
   if (invariant_expression.empty())
     return true;
 
@@ -365,14 +303,14 @@ oput_protocon_pc_invariant(std::ostream& out, const Xn::PcSymm& pc_symm,
   bool
 oput_protocon_file(std::ostream& out, const Xn::Sys& sys,
                    const Xn::Net& o_topology,
-                   const vector<uint>& actions,
-                   bool use_espresso,
-                   const char* comment)
+                   const std::vector<Action_id>& actions,
+                   std::string_view maybe_espresso,
+                   std::string_view comment)
 {
   DeclLegit( good );
 
   const Xn::Net& topo = sys.topology;
-  if (comment) {
+  if (!comment.empty()) {
     out << "// " << comment;
   }
   oput_protocon_constants(out, *o_topology.spec);
@@ -398,11 +336,11 @@ oput_protocon_file(std::ostream& out, const Xn::Sys& sys,
     out << "\n(assume & closed)\n  (" << sys.spec->closed_assume_expression << ")\n  ;";
   }
 
-  String style_str =
+  std::string style_str =
     string_of_invariant_style (sys.spec->invariant_style,
                                sys.spec->invariant_scope);
   if (!sys.spec->invariant_expression.empty()) {
-    String legit_str = sys.spec->invariant_expression;
+    const auto& legit_str = sys.spec->invariant_expression;
     out << "\n" << style_str << "\n  (" << legit_str << ")\n  ;";
   }
 
@@ -412,10 +350,10 @@ oput_protocon_file(std::ostream& out, const Xn::Sys& sys,
   }
 
 
-  Table<Xn::ActSymm> acts;
-  for (uint i = 0; i < actions.size(); ++i) {
-    for (uint j = 0; j < sys.topology.represented_actions[actions[i]].sz(); ++j) {
-      sys.topology.action(acts.grow1(), sys.topology.represented_actions[actions[i]][j]);
+  std::vector<Xn::ActSymm> acts;
+  for (auto act_id : actions) {
+    for (const auto& a : topo.represented_actions[act_id]) {
+      sys.topology.action(acts.emplace_back(), a);
     }
   }
   std::sort(acts.begin(), acts.end());
@@ -444,7 +382,7 @@ oput_protocon_file(std::ostream& out, const Xn::Sys& sys,
     DoLegitLine("output invariant")
       oput_protocon_pc_invariant(out, pc_symm, style_str);
     DoLegitLine("output actions")
-      oput_protocon_pc_acts(out, pc_symm, acts, use_espresso);
+      oput_protocon_pc_acts(out, pc_symm, acts, maybe_espresso);
     out << "\n}\n";
   }
 
@@ -452,38 +390,44 @@ oput_protocon_file(std::ostream& out, const Xn::Sys& sys,
 }
 
   bool
-oput_protocon_file(std::ostream& out, const Xn::Sys& sys, const vector<uint>& actions,
-                   bool use_espresso, const char* comment)
+oput_protocon_file(
+    std::ostream& out, const Xn::Sys& sys,
+    const std::vector<Action_id>& actions,
+    std::string_view maybe_espresso, std::string_view comment)
 {
-  return oput_protocon_file(out, sys, sys.topology, actions, use_espresso, comment);
+  return oput_protocon_file(out, sys, sys.topology, actions, maybe_espresso, comment);
 }
 
   bool
 oput_protocon_file(std::ostream& out, const Xn::Sys& sys,
-                   bool use_espresso, const char* comment)
+                   std::string_view maybe_espresso, std::string_view comment)
 {
-  return oput_protocon_file(out, sys, sys.actions, use_espresso, comment);
+  return oput_protocon_file(out, sys, sys.actions, maybe_espresso, comment);
 }
 
   bool
-oput_protocon_file (const String& ofilename,
-                    const Xn::Sys& sys,
-                    const Xn::Net& o_topology,
-                    const vector<uint>& actions,
-                    bool use_espresso,
-                    const char* comment)
+oput_protocon_file(
+    const std::string& ofilename,
+    const Xn::Sys& sys,
+    const Xn::Net& o_topology,
+    const std::vector<Action_id>& actions,
+    std::string_view maybe_espresso,
+    std::string_view comment)
 {
   fildesh::ofstream out(ofilename.c_str());
   if (!out.good()) {return false;}
-  return oput_protocon_file(out, sys, o_topology, actions, use_espresso, comment);
+  return oput_protocon_file(out, sys, o_topology, actions, maybe_espresso, comment);
 }
 
   bool
-oput_protocon_file (const String& ofilename, const Xn::Sys& sys,
-                    bool use_espresso,
-                    const char* comment)
+oput_protocon_file(
+    const std::string& ofilename,
+    const Xn::Sys& sys,
+    std::string_view maybe_espresso,
+    std::string_view comment)
 {
-  return oput_protocon_file (ofilename, sys, sys.topology, sys.actions, use_espresso, comment);
+  return oput_protocon_file(
+      ofilename, sys, sys.topology, sys.actions, maybe_espresso, comment);
 }
 
 END_NAMESPACE

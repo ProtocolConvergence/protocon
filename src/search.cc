@@ -47,7 +47,7 @@ verify_solutions(const PartialSynthesis& inst, StabilizationCkInfo* info, uint* 
 
         fildesh::ofstream livelock_out(livelock_out_filename.c_str());
         oput_protocon_file(livelock_out, *inst.ctx->systems[i], inst[i].actions,
-                           false, "livelock");
+                           "", "livelock");
       }
       *inst[i].log << "Solution was NOT self-stabilizing." << std::endl;
       return false;
@@ -367,19 +367,22 @@ rank_actions (Table< Table<uint> >& act_layers,
   return true;
 }
 
+static
   void
-oput_conflicts (const ConflictFamily& conflicts, const String& ofilename)
+oput_conflicts(const ConflictFamily& conflicts, const std::string& ofilename)
 {
   fildesh::ofstream conflicts_of(ofilename.c_str());
   conflicts_of << conflicts;
 }
 
+static
   void
-oput_conflicts (const ConflictFamily& conflicts, String ofilename, uint pcidx)
+oput_conflicts(
+    const ConflictFamily& conflicts,
+    const std::string& ofilename,
+    unsigned pcidx)
 {
-  ofilename += ".";
-  ofilename += pcidx;
-  oput_conflicts(conflicts, ofilename);
+  oput_conflicts(conflicts, ofilename + "." + std::to_string(pcidx));
 }
 
 static volatile Bool done_flag = 0;
@@ -453,11 +456,13 @@ try_known_solution(const ConflictFamily& conflicts,
       synctx.log << "I SKIPPED SOME\n";
 
     fildesh::ofstream working_of(
-        (String("working_conflicts.out.") + synctx.opt.sys_pcidx).c_str());
+        ("working_conflicts.out." +
+         std::to_string(synctx.opt.sys_pcidx)).c_str());
     working_of << conflicts;
 
     fildesh::ofstream broken_of(
-        (String("broken_conflicts.out.") + synctx.opt.sys_pcidx).c_str());
+        ("broken_conflicts.out." +
+         std::to_string(synctx.opt.sys_pcidx)).c_str());
     broken_of << synctx.conflicts;
   }
   return good;
@@ -537,10 +542,9 @@ stabilization_search_init
   DeclLegit( good );
 
   if (!exec_opt.log_ofilename.empty()) {
-    String ofilename( exec_opt.log_ofilename );
-    ofilename += ".";
-    ofilename += opt.sys_pcidx;
-    synctx.log.open(ofilename.c_str());
+    synctx.log.open(
+        (exec_opt.log_ofilename + "." +
+         std::to_string(opt.sys_pcidx)).c_str());
   }
   else if (opt.sys_npcs > 1) {
     synctx.log.open("/dev/null");
@@ -561,12 +565,12 @@ stabilization_search_init
       const Xn::PcSymm& pc_symm = sys.topology.pc_symms[i];
       uint pcidx = 0;
       if (pc_symm.membs.sz() > 0 && !pc_symm.representative(&pcidx)) {
-        String msg;
+        fildesh::ostringstream msg;
         msg << "Every process "
           << pc_symm.spec->name << "[" << pc_symm.spec->idx_name << "]"
           << " has repeated variable references!";
-        DBog0( msg.c_str() );
-        good = 0;
+        DBog0( msg.str().c_str() );
+        good = false;
       }
     }
     if (!good) {
@@ -584,7 +588,7 @@ stabilization_search_init
   }
 
   if (exec_opt.task != ProtoconOpt::VerifyTask)
-  for (uint i = 0; good && i < exec_opt.instances.sz(); ++i) {
+  for (unsigned i = 0; good && i < exec_opt.instances.size(); ++i) {
     ProtoconFileOpt param_infile_opt = infile_opt;
     param_infile_opt.constant_map = exec_opt.instances[i].constant_map;
 
@@ -622,7 +626,7 @@ stabilization_search_init
 
   PartialSynthesis& synlvl = synctx.base_partial;
 
-  for (uint i = 0; good && i < exec_opt.instances.sz(); ++i) {
+  for (unsigned i = 0; good && i < exec_opt.instances.size(); ++i) {
     synlvl[i].no_conflict = !exec_opt.instances[i].conflict_ck();
     synlvl[i].no_partial = !exec_opt.instances[i].partial_ck();
   }
@@ -669,7 +673,7 @@ void
   Xn::Sys sys;
   ProtoconFileOpt verif_infile_opt( infile_opt );
   verif_infile_opt.constant_map = exec_opt.instances[0].constant_map;
-  const String& xfilepath = exec_opt.xfilepaths[i];
+  const std::string& xfilepath = exec_opt.xfilepaths[i];
   if (xfilepath != exec_opt.xfilepath) {
     slurp_file_to_string(verif_infile_opt.text, xfilepath.c_str());
   }
@@ -685,11 +689,11 @@ void
       log << "System is stabilizing." << std::endl;
 
       if (!exec_opt.ofilepath.empty()) {
-        String filepath( exec_opt.ofilepath + "." + i );
+        std::string filepath = exec_opt.ofilepath + "." + std::to_string(i);
         log << "Writing system to: " << filepath  << std::endl;
         fildesh::ofstream prot_out(filepath.c_str());
         oput_protocon_file(prot_out, sys, sys.actions,
-                           exec_opt.use_espresso,
+                           exec_opt.maybe_espresso,
                            exec_opt.argline.c_str());
       }
     }
@@ -730,7 +734,7 @@ stabilization_search(vector<uint>& ret_actions,
 #ifdef _OPENMP
   if (exec_opt.nparallel != 0)
     omp_set_num_threads(exec_opt.nparallel);
-  if (exec_opt.task == ProtoconOpt::VerifyTask && exec_opt.xfilepaths.sz()==1)
+  if (exec_opt.task == ProtoconOpt::VerifyTask && exec_opt.xfilepaths.size()==1)
     omp_set_num_threads(1);
 #endif
 
@@ -790,7 +794,7 @@ stabilization_search(vector<uint>& ret_actions,
   if (exec_opt.task == ProtoconOpt::VerifyTask)
   {
 #pragma omp for schedule(dynamic)
-    for (uint i = 0; i < exec_opt.xfilepaths.sz(); ++i) {
+    for (unsigned i = 0; i < exec_opt.xfilepaths.size(); ++i) {
       if (synctx.done_ck())  continue;
       multi_verify_stabilization
         (i, synctx, ret_actions,
@@ -947,9 +951,12 @@ stabilization_search(vector<uint>& ret_actions,
         solution_found = true;
         ret_actions = actions;
         if (global_opt.try_all && !exec_opt.ofilepath.empty()) {
-          fildesh::ofstream prot_out((exec_opt.ofilepath + "." + PcIdx + "." + trial_idx).c_str());
+          fildesh::ofstream prot_out(
+              (exec_opt.ofilepath + "." +
+               std::to_string(PcIdx) + "." +
+               std::to_string(trial_idx)).c_str());
           oput_protocon_file(prot_out, sys, actions,
-                             exec_opt.use_espresso,
+                             exec_opt.maybe_espresso,
                              exec_opt.argline.c_str());
         }
       }
@@ -1043,10 +1050,7 @@ stabilization_search(vector<uint>& ret_actions,
   if (global_opt.snapshot_conflicts && !exec_opt.conflicts_ofilepath.empty())
   {
     for (uint i = 0; i < NPcs; ++i) {
-      String ofilename( exec_opt.conflicts_ofilepath );
-      ofilename += ".";
-      ofilename += i;
-      remove(ofilename.c_str());
+      remove((exec_opt.conflicts_ofilepath + "." + std::to_string(i)).c_str());
     }
   }
 

@@ -264,7 +264,7 @@ parse_NatMap (Xn::NatMap& tup, const char* line)
 
 static
   void
-push_instances(Table< ProtoconParamOpt >& instances,
+push_instances(std::vector<ProtoconParamOpt>& instances,
                const ProtoconParamOpt& instdef)
 {
   const unsigned begidx = instances.size();
@@ -543,7 +543,10 @@ protocon_options_rec
       exec_opt.ofilepath = pathname2(relpath, argv[argi++]);
     }
     else if (eq_cstr (arg, "-espresso")) {
-      exec_opt.use_espresso = true;
+      if (!argv[argi]) {
+        failout_sysCx("Not enuff arguments.");
+      }
+      exec_opt.maybe_espresso = argv[argi++];
     }
     else if (eq_cstr (arg, "-x-test-known")) {
       Xn::Sys test_sys;

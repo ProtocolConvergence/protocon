@@ -1285,7 +1285,7 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
             this->ctx->opt.n_livelock_ofiles).c_str();
         this->ctx->opt.n_livelock_ofiles += 1;
         fildesh::ofstream livelock_out(livelock_out_filename.c_str());
-        oput_protocon_file(livelock_out, sys, this->actions, false, "livelock");
+        oput_protocon_file(livelock_out, sys, this->actions, "", "livelock");
       }
     }
     return false;

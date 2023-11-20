@@ -1,13 +1,13 @@
 
 #ifndef OPT_HH_
 #define OPT_HH_
-#include "cx/synhax.hh"
-#include "cx/alphatab.hh"
-#include "cx/map.hh"
-#include "cx/table.hh"
+#include <vector>
+
 #include "stabilization.hh"
 #include "xnspec.hh"
+#include "cx/map.hh"
 
+#include "cx/synhax.hh"
 #include "namespace.hh"
 
 class AddConvergenceOpt;
@@ -54,28 +54,27 @@ public:
   ExecTask task;
   uint nparallel;
   ProtoconParamOpt instance_def;
-  Table< ProtoconParamOpt > instances;
-  String log_ofilename;
-  String xfilepath;
-  String ofilepath;
-  bool use_espresso;
-  Table< String > xfilepaths;
-  String model_ofilepath;
-  String graphviz_ofilepath;
-  String udp_ofilepath;
+  std::vector<ProtoconParamOpt> instances;
+  std::string log_ofilename;
+  std::string xfilepath;
+  std::string ofilepath;
+  std::string maybe_espresso;
+  std::vector<std::string> xfilepaths;
+  std::string model_ofilepath;
+  std::string graphviz_ofilepath;
+  std::string udp_ofilepath;
   bool only_udp_include;
-  String pla_ofilepath;
-  String conflicts_xfilepath;
-  String conflicts_ofilepath;
-  String stats_ofilepath;
-  String argline;
+  std::string pla_ofilepath;
+  std::string conflicts_xfilepath;
+  std::string conflicts_ofilepath;
+  std::string stats_ofilepath;
+  std::string argline;
 
   MinimizeConflictsOrder conflict_order;
 
   ProtoconOpt()
     : task(SearchTask)
     , nparallel( 1 )
-    , use_espresso( false )
     , only_udp_include( false )
     , conflict_order( HiLoOrder )
   {}

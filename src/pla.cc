@@ -8,9 +8,6 @@ extern "C" {
 #include <fildesh/fildesh_compat_string.h>
 }
 
-#include "cx/alphatab.hh"
-#include "cx/fileb.hh"
-#include "cx/table.hh"
 #include "xnsys.hh"
 
 #include "namespace.hh"
@@ -45,26 +42,25 @@ oput_pla_act(std::ostream& out, const Xn::ActSymm& act)
 
   void
 oput_pla_pc_acts(std::ostream& out, const Xn::PcSymm& pc_symm,
-                 const Table<Xn::ActSymm>& acts)
+                 const std::vector<Xn::ActSymm>& acts)
 {
   assert(pc_symm.wvbl_symms.sz() == pc_symm.spec->wmap.sz());
 
   unsigned nrvbls = 0;
-  for (unsigned i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
-    if (!pc_symm.rvbl_symms[i]->pure_shadow_ck())
+  for (const Xn::VblSymm* vbl_symm : pc_symm.rvbl_symms) {
+    if (!vbl_symm->pure_shadow_ck()) {
       nrvbls += 1;
+    }
   }
 
   out << ".mv " << (nrvbls + pc_symm.spec->wmap.sz()) << " 0";
-  for (unsigned i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
-    const Xn::VblSymm& vbl_symm = *pc_symm.rvbl_symms[i];
-    if (vbl_symm.pure_shadow_ck())
-      continue;
-    out << ' ' << vbl_symm.domsz;
+  for (const Xn::VblSymm* vbl_symm : pc_symm.rvbl_symms) {
+    if (!vbl_symm->pure_shadow_ck()) {
+      out << ' ' << vbl_symm->domsz;
+    }
   }
-  for (unsigned i = 0; i < pc_symm.wvbl_symms.sz(); ++i) {
-    const Xn::VblSymm& vbl_symm = *pc_symm.wvbl_symms[i];
-    out << ' ' << vbl_symm.domsz;
+  for (const Xn::VblSymm* vbl_symm : pc_symm.wvbl_symms) {
+    out << ' ' << vbl_symm->domsz;
   }
   out << '\n';
 
@@ -75,12 +71,12 @@ oput_pla_pc_acts(std::ostream& out, const Xn::PcSymm& pc_symm,
     out << ' ' << pc_symm.vbl_name(i);
   }
 
-  for (unsigned i = 0; i < pc_symm.spec->wmap.sz(); ++i)
-    out << ' ' << pc_symm.vbl_name(pc_symm.spec->wmap[i]) << '\'';
+  for (auto pc_rvbl_idx : pc_symm.spec->wmap) {
+    out << ' ' << pc_symm.vbl_name(pc_rvbl_idx) << '\'';
+  }
   out << '\n';
 
-  for (unsigned i = 0; i < acts.sz(); ++i) {
-    const Xn::ActSymm& act = acts[i];
+  for (const Xn::ActSymm& act : acts) {
     if (act.pc_symm == &pc_symm) {
       oput_pla_act (out, act);
       out << '\n';
@@ -92,11 +88,11 @@ oput_pla_pc_acts(std::ostream& out, const Xn::PcSymm& pc_symm,
   bool
 oput_pla_file (std::ostream& ofile, const Xn::Sys& sys)
 {
-  Table<Xn::ActSymm> acts;
+  std::vector<Xn::ActSymm> acts;
   const Xn::Net& topo = sys.topology;
-  for (unsigned i = 0; i < sys.actions.size(); ++i) {
-    for (unsigned j = 0; j < topo.represented_actions[sys.actions[i]].sz(); ++j) {
-      topo.action(acts.grow1(), topo.represented_actions[sys.actions[i]][j]);
+  for (auto act_id : sys.actions) {
+    for (const auto& a : topo.represented_actions[act_id]) {
+      topo.action(acts.emplace_back(), a);
     }
   }
   std::sort(acts.begin(), acts.end());
@@ -110,7 +106,7 @@ oput_pla_file (std::ostream& ofile, const Xn::Sys& sys)
 }
 
   bool
-oput_pla_file(const String& ofilename, const Xn::Sys& sys)
+oput_pla_file(const std::string& ofilename, const Xn::Sys& sys)
 {
   fildesh::ofstream out(ofilename.c_str());
   if (out.fail()) {
@@ -124,46 +120,46 @@ oput_pla_file(const String& ofilename, const Xn::Sys& sys)
 static
   bool
 oput_protocon_pc_act(std::ostream& out, FildeshX* in,
-                     const Table<String>& guard_vbls,
-                     const Table<String>& assign_vbls)
+                     const std::vector<std::string>& guard_vbls,
+                     const std::vector<std::string>& assign_vbls)
 {
   bool clause = false;
   out << "\n    ( ";
   for (unsigned i = 0;
-       i < (guard_vbls.sz() + assign_vbls.sz());
+       i < (guard_vbls.size() + assign_vbls.size());
        ++i)
   {
     skipchrs_FildeshX(in, fildesh_compat_string_blank_bytes);
 
     unsigned m = 0;
-    Table<unsigned> vals;
+    std::vector<unsigned> vals;
     while (peek_char_FildeshX(in, '0') || peek_char_FildeshX(in, '1')) {
       assert(in->at[in->off] == '0' || in->at[in->off] == '1');
       if (in->at[in->off] == '1') {
-        vals.push(m);
+        vals.push_back(m);
       }
       skip_bytestring_FildeshX(in, NULL, 1);
       ++ m;
     }
 
-    if (i >= guard_vbls.sz()) {
-      if (i == guard_vbls.sz()) {
+    if (i >= guard_vbls.size()) {
+      if (i == guard_vbls.size()) {
         out << " -->";
       }
-      assert(vals.sz() == 1);
-      out << ' ' << assign_vbls[i-guard_vbls.sz()] << ":=" << vals[0] << ';';
+      assert(vals.size() == 1);
+      out << ' ' << assign_vbls[i-guard_vbls.size()] << ":=" << vals[0] << ';';
       continue;
     }
 
-    if (vals.sz() == m)  continue;
+    if (vals.size() == m)  continue;
 
     if (clause)
       out << " && ";
     clause = true;
 
-    if (vals.sz() == m-1 && m > 2) {
+    if (vals.size() == m-1 && m > 2) {
       for (unsigned j = 0; j < m; ++j) {
-        if (!vals.elem_ck(j)) {
+        if (std::find(vals.begin(), vals.end(), j) == vals.end()) {
           out << guard_vbls[i] << "!=" << j;
           break;
         }
@@ -171,12 +167,12 @@ oput_protocon_pc_act(std::ostream& out, FildeshX* in,
       continue;
     }
 
-    if (vals.sz() > 1)  out << "(";
-    for (unsigned j = 0; j < vals.sz(); ++j) {
+    if (vals.size() > 1)  out << "(";
+    for (unsigned j = 0; j < vals.size(); ++j) {
       if (j > 0)  out << " || ";
       out << guard_vbls[i] << "==" << vals[j];
     }
-    if (vals.sz() > 1)  out << ")";
+    if (vals.size() > 1)  out << ")";
   }
   out << " )";
   return true;
@@ -186,7 +182,7 @@ oput_protocon_pc_act(std::ostream& out, FildeshX* in,
 static
   bool
 oput_protocon_pc_acts_espresso_spawn(std::ostream& out, const Xn::PcSymm& pc_symm,
-                                     const Table<Xn::ActSymm>& acts,
+                                     const std::vector<Xn::ActSymm>& acts,
                                      const char* const* argv)
 {
   int istat = 0;
@@ -197,12 +193,12 @@ oput_protocon_pc_acts_espresso_spawn(std::ostream& out, const Xn::PcSymm& pc_sym
   fildesh_compat_pid_t pid = -1;
 
   // Names for variables.
-  Table<String> guard_vbls;
-  Table<String> assign_vbls( pc_symm.spec->wmap.sz() );
+  std::vector<std::string> guard_vbls;
+  std::vector<std::string> assign_vbls( pc_symm.spec->wmap.size() );
   for (unsigned i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
-    if (pc_symm.rvbl_symms[i]->pure_shadow_ck())
-      continue;
-    guard_vbls.push(pc_symm.vbl_name(i));
+    if (!pc_symm.rvbl_symms[i]->pure_shadow_ck()) {
+      guard_vbls.emplace_back() = pc_symm.vbl_name(i);
+    }
   }
   for (unsigned i = 0; i < pc_symm.wvbl_symms.sz(); ++i) {
     assign_vbls[i] = pc_symm.vbl_name(pc_symm.spec->wmap[i]);
@@ -254,29 +250,24 @@ oput_protocon_pc_acts_espresso_spawn(std::ostream& out, const Xn::PcSymm& pc_sym
     FildeshX slice = sliceline_FildeshX(from_espresso);
     oput_protocon_pc_act(out, &slice, guard_vbls, assign_vbls);
   }
-  out << "\n    ;";
 
   close_FildeshX(from_espresso);
-  fildesh_log_errorf("istat %d");
+  fildesh_log_tracef("istat %d");
   return (istat == 0);
 }
 
   bool
 oput_protocon_pc_acts_espresso(std::ostream& out,
                                const Xn::PcSymm& pc_symm,
-                               const Table<Xn::ActSymm>& acts)
+                               const std::vector<Xn::ActSymm>& acts,
+                               std::string_view espresso_name)
 {
+  std::string exename;
+  exename = espresso_name;
   const char* const argv[] = {
-#if 1
-    "espresso",
+    exename.c_str(),
     // Using -Dexact can take a long time.
     // "-Dexact",
-#else
-    // Use this to capture espresso input/output.
-    "sh",
-    "-c",
-    "tee in.pla | espresso | tee out.pla",
-#endif
     NULL,
   };
 
