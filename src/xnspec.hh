@@ -84,6 +84,11 @@ public:
     return *this;
   }
 
+  unsigned cardinality() const {return membs.size();}
+  void clear() {*this = NatMap();}
+  void push_back(int x) {membs.push_back(x);}
+  void assign_expression(std::string_view s) {expression = s;}
+
   uint sz() const { return membs.sz(); }
 
   int eval(uint i) const {

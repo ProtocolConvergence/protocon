@@ -327,7 +327,7 @@ interactive(const Xn::Sys& sys)
         }
         if (lines.sz()==0)
           break;
-        std::string_view line = lines[usim.urandom.pick(lines.sz())].view();
+        std::string_view line = lines[usim.urandom.pick(lines.sz())];
         of << line << std::endl;
         usim.assign(line);
       }
@@ -355,7 +355,7 @@ interactive(const Xn::Sys& sys)
         if (lines.sz()==0)
           break;
         for (unsigned i = 0; i < lines.sz(); ++i) {
-          std::string_view line = lines[i].view();
+          std::string_view line = lines[i];
           if (print_change_on) {
             of << line << std::endl;
           }

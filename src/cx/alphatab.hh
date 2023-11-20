@@ -12,7 +12,6 @@ extern "C" {
 }
 
 namespace Cx {
-class OFile;
 
 namespace C {
   using ::AlphaTab;
@@ -21,37 +20,43 @@ namespace C {
 class AlphaTab
 {
 private:
-  C::AlphaTab t;
+  C::AlphaTab t = dflt_AlphaTab();
 public:
-  AlphaTab()
-    : t( dflt_AlphaTab () )
-  {}
+  AlphaTab() {}
+  ~AlphaTab() {lose_AlphaTab (&t);}
 
-  AlphaTab(const char* s)
-    : t( cons1_AlphaTab (s) )
-  {}
-
-  explicit AlphaTab(const C::AlphaTab& b)
-    : t( dflt_AlphaTab () )
-  {
+  explicit AlphaTab(const C::AlphaTab& b) {
     copy_AlphaTab (&t, &b);
   }
 
-  AlphaTab(const AlphaTab& b)
-    : t( dflt_AlphaTab () )
-  {
+  AlphaTab(const AlphaTab& b) {
     copy_AlphaTab (&t, &b.t);
   }
 
-  const AlphaTab& operator=(const C::AlphaTab& b) {
+  AlphaTab(const char* b) {
+    *this = std::string_view(b);
+  }
+  AlphaTab(const std::string& b) {
+    *this = std::string_view(b);
+  }
+
+  AlphaTab& operator=(const C::AlphaTab& b) {
     copy_AlphaTab (&t, &b);
     return *this;
   }
   const AlphaTab& operator=(const AlphaTab& b) {
     return (*this = b.t);
   }
-  ~AlphaTab() {
-    lose_AlphaTab (&t);
+  AlphaTab& operator=(std::string_view b) {
+    clear_AlphaTab(&t);
+    cat1_cstr_AlphaTab(&t, b.data(), b.size());
+    return *this;
+  }
+  AlphaTab& operator=(const std::string& b) {
+    return (*this = std::string_view(b));
+  }
+  AlphaTab& operator=(const char* b) {
+    return (*this = std::string_view(b));
   }
 
   void clear() { clear_AlphaTab (&t); }
@@ -137,7 +142,7 @@ public:
 
   AlphaTab& push_delim(const char* pfx, const char* delim) {
     if (this->empty())
-      (*this) = pfx;
+      (*this) = std::string_view(pfx);
     else
       (*this) << delim;
     return (*this);
@@ -151,17 +156,17 @@ public:
     return (*this << x);
   }
 
-  bool operator==(const AlphaTab& b) const {
-    return (0 == cmp_AlphaTab (&t, &b.t));
+  bool operator==(std::string_view b) const {
+    return ((std::string_view)*this == b);
   }
-  bool operator!=(const AlphaTab& b) const {
-    return !(*this == b);
+  bool operator!=(std::string_view b) const {
+    return ((std::string_view)*this != b);
   }
-  bool operator<(const AlphaTab& b) const {
-    return (0 > cmp_AlphaTab (&t, &b.t));
+  bool operator<(std::string_view b) const {
+    return ((std::string_view)*this < b);
   }
 
-  std::string_view view() const {
+  operator std::string_view() const {
     if (this->empty()) {return "";}
     return std::string_view(this->data(), this->size());
   }
@@ -172,7 +177,6 @@ public:
     return (this->size() == 0);
   }
 
-  friend class OFile;
   friend C::AlphaTab& operator<<(C::AlphaTab& a, const Cx::AlphaTab& b);
 };
 
