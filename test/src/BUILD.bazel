@@ -1,12 +1,10 @@
 load("@fildesh//:def.bzl", "fildesh_test")
 
-cc_binary(
-    name = "kautz_graphviz",
-    srcs = ["kautz_graphviz.cc"],
-    deps = ["//src:kautz_lib"],
-    testonly = 1,
+fildesh_test(
+    name = "biring_test",
+    srcs = ["biring_test.fildesh"],
+    aliases = {"biring": "//src:biring"},
 )
-
 
 cc_test(
     name = "conflictfamily_test",
@@ -14,6 +12,12 @@ cc_test(
     deps = ["//src:protocon_lib"],
 )
 
+cc_binary(
+    name = "kautz_graphviz",
+    srcs = ["kautz_graphviz.cc"],
+    deps = ["//src:kautz_lib"],
+    testonly = 1,
+)
 fildesh_test(
     name = "kautz_test",
     srcs = ["kautz_test.fildesh"],

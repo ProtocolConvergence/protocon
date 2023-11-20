@@ -1,0 +1,12 @@
+
+(: expect_content Str
+ (++
+  "01111110 2match:Y 3match:Y next7:Y next10:Y\n"
+  "01111000 2match:Y 3match:Y next7:N next10:N\n"
+ ))
+zec -o $(OF expect) / "${expect_content}" /
+
+|< biring -domsz 2
+|- biring -domsz 2 -echo -subck-known
+|- cmp $(XF expect)
+|> stdout

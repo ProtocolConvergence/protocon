@@ -1,6 +1,7 @@
 cc_library(
     name = "inline_cc_lib",
     srcs = [
+        "eq_cstr.h",
         "slurp_file_to_string.hh",
     ],
     visibility = ["//visibility:public"],
