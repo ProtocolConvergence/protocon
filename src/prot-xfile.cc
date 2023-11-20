@@ -3,6 +3,8 @@
 #include "prot-xfile.hh"
 #include "cx/bittable.hh"
 
+#include "src/inline/eq_cstr.h"
+
 #include "namespace.hh"
 
   bool
@@ -100,7 +102,7 @@ ProtoconFile::add_processes(Sesp pc_name, Sesp idx_name, Sesp npcs, Sesp map_vbl
     for (uint pcidx = 0; pcidx < pc_symm->membs.sz(); ++pcidx) {
       index_map[pc_symm_spec->idxmap_name] = pcidx;
       DoLegitLine( "evaluating process index map" )
-        eval_int (&pc_symm->mapped_indices.membs[pcidx], map_expr);
+        eval_int (pc_symm->mapped_indices.elt(pcidx), map_expr);
     }
     index_map.erase(pc_symm_spec->idxmap_name);
   }
@@ -118,9 +120,12 @@ ProtoconFile::add_constant(Sesp name_sp, Sesp val_sp)
     ccstr_of_Sesp (name_sp);
   Xn::NatMap val(1);
   DoLegitLine("evaluating int")
-    eval_int (&val.membs[0], val_sp);
-  DoLegitLine( "finding expression" )
-    string_expression (val.expression, val_sp);
+    eval_int(val.elt(0), val_sp);
+  if (good) {
+    string tmp_s;
+    good = string_expression(tmp_s, val_sp);
+    val.assign_expression(tmp_s);
+  }
   DoLegit(0)
     if (!spec->constant_map.key_ck(name))
       spec->constant_map.add(name, val);
@@ -151,11 +156,15 @@ ProtoconFile::add_constant_list(Sesp name_sp, Sesp list_sp)
   Xn::NatMap val( membs.sz() );
   for (uint i = 0; i < membs.sz(); ++i) {
     DoLegitLine("evaluating int")
-      eval_int (&val.membs[i], membs[i]);
+      eval_int(val.elt(i), membs[i]);
   }
 
-  DoLegitLine( "finding expression" )
-    string_expression (val.expression, list_sp);
+  if (good) {
+    string tmp_s;
+    good = string_expression(tmp_s, list_sp);
+    val.assign_expression(tmp_s);
+  }
+
   DoLegit(0)
     if (!spec->constant_map.key_ck(name))
       spec->constant_map.add(name, val);
@@ -176,11 +185,14 @@ ProtoconFile::add_let(Sesp name_sp, Sesp val_sp)
   for (uint i = 0; good && i < pc_symm->membs.sz(); ++i) {
     within_process(i);
     DoLegitLine( "" )
-      eval_int (&let_vals.membs[i], val_sp);
+      eval_int(let_vals.elt(i), val_sp);
   }
   escape_process();
-  DoLegitLine( "finding expression" )
-    string_expression (let_vals.expression, val_sp);
+  if (good) {
+    string tmp_s;
+    good = string_expression(tmp_s, val_sp);
+    let_vals.assign_expression(tmp_s);
+  }
   DoLegit(0)
     pc_symm_spec->let_map.add(name, let_vals);
   return update_allgood (good);
@@ -241,12 +253,15 @@ ProtoconFile::add_access(Sesp vbl_sp, Xn::VariableAccessType access_type)
     for (uint i = 0; i < pc_symm->membs.sz(); ++i) {
       within_process(i);
       DoLegitLine("")
-        eval_int (&indices.membs[i], vbl_idx_sp);
+        eval_int(indices.elt(i), vbl_idx_sp);
     }
     escape_process();
 
-    DoLegitLine( "string_expression()" )
-      string_expression(indices.expression, vbl_idx_sp);
+    if (good) {
+      string tmp_s;
+      good = string_expression(tmp_s, vbl_idx_sp);
+      indices.assign_expression(tmp_s);
+    }
 
     if (good)
       topo.add_access(+pc_symm, vbl_symm, indices, access_type);
@@ -266,8 +281,10 @@ ProtoconFile::add_symmetric_links(Sesp let_names_sp, Sesp let_vals_list_sp)
     link_symmetry.let_expression = ccstr_of_Sesp (car_of_Sesp (let_names_sp));
     Sesp let_vals_sp = let_vals_list_sp;
     while (!nil_ck_Sesp (let_vals_sp)) {
-      link_symmetry.multiset_expression.push_delim("", ", ");
-      String val_expression;
+      if (!link_symmetry.multiset_expression.empty()) {
+        link_symmetry.multiset_expression += ", ";
+      }
+      std::string val_expression;
       string_expression(val_expression, caar_of_Sesp (let_vals_sp));
       link_symmetry.multiset_expression += val_expression;
       let_vals_sp = cdr_of_Sesp (let_vals_sp);
@@ -277,7 +294,8 @@ ProtoconFile::add_symmetric_links(Sesp let_names_sp, Sesp let_vals_list_sp)
 
   Sesp let_name_sp = let_names_sp;
   while (!nil_ck_Sesp (let_name_sp)) {
-    link_symmetry.let_expression.push_delim("(", ", ");
+    link_symmetry.let_expression += (
+        link_symmetry.let_expression.empty() ? "{" : ", ");
 
     link_symmetry.let_expression += ccstr_of_Sesp (car_of_Sesp (let_name_sp));
     let_name_sp = cdr_of_Sesp (let_name_sp);
@@ -286,14 +304,17 @@ ProtoconFile::add_symmetric_links(Sesp let_names_sp, Sesp let_vals_list_sp)
 
   Sesp let_vals_sp = let_vals_list_sp;
   while (!nil_ck_Sesp (let_vals_sp)) {
-    link_symmetry.multiset_expression.push_delim("", ", ");
+    if (!link_symmetry.multiset_expression.empty()) {
+      link_symmetry.multiset_expression += ", ";
+    }
 
-    String tuple_expression;
+    std::string tuple_expression;
     Sesp let_val_sp = car_of_Sesp (let_vals_sp);
     while (!nil_ck_Sesp (let_val_sp)) {
-      tuple_expression.push_delim("(", ", ");
+      tuple_expression += (
+          tuple_expression.empty() ? "(" : ", ");
 
-      String val_expression;
+      std::string val_expression;
       DoLegitLine( "" )
         string_expression(val_expression, car_of_Sesp (let_val_sp));
       if (!good)  break;
@@ -348,7 +369,7 @@ ProtoconFile::add_symmetric_access(Sesp let_names_sp, Sesp let_vals_list_sp,
     }
     if (!good)  break;
 
-    String index_expression;
+    std::string index_expression;
     string_expression(index_expression, caddar_of_Sesp (vbls_sp));
     link_symmetry.add_link_symmetry(vbl_idcs, index_expression);
     vbls_sp = cdr_of_Sesp (vbls_sp);
@@ -568,7 +589,7 @@ ProtoconFile::add_action(Sesp act_sp, Xn::ShadowPuppetRole role)
   DoLegit( "" )
   {
     if (role != Xn::Puppet) {
-      String act_expression;
+      std::string act_expression;
       good = string_expression (act_expression, act_sp);
       if (good) {
         pc_symm_spec->shadow_act_strings.push(act_expression);
@@ -639,7 +660,7 @@ ProtoconFile::forbid_action(Sesp act_sp)
 
   DoLegit( "" )
   {
-    String act_expression;
+    std::string act_expression;
     good = string_expression (act_expression, act_sp);
     if (good) {
       pc_symm_spec->forbid_act_strings.push(act_expression);
@@ -671,7 +692,7 @@ ProtoconFile::permit_action(Sesp act_sp)
 
   DoLegit( "" )
   {
-    String act_expression;
+    std::string act_expression;
     good = string_expression (act_expression, act_sp);
     if (good) {
       pc_symm_spec->permit_act_strings.push(act_expression);
@@ -800,15 +821,15 @@ ProtoconFile::add_pc_assume(Sesp assume_sp)
   if (!allgood)  return false;
   DeclLegit( good );
 
-  String assume_expression;
+  std::string assume_expression;
   DoLegitLine( "" )
     parend_string_expression(assume_expression, assume_sp);
 
   DoLegit( "" ) {
     if (!pc_symm_spec->closed_assume_expression.empty()) {
-      pc_symm_spec->closed_assume_expression << " && ";
+      pc_symm_spec->closed_assume_expression += " && ";
     }
-    pc_symm_spec->closed_assume_expression << assume_expression;
+    pc_symm_spec->closed_assume_expression += assume_expression;
   }
 
   if (!this->interpret_ck())  return update_allgood (good);
@@ -835,7 +856,7 @@ ProtoconFile::add_pc_legit(Sesp legit_sp)
   if (!allgood)  return false;
   DeclLegit( good );
 
-  String invariant_expression;
+  std::string invariant_expression;
   DoLegitLine( "" )
     string_expression(invariant_expression, legit_sp);
 
@@ -843,7 +864,7 @@ ProtoconFile::add_pc_legit(Sesp legit_sp)
   {
     if (!pc_symm_spec->invariant_expression.empty()) {
       pc_symm_spec->invariant_expression =
-        String("(") + pc_symm_spec->invariant_expression + ") && ";
+        std::string("(") + pc_symm_spec->invariant_expression + ") && ";
     }
     pc_symm_spec->invariant_expression += invariant_expression;
   }
@@ -886,7 +907,7 @@ ProtoconFile::add_predicate(Sesp name_sp, Sesp val_sp)
   DoLegitLineP( name, "" )
     ccstr_of_Sesp (name_sp);
 
-  String expression;
+  std::string expression;
   DoLegitLine( "finding expression" )
     string_expression (expression, val_sp);
 
@@ -909,15 +930,15 @@ ProtoconFile::add_assume(Sesp assume_sp)
   if (!allgood)  return false;
   DeclLegit( good );
 
-  String str;
+  std::string str;
   DoLegitLine( "convert invariant expression to string" )
     parend_string_expression(str, assume_sp);
 
   DoLegit(0) {
-    if (spec->closed_assume_expression != "") {
-      spec->closed_assume_expression << "\n  &&\n  ";
+    if (!spec->closed_assume_expression.empty()) {
+      spec->closed_assume_expression += "\n  &&\n  ";
     }
-    spec->closed_assume_expression << str;
+    spec->closed_assume_expression += str;
   }
   if (!this->interpret_ck())  return update_allgood (good);
 
@@ -953,14 +974,14 @@ ProtoconFile::add_legit(Sesp legit_sp)
   if (!allgood)  return false;
   DeclLegit( good );
 
-  String invariant_expression;
+  std::string invariant_expression;
   DoLegitLine( "convert invariant expression to string" )
     string_expression(invariant_expression, legit_sp);
 
   DoLegit(0) {
     if (spec->invariant_expression != "") {
       spec->invariant_expression =
-        String("(") + spec->invariant_expression + ")\n  &&\n  ";
+        std::string("(") + spec->invariant_expression + ")\n  &&\n  ";
     }
     spec->invariant_expression += invariant_expression;
   }
@@ -978,7 +999,7 @@ ProtoconFile::add_legit(Sesp legit_sp)
 }
 
   bool
-ProtoconFile::string_expression(String& ss, Sesp a)
+ProtoconFile::string_expression(std::string& ss, Sesp a)
 {
   if (!allgood)  return false;
   DeclLegit( good );
@@ -1052,9 +1073,9 @@ ProtoconFile::string_expression(String& ss, Sesp a)
        eq_cstr (key, "==>") ||
        eq_cstr (key, "<=>"));
     string_expression (ss, cadr_of_Sesp (a));
-    if (pad)  ss += " ";
+    if (pad) {ss += ' ';}
     ss += key;
-    if (pad)  ss += " ";
+    if (pad) {ss += ' ';}
     string_expression (ss, caddr_of_Sesp (a));
   }
   else if (eq_cstr (key, "xor")) {
@@ -1065,20 +1086,22 @@ ProtoconFile::string_expression(String& ss, Sesp a)
   else if (eq_cstr (key, "-->") ||
            eq_cstr (key, "-=>")) {
     string_expression (ss, cadr_of_Sesp (a));
-    ss << " " << key;
+    ss += ' ';
+    ss += key;
     for (Sesp b = cddr_of_Sesp (a); !nil_ck_Sesp (b); b = cdr_of_Sesp (b)) {
-      ss += " ";
+      ss += ' ';
       string_expression (ss, car_of_Sesp (b));
-      ss += ";";
+      ss += ';';
     }
   }
   else if (eq_cstr (key, "min") ||
            eq_cstr (key, "max")) {
-    ss << key << "(";
+    ss += key;
+    ss += '(';
     string_expression (ss, cadr_of_Sesp (a));
-    ss << ",";
+    ss += ',';
     string_expression (ss, caddr_of_Sesp (a));
-    ss << ")";
+    ss += ')';
   }
   else if (eq_cstr (key, "wild"))
   {
@@ -1120,12 +1143,12 @@ ProtoconFile::string_expression(String& ss, Sesp a)
     bool first = true;
     Sesp b = a;
     while (b = cdr_of_Sesp (b), !nil_ck_Sesp (b)) {
-      if (first)  ss << '(';
-      else        ss << ",";
+      if (first) {ss += '(';}
+      else       {ss += ',';}
       first = false;
       string_expression (ss, car_of_Sesp (b));
     }
-    ss << ')';
+    ss += ')';
   }
   else {
     good = false;
@@ -1136,7 +1159,7 @@ ProtoconFile::string_expression(String& ss, Sesp a)
 }
 
   bool
-ProtoconFile::parend_string_expression(String& ss, Sesp a)
+ProtoconFile::parend_string_expression(std::string& ss, Sesp a)
 {
   const char* key = 0;
   if (list_ck_Sesp (a)) {
@@ -1144,11 +1167,11 @@ ProtoconFile::parend_string_expression(String& ss, Sesp a)
   }
   bool wrap = (!eq_cstr (key, "(bool)") &&
                !eq_cstr (key, "(int)"));
-  if (wrap)  ss << '(';
+  if (wrap) {ss += '(';}
   DeclLegit( good );
   DoLegitLine( "" )
     good = string_expression(ss, a);
-  if (wrap)  ss << ')';
+  if (wrap) {ss += ')';}
   return good;
 }
 
@@ -1594,7 +1617,7 @@ ProtoconFile::eval_gtz(uint* ret, Sesp sp)
 }
 
   bool
-ProtoconFile::eval_vbl(IntPFmla* ret, const String& name, Sesp idx_sp)
+ProtoconFile::eval_vbl(IntPFmla* ret, const std::string& name, Sesp idx_sp)
 {
   DeclLegit( good );
 
@@ -1604,7 +1627,7 @@ ProtoconFile::eval_vbl(IntPFmla* ret, const String& name, Sesp idx_sp)
     DoLegitLine( "eval array index" )
       eval_int(&idx, idx_sp);
     if (good) {
-      *ret = IntPFmla(tup->membs[umod_int (idx, tup->membs.sz())]);
+      *ret = IntPFmla(tup->eval(tup->index(idx, tup->size())));
     }
   }
   else {
@@ -1635,7 +1658,7 @@ ProtoconFile::escape_process()
 }
 
   bool
-ProtoconFile::lookup_vbl(Xn::Vbl** ret, const String& name, Sesp idx_sp)
+ProtoconFile::lookup_vbl(Xn::Vbl** ret, const std::string& name, Sesp idx_sp)
 {
   DeclLegit( good );
   Claim( idx_sp && "null index expression" );
@@ -1672,7 +1695,7 @@ ProtoconFile::lookup_vbl(Xn::Vbl** ret, const String& name, Sesp idx_sp)
 }
 
   bool
-ProtoconFile::lookup_pfmla(P::Fmla* ret, const String& name)
+ProtoconFile::lookup_pfmla(P::Fmla* ret, const std::string& name)
 {
   if (name == "true") {
     *ret = true;
@@ -1702,7 +1725,7 @@ ProtoconFile::lookup_pfmla(P::Fmla* ret, const String& name)
 }
 
   bool
-ProtoconFile::lookup_int(int* ret, const String& name)
+ProtoconFile::lookup_int(int* ret, const std::string& name)
 {
   const int* val = index_map.lookup(name);
   if (val) {
@@ -1711,7 +1734,7 @@ ProtoconFile::lookup_int(int* ret, const String& name)
   }
 
   if (spec->constant_map.key_ck(name)) {
-    *ret = spec->constant_map.lookup(name)->membs[0];
+    *ret = spec->constant_map.lookup(name)->eval(0);
     return true;
   }
   if ((bool)pc_symm && (bool)pc_in_use) {

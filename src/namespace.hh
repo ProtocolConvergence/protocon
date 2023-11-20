@@ -33,7 +33,6 @@ namespace X {
 #define PROTOCON_NAMESPACE protocon
 #endif
 namespace PROTOCON_NAMESPACE {
-  typedef Cx::AlphaTab String;
   using Cx::BitTable;
   using Cx::FlatSet;
   using Cx::LgTable;

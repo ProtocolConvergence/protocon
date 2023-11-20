@@ -28,6 +28,8 @@ enum ProblemInstance {
   NProblemInstances
 };
 
+static const char WhiteSpaceChars[] = " \t\v\r\n";
+
 static
   void
 ReadFileText(std::string& ret_text, const char* filename)
@@ -204,7 +206,7 @@ static
 parse_NatMap (Xn::NatMap& tup, const char* line)
 {
   bool good = true;
-  tup = Xn::NatMap();
+  tup.clear();
   FildeshX in[1];
   *in = FildeshX_of_bytestring(
       (const unsigned char*)line,
@@ -228,33 +230,36 @@ parse_NatMap (Xn::NatMap& tup, const char* line)
     if (good) {
       int diff = (begval < endval ? 1 : -1);
       for (int val = begval; val != endval + diff; val += diff) {
-        tup.membs << val;
+        tup.push_back(val);
       }
     }
   }
   else {
     int x = 0;
     while (parse_int_FildeshX(in, &x)) {
-      tup.membs << x;
+      tup.push_back(x);
       skipchrs_FildeshX(in, " ,)");
     }
 
-    good = (tup.membs.sz() > 0 || !tup.scalar);
+    good = (tup.size() > 0 || !tup.scalar);
   }
 
   if (good) {
-    if (tup.membs.sz() == 1) {
-      tup.expression << tup.membs[0];
+    fildesh::ostringstream oss;
+    if (tup.size() == 1) {
+      oss << tup.at(0);
     }
     else {
-      tup.expression << '(';
-      for (uint i = 0; i < tup.membs.sz(); ++i) {
-        if (i > 0)
-          tup.expression << ",";
-        tup.expression << tup.membs[i];
+      oss << '(';
+      for (uint i = 0; i < tup.size(); ++i) {
+        if (i > 0) {
+          oss << ",";
+        }
+        oss << tup.at(i);
       }
-      tup.expression << ')';
+      oss << ')';
     }
+    tup.assign_expression(oss.view());
   }
   return good;
 }
@@ -273,7 +278,10 @@ push_instances(std::vector<ProtoconParamOpt>& instances,
     while (param_it != instance.constant_map.end()) {
       Xn::NatMap& tup = param_it->second;
       if (tup.scalar) {
-        tup.membs.resize(1);
+        std::string tmp_s;
+        tmp_s = std::string(tup.expression());
+        tup = tup.at(0);
+        tup.assign_expression(tmp_s);
       }
       ++ param_it;
     }
@@ -363,7 +371,7 @@ protocon_options_rec
    ProblemInstance& problem)
 {
   std::ostream& of = std::cerr;
-  while (pfxeq_cstr ("-", argv[argi])) {
+  while (argv[argi] && argv[argi][0] == '0') {
     const int prev_argi = argi;
     bool copy_to_argline = true;
 
@@ -646,9 +654,9 @@ protocon_options_rec
     else if (eq_cstr (arg, "-peak-MB")) {
       // This limits virtual memory, which could be
       // twice the amount that is actually used (i.e., resident)!
-      luint megabytes = 0;
+      unsigned megabytes = 0;
       struct rlimit rlim;
-      if (!xget_luint_cstr (&megabytes, argv[argi++])) {
+      if (!fildesh_parse_unsigned(&megabytes, argv[argi++])) {
         failout_sysCx("Argument Usage: -peak-MB NUMBER");
       }
       rlim.rlim_max = megabytes * 1000 * 1000;

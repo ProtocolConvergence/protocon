@@ -1279,12 +1279,11 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
         }
       }
       if (big_livelock) {
-        const std::string livelock_out_filename = (
-            this->ctx->opt.livelock_ofilepath + "." +
-            this->ctx->opt.sys_pcidx + "." +
-            this->ctx->opt.n_livelock_ofiles).c_str();
         this->ctx->opt.n_livelock_ofiles += 1;
-        fildesh::ofstream livelock_out(livelock_out_filename.c_str());
+        fildesh::ofstream livelock_out(
+            (this->ctx->opt.livelock_ofilepath + "." +
+             std::to_string(this->ctx->opt.sys_pcidx) + "." +
+             std::to_string(this->ctx->opt.n_livelock_ofiles)).c_str());
         oput_protocon_file(livelock_out, sys, this->actions, "", "livelock");
       }
     }
@@ -1609,7 +1608,7 @@ SynthesisCtx::init(const AddConvergenceOpt& opt)
     const Xn::PcSymm& pc_symm = topo.pc_symms[pcidx];
     for (uint i = 0; i < pc_symm.pre_domsz; ++i)
     {
-      String name = pc_symm.spec->name + "@pre_enum[" + i + "]";
+      std::string name = pc_symm.spec->name + "@pre_enum[" + i + "]";
       uint vbl_idx =
         synctx.csp_pfmla_ctx.add_vbl(name, pc_symm.img_domsz);
       Claim2( vbl_idx ,==, pc_symm.pre_dom_offset + i );

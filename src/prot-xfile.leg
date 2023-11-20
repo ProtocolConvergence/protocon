@@ -1,6 +1,7 @@
 
 %{
 #include "src/prot-xfile.hh"
+#include "src/inline/eq_cstr.h"
 
 #define YYSTYPE FinMeta
 #define YY_CTX_LOCAL
@@ -737,9 +738,9 @@ ReadProtoconFile(Xn::Sys& sys, const ProtoconFileOpt& opt)
        itr != opt.constant_map.end();
        ++itr)
   {
-    Xn::NatMap x( itr->second );
-    if (x.expression.empty()) {
-      x.expression = x.membs[0];
+    Xn::NatMap x = itr->second.copy();
+    if (x.expression().empty()) {
+      x.assign_expression(std::to_string(x.eval(0)));
     }
     yyctx.st->sys->spec->constant_map.add(itr->first.c_str(), x);
   }

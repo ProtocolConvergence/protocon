@@ -137,7 +137,7 @@ PFmla::cycle_ck(const PFmla& pf) const
  **/
   ostream&
 PFmlaCtx::oput(ostream& of, const PFmla& a, uint setIdx,
-               const String& pfx, const String& sfx) const
+               const std::string& pfx, const std::string& sfx) const
 {
   (void) a;
   (void) setIdx;

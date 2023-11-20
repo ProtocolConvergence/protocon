@@ -7,18 +7,18 @@
 static
   void
 OPutPromelaVblRef(std::ostream& of, const Xn::VblSymm& vbl_symm, const Xn::NatMap& index_map,
-                  const String& index_expression)
+                  std::string_view index_expression)
 {
   uint mod_val = 0;
   uint add_val = 0;
-  for (uint i = 0; i < index_map.membs.sz(); ++i) {
-    if (index_map.membs[i] < 0) {
+  for (unsigned i = 0; i < index_map.size(); ++i) {
+    if (index_map.at(i) < 0) {
       mod_val = vbl_symm.membs.sz();
-      while (index_map.membs[i] + (int) add_val < 0) {
+      while (index_map.at(i) + (int) add_val < 0) {
         add_val += mod_val;
       }
     }
-    if (index_map.membs[i] >= (int) vbl_symm.membs.sz()) {
+    if (index_map.at(i) >= (int) vbl_symm.membs.sz()) {
       mod_val = vbl_symm.membs.sz();
     }
   }
@@ -44,7 +44,7 @@ OPutPromelaAction(std::ostream& of, const Xn::ActSymm& act)
   for (uint i = 0; i < pc_symm.rvbl_symms.sz(); ++i) {
     if (i != 0)  of << " && ";
     OPutPromelaVblRef(of, *pc_symm.rvbl_symms[i], pc_symm.vbl_indices[i],
-                      pc_symm.spec->access[i].index_expression);
+                      pc_symm.spec->access[i].index_expression());
     of << "==" << act.guard(i);
   }
   of << " ->";
@@ -52,7 +52,7 @@ OPutPromelaAction(std::ostream& of, const Xn::ActSymm& act)
     of << ' ';
     OPutPromelaVblRef(of, *pc_symm.wvbl_symms[i],
                       pc_symm.vbl_indices[pc_symm.spec->wmap[i]],
-                      pc_symm.spec->waccess(i).index_expression);
+                      pc_symm.spec->waccess(i).index_expression());
     of << "=" << act.assign(i) << ';';
   }
 }
@@ -115,26 +115,26 @@ OPutPromelaPc(std::ostream& ofile, const Xn::PcSymm& pc_symm, const Table<Xn::Ac
   }
   ofile << "\n  (initialized==1);";
 
-  for (uint i = 0; i < pc_symm_spec.let_map.keys.sz(); ++i) {
+  for (uint i = 0; i < pc_symm_spec.let_map.keys.size(); ++i) {
     ofile
       << "\n#define " << pc_symm_spec.let_map.keys[i]
-      << " (" << pc_symm_spec.let_map.vals[i].expression << ")"
+      << " (" << pc_symm_spec.let_map.vals[i].expression() << ")"
       ;
   }
   ofile << "\nend_" << pc_symm_spec.name << ":";
   ofile << "\n  do";
-  for (uint i = 0; i < acts.sz(); ++i) {
-    Xn::ActSymm act = acts[i];
+  for (const Xn::ActSymm& act : acts) {
     if (act.pc_symm == &pc_symm) {
-      act.pc_symm = &o_pc_symm;
+      Xn::ActSymm tmp_act = act;
+      tmp_act.pc_symm = &o_pc_symm;
       ofile << "\n  :: atomic { ";
-      OPutPromelaAction(ofile, act);
+      OPutPromelaAction(ofile, tmp_act);
       ofile << " }";
     }
   }
   ofile << "\n  od;";
-  for (uint i = 0; i < pc_symm_spec.let_map.keys.sz(); ++i) {
-    ofile << "\n#undef " << pc_symm_spec.let_map.keys[i];
+  for (const auto& k : pc_symm_spec.let_map.keys) {
+    ofile << "\n#undef " << k;
   }
   ofile << "\n}";
 }
@@ -149,9 +149,9 @@ OPutPromelaModel(std::ostream& ofile, const Xn::Sys& sys, const Xn::Net& otopolo
 {
   const Xn::Net& topo = sys.topology;
   const Xn::Spec& spec = *otopology.spec;
-  for (uint i = 0; i < spec.constant_map.keys.sz(); ++i) {
+  for (unsigned i = 0; i < spec.constant_map.keys.size(); ++i) {
     ofile << "\n#define " << spec.constant_map.keys[i]
-      << " (" << spec.constant_map.vals[i].expression
+      << " (" << spec.constant_map.vals[i].expression()
       << ")";
   }
   ofile << "\nbit initialized;";

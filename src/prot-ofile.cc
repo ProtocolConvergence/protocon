@@ -12,9 +12,9 @@ static
   void
 oput_protocon_constants(std::ostream& out, const Xn::Spec& spec)
 {
-  for (uint i = 0; i < spec.constant_map.keys.sz(); ++i) {
+  for (unsigned i = 0; i < spec.constant_map.keys.size(); ++i) {
     out << "\nconstant " << spec.constant_map.keys[i];
-    out << " := " << spec.constant_map.vals[i].expression;
+    out << " := " << spec.constant_map.vals[i].expression();
     out << ";";
   }
 }
@@ -23,9 +23,9 @@ static
   void
 oput_protocon_pc_lets(std::ostream& out, const Xn::PcSymm& pc_symm)
 {
-  for (uint i = 0; i < pc_symm.spec->let_map.keys.sz(); ++i) {
+  for (unsigned i = 0; i < pc_symm.spec->let_map.keys.size(); ++i) {
     out << "\n  let " << pc_symm.spec->let_map.keys[i];
-    out << " := " << pc_symm.spec->let_map.vals[i].expression;
+    out << " := " << pc_symm.spec->let_map.vals[i].expression();
     out << ";";
   }
 }
@@ -34,7 +34,7 @@ static
   void
 oput_protocon_pc_predicates(std::ostream& ofile, const Xn::PcSymm& pc_symm)
 {
-  for (uint i = 0; i < pc_symm.predicate_map.keys.sz(); ++i) {
+  for (unsigned i = 0; i < pc_symm.predicate_map.keys.size(); ++i) {
     ofile << "\n  predicate "
       << pc_symm.predicate_map.keys[i]
       << " := " << pc_symm.predicate_map.vals[i].expression
@@ -69,7 +69,7 @@ string_of_access_type(Xn::VariableAccessType type)
 static
   void
 oput_protocon_pc_vbl(std::ostream& ofile, const Xn::PcSymm& pc_symm,
-                     unsigned vidx, const String& idxname)
+                     unsigned vidx, std::string_view idxname)
 {
   const Xn::VblSymmAccessSpec& access = pc_symm.spec->access[vidx];
   ofile
@@ -93,8 +93,9 @@ oput_protocon_pc_vbls(std::ostream& ofile, const Xn::PcSymm& pc_symm)
         for (uint v = 0; v < link_symmetry.nvbls; ++v) {
           uint vidx = link_symmetry(v, 0);
           ofile << "\n    ";
-          oput_protocon_pc_vbl (ofile, pc_symm, vidx,
-                                link_symmetry.index_expressions[v]);
+          oput_protocon_pc_vbl(
+              ofile, pc_symm, vidx,
+              link_symmetry.index_expressions[v]);
         }
         ofile << "\n  }";
         i += link_symmetry.nlinks * link_symmetry.nvbls - 1;
@@ -103,8 +104,10 @@ oput_protocon_pc_vbls(std::ostream& ofile, const Xn::PcSymm& pc_symm)
       }
     }
     if (symmetric_link_case)  continue;
-    oput_protocon_pc_vbl ((ofile << "\n  "), pc_symm,
-                          i, pc_symm.spec->access[i].index_expression);
+    ofile << "\n  ";
+    oput_protocon_pc_vbl(
+        ofile, pc_symm, i,
+        pc_symm.spec->access[i].index_expression());
   }
 }
 
@@ -215,7 +218,7 @@ static
   bool
 oput_protocon_pc_assume (std::ostream& out, const Xn::PcSymm& pc_symm)
 {
-  const String& assume_expression = pc_symm.spec->closed_assume_expression;
+  const std::string& assume_expression = pc_symm.spec->closed_assume_expression;
   if (assume_expression.empty())
     return true;
   out << "\n  (assume & closed)\n    (" << assume_expression << ");";
@@ -223,10 +226,10 @@ oput_protocon_pc_assume (std::ostream& out, const Xn::PcSymm& pc_symm)
 }
 
 static
-  String
+  std::string
 string_of_invariant_style (Xn::InvariantStyle style, Xn::InvariantScope scope)
 {
-  String s = "";
+  std::string s = "";
   const char* pfx = "";
   const char* sfx = "";
 
@@ -245,25 +248,27 @@ string_of_invariant_style (Xn::InvariantStyle style, Xn::InvariantScope scope)
       Claim( 0 );
   }
 
-  s << "(future & " << pfx;
+  s += "(future & ";
+  s += pfx;
   switch (style)
   {
     case Xn::FutureAndClosed:
-      s << "closed";
+      s += "closed";
       break;
     case Xn::FutureAndSilent:
-      s << "silent";
+      s += "silent";
       break;
     case Xn::FutureAndShadow:
-      s << "shadow";
+      s += "shadow";
       break;
     case Xn::FutureAndActiveShadow:
-      s << "active shadow";
+      s += "active shadow";
       break;
     case Xn::NInvariantStyles:
       Claim( 0 );
   }
-  s << ")" << sfx;
+  s += ')';
+  s += sfx;
   return s;
 }
 
@@ -287,9 +292,9 @@ string_of_invariant_behav (Xn::InvariantBehav behav)
 static
   bool
 oput_protocon_pc_invariant(std::ostream& out, const Xn::PcSymm& pc_symm,
-                           const String& style_str)
+                           const std::string& style_str)
 {
-  const String& invariant_expression = pc_symm.spec->invariant_expression;
+  const std::string& invariant_expression = pc_symm.spec->invariant_expression;
   if (invariant_expression.empty())
     return true;
 
@@ -334,11 +339,11 @@ oput_protocon_file(std::ostream& out, const Xn::Sys& sys,
     out << "\n(assume & closed)\n  (" << sys.spec->closed_assume_expression << ")\n  ;";
   }
 
-  String style_str =
+  std::string style_str =
     string_of_invariant_style (sys.spec->invariant_style,
                                sys.spec->invariant_scope);
   if (!sys.spec->invariant_expression.empty()) {
-    String legit_str = sys.spec->invariant_expression;
+    std::string legit_str = sys.spec->invariant_expression;
     out << "\n" << style_str << "\n  (" << legit_str << ")\n  ;";
   }
 

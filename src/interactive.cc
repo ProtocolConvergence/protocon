@@ -57,9 +57,9 @@ public:
   }
 
   void assign(std::string_view s);
-  void next_options(Table<String>& ret_lines, bool fwd) const;
-  void img_options(Table<String>& ret_lines) const;
-  void pre_options(Table<String>& ret_lines) const;
+  void next_options(Table<std::string>& ret_lines, bool fwd) const;
+  void img_options(Table<std::string>& ret_lines) const;
+  void pre_options(Table<std::string>& ret_lines) const;
   void reset_mask_pfmla();
   P::Fmla state_pfmla() const;
   void randomize_state();
@@ -109,7 +109,7 @@ Interactive::assign(std::string_view s)
 }
 
   void
-Interactive::next_options(Table<String>& ret_lines, bool fwd) const
+Interactive::next_options(Table<std::string>& ret_lines, bool fwd) const
 {
   P::Fmla pf( topo.pfmla_ctx.pfmla_of_state(&state[0], all_vbls) );
   Table<uint> img_state(state);
@@ -121,10 +121,12 @@ Interactive::next_options(Table<String>& ret_lines, bool fwd) const
     while (local_pf.sat_ck()) {
       local_pf.state(&img_state[0], all_vbls);
       const char* delim = "";
-      String line;
+      std::string line;
       for (uint i = 0; i < img_state.sz(); ++i) {
         if (img_state[i] != state[i]) {
-          line << delim << name_of(topo.vbls[i]) << ":=" << img_state[i] << ";";
+          line += (
+              delim + name_of(topo.vbls[i]) + ":=" +
+              std::to_string(img_state[i]) + ';');
           delim = " ";
         }
       }
@@ -136,12 +138,12 @@ Interactive::next_options(Table<String>& ret_lines, bool fwd) const
 }
 
   void
-Interactive::img_options(Table<String>& ret_lines) const
+Interactive::img_options(Table<std::string>& ret_lines) const
 {
   next_options(ret_lines, true);
 }
   void
-Interactive::pre_options(Table<String>& ret_lines) const
+Interactive::pre_options(Table<std::string>& ret_lines) const
 {
   next_options(ret_lines, false);
 }
@@ -266,7 +268,7 @@ interactive(const Xn::Sys& sys)
       of << std::endl;
     }
     else if (skipstr_FildeshX(&line_slice, "show-img")) {
-      Table<String> lines;
+      Table<std::string> lines;
       usim.img_options(lines);
       //std::sort (lines.begin(), lines.end());
       for (uint i = 0; i < lines.sz(); ++i) {
@@ -275,7 +277,7 @@ interactive(const Xn::Sys& sys)
       of << std::endl;
     }
     else if (skipstr_FildeshX(&line_slice, "show-pre")) {
-      Table<String> lines;
+      Table<std::string> lines;
       usim.pre_options(lines);
       //std::sort (lines.begin(), lines.end());
       for (uint i = 0; i < lines.sz(); ++i) {
@@ -318,7 +320,7 @@ interactive(const Xn::Sys& sys)
       }
       while (n > 0) {
         n -= 1;
-        Table<String> lines;
+        Table<std::string> lines;
         if (forward) {
           usim.img_options(lines);
         }
@@ -348,7 +350,7 @@ interactive(const Xn::Sys& sys)
       }
       while (n > 0) {
         n -= 1;
-        Table<String> lines;
+        Table<std::string> lines;
         if (forward) {
           usim.img_options(lines);
         }

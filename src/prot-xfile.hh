@@ -61,9 +61,9 @@ public:
   // TODO:
   //Table<ProtoconFilePcSymm> pcsymm_fmlas;
 
-  Map< String, int > index_map;
-  Map< String, const Xn::VblSymm* > vbl_map;
-  Map< String, Sesp > scope_let_map;
+  Map< std::string, int > index_map;
+  Map< std::string, const Xn::VblSymm* > vbl_map;
+  Map< std::string, Sesp > scope_let_map;
   Xn::Sys* sys;
   Xn::Spec* spec;
   SespCtx* spctx;
@@ -148,8 +148,8 @@ public:
                          Xn::InvariantScope scope = Xn::DirectInvariant);
   bool add_legit(Sesp legit_sp);
 
-  bool string_expression(String& ss, Sesp a);
-  bool parend_string_expression(String& ss, Sesp a);
+  bool string_expression(std::string& ss, Sesp a);
+  bool parend_string_expression(std::string& ss, Sesp a);
 
   bool eval(P::Fmla& pf, Sesp a);
 
@@ -161,14 +161,14 @@ public:
 
   bool eval_gtz(uint* ret, Sesp sp);
 
-  bool eval_vbl(IntPFmla* ret, const String& name, Sesp idx_sp);
+  bool eval_vbl(IntPFmla* ret, const std::string& name, Sesp idx_sp);
 
   void within_process(uint pcidx);
   void escape_process();
 
-  bool lookup_vbl(Xn::Vbl** ret, const String& name, Sesp c);
-  bool lookup_pfmla(P::Fmla* ret, const String& name);
-  bool lookup_int(int* ret, const String& name);
+  bool lookup_vbl(Xn::Vbl** ret, const std::string& name, Sesp c);
+  bool lookup_pfmla(P::Fmla* ret, const std::string& name);
+  bool lookup_int(int* ret, const std::string& name);
 };
 
 END_NAMESPACE

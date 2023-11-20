@@ -4,7 +4,6 @@ cc_library(
     srcs = [
         "alphatab.c",
         "alphatab.h",
-        "alphatab.hh",
         "bittable.h",
         "bittable.hh",
         "def.h",

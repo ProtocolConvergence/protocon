@@ -143,31 +143,35 @@ void oput_udp_include_file(std::ostream& ofile, const Xn::Sys& sys, const Xn::Ne
     << "\n{"
     << "\n  "
     ;
-  String prev_str = "";
+  std::string prev_str = "";
   for (uint pcidx = 0; pcidx < pcs.sz(); ++pcidx) {
     Process& process = pcs[pcidx];
-    String str = "";
-    str << "\n    if (writing) {";
+    std::string str = "";
+    str += "\n    if (writing) {";
     for (uint chanidx = 0; chanidx < process.chans.sz(); ++chanidx) {
       const Channel& o_channel = process.chans[chanidx];
       for (uint i = 0; i < o_channel.vbls.sz(); ++i) {
-        str << "\n      if (channel_idx==" << chanidx
-          << " && i==" << i
-          << ")  return " << process.local_idcs[o_channel.vbls[i]] << ";";
+        str += (
+            "\n      if (channel_idx==" + std::to_string(chanidx) +
+            " && i==" + std::to_string(i) + ")  return " +
+            std::to_string(process.local_idcs[o_channel.vbls[i]]) +
+            ';');
       }
     }
-    str << "\n    }\n    else {";
+    str += "\n    }\n    else {";
     for (uint chanidx = 0; chanidx < process.chans.sz(); ++chanidx) {
       const Channel& o_channel = process.chans[chanidx];
       const Process& other = pcs[o_channel.pcidx];
       const Channel& x_channel = other.chans[*other.chan_map.lookup(pcidx)];
       for (uint i = 0; i < x_channel.vbls.sz(); ++i) {
-        str << "\n      if (channel_idx==" << chanidx
-          << " && i==" << i
-          << ")  return " << process.local_idcs[x_channel.vbls[i]] << ";";
+        str += (
+            "\n      if (channel_idx==" + std::to_string(chanidx) +
+            " && i==" + std::to_string(i) + ")  return " +
+            std::to_string(process.local_idcs[x_channel.vbls[i]]) +
+           ';');
       }
     }
-    str << "\n    }";
+    str += "\n    }";
     if (str != prev_str) {
       if (!prev_str.empty()) {
         ofile << "if (pc.idx < " << pcidx << ") {" << prev_str << "\n  }\n  else ";
@@ -374,16 +378,18 @@ void oput_udp_include_file(std::ostream& ofile, const Xn::Sys& sys, const Xn::Ne
       }
       ofile << ")";
 
-      Table<String> choice_statements;
+      Table<std::string> choice_statements;
       while (img_pf.sat_ck()) {
         img_pf.state (+img_state, pfmla_wvbl_idcs);
         P::Fmla tmp_pf = topo.pfmla_ctx.pfmla_of_state (+img_state, pfmla_wvbl_idcs);
         img_pf -= tmp_pf;
         if (pre_pf.subseteq_ck(tmp_pf))  continue;
 
-        choice_statements.grow1();
+        choice_statements.emplace_back();
         for (uint i = 0; i < img_state.sz(); ++i) {
-          choice_statements.top() << " x[" << writable[i] << "]=" << img_state[i] << ";";
+          choice_statements.back() += (
+              " x[" + std::to_string(writable[i]) + "]=" +
+              std::to_string(img_state[i]) + ';');
         }
       }
 

@@ -1,12 +1,12 @@
 
 #ifndef XnSpec_HH_
 #define XnSpec_HH_
+#include <memory>
 
 #include "cx/set.hh"
 #include "cx/synhax.hh"
 #include "cx/table.hh"
 #include "cx/lgtable.hh"
-#include "cx/alphatab.hh"
 #include "cx/map.hh"
 
 #include "namespace.hh"
@@ -64,31 +64,55 @@ enum InvariantBehav {
 
 class NatMap {
 public:
-  Table< int > membs;
-  String expression;
-  bool scalar;
-
-  NatMap() : scalar(true) {}
-
-  explicit NatMap(uint nmembs) : scalar(true) {
-    for (uint i = 0; i < nmembs; ++i) {
-      membs.push(i);
+  NatMap() {}
+  explicit NatMap(unsigned n) {
+    scalar = false;
+    a_.resize(n);
+    for (unsigned i = 0; i < n; ++i) {
+      a_[i] = i;
     }
   }
 
+  NatMap(NatMap&& m) = default;
+  explicit NatMap(const NatMap& m) {
+    scalar = m.scalar;
+    a_ = m.a_;
+    this->assign_expression(m.expression());
+  }
+
+  NatMap copy() const {
+    NatMap m;
+    m.scalar = scalar;
+    m.a_ = a_;
+    if (expression_) {
+      m.assign_expression(*expression_);
+    }
+    return m;
+  }
+
+  void clear() {
+    scalar = true;
+    a_.clear();
+    expression_.reset(NULL);
+  }
   const NatMap& operator=(int x) {
     scalar = true;
-    membs.resize(1);
-    membs[0] = x;
-    expression = x;
+    a_.resize(1);
+    a_[0] = x;
+    this->assign_expression(std::to_string(x));
     return *this;
   }
 
-  uint sz() const { return membs.sz(); }
+  int* elt(unsigned i) {return &a_[i];}
+  void assign_at(unsigned i, int x) {a_[i] = x;}
+  int at(unsigned i) const {return a_[i];}
+  unsigned size() const {return a_.size();}
+
+  uint sz() const { return this->size();}
 
   int eval(uint i) const {
-    Claim2( i ,<, membs.sz() );
-    return membs[i];
+    Claim2( i ,<, this->size() );
+    return a_[i];
   }
 
   uint index(uint i, uint m) const {
@@ -96,33 +120,57 @@ public:
   }
 
   bool constant_ck() const {
-    for (uint i = 1; i < membs.sz(); ++i) {
-      if (membs[i] != membs[0])
+    for (unsigned i = 1; i < a_.size(); ++i) {
+      if (a_[i] != a_[0]) {
         return false;
+      }
     }
     return true;
   }
+
+  void push_back(int x) {
+    scalar = false;
+    a_.push_back(x);
+    expression_.reset(NULL);
+  }
+
+  std::string_view expression() const {
+    if (!expression_) {return "";}
+    return *expression_;
+  }
+  void assign_expression(std::string_view s) {
+    if (!expression_) {
+      expression_.reset(new std::string);
+    }
+    *expression_ = s;
+  }
+
+ public:
+  bool scalar = true;
+ private:
+  std::vector<int> a_;
+  std::unique_ptr<std::string> expression_;
 };
 
 class LetVblMap {
 public:
-  Table<String> keys;
-  Table<NatMap> vals;
-  Map<String,uint> map;
+  std::vector<std::string> keys;
+  std::vector<NatMap> vals;
+  Map<std::string,uint> map;
 
-  void add(const String& key, const NatMap& val) {
-    keys.push(key);
-    vals.push(val);
-    map[key] = keys.sz()-1;
+  void add(const std::string& key, const NatMap& val) {
+    keys.push_back(key);
+    vals.push_back(val.copy());
+    map[key] = keys.size()-1;
   }
 
-  NatMap* lookup(const String& key) {
+  NatMap* lookup(const std::string& key) {
     uint* idx = map.lookup(key);
     if (!idx)  return 0;
     return &vals[*idx];
   }
 
-  bool key_ck(const String& key) {
+  bool key_ck(const std::string& key) {
     return !!map.lookup(key);
   }
 };
@@ -135,9 +183,9 @@ public:
   uint nlinks;
   uint nvbls;
 
-  String let_expression;
-  String multiset_expression;
-  Table<String> index_expressions;
+  std::string let_expression;
+  std::string multiset_expression;
+  Table<std::string> index_expressions;
 
 public:
   explicit LinkSymmetry(uint _nlinks)
@@ -146,10 +194,10 @@ public:
   {
   }
 
-  void add_link_symmetry(const Table<uint>& ob, const String& index_expression) {
+  void add_link_symmetry(const Table<uint>& ob, const std::string& index_expression) {
     Claim2( ob.sz() ,==, nlinks );
     ++nvbls;
-    index_expressions.push(index_expression);
+    index_expressions.push_back(index_expression);
     for (uint i = 0; i < nlinks; ++i) {
       t.push(ob[i]);
     }
@@ -201,9 +249,9 @@ public:
 
 class VblSymmSpec {
 public:
-  String name;
-  String domsz_expression;
-  String nmembs_expression;
+  std::string name;
+  std::string domsz_expression;
+  std::string nmembs_expression;
   uint domsz;
   ShadowPuppetRole shadow_puppet_role;
 
@@ -224,7 +272,6 @@ class VblSymmAccessSpec {
 public:
   Mem<const VblSymmSpec> vbl_symm;
   VariableAccessType type;
-  String index_expression;
 
   VblSymmAccessSpec()
     : type(Xn::NVariableAccessTypes)
@@ -285,25 +332,39 @@ public:
     if (type == Xn::EffectAccess)  return domsz()+1;
     return domsz();
   }
+
+  std::string_view index_expression() const {
+    if (!index_expression_) {return "";}
+    return *index_expression_;
+  }
+  void assign_index_expression(std::string_view s) {
+    if (!index_expression_) {
+      index_expression_.reset(new std::string);
+    }
+    *index_expression_ = s;
+  }
+
+ private:
+  std::unique_ptr<std::string> index_expression_;
 };
 
 class PcSymmSpec {
 public:
-  String name;
-  String idx_name;
-  String closed_assume_expression;
-  String invariant_expression;
+  std::string name;
+  std::string idx_name;
+  std::string closed_assume_expression;
+  std::string invariant_expression;
   LetVblMap let_map;
 
   Table<VblSymmAccessSpec> access;
   Table<uint> wmap;
   Table<LinkSymmetry> link_symmetries;
-  String nmembs_expression;
-  String idxmap_name;
-  String idxmap_expression;
-  Table<String> shadow_act_strings;
-  Table<String> forbid_act_strings;
-  Table<String> permit_act_strings;
+  std::string nmembs_expression;
+  std::string idxmap_name;
+  std::string idxmap_expression;
+  Table<std::string> shadow_act_strings;
+  Table<std::string> forbid_act_strings;
+  Table<std::string> permit_act_strings;
 
 
   const VblSymmAccessSpec& waccess(uint i) const {
@@ -334,8 +395,8 @@ public:
   InvariantStyle invariant_style;
   InvariantScope invariant_scope;
   InvariantBehav invariant_behav;
-  String closed_assume_expression;
-  String invariant_expression;
+  std::string closed_assume_expression;
+  std::string invariant_expression;
 
   Spec()
     : invariant_style( Xn::FutureAndShadow )

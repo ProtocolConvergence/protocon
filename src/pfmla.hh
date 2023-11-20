@@ -6,7 +6,6 @@
 #define PFmla_HH_
 
 #include "cx/synhax.hh"
-#include "cx/alphatab.hh"
 #include "cx/table.hh"
 
 extern "C" {
@@ -580,7 +579,7 @@ public:
   void nullify_context()
   { ctx = 0; }
 
-  uint add_vbl(const String& name, uint domsz)
+  uint add_vbl(const std::string& name, uint domsz)
   {
     return add_vbl_PFmlaCtx(ctx, name.c_str(), domsz);
   }
@@ -600,7 +599,7 @@ public:
     return PFmlaVbl( vbl_of_PFmlaCtx (ctx, id) );
   }
 
-  const PFmlaVbl vbl(const String& s) const
+  const PFmlaVbl vbl(const std::string& s) const
   {
     return PFmlaVbl(vbl_lookup_PFmlaCtx(ctx, s.c_str()));
   }
@@ -611,8 +610,8 @@ public:
   ostream& oput(ostream& of,
                 const PFmla& a,
                 uint setIdx,
-                const String& pfx = "",
-                const String& sfx = "") const;
+                const std::string& pfx = "",
+                const std::string& sfx = "") const;
   friend void PFmla::ensure_ctx (const PFmlaCtx& ctx);
 };
 

@@ -41,8 +41,8 @@ verify_solutions(const PartialSynthesis& inst, StabilizationCkInfo* info, uint* 
           !inst.ctx->opt.livelock_ofilepath.empty()) {
         const std::string livelock_out_filename = (
             inst.ctx->opt.livelock_ofilepath + "." +
-            inst.ctx->opt.sys_pcidx + "." +
-            inst.ctx->opt.n_livelock_ofiles).c_str();
+            std::to_string(inst.ctx->opt.sys_pcidx) + "." +
+            std::to_string(inst.ctx->opt.n_livelock_ofiles)).c_str();
         inst.ctx->opt.n_livelock_ofiles += 1;
 
         fildesh::ofstream livelock_out(livelock_out_filename.c_str());
@@ -451,11 +451,13 @@ try_known_solution(const ConflictFamily& conflicts,
       synctx.log << "I SKIPPED SOME\n";
 
     fildesh::ofstream working_of(
-        (String("working_conflicts.out.") + synctx.opt.sys_pcidx).c_str());
+        ("working_conflicts.out." +
+         std::to_string(synctx.opt.sys_pcidx)).c_str());
     working_of << conflicts;
 
     fildesh::ofstream broken_of(
-        (String("broken_conflicts.out.") + synctx.opt.sys_pcidx).c_str());
+        ("broken_conflicts.out." +
+         std::to_string(synctx.opt.sys_pcidx)).c_str());
     broken_of << synctx.conflicts;
   }
   return good;
@@ -558,10 +560,11 @@ stabilization_search_init
       const Xn::PcSymm& pc_symm = sys.topology.pc_symms[i];
       uint pcidx = 0;
       if (pc_symm.membs.sz() > 0 && !pc_symm.representative(&pcidx)) {
-        String msg;
-        msg << "Every process "
-          << pc_symm.spec->name << "[" << pc_symm.spec->idx_name << "]"
-          << " has repeated variable references!";
+        std::string msg;
+        msg += (
+            "Every process " + pc_symm.spec->name +
+            '[' + pc_symm.spec->idx_name + ']' +
+            " has repeated variable references!");
         DBog0( msg.c_str() );
         good = 0;
       }

@@ -88,7 +88,7 @@ public:
   vector<uint> known_solution;
   Table< vector<uint> > solution_guesses;
   Set< uint > subset_solution_guesses;
-  String livelock_ofilepath;
+  std::string livelock_ofilepath;
   uint n_livelock_ofiles;
 
   AddConvergenceOpt() :

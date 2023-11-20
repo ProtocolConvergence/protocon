@@ -6,21 +6,14 @@
 
 #include <errno.h>
 #include <signal.h>
-#include <stdlib.h>
+#include <stdio.h>
 
-# include <fcntl.h>
 #ifndef _MSC_VER
 # include <unistd.h>
-# include <sys/wait.h>
 #else
+# include <fcntl.h>
 # include <windows.h>
-# include <direct.h>
-# include <io.h>
-# include <process.h>
 #endif
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <stdio.h>
 
 #include <fildesh/fildesh_compat_fd.h>
 #include <fildesh/fildesh_compat_sh.h>

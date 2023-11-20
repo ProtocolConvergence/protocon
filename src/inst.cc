@@ -29,34 +29,33 @@ UnidirectionalRing(Xn::Net& topo, uint npcs, uint domsz,
 
     // Make this f(i) = i-1
     Xn::NatMap indices(npcs);
-    for (uint i = 0; i < npcs; ++i) {
-      indices.membs[i] = (int)i - 1;
+    for (unsigned i = 0; i < npcs; ++i) {
+      indices.assign_at(i, (int)i - 1);
     }
-    indices.expression = "i-1";
+    indices.assign_expression("i-1");
     topo.add_access(pc_symm, vbl_symm, indices, Xn::ReadAccess);
 
     // Now make this f(i) = i
-    indices = Xn::NatMap(npcs);
-    for (uint i = 0; i < npcs; ++i) {
-      indices.membs[i] = (int)i;
+    for (unsigned i = 0; i < npcs; ++i) {
+      indices.assign_at(i, (int)i);
     }
-    indices.expression = "i";
+    indices.assign_expression("i");
     topo.add_access(pc_symm, vbl_symm, indices, Xn::WriteAccess);
   }
   else {
     // Create a new symmetry for each process.
     for (uint i = 0; i < npcs; ++i) {
-      Xn::PcSymm* pc_symm = topo.add_processes(String("P") + i, "i", 1);
+      Xn::PcSymm* pc_symm = topo.add_processes("P" + std::to_string(i), "i", 1);
 
       // Make this f(j) = i-1
       Xn::NatMap indices(1);
-      indices.membs[0] = (int)i - 1;
-      indices.expression = indices.membs[0];
+      indices.assign_at(i, (int)i - 1);
+      indices.assign_expression(std::to_string(indices.at(0)));
       topo.add_access(pc_symm, vbl_symm, indices, Xn::ReadAccess);
 
       // Now make this f(j) = i
-      indices.membs[0] = (int)i;
-      indices.expression = indices.membs[0];
+      indices.assign_at(i, (int)i);
+      indices.assign_expression(std::to_string(indices.at(0)));
       topo.add_access(pc_symm, vbl_symm, indices, Xn::WriteAccess);
     }
   }
@@ -67,12 +66,12 @@ UnidirectionalRing(Xn::Net& topo, uint npcs, uint domsz,
     Xn::PcSymm* pc_symm = topo.add_processes("Bot", "i", 1);
 
     Xn::NatMap indices(1);
-    indices.membs[0] = (int)npcs - 2;
-    indices.expression = indices.membs[0];
+    indices.assign_at(0, (int)npcs - 2);
+    indices.assign_expression(std::to_string(indices.at(0)));
     topo.add_access(pc_symm, vbl_symm, indices, Xn::ReadAccess);
 
-    indices.membs[0] = (int)npcs - 1;
-    indices.expression = indices.membs[0];
+    indices.assign_at(0, (int)npcs - 1);
+    indices.assign_expression(std::to_string(indices.at(0)));
     topo.add_access(pc_symm, vbl_symm, indices, Xn::WriteAccess);
   }
 }
@@ -94,9 +93,9 @@ BidirectionalRing(Xn::Net& topo, uint npcs, uint domsz,
     // Make this f(i) = i+1
     Xn::NatMap indices(npcs);
     for (uint i = 0; i < npcs; ++i) {
-      indices.membs[i] = (int)i + 1;
+      indices.assign_at(i, (int)i + 1);
     }
-    indices.expression = "i+1";
+    indices.assign_expression("i+1");
     topo.add_access(pc_symm, &topo.vbl_symms[0], indices, Xn::ReadAccess);
   }
   else {
@@ -104,8 +103,8 @@ BidirectionalRing(Xn::Net& topo, uint npcs, uint domsz,
       Xn::PcSymm* pc_symm = &topo.pc_symms[i];
       // Make this f(j) = i+1
       Xn::NatMap indices(1);
-      indices.membs[0] = (int)i + 1;
-      indices.expression = indices.membs[0];
+      indices.assign_at(0, (int)i + 1);
+      indices.assign_expression(std::to_string(indices.at(0)));
       topo.add_access(pc_symm, &topo.vbl_symms[0], indices, Xn::ReadAccess);
     }
   }
@@ -126,23 +125,23 @@ SilentShadowRing(Xn::Sys& sys, const uint npcs,
   Xn::NatMap indices(npcs);
 
   for (uint i = 0; i < npcs; ++i)
-    indices.membs[i] = (int)i - 1;
-  indices.expression = "i-1";
+    indices.assign_at(i, (int)i - 1);
+  indices.assign_expression("i-1");
   topo.add_access(pc_symm, &topo.vbl_symms[0], indices, Xn::ReadAccess);
 
   for (uint i = 0; i < npcs; ++i)
-    indices.membs[i] = (int)i;
-  indices.expression = "i";
+    indices.assign_at(i, (int)i);
+  indices.assign_expression("i");
   topo.add_access(pc_symm, &topo.vbl_symms[0], indices, Xn::WriteAccess);
 
   for (uint i = 0; i < npcs; ++i)
-    indices.membs[i] = (int)i + 1;
-  indices.expression = "i+1";
+    indices.assign_at(i, (int)i + 1);
+  indices.assign_expression("i+1");
   topo.add_access(pc_symm, &topo.vbl_symms[0], indices, Xn::ReadAccess);
 
   for (uint i = 0; i < npcs; ++i)
-    indices.membs[i] = (int)i;
-  indices.expression = "i";
+    indices.assign_at(i, (int)i);
+  indices.assign_expression("i");
   topo.add_access(pc_symm, &topo.vbl_symms[1], indices, Xn::WriteAccess);
 
   sys.spec->invariant_style = Xn::FutureAndShadow;

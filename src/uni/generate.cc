@@ -15,6 +15,8 @@
 #include "src/cx/bittable.hh"
 #include "src/cx/table.hh"
 
+#include "src/inline/eq_cstr.h"
+
 extern "C" {
 #include "src/cx/syscx.h"
 }
@@ -75,7 +77,7 @@ struct SearchOpt
     if (use_bdds) {
       pfmla_vbls.affysz(1+max_period);
       for (uint i = 0; i < 1+max_period; ++i) {
-        uint vbl_id = pfmla_ctx.add_vbl((String("x") << i), domsz);
+        unsigned vbl_id = pfmla_ctx.add_vbl("x" + std::to_string(i), domsz);
         pfmla_vbls[i] = pfmla_ctx.vbl(vbl_id);
       }
       allbut2_pfmla_list_id = pfmla_ctx.add_vbl_list();

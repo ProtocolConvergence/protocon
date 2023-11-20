@@ -2,7 +2,6 @@
 #ifndef SEARCH_HH_
 #define SEARCH_HH_
 #include "cx/synhax.hh"
-#include "cx/alphatab.hh"
 #include "cx/table.hh"
 
 #include "namespace.hh"

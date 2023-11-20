@@ -118,7 +118,7 @@ Net::fixup_pc_xns()
 }
 
   VblSymm*
-Net::add_variables(const String& name, uint nmembs, uint domsz,
+Net::add_variables(const std::string& name, uint nmembs, uint domsz,
                    Xn::ShadowPuppetRole role)
 {
   // Cannot add variables after committing them.
@@ -202,7 +202,7 @@ Net::commit_variables()
 }
 
   PcSymm*
-Net::add_processes(const String& name, const String& idx_name, uint nmembs)
+Net::add_processes(const std::string& name, const std::string& idx_name, uint nmembs)
 {
   if (vbls.sz() == 0) {
     commit_variables();
@@ -215,8 +215,8 @@ Net::add_processes(const String& name, const String& idx_name, uint nmembs)
   for (uint i = 0; i < nmembs; ++i) {
     xfmlae_ctx.wvbl_list_ids.push(pfmla_ctx.add_vbl_list());
     Pc& pc = pcs.push(Pc(&symm, i));
-    symm.membs.push(&pc);
-    symm.mapped_indices.membs.push(i);
+    symm.membs.push_back(&pc);
+    symm.mapped_indices.push_back(i);
     if (this->featherweight)  continue;
     pc.global_mask_xn = this->identity_xn;
     xfmlae_ctx.global_mask_xns.push(this->identity_xn);
@@ -231,12 +231,12 @@ Net::add_access(PcSymm* pc_symm, const VblSymm* vbl_symm,
 {
   Xn::PcSymmSpec* spec = +pc_symm->spec;
   pc_symm->rvbl_symms.push(vbl_symm);
-  pc_symm->vbl_indices.push(indices);
+  pc_symm->vbl_indices.push_back(indices.copy());
 
   Xn::VblSymmAccessSpec& access = spec->access.grow1();
   access.vbl_symm = +vbl_symm->spec;
   access.type = access_type;
-  access.index_expression = indices.expression;
+  access.assign_index_expression(indices.expression());
 
   if (access.write_ck()) {
     spec->wmap.push(spec->access.sz()-1);
@@ -479,8 +479,8 @@ Net::unroll_action(Table<Xn::ActSymm>& dst, uint actid, bool include_shadow) con
   ostream&
 Net::oput(ostream& of,
           const P::Fmla& pf,
-          const String& pfx,
-          const String& sfx) const
+          const std::string& pfx,
+          const std::string& sfx) const
 {
 
   (void) pf;
@@ -707,7 +707,7 @@ OPut(std::ostream& of, const Xn::ActSymm& act)
     of << delim;
     delim = " && ";
     of << pc.rvbl_symms[i]->spec->name
-      << "[" << pc.spec->access[i].index_expression << "]"
+      << "[" << pc.spec->access[i].index_expression() << "]"
       << "==" << act.guard(i);
   }
   of << " -->";
@@ -716,7 +716,7 @@ OPut(std::ostream& of, const Xn::ActSymm& act)
     if (pc.spec->waccess(i).synt_writeonly_ck() && act.assign(i)==vbl_symm.domsz)
       continue;
     of << ' ' << vbl_symm.spec->name
-      << "[" << pc.spec->waccess(i).index_expression << "]"
+      << "[" << pc.spec->waccess(i).index_expression() << "]"
       << ":=";
     if (pc.spec->waccess(i).random_write_ck())
       of << '_';

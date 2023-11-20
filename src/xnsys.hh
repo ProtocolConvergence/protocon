@@ -70,14 +70,14 @@ public:
   void fixup_pc_xns();
 
   VblSymm*
-  add_variables(const String& name, uint nmembs, uint domsz,
+  add_variables(const std::string& name, uint nmembs, uint domsz,
                 Xn::ShadowPuppetRole role = Xn::Direct);
 private:
   void commit_variable(VblSymm& symm, uint i);
 public:
   void commit_variables();
   PcSymm*
-  add_processes(const String& name, const String& idx_name, uint nmembs);
+  add_processes(const std::string& name, const std::string& idx_name, uint nmembs);
   void add_access (PcSymm* pc_symm, const VblSymm* vbl_symm,
                    const NatMap& indices,
                    Xn::VariableAccessType access_type);
@@ -156,8 +156,8 @@ public:
 
   std::ostream& oput(std::ostream& of,
                 const Cx::PFmla& pf,
-                const String& pfx,
-                const String& sfx) const;
+                const std::string& pfx,
+                const std::string& sfx) const;
 
   std::ostream& oput_vbl_names(std::ostream& ofile) const;
   std::ostream& oput_pfmla(std::ostream& ofile, Cx::PFmla pf,
