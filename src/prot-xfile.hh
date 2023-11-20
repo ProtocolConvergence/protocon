@@ -2,20 +2,17 @@
 #ifndef ProtoconFile_HH_
 #define ProtoconFile_HH_
 
-#include "cx/synhax.hh"
-extern "C" {
-#include "cx/sesp.h"
-#include "cx/xfile.h"
-}
 #include "xnsys.hh"
+#include "cx/sesp.h"
 
+#include "cx/synhax.hh"
 #include "namespace.hh"
 
 class ProtoconFileOpt
 {
 public:
   std::string text;
-  Map< String, Xn::NatMap > constant_map;
+  Map< std::string, Xn::NatMap > constant_map;
   Xn::InvariantStyle invariant_style;
   Xn::InvariantScope invariant_scope;
   Xn::InvariantBehav invariant_behav;

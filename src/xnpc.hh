@@ -1,8 +1,7 @@
 
 #ifndef XnPc_HH_
 #define XnPc_HH_
-
-#include "cx/synhax.hh"
+#include <sstream>
 
 #include "cx/set.hh"
 #include "cx/table.hh"
@@ -10,6 +9,8 @@
 #include "cx/map.hh"
 #include "xfmlae.hh"
 #include "xnspec.hh"
+
+#include "cx/synhax.hh"
 
 #include "namespace.hh"
 namespace Xn {
@@ -129,8 +130,10 @@ public:
   bool puppet_ck() const { return spec->puppet_ck(); }
 };
 
-inline String name_of(const Vbl& vbl) {
-  return vbl.symm->spec->name + "[" + vbl.symm_idx + "]";
+inline std::string name_of(const Vbl& vbl) {
+  std::ostringstream oss;
+  oss << vbl.symm->spec->name << '[' << vbl.symm_idx << ']';
+  return oss.str();
 }
 
 class ActSymm {
@@ -224,9 +227,11 @@ public:
     InitDomMax( representative_pcidx );
   }
 
-  String vbl_name(uint i) const {
-    const String& name = rvbl_symms[i]->spec->name;
-    return name + "[" + vbl_indices[i].expression + "]";
+  std::string vbl_name(uint i) const {
+    std::ostringstream oss;
+    oss << rvbl_symms[i]->spec->name
+      << '[' << vbl_indices[i].expression << ']';
+    return oss.str();
   }
 
   bool read_ck(uint ridx) const {
@@ -253,8 +258,11 @@ public:
   }
 };
 
-inline String name_of(const Pc& pc) {
-  return pc.symm->spec->name + "[" + pc.symm->mapped_indices.eval(pc.symm_idx) + "]";
+inline std::string name_of(const Pc& pc) {
+  std::ostringstream oss;
+  oss << pc.symm->spec->name
+    << '[' << pc.symm->mapped_indices.eval(pc.symm_idx) << ']';
+  return oss.str();
 }
 
 inline uint ActSymm::guard (uint vidx) const { return vals[vidx]; }

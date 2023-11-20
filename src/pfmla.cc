@@ -135,9 +135,10 @@ PFmla::cycle_ck(const PFmla& pf) const
  * \param pfx  Prefix to output before every valuation.
  * \param sfx  Suffix to output after every valuation.
  **/
-  ostream&
-PFmlaCtx::oput(ostream& of, const PFmla& a, uint setIdx,
-               const String& pfx, const String& sfx) const
+  std::ostream&
+PFmlaCtx::oput(
+    std::ostream& of, const PFmla& a, unsigned setIdx,
+    std::string_view pfx, std::string_view sfx) const
 {
   (void) a;
   (void) setIdx;

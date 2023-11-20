@@ -7,6 +7,8 @@
 #include <fildesh/fildesh.h>
 #include "lgtable.h"
 
+BEGIN_EXTERN_C
+
 typedef struct SespBase SespBase;
 typedef SespBase* Sesp;
 typedef struct SespKind SespKind;
@@ -419,5 +421,5 @@ list4_ccstr_Sesp (const char* a, Sesp b, Sesp c, Sesp d)
   return list4_Sesp (make_ccstr_Sesp (ctx_of_Sesp (b), a), b, c, d);
 }
 
+END_EXTERN_C
 #endif
-

@@ -118,7 +118,7 @@ Net::fixup_pc_xns()
 }
 
   VblSymm*
-Net::add_variables(const String& name, uint nmembs, uint domsz,
+Net::add_variables(std::string_view name, uint nmembs, uint domsz,
                    Xn::ShadowPuppetRole role)
 {
   // Cannot add variables after committing them.
@@ -202,7 +202,8 @@ Net::commit_variables()
 }
 
   PcSymm*
-Net::add_processes(const String& name, const String& idx_name, uint nmembs)
+Net::add_processes(
+    std::string_view name, std::string_view idx_name, unsigned nmembs)
 {
   if (vbls.sz() == 0) {
     commit_variables();
@@ -479,8 +480,8 @@ Net::unroll_action(Table<Xn::ActSymm>& dst, uint actid, bool include_shadow) con
   ostream&
 Net::oput(ostream& of,
           const P::Fmla& pf,
-          const String& pfx,
-          const String& sfx) const
+          std::string_view pfx,
+          std::string_view sfx) const
 {
 
   (void) pf;

@@ -580,9 +580,8 @@ public:
   void nullify_context()
   { ctx = 0; }
 
-  uint add_vbl(const String& name, uint domsz)
-  {
-    return add_vbl_PFmlaCtx(ctx, name.c_str(), domsz);
+  unsigned add_vbl(std::string_view name, unsigned domsz) {
+    return add_vbl_PFmlaCtx(ctx, std::string(name).c_str(), domsz);
   }
 
   uint add_vbl_list()
@@ -600,19 +599,20 @@ public:
     return PFmlaVbl( vbl_of_PFmlaCtx (ctx, id) );
   }
 
-  const PFmlaVbl vbl(const String& s) const
-  {
+  const PFmlaVbl vbl(const std::string& s) const {
     return PFmlaVbl(vbl_lookup_PFmlaCtx(ctx, s.c_str()));
   }
 
   PFmla pfmla_of_state(const uint* state, const Table<uint>& vbls) const;
   PFmla pfmla_of_img_state(const uint* state, const Table<uint>& vbls) const;
 
-  ostream& oput(ostream& of,
-                const PFmla& a,
-                uint setIdx,
-                const String& pfx = "",
-                const String& sfx = "") const;
+  std::ostream&
+  oput(std::ostream& of,
+       const PFmla& a,
+       uint setIdx,
+       std::string_view pfx = "",
+       std::string_view sfx = "") const;
+
   friend void PFmla::ensure_ctx (const PFmlaCtx& ctx);
 };
 

@@ -17,7 +17,7 @@ class ProtoconOpt;
 
 class ProtoconParamOpt {
 public:
-  Map<String, Xn::NatMap> constant_map;
+  Map<std::string, Xn::NatMap> constant_map;
   bool conflict;
   bool partial;
   StabilizationOpt stabilization_opt;
