@@ -12,7 +12,7 @@
 int main(int argc, char** argv)
 {
   using namespace PROTOCON_NAMESPACE;
-  int argi = init_sysCx (&argc, &argv);
+  int argi = 1;
   DeclLegit( good );
   AddConvergenceOpt opt;
   ProtoconFileOpt infile_opt;
@@ -153,8 +153,6 @@ int main(int argc, char** argv)
   }
 #endif
 #endif
-
-  lose_sysCx ();
 
   if (!good)  return 1;
 

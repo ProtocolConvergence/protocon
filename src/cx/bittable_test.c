@@ -3,8 +3,6 @@
  * Tests for bitstrings of 0 and 1.
  **/
 
-#include "syscx.h"
-
 #include "bittable.h"
 
 
@@ -101,14 +99,8 @@ testfn_cache_BitTable ()
 }
 
 
-int main(int argc, char** argv)
-{
-  int argi = init_sysCx (&argc, &argv);
-  (void) argi;
-
+int main() {
   testfn_BitTable();
   testfn_cache_BitTable();
-
-  lose_sysCx ();
   return 0;
 }

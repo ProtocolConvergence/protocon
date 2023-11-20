@@ -14,9 +14,6 @@
 
 #include "src/inline/slurp_file_to_string.hh"
 
-extern "C" {
-#include "src/cx/syscx.h"
-}
 #include "src/namespace.hh"
 
 using std::queue;
@@ -157,7 +154,7 @@ ReadUniRing(const char* filepath, Xn::Sys& sys, vector<UniStep>& legits);
 
 /** Execute me now!**/
 int main(int argc, char** argv) {
-  int argi = init_sysCx(&argc, &argv);
+  int argi = 1;
 
   if (argi + 1 > argc)
     failout_sysCx("Need at least one argument (an input file).");
@@ -193,7 +190,6 @@ int main(int argc, char** argv) {
     oput_protocon(out_filepath, Table<UniAct>(actions));
   }
 
-  lose_sysCx();
   return 0;
 }
 

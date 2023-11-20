@@ -3,10 +3,7 @@
  * Tests for dynamic arrays.
  **/
 
-#include "syscx.h"
-
-#include "alphatab.h"
-#include "fileb.h"
+#include "table.h"
 
 
 static
@@ -125,13 +122,7 @@ testfn_Table ()
 }
 
 
-int main(int argc, char** argv)
-{
-  int argi = init_sysCx (&argc, &argv);
-  (void) argi;
-
+int main() {
   testfn_Table();
-
-  lose_sysCx ();
   return 0;
 }

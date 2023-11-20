@@ -3,9 +3,7 @@
  *
  * SAT-based stabilization synthesis.
  **/
-#include "cx/syscx.h"
 #include "cx/bittable.h"
-#include "cx/fileb.h"
 #include "cx/table.h"
 
 #include <assert.h>
@@ -85,7 +83,7 @@ synsearch_sat (FMem_synsearch* tape)
     int
 main (int argc, char** argv)
 {
-    int argi = (init_sysCx (&argc, &argv), 1);
+    int argi = 1;
     XnSysInstance inst_kind =
         /* Sat3Inst */
         /* Sat3RingInst */
@@ -296,7 +294,6 @@ main (int argc, char** argv)
 
     lose_CnfFmla (fmla);
     lose_XnSys (sys);
-    lose_sysCx ();
     return 0;
 }
 

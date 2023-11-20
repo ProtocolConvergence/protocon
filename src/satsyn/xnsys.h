@@ -3,8 +3,8 @@
 #define XnSys_H_
 
 #include <fildesh/fildesh.h>
+#include "cx/alphatab.h"
 #include "cx/bittable.h"
-#include "cx/fileb.h"
 
 #define NMaxXnPcVbls 10
 

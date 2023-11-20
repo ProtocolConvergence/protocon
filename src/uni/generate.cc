@@ -15,9 +15,6 @@
 #include "src/cx/bittable.hh"
 #include "src/cx/table.hh"
 
-extern "C" {
-#include "src/cx/syscx.h"
-}
 #include "src/namespace.hh"
 
 struct SearchOpt
@@ -735,7 +732,7 @@ searchit(const SearchOpt& opt)
 
 int main(int argc, char** argv)
 {
-  int argi = init_sysCx (&argc, &argv);
+  int argi = 1;
   SearchOpt opt;
 
   fildesh::ifstream given_in;
@@ -888,7 +885,6 @@ int main(int argc, char** argv)
     }
     opt.given_acts = uniring_actions_of(ppgfun, opt.domsz);
   } while(true);
-  lose_sysCx ();
   return 0;
 }
 

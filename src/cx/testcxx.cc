@@ -1,8 +1,4 @@
 
-extern "C" {
-#include "syscx.h"
-}
-
 #include "table.hh"
 #include "lgtable.hh"
 #include "set.hh"
@@ -71,16 +67,10 @@ testfn_CXX_FlatSet()
   }
 }
 
-int main(int argc, char** argv)
-{
-  int argi = init_sysCx (&argc, &argv);
-  (void) argi;
-
+int main() {
   testfn_CXX_Table();
   testfn_CXX_LgTable();
   testfn_CXX_FlatSet();
-
-  lose_sysCx ();
   return 0;
 }
 

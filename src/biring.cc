@@ -14,10 +14,6 @@
 
 #include "src/inline/eq_cstr.h"
 
-extern "C" {
-#include "cx/syscx.h"
-}
-
 //#include "biring-ext.cc"
 #define UseBitTableDB
 
@@ -1058,7 +1054,7 @@ filter_stdin (const FilterOpt& opt, std::ostream& ofile)
 
 int main(int argc, char** argv)
 {
-  int argi = init_sysCx (&argc, &argv);
+  int argi = 1;
   bool filter = false;
   FilterOpt opt;
 
@@ -1141,7 +1137,6 @@ int main(int argc, char** argv)
   else {
     searchit(opt, ofile);
   }
-  lose_sysCx ();
   return 0;
 }
 

@@ -9,9 +9,6 @@
 
 #include "src/inline/slurp_file_to_string.hh"
 
-extern "C" {
-#include "cx/syscx.h"
-}
 #include "namespace.hh"
 
 struct LCNode {
@@ -162,7 +159,7 @@ deadlock_freedom_ck(const Xn::Sys& sys)
 
 /** Execute me now!**/
 int main(int argc, char** argv) {
-  int argi = init_sysCx(&argc, &argv);
+  int argi = 1;
 
 
   if (argi + 1 != argc)
@@ -179,7 +176,6 @@ int main(int argc, char** argv) {
     failout_sysCx("Cannot read file!");
 
   bool exit_good = deadlock_freedom_ck(sys);
-  lose_sysCx();
   return exit_good ? 0 : 2;
 }
 

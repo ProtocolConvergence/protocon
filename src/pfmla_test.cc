@@ -1,11 +1,7 @@
 
-extern "C" {
-#include "cx/syscx.h"
-}
-
-#include "cx/synhax.hh"
 #include "pfmla.hh"
 
+#include "cx/synhax.hh"
 #include "namespace.hh"
 
 static
@@ -116,16 +112,10 @@ TestIntPFmla()
 
 END_NAMESPACE
 
-int main(int argc, char** argv)
-{
+int main() {
   using namespace PROTOCON_NAMESPACE;
-  int argi = init_sysCx (&argc, &argv);
-  (void) argi;
-
   TestPFmla();
   TestIntPFmla();
-
-  lose_sysCx ();
   return 0;
 }
 

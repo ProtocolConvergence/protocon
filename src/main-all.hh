@@ -11,12 +11,6 @@
 #include "stabilization.hh"
 #include "synthesis.hh"
 
-extern "C" {
-#include "cx/syscx.h"
-#ifdef ENABLE_MEMORY_STATS
-#include "cx/benchmark.h"
-#endif
-}
 #include "namespace.hh"
 
   void

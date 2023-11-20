@@ -16,19 +16,10 @@
 
 #include "src/inline/slurp_file_to_string.hh"
 
-extern "C" {
-#include "cx/syscx.h"
-}
-
-using std::vector;
-
 //#define WITH_PRE
 
-int main(int argc, char** argv)
-{
+int main() {
   using namespace protocon;
-  int argi = init_sysCx (&argc, &argv);
-  (void) argi;
   //const char filename[] = "examplespec/SumNotTwo.prot";
   //const char filename[] = "examplespec/ColorRing.prot";
   //const char filename[] = "examplespec/MatchRing.prot";
@@ -60,7 +51,7 @@ int main(int argc, char** argv)
     solv.setFrozen(i, true);
   }
 
-  vector<uint> candidates;
+  std::vector<Action_id> candidates;
   Cx::Table<uint> dels;
   Cx::Table<uint> rejs;
   if (!candidate_actions(candidates, dels, rejs, sys)) {
@@ -129,7 +120,7 @@ int main(int argc, char** argv)
   uint ntries = 0;
   while (solv.solve()) {
     ::X::Fmla xn(false);
-    vector<uint> actions;
+    std::vector<Action_id> actions;
 #ifdef WITH_PRE
     Cx::Table<bool> model(topo.n_possible_acts + topo.total_pre_domsz);
 #else
@@ -197,7 +188,6 @@ int main(int argc, char** argv)
     }
   }
 
-  lose_sysCx ();
   return 0;
 }
 

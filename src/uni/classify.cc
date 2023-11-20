@@ -9,11 +9,9 @@
 
 #include "src/pfmla.hh"
 #include "src/cx/bittable.hh"
-#include "src/cx/fileb.hh"
 
-extern "C" {
-#include "src/cx/syscx.h"
-}
+#include "src/inline/eq_cstr.h"
+
 #include "src/namespace.hh"
 
 
@@ -88,7 +86,7 @@ tile_classify(const Table<PcState>& ppgfun, uint max_period, const uint domsz)
 
 /** Execute me now!**/
 int main(int argc, char** argv) {
-  int argi = init_sysCx(&argc, &argv);
+  int argi = 1;
 
   uint min_period = 0;
   uint max_period = 0;
@@ -248,7 +246,6 @@ int main(int argc, char** argv) {
   }
 
   close_FildeshX(in);
-  lose_sysCx();
   return 0;
 }
 

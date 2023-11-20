@@ -13,9 +13,6 @@
 
 #define TestClaim
 #include "cx/synhax.hh"
-extern "C" {
-#include "cx/syscx.h"
-}
 #include "namespace.hh"
 
 static void
@@ -306,7 +303,7 @@ END_NAMESPACE
 int main(int argc, char** argv)
 {
   using namespace PROTOCON_NAMESPACE;
-  int argi = init_sysCx (&argc, &argv);
+  int argi = 1;
 
   if (argi == argc) {
     Test("");
@@ -317,7 +314,6 @@ int main(int argc, char** argv)
     }
   }
 
-  lose_sysCx ();
   return 0;
 }
 

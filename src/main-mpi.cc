@@ -366,7 +366,7 @@ stabilization_search(vector<uint>& ret_actions,
 
 int main(int argc, char** argv)
 {
-  int argi = init_sysCx (&argc, &argv);
+  int argi = 1;
   DeclLegit( good );
   struct timespec begtime, endtime;
   push_losefn_sysCx ((void (*) ()) MPI_Finalize);
@@ -427,7 +427,6 @@ int main(int argc, char** argv)
   }
 #endif
 
-  lose_sysCx ();
   return good ? 0 : 1;
 }
 

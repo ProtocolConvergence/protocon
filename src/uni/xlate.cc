@@ -5,18 +5,15 @@
 #include "unifile.hh"
 
 #include "src/cx/bittable.hh"
-#include "src/cx/fileb.hh"
 #include "src/cx/table.hh"
 
-extern "C" {
-#include "src/cx/syscx.h"
-}
+#include "src/inline/eq_cstr.h"
 
 #include "src/namespace.hh"
 
 int main(int argc, char** argv)
 {
-  int argi = init_sysCx (&argc, &argv);
+  int argi = 1;
 
   const char* id_ofilename = 0;
   const char* graphviz_ofilename = 0;
@@ -160,7 +157,6 @@ int main(int argc, char** argv)
     oput_list(list_ofile, acts);
   }
 
-  lose_sysCx ();
   return 0;
 }
 

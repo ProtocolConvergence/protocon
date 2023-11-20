@@ -8,9 +8,6 @@ cc_library(
         "bittable.h",
         "bittable.hh",
         "def.h",
-        "fileb.c",
-        "fileb.h",
-        "fileb.hh",
         "lgtable.h",
         "lgtable.hh",
         "map.hh",
@@ -20,16 +17,12 @@ cc_library(
         "synhax.h",
         "synhax.hh",
         "syscx.c",
-        "syscx.h",
         "table.h",
         "table.hh",
         "tuple.hh",
         "urandom.c",
         "urandom.h",
         "urandom.hh",
-        "xfile.c",
-        "xfile.h",
-        "xfile.hh",
     ],
     deps = [
         "@fildesh//:fildesh_lib",
@@ -46,13 +39,6 @@ cc_test(
 cc_test(
     name = "bittable_test",
     srcs = ["bittable_test.c"],
-    deps = [":cx_lib"],
-    size = "small",
-)
-
-cc_test(
-    name = "fileb_test",
-    srcs = ["fileb_test.c"],
     deps = [":cx_lib"],
     size = "small",
 )

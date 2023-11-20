@@ -13,9 +13,6 @@
 #include <sys/resource.h>
 #endif
 
-extern "C" {
-#include "cx/syscx.h"
-}
 #include "namespace.hh"
 
 enum ProblemInstance {
@@ -749,7 +746,7 @@ protocon_options
    ProtoconOpt& exec_opt)
 {
   ProblemInstance problem = NProblemInstances;
-  exec_opt.argline = exename_of_sysCx ();
+  exec_opt.argline = (argi > 0 ? argv[argi-1] : "protocon");
   uint npcs = 4;
   if (!protocon_options_rec (argi, argc, argv, /*relpath=*/"",
                              opt, infile_opt, exec_opt, problem))
