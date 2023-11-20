@@ -1,19 +1,28 @@
+---
 name: Bazel
 on: [push, pull_request]
 
 jobs:
   test:
     strategy:
+      fail-fast: false
       matrix:
-        platform: [ubuntu-latest]
+        platform: [ubuntu-latest, macos-latest]
 
     runs-on: ${{ matrix.platform }}
 
     steps:
+    - name: Cache Setup
+      uses: actions/cache@v3
+      id: cache-bazel
+      with:
+        path: ~/.cache/bazel
+        key: ${{ runner.os }}-bazel
+
     - name: Setup bazel
       uses: jwlawson/actions-setup-bazel@v1
       with:
-        bazel-version: '5'
+        bazel-version: '6'
 
     - name: Checkout
       uses: actions/checkout@v4
@@ -43,7 +52,7 @@ jobs:
     - name: Setup bazel
       uses: jwlawson/actions-setup-bazel@v1
       with:
-        bazel-version: '5'
+        bazel-version: '6'
 
     - name: Checkout
       uses: actions/checkout@v4

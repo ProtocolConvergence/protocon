@@ -16,18 +16,17 @@
 
 #include "src/namespace.hh"
 
-using std::queue;
-using std::vector;
-
 #ifdef DEBUG
-void printSquareMatrix(int** matrix, int length){
+template <class T>
+void printSquareMatrix(T** matrix, int length){
   for(int i = 0; i < length; i++){
     for(int j = 0; j < length; j++){
-      printf("%d\t", matrix[i][j]);
+      std::cout << matrix[i][j] << '\t';
     }
-    printf("\n");
+    std::cout << '\n';
   }
-  printf("\n");
+  std::cout << '\n';
+  std::cout.flush();
 }
 #endif
 
@@ -54,12 +53,14 @@ void freeSquareMatrix(size_t **toFree, size_t M){
 }
 
 
-vector<UniAct> unidirectionalRingProtocolGenerator(vector<UniStep> legits, size_t M){
+  std::vector<UniAct>
+unidirectionalRingProtocolGenerator(std::vector<UniStep> legits, size_t M)
+{
   size_t gamma = 0;
   bool gammaExists = false;
   size_t **L = NULL;
   size_t **Lprime = NULL;
-  vector<UniAct> actions;
+  std::vector<UniAct> actions;
 
   L = allocSquareMatrix(M);
   //first diamention is the x-1 vertex value, second is x vertex valid value
@@ -111,12 +112,12 @@ vector<UniAct> unidirectionalRingProtocolGenerator(vector<UniStep> legits, size_
 
   //Lprime is now calculated.
 
-  vector<uint> tau(M);
+  std::vector<uint> tau(M);
   for (uint i = 0; i < M; ++i) {
     tau[i] = i;
   }
 
-  queue<uint> tree_q;
+  std::queue<uint> tree_q;
   tree_q.push(gamma);
 
   while (!tree_q.empty()) {
@@ -150,7 +151,7 @@ vector<UniAct> unidirectionalRingProtocolGenerator(vector<UniStep> legits, size_
 }
 
 uint
-ReadUniRing(const char* filepath, Xn::Sys& sys, vector<UniStep>& legits);
+ReadUniRing(const char* filepath, Xn::Sys& sys, std::vector<UniStep>& legits);
 
 /** Execute me now!**/
 int main(int argc, char** argv) {
@@ -161,7 +162,7 @@ int main(int argc, char** argv) {
 
   const char* in_filepath = argv[argi++];
   Xn::Sys sys; /// For I/O only.
-  vector<UniStep> legits;
+  std::vector<UniStep> legits;
   uint domsz = ReadUniRing(in_filepath, sys, legits);
   if (domsz == 0)
     failout_sysCx(in_filepath);
@@ -172,7 +173,7 @@ int main(int argc, char** argv) {
     printf("x[i-1]==%u && x[i]==%u\n", legits[i][0], legits[i][1]);
   }
 
-  vector<UniAct> actions;
+  std::vector<UniAct> actions;
 ////////////////////////////////////////////////////////////////////////
   actions = unidirectionalRingProtocolGenerator(legits, domsz);
 ////////////////////////////////////////////////////////////////////////
@@ -195,7 +196,7 @@ int main(int argc, char** argv) {
 
 /** Read a unidirectional ring specification.**/
   uint
-ReadUniRing(const char* filepath, Xn::Sys& sys, vector<UniStep>& legits)
+ReadUniRing(const char* filepath, Xn::Sys& sys, std::vector<UniStep>& legits)
 {
   legits.clear();
   sys.topology.lightweight = true;

@@ -10,8 +10,7 @@ jobs:
   test:
     strategy:
       matrix:
-        # macos-latest fails some tests
-        platform: [ubuntu-latest]
+        platform: [ubuntu-latest, macos-latest]
 
     runs-on: ${{ matrix.platform }}
 

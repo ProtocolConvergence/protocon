@@ -20,11 +20,11 @@ cc_binary(
         "protocol.h",
         "act.h",
     ],
-    linkopts = [
-        "-lrt",
+    linkopts = select({
+        "@platforms//os:linux": ["-lrt"],
+        "//conditions:default": [],
+    }),
+    target_compatible_with = [
+        "@platforms//os:linux",
     ],
-    # Uncomment when Bazel version 4 is on Gentoo.
-    # target_compatible_with = [
-    #     "@platforms//os:linux",
-    # ],
 )

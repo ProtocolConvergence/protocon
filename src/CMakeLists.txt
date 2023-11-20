@@ -30,8 +30,8 @@ add_library(pfmla_lib STATIC
   "pfmla.hh"
   )
 set_property(TARGET pfmla_lib
-  APPEND PROPERTY INCLUDE_DIRECTORIES ${GluIncludePath})
-target_link_libraries(pfmla_lib cx_lib ${mdd_glu_libs})
+  APPEND PROPERTY INCLUDE_DIRECTORIES ${MddGlu_INCLUDE_DIRS})
+target_link_libraries(pfmla_lib cx_lib ${MddGlu_LIBRARIES})
 
 add_executable(pfmla_test
   "pfmla_test.cc"

@@ -29,9 +29,9 @@ include(CTest)
 
 include(FetchContent)
 include("dep/cmake_fetchcontent/fildesh.cmake")
+include("dep/cmake_fetchcontent/mddglu.cmake")
 
 include(ExternalProject)
-include("dep/cmake_externalproject/mddglu.cmake")
 include("dep/cmake_externalproject/peg.cmake")
 
 #### Build ####
