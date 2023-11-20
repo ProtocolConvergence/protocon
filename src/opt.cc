@@ -371,7 +371,7 @@ protocon_options_rec
    ProblemInstance& problem)
 {
   std::ostream& of = std::cerr;
-  while (argv[argi] && argv[argi][0] == '0') {
+  while (argv[argi] && argv[argi][0] == '-') {
     const int prev_argi = argi;
     bool copy_to_argline = true;
 
