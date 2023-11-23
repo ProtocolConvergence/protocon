@@ -38,7 +38,7 @@ jobs:
       uses: actions/upload-artifact@v3
       if: failure()
       with:
-        name: Test Results (${{ matrix.platform }})
+        name: bazel-testlogs-(${{ matrix.platform }})
         path: bazel-testlogs*/**/*
 
 

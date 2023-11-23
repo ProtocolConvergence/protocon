@@ -17,6 +17,9 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v3
+
     - name: Create Build Environment
       run: cmake -E make_directory ${{runner.workspace}}/bld
 
@@ -44,7 +47,7 @@ jobs:
       uses: actions/upload-artifact@v3
       if: failure()
       with:
-        name: Test Results (${{ matrix.platform }})
+        name: Testing-${{ matrix.platform }}
         path: ${{runner.workspace}}/bld/Testing/
 
 

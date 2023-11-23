@@ -51,3 +51,15 @@ fildesh_test(
     srcs = ["c_d7_b3_c20_test.fildesh"],
     aliases = {"classify": "//src/uni:classify"},
 )
+
+fildesh_test(
+    name = "synthesize_test",
+    srcs = ["synthesize_test.fildesh"],
+    aliases = {"synthesize": "//src/uni:synthesize"},
+    args = [
+        "--input_file=$(location //examplespec:SumNotTwo.prot)",
+    ],
+    data = [
+        "//examplespec:SumNotTwo.prot",
+    ],
+)

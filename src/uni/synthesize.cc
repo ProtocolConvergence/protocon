@@ -1,7 +1,7 @@
-#include <cstdio>
 #include <queue>
 #include <vector>
 
+#include <fildesh/ostream.hh>
 #include <fildesh/string.hh>
 
 #include "uniact.hh"
@@ -10,8 +10,6 @@
 #include "src/prot-xfile.hh"
 #include "src/xnsys.hh"
 
-#include "src/cx/tuple.hh"
-
 #include "src/inline/slurp_file_to_string.hh"
 
 #include "src/namespace.hh"
@@ -19,14 +17,15 @@
 #ifdef DEBUG
 template <class T>
 void printSquareMatrix(T** matrix, int length){
+  std::ostream& out = std::cerr;
   for(int i = 0; i < length; i++){
     for(int j = 0; j < length; j++){
-      std::cout << matrix[i][j] << '\t';
+      out << matrix[i][j] << '\t';
     }
-    std::cout << '\n';
+    out << '\n';
   }
-  std::cout << '\n';
-  std::cout.flush();
+  out << '\n';
+  out.flush();
 }
 #endif
 
@@ -156,6 +155,7 @@ ReadUniRing(const char* filepath, Xn::Sys& sys, std::vector<UniStep>& legits);
 /** Execute me now!**/
 int main(int argc, char** argv) {
   int argi = 1;
+  std::ostream& info_out = std::cerr;
 
   if (argi + 1 > argc)
     failout_sysCx("Need at least one argument (an input file).");
@@ -168,9 +168,12 @@ int main(int argc, char** argv) {
     failout_sysCx(in_filepath);
 
   // (Debugging) Output all the legitimate readable states.
-  printf("Legitimate states for P[i]:\n");
-  for (uint i = 0; i < legits.size(); ++i) {
-    printf("x[i-1]==%u && x[i]==%u\n", legits[i][0], legits[i][1]);
+  info_out << "Legitimate states for P[i]:\n";
+  for (const UniStep& legit_state : legits) {
+    info_out
+      << "x[i-1]==" << legit_state[0]
+      << " && x[i]==" << legit_state[1]
+      << '\n';
   }
 
   std::vector<UniAct> actions;
@@ -179,15 +182,26 @@ int main(int argc, char** argv) {
 ////////////////////////////////////////////////////////////////////////
 
   // (Debugging) Output all the synthesized acctions.
-  printf("Synthesized actions for P[i]:\n");
-  for (uint i = 0; i < actions.size(); ++i) {
-    printf("x[i-1]==%u && x[i]==%u --> x[i]:=%u\n", actions[i][0], actions[i][1], actions[i][2]);
+  info_out << "Synthesized actions for P[i]:\n";
+  for (const UniAct& act : actions) {
+    info_out
+      << "x[i-1]==" << act[0]
+      << " && x[i]==" << act[1]
+      << " --> x[i]:=" << act[2]
+      << '\n';
   }
 
-
-  const char* out_filepath = argv[argi];
-  if (out_filepath) {
-    ++ argi;
+  if (argi + 2 >= argc && 0 == strcmp("-o-list", argv[argi])) {
+    const char* out_filepath = argv[argi+1];
+    argi += 2;
+    fildesh::ofstream list_out(out_filepath);
+    oput_list(list_out, Table<UniAct>(actions));
+  }
+  else if (argi + 1 >= argc) {
+    if (argi + 2 >= argc && 0 == strcmp("-o", argv[argi])) {
+      argi += 1;
+    }
+    const char* out_filepath = argv[argi++];
     oput_protocon(out_filepath, Table<UniAct>(actions));
   }
 

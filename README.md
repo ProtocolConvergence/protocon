@@ -1,5 +1,5 @@
-[https://github.com/grencez/protocon](https://github.com/grencez/protocon)\
-[![Coverage Status](https://coveralls.io/repos/github/grencez/protocon/badge.svg?branch=trunk)](https://coveralls.io/github/grencez/protocon?branch=trunk)
+[https://github.com/ProtocolConvergence/protocon](https://github.com/ProtocolConvergence/protocon)\
+[![Coverage Status](https://coveralls.io/repos/github/ProtocolConvergence/protocon/badge.svg?branch=trunk)](https://coveralls.io/github/ProtocolConvergence/protocon?branch=trunk)
 
 # Protocon: Add Convergence to Shared Memory Protocols
 
@@ -32,7 +32,7 @@ mkdir tmp
 
 ```
 # Get the code.
-git clone https://github.com/grencez/protocon.git protocon
+git clone https://github.com/ProtocolConvergence/protocon.git protocon
 cd protocon
 
 # Build with CMake.
@@ -59,16 +59,14 @@ Now there should be a makefile in `bld/`, so in the terminal type `make`.
 
 All essential dependencies are automatically downloaded during compilation.
 
-* peg
-  * http://piumarta.com/software/peg/
+* peg - http://piumarta.com/software/peg/ and [mirrored on GitHub](https://github.com/gpakosz/peg/)
   * Parser.
-* glu 2.4
-  * ftp://vlsi.colorado.edu/pub/vis/
+* glu 2.4 - [forked on GitHub](https://github.com/ProtocolConvergence/mdd-glu)
   * Library for multi-valued decision diagrams (MDDs).
 * Qt5 (optional)
   * For the gui.
 * espresso (optional)
-  *  http://code.google.com/p/eqntott/downloads/detail?name=espresso-ab-1.0.tar.gz
+  * http://code.google.com/p/eqntott/downloads/detail?name=espresso-ab-1.0.tar.gz
   * Logic minimization tool when -espresso flag is used.
 
 ## Thanks
