@@ -1,0 +1,9 @@
+version: "3"
+services:
+  app:
+    # Name the image.
+    image: protocon
+    build:
+      context: ../../bazel-bin
+      # Relative to context.
+      dockerfile: ../pkg/docker/Dockerfile
