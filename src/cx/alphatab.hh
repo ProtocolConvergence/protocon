@@ -1,36 +1,30 @@
 /**
  * \file alphatab.hh
- * Dynamic array.
  **/
 #ifndef AlphaTab_HH_
 #define AlphaTab_HH_
 #include <string>
 
-#include "synhax.hh"
 extern "C" {
-#include "alphatab.h"
+#include "table.h"
 }
 
 namespace Cx {
 
-namespace C {
-  using ::AlphaTab;
-}
-
 class AlphaTab
 {
 private:
-  C::AlphaTab t = dflt_AlphaTab();
+  TableT(char) t = DEFAULT_Table;
 public:
   AlphaTab() {}
-  ~AlphaTab() {lose_AlphaTab (&t);}
-
-  explicit AlphaTab(const C::AlphaTab& b) {
-    copy_AlphaTab (&t, &b);
+  ~AlphaTab() {
+    if (t.alloc_lgsz > 0 && t.alloc_lgsz != BITINT_MAX) {
+      free(t.s);
+    }
   }
 
   AlphaTab(const AlphaTab& b) {
-    copy_AlphaTab (&t, &b.t);
+    *this = b;
   }
 
   AlphaTab(const char* b) {
@@ -40,17 +34,18 @@ public:
     *this = std::string_view(b);
   }
 
-  AlphaTab& operator=(const C::AlphaTab& b) {
-    copy_AlphaTab (&t, &b);
+  AlphaTab& operator=(std::string_view b) {
+    if (t.sz <= b.size()) {
+      grow_FildeshA_((void**)&t.s, &t.sz, &t.alloc_lgsz, 1, b.size() - t.sz);
+    }
+    else {
+      mpop_FildeshA_((void**)&t.s, &t.sz, &t.alloc_lgsz, 1, t.sz - b.size());
+    }
+    if (t.sz > 0) {memcpy(t.s, b.data(), t.sz);}
     return *this;
   }
   const AlphaTab& operator=(const AlphaTab& b) {
-    return (*this = b.t);
-  }
-  AlphaTab& operator=(std::string_view b) {
-    clear_AlphaTab(&t);
-    cat1_cstr_AlphaTab(&t, b.data(), b.size());
-    return *this;
+    return (*this = std::string_view(b));
   }
   AlphaTab& operator=(const std::string& b) {
     return (*this = std::string_view(b));
@@ -59,7 +54,9 @@ public:
     return (*this = std::string_view(b));
   }
 
-  void clear() { clear_AlphaTab (&t); }
+  void clear() {
+    mpop_FildeshA_((void**)&t.s, &t.sz, &t.alloc_lgsz, 1, t.sz);
+  }
 
   const char* data() const {
     return (char*)t.s;
@@ -74,86 +71,18 @@ public:
     return t.sz;
   }
 
-  AlphaTab& operator<<(char c) {
-    cat_char_AlphaTab (&t, c);
+  AlphaTab& operator+=(std::string_view s) {
+    t.sz = this->size();
+    memcpy(
+        grow_FildeshA_((void**)&t.s, &t.sz, &t.alloc_lgsz, 1, s.size()),
+        s.data(), s.size());
     return *this;
   }
-
-  AlphaTab& operator<<(const char* s) {
-    cat_cstr_AlphaTab (&t, s);
-    return *this;
+  AlphaTab& operator+=(char c) {
+    return (*this += std::string_view(&c, 1));
   }
-
-  AlphaTab& operator<<(const C::AlphaTab& b) {
-    cat_AlphaTab (&t, &b);
-    return *this;
-  }
-
-  AlphaTab& operator<<(const AlphaTab& b) {
-    return (*this << b.t);
-  }
-  AlphaTab operator+(const AlphaTab& b) const {
-    AlphaTab a( *this );
-    a << b;
-    return a;
-  }
-
-  AlphaTab& operator<<(uint x) {
-    cat_uint_AlphaTab (&t, x);
-    return *this;
-  }
-  const AlphaTab& operator=(uint x) {
-    clear_AlphaTab (&t);
-    return (*this) << x;
-  }
-  AlphaTab operator+(uint x) const {
-    AlphaTab a( *this );
-    a << x;
-    return a;
-  }
-
-  AlphaTab& operator<<(zuint x) {
-    cat_luint_AlphaTab (&t, x);
-    return *this;
-  }
-  const AlphaTab& operator=(zuint x) {
-    clear_AlphaTab (&t);
-    return (*this) << x;
-  }
-  AlphaTab operator+(zuint x) const {
-    AlphaTab a( *this );
-    a << x;
-    return a;
-  }
-
-  AlphaTab& operator<<(int x) {
-    cat_int_AlphaTab (&t, x);
-    return *this;
-  }
-  const AlphaTab& operator=(int x) {
-    clear_AlphaTab (&t);
-    return (*this) << x;
-  }
-  AlphaTab operator+(int x) const {
-    AlphaTab a( *this );
-    a << x;
-    return a;
-  }
-
-  AlphaTab& push_delim(const char* pfx, const char* delim) {
-    if (this->empty())
-      (*this) = std::string_view(pfx);
-    else
-      (*this) << delim;
-    return (*this);
-  }
-  AlphaTab& push_delim(const char* delim) {
-    return push_delim(0, delim);
-  }
-
-  template <typename T>
-  const AlphaTab& operator+=(const T& x) {
-    return (*this << x);
+  AlphaTab operator+(std::string_view s) const {
+    return (AlphaTab(*this) += s);
   }
 
   bool operator==(std::string_view b) const {
@@ -170,29 +99,18 @@ public:
     if (this->empty()) {return "";}
     return std::string_view(this->data(), this->size());
   }
-  const char* c_str() const {
-    return ccstr_of_AlphaTab (&t);
+  const char* c_str() {
+    *this += '\0';
+    return t.s;
   }
   bool empty() const {
     return (this->size() == 0);
   }
-
-  friend C::AlphaTab& operator<<(C::AlphaTab& a, const Cx::AlphaTab& b);
 };
 
 inline
-C::AlphaTab& operator<<(C::AlphaTab& a, const Cx::AlphaTab& b)
-{
-  const C::AlphaTab tmp = dflt2_AlphaTab(b.c_str(), b.size());
-  cat_AlphaTab (&a, &tmp);
-  return a;
-}
-
-inline
 std::ostream& operator<<(ostream& out, const AlphaTab& a) {
-  if (a.size() > 0)
-    out.write(a.data(), a.size());
-  return out;
+  return (out << (std::string_view)a);
 }
 
 typedef AlphaTab String;

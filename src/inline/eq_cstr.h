@@ -1,4 +1,3 @@
-#ifndef AlphaTab_H_
 static inline
   bool
 eq_cstr(const char* a, const char* b)
@@ -11,4 +10,3 @@ eq_cstr(const char* a, const char* b)
   }
   return (0 == strcmp(a, b));
 }
-#endif

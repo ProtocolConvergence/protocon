@@ -3,7 +3,7 @@
 #define XnSys_H_
 
 #include <fildesh/fildesh.h>
-#include "cx/alphatab.h"
+
 #include "cx/bittable.h"
 
 #define NMaxXnPcVbls 10
@@ -40,7 +40,7 @@ struct XnSz2 { XnSz i; XnSz j; };
 /** Variable name.**/
 struct XnVblSymm
 {
-    AlphaTab name;
+    char* name;
     XnDomSz domsz;
     XnSz stepsz0; /** Rule enumeration step size.**/
     XnSz stepsz1; /** Equal to zero if read-only.**/
@@ -49,7 +49,7 @@ struct XnVblSymm
 /** Symmetric process template.**/
 struct XnPcSymm
 {
-    AlphaTab name;
+    char* name;
     TableT(XnVblSymm) ovbls;
     TableT(XnVblSymm) xvbls;
     XnSz nstates;
@@ -66,7 +66,7 @@ struct XnPcSymm
 /** Variable in a transition system.**/
 struct XnVbl
 {
-    AlphaTab name;
+    char* name;
     XnDomSz domsz; /**< Maximum value in the domain.**/
     TableT(uint) pcs; /**< List of processes that use this variable.**/
     XnSz nwpcs;  /**< Number of processes with write (and read) permission.**/
@@ -149,6 +149,8 @@ void
 lose_XnVbl (XnVbl* x);
 void
 print_name_of_XnVbl_FildeshO(FildeshO* out, const XnVbl* x);
+void
+assign_name_of_XnVbl(XnVbl* x, const char* name);
 XnPc
 dflt_XnPc ();
 void

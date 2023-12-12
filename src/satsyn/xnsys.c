@@ -3,12 +3,14 @@
 
 #include <stdio.h>
 
+#include <fildesh/fildesh_compat_string.h>
+
     XnVblSymm
 cons2_XnVblSymm (const char* name, XnDomSz domsz)
 {
-    XnVblSymm x;
+  XnVblSymm x;
+  x.name = fildesh_compat_string_duplicate(name);
     x.domsz = domsz;
-    x.name = cons1_AlphaTab (name);
     x.stepsz0 = 0;
     x.stepsz1 = 0;
     return x;
@@ -16,14 +18,16 @@ cons2_XnVblSymm (const char* name, XnDomSz domsz)
     void
 lose_XnVblSymm (XnVblSymm* x)
 {
-    lose_AlphaTab (&x->name);
+  if (x->name) {
+    free(x->name);
+  }
 }
 
     XnPcSymm
 cons1_XnPcSymm (const char* name)
 {
-    XnPcSymm pc;
-    pc.name = cons1_AlphaTab (name);
+  XnPcSymm pc;
+  pc.name = fildesh_compat_string_duplicate(name);
     InitTable( pc.ovbls );
     InitTable( pc.xvbls );
     pc.allowed_acts = dflt_BitTable ();
@@ -35,7 +39,9 @@ cons1_XnPcSymm (const char* name)
     void
 lose_XnPcSymm (XnPcSymm* pc)
 {
-    lose_AlphaTab (&pc->name);
+  if (pc->name) {
+    free(pc->name);
+  }
     for (uint i = 0; i < pc->ovbls.sz; ++i) {
         lose_XnVblSymm (&pc->ovbls.s[i]);
     }
@@ -94,8 +100,8 @@ commit_initialization_XnPcSymm (XnPcSymm* pc)
     XnVbl
 dflt_XnVbl ()
 {
-    XnVbl x;
-    x.name = cons1_AlphaTab ("x");
+  XnVbl x;
+  x.name = fildesh_compat_string_duplicate("x");
     x.domsz = 1;
     InitTable( x.pcs );
     x.nwpcs = 0;
@@ -106,14 +112,21 @@ dflt_XnVbl ()
     void
 lose_XnVbl (XnVbl* x)
 {
-    lose_AlphaTab (&x->name);
-    LoseTable( x->pcs );
+  if (x->name) {free(x->name);}
+  LoseTable( x->pcs );
 }
 
   void
 print_name_of_XnVbl_FildeshO(FildeshO* out, const XnVbl* x)
 {
-  put_AlphaTab_FildeshO(out, &x->name);
+  putstr_FildeshO(out, x->name);
+}
+
+  void
+assign_name_of_XnVbl(XnVbl* x, const char* name)
+{
+  if (x->name) {free(x->name);}
+  x->name = fildesh_compat_string_duplicate(name);
 }
 
     XnPc

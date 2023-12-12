@@ -46,17 +46,18 @@ UnidirectionalRing(Xn::Net& topo, uint npcs, uint domsz,
   else {
     // Create a new symmetry for each process.
     for (uint i = 0; i < npcs; ++i) {
-      Xn::PcSymm* pc_symm = topo.add_processes(String("P") + i, "i", 1);
+      Xn::PcSymm* pc_symm = topo.add_processes(
+          "P" + std::to_string(i), "i", 1);
 
       // Make this f(j) = i-1
       Xn::NatMap indices(1);
       indices.membs[0] = (int)i - 1;
-      indices.expression = indices.membs[0];
+      indices.expression = std::to_string(indices.membs[0]);
       topo.add_access(pc_symm, vbl_symm, indices, Xn::ReadAccess);
 
       // Now make this f(j) = i
       indices.membs[0] = (int)i;
-      indices.expression = indices.membs[0];
+      indices.expression = std::to_string(indices.membs[0]);
       topo.add_access(pc_symm, vbl_symm, indices, Xn::WriteAccess);
     }
   }
@@ -68,11 +69,11 @@ UnidirectionalRing(Xn::Net& topo, uint npcs, uint domsz,
 
     Xn::NatMap indices(1);
     indices.membs[0] = (int)npcs - 2;
-    indices.expression = indices.membs[0];
+    indices.expression = std::to_string(indices.membs[0]);
     topo.add_access(pc_symm, vbl_symm, indices, Xn::ReadAccess);
 
     indices.membs[0] = (int)npcs - 1;
-    indices.expression = indices.membs[0];
+    indices.expression = std::to_string(indices.membs[0]);
     topo.add_access(pc_symm, vbl_symm, indices, Xn::WriteAccess);
   }
 }
@@ -105,7 +106,7 @@ BidirectionalRing(Xn::Net& topo, uint npcs, uint domsz,
       // Make this f(j) = i+1
       Xn::NatMap indices(1);
       indices.membs[0] = (int)i + 1;
-      indices.expression = indices.membs[0];
+      indices.expression = std::to_string(indices.membs[0]);
       topo.add_access(pc_symm, &topo.vbl_symms[0], indices, Xn::ReadAccess);
     }
   }

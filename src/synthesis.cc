@@ -4,6 +4,7 @@
 #include <algorithm>
 
 #include <fildesh/ostream.hh>
+#include <fildesh/string.hh>
 
 #include "cx/tuple.hh"
 #include "prot-ofile.hh"
@@ -1279,12 +1280,13 @@ PartialSynthesis::revise_actions_alone(Set<uint>& adds, Set<uint>& dels,
         }
       }
       if (big_livelock) {
-        const std::string livelock_out_filename = (
-            this->ctx->opt.livelock_ofilepath + "." +
-            this->ctx->opt.sys_pcidx + "." +
-            this->ctx->opt.n_livelock_ofiles).c_str();
+        fildesh::ostringstream oss;
+        oss
+          << this->ctx->opt.livelock_ofilepath << '.'
+          << this->ctx->opt.sys_pcidx << '.'
+          << this->ctx->opt.n_livelock_ofiles;
+        fildesh::ofstream livelock_out(oss.c_str());
         this->ctx->opt.n_livelock_ofiles += 1;
-        fildesh::ofstream livelock_out(livelock_out_filename.c_str());
         oput_protocon_file(livelock_out, sys, this->actions, "", "livelock");
       }
     }

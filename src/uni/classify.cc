@@ -38,8 +38,8 @@ bdd_init_vbls(PFmlaCtx& pfmla_ctx, Table<PFmlaVbl>& vbls,
               uint max_period, uint domsz)
 {
   vbls.affysz(1+max_period);
-  for (uint i = 0; i < 1+max_period; ++i) {
-    uint vbl_id = pfmla_ctx.add_vbl((String("x") << i), domsz);
+  for (unsigned i = 0; i < 1+max_period; ++i) {
+    unsigned vbl_id = pfmla_ctx.add_vbl("x" + std::to_string(i), domsz);
     vbls[i] = pfmla_ctx.vbl(vbl_id);
   }
 }

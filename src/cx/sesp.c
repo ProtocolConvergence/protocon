@@ -1,6 +1,7 @@
 
 #include "sesp.h"
-#include "alphatab.h"
+
+#include <fildesh/fildesh_compat_string.h>
 
   SespCtx*
 make_SespCtx ()
@@ -177,7 +178,7 @@ make_SespCStr (SespCtx* ctx, const char* s)
 {
   SespKind* kind = ensure_kind_SespCtx (ctx, vt_SespCStr ());
   SespCStr sp = to_SespCStr (take_SespKind (kind));
-  sp->s = dup_cstr (s);
+  sp->s = fildesh_compat_string_duplicate(s);
   return sp;
 }
 

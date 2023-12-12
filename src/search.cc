@@ -39,13 +39,13 @@ verify_solutions(const PartialSynthesis& inst, StabilizationCkInfo* info, uint* 
       if (i == inst.sz()-1 && info &&
           info->livelock_exists &&
           !inst.ctx->opt.livelock_ofilepath.empty()) {
-        const std::string livelock_out_filename = (
-            inst.ctx->opt.livelock_ofilepath + "." +
-            inst.ctx->opt.sys_pcidx + "." +
-            inst.ctx->opt.n_livelock_ofiles).c_str();
+        fildesh::ostringstream oss;
+        oss
+          << inst.ctx->opt.livelock_ofilepath << '.'
+          << inst.ctx->opt.sys_pcidx << '.'
+          << inst.ctx->opt.n_livelock_ofiles;
+        fildesh::ofstream livelock_out(oss.c_str());
         inst.ctx->opt.n_livelock_ofiles += 1;
-
-        fildesh::ofstream livelock_out(livelock_out_filename.c_str());
         oput_protocon_file(livelock_out, *inst.ctx->systems[i], inst[i].actions,
                            "", "livelock");
       }

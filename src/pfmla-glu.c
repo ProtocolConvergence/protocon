@@ -3,7 +3,6 @@
 #include "mdd-glu/mdd.h"
 
 #include "pfmla-glu.h"
-#include "cx/alphatab.h"
 
 typedef struct GluPFmla GluPFmla;
 typedef struct GluPFmlaVbl GluPFmlaVbl;
@@ -19,8 +18,8 @@ struct GluPFmla
 struct GluPFmlaVbl
 {
   PFmlaVbl base;
-  AlphaTab img_name;
-  AlphaTab aux_name;
+  char* img_name;
+  char* aux_name;
   uint pre_id;
   uint img_id;
   uint aux_id;
@@ -429,8 +428,8 @@ static
 lose_GluPFmlaVbl (PFmlaVbl* base)
 {
   GluPFmlaVbl* x = CastUp( GluPFmlaVbl, base, base );
-  lose_AlphaTab (&x->img_name);
-  lose_AlphaTab (&x->aux_name);
+  free(x->img_name);
+  free(x->aux_name);
 }
 
 static
@@ -490,14 +489,19 @@ add_vbl_GluPFmlaCtx (PFmlaCtx* fmlactx, uint id)
   array_t* names = array_alloc(char*, 0);
   PFmlaVbl* vbl = vbl_of_PFmlaCtx (fmlactx, id);
   GluPFmlaVbl* x = CastUp( GluPFmlaVbl, base, vbl );
+  size_t n;
 
-  x->img_name = dflt_AlphaTab ();
-  cat_cstr_AlphaTab(&x->img_name, vbl->name);
-  cat_cstr_AlphaTab (&x->img_name, "'");
-
-  x->aux_name = dflt_AlphaTab ();
-  cat_cstr_AlphaTab(&x->aux_name, vbl->name);
-  cat_cstr_AlphaTab (&x->aux_name, "''");
+  n = strlen(vbl->name);
+  x->img_name = (char*)malloc(n+2);
+  x->aux_name = (char*)malloc(n+3);
+  memcpy(x->img_name, vbl->name, n);
+  memcpy(x->aux_name, vbl->name, n);
+  x->img_name[n] = '\'';
+  x->img_name[n+1] = '\0';
+  x->aux_name[n] = '\'';
+  x->aux_name[n+1] = '\'';
+  x->aux_name[n+2] = '\0';
+  n = 0;
 
   x->pre_id = vbl->id * 3 + 2;
   x->img_id = vbl->id * 3 + 1;
@@ -507,8 +511,8 @@ add_vbl_GluPFmlaCtx (PFmlaCtx* fmlactx, uint id)
   array_insert_last(uint, doms, vbl->domsz);
   array_insert_last(uint, doms, vbl->domsz);
   // Notice that the actual variables are added in the order: aux, img, pre.
-  array_insert_last(const char*, names, ccstr_of_AlphaTab (&x->aux_name));
-  array_insert_last(const char*, names, ccstr_of_AlphaTab (&x->img_name));
+  array_insert_last(const char*, names, x->aux_name);
+  array_insert_last(const char*, names, x->img_name);
   array_insert_last(const char*, names, vbl->name);
   array_insert_last(uint, ctx->aux_vbl_list, x->aux_id);
   array_insert_last(uint, ctx->img_vbl_list, x->img_id);

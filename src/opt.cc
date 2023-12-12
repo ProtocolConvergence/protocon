@@ -13,6 +13,8 @@
 #include <sys/resource.h>
 #endif
 
+static const char WhiteSpaceChars[] = " \t\v\r\n";
+
 #include "namespace.hh"
 
 enum ProblemInstance {

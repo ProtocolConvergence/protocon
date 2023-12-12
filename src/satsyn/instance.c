@@ -33,7 +33,7 @@ inst_coloring_XnSys(unsigned npcs, unsigned domsz)
     putc_FildeshO(name, 'c');
     print_int_FildeshO(name, (int)r);
     putc_FildeshO(name, '\0');
-    assign_cstr_AlphaTab(&vbl.name, name->at);
+    assign_name_of_XnVbl(&vbl, name->at);
 
     PushTable( sys->pcs, dflt_XnPc() );
     PushTable( sys->vbls, vbl );
@@ -85,7 +85,7 @@ inst_matching_XnSys(unsigned npcs)
     putc_FildeshO(name, 'm');
     print_int_FildeshO(name, (int)r);
     putc_FildeshO(name, '\0');
-    assign_cstr_AlphaTab(&vbl.name, name->at);
+    assign_name_of_XnVbl(&vbl, name->at);
 
     PushTable( sys->pcs, dflt_XnPc() );
     PushTable( sys->vbls, vbl );
@@ -153,7 +153,7 @@ inst_bit3_XnSys(unsigned npcs)
     putc_FildeshO(name, 'e');
     print_int_FildeshO(name, (int)r);
     putc_FildeshO(name, '\0');
-    assign_cstr_AlphaTab(&e_vbl.name, name->at);
+    assign_name_of_XnVbl(&e_vbl, name->at);
     PushTable( e_idcs, sys->vbls.sz );
     PushTable( sys->vbls, e_vbl );
 
@@ -162,7 +162,7 @@ inst_bit3_XnSys(unsigned npcs)
     putc_FildeshO(name, 't');
     print_int_FildeshO(name, (int)r);
     putc_FildeshO(name, '\0');
-    assign_cstr_AlphaTab(&t_vbl.name, name->at);
+    assign_name_of_XnVbl(&t_vbl, name->at);
     PushTable( t_idcs, sys->vbls.sz );
     PushTable( sys->vbls, t_vbl );
 
@@ -171,7 +171,7 @@ inst_bit3_XnSys(unsigned npcs)
     putstrlit_FildeshO(name, "ready");
     print_int_FildeshO(name, (int)r);
     putc_FildeshO(name, '\0');
-    assign_cstr_AlphaTab(&ready_vbl.name, name->at);
+    assign_name_of_XnVbl(&ready_vbl, name->at);
     PushTable( ready_idcs, sys->vbls.sz );
     PushTable( sys->vbls, ready_vbl );
   }
@@ -234,7 +234,7 @@ inst_dijkstra_XnSys(unsigned npcs)
     putc_FildeshO(name, 'x');
     print_int_FildeshO(name, (int)r);
     putc_FildeshO(name, '\0');
-    assign_cstr_AlphaTab(&x_vbl.name, name->at);
+    assign_name_of_XnVbl(&x_vbl, name->at);
     PushTable( x_idcs, sys->vbls.sz );
     PushTable( sys->vbls, x_vbl );
   }
@@ -306,7 +306,7 @@ inst_dijkstra4state_XnSys(unsigned npcs)
     putc_FildeshO(name, 'x');
     print_int_FildeshO(name, (int)r);
     putc_FildeshO(name, '\0');
-    assign_cstr_AlphaTab(&x_vbl.name, name->at);
+    assign_name_of_XnVbl(&x_vbl, name->at);
     PushTable( x_idcs, sys->vbls.sz );
     PushTable( sys->vbls, x_vbl );
 
@@ -315,7 +315,7 @@ inst_dijkstra4state_XnSys(unsigned npcs)
     putstrlit_FildeshO(name, "up");
     print_int_FildeshO(name, (int)r);
     putc_FildeshO(name, '\0');
-    assign_cstr_AlphaTab(&up_vbl.name, name->at);
+    assign_name_of_XnVbl(&up_vbl, name->at);
     PushTable( up_idcs, sys->vbls.sz );
     PushTable( sys->vbls, up_vbl );
   }

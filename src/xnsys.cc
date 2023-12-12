@@ -128,8 +128,8 @@ Net::add_variables(std::string_view name, uint nmembs, uint domsz,
   symm.spec = &spec->vbl_symms.grow1();
   symm.domsz = domsz;
   symm.spec->name = name;
-  symm.spec->domsz_expression = domsz;
-  symm.spec->nmembs_expression = nmembs;
+  symm.spec->domsz_expression = std::to_string(domsz);
+  symm.spec->nmembs_expression = std::to_string(nmembs);
   symm.spec->domsz = domsz;
   symm.spec->shadow_puppet_role = role;
   symm.pfmla_list_id = pfmla_ctx.add_vbl_list();
@@ -211,7 +211,7 @@ Net::add_processes(
   PcSymm& symm = pc_symms.grow1();
   symm.spec = &spec->pc_symms.grow1();
   symm.spec->name = name;
-  symm.spec->nmembs_expression = nmembs;
+  symm.spec->nmembs_expression = std::to_string(nmembs);
   symm.spec->idx_name = idx_name;
   for (uint i = 0; i < nmembs; ++i) {
     xfmlae_ctx.wvbl_list_ids.push(pfmla_ctx.add_vbl_list());

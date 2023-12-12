@@ -120,15 +120,14 @@ Interactive::next_options(Table<String>& ret_lines, bool fwd) const
     P::Fmla local_pf( next & (topo.pfmla_vbl(vbl_idx) != state[vbl_idx]) );
     while (local_pf.sat_ck()) {
       local_pf.state(&img_state[0], all_vbls);
-      const char* delim = "";
-      String line;
-      for (uint i = 0; i < img_state.sz(); ++i) {
+      fildesh::ostringstream oss;
+      for (unsigned i = 0; i < img_state.size(); ++i) {
         if (img_state[i] != state[i]) {
-          line << delim << name_of(topo.vbls[i]) << ":=" << img_state[i] << ";";
-          delim = " ";
+          if (!oss.view().empty()) {oss << ' ';}
+          oss << name_of(topo.vbls[i]) << ":=" << img_state[i] << ';';
         }
       }
-      ret_lines.push(line);
+      ret_lines.emplace_back() = oss.view();
       local_pf -= topo.pfmla_ctx.pfmla_of_state(&img_state[0], all_vbls);
     }
     next -= topo.pfmla_vbl(vbl_idx) != state[vbl_idx];

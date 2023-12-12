@@ -80,7 +80,7 @@ public:
     scalar = true;
     membs.resize(1);
     membs[0] = x;
-    expression = x;
+    expression = std::to_string(x);
     return *this;
   }
 

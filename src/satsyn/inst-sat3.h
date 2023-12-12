@@ -156,7 +156,7 @@ inst_sat3_XnSys (const CnfFmla* fmla)
         putc_FildeshO(name, 'x');
         print_int_FildeshO(name, (int)r);
         putc_FildeshO(name, '\0');
-        assign_cstr_AlphaTab(&x.name, name->at);
+        assign_name_of_XnVbl(&x, name->at);
         x_idcs[r] = sys->vbls.sz;
         PushTable( sys->vbls, x );
 
@@ -165,7 +165,7 @@ inst_sat3_XnSys (const CnfFmla* fmla)
         putc_FildeshO(name, 'y');
         print_int_FildeshO(name, (int)r);
         putc_FildeshO(name, '\0');
-        assign_cstr_AlphaTab(&y.name, name->at);
+        assign_name_of_XnVbl(&y, name->at);
         y_idcs[r] = sys->vbls.sz;
         PushTable( sys->vbls, y );
     }
@@ -178,7 +178,7 @@ inst_sat3_XnSys (const CnfFmla* fmla)
         truncate_FildeshO(name);
         putstrlit_FildeshO(name, "sat");
         putc_FildeshO(name, '\0');
-        assign_cstr_AlphaTab(&sat.name, name->at);
+        assign_name_of_XnVbl(&sat, name->at);
         sat_idx = sys->vbls.sz;
         PushTable( sys->vbls, sat );
     }
@@ -274,13 +274,13 @@ inst_sat3_ring_XnSys (const CnfFmla* fmla, const bool use_sat)
         putc_FildeshO(name, 'x');
         print_int_FildeshO(name, (int)r);
         putc_FildeshO(name, '\0');
-        assign_cstr_AlphaTab(&x->name, name->at);
+        assign_name_of_XnVbl(x, name->at);
 
         truncate_FildeshO(name);
         putc_FildeshO(name, 'y');
         print_int_FildeshO(name, (int)r);
         putc_FildeshO(name, '\0');
-        assign_cstr_AlphaTab(&y->name, name->at);
+        assign_name_of_XnVbl(y, name->at);
 
 
         /* Process r */
@@ -305,7 +305,7 @@ inst_sat3_ring_XnSys (const CnfFmla* fmla, const bool use_sat)
         putstrlit_FildeshO(name, "sat");
         print_int_FildeshO(name, (int)r);
         putc_FildeshO(name, '\0');
-        assign_cstr_AlphaTab(&sat->name, name->at);
+        assign_name_of_XnVbl(sat, name->at);
         /* Process r */
         assoc_XnSys (sys, r, sat_idcs[r], Yes);
         /* Process r+1 */
@@ -380,7 +380,7 @@ sat3_soln_XnSys (TableT(XnRule)* rules,
         //const XnVbl* y_vbl;
 
         for (uint i = 0; i < 3; ++i) {
-            char c = sys->vbls.s[pc->vbls.s[i]].name.s[0];
+            char c = sys->vbls.s[pc->vbls.s[i]].name[0];
             if (c == 'x')  x_idx = i;
             if (c == 'y')  y_idx = i;
             if (c == 's')  sat_idx = i;
@@ -426,7 +426,7 @@ sat3_ring_soln_XnSys (TableT(XnRule)* rules,
 
     for (uint i = 0; i < sys->vbls.sz; ++i) {
         const XnVbl* x = &sys->vbls.s[i];
-        char c = x->name.s[0];
+        char c = x->name[0];
         uint pcidx = 0;
         uint mid = x->pcs.s[2];
         uint min = mid;

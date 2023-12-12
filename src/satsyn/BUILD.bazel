@@ -74,6 +74,7 @@ cc_binary(
     deps = [
         ":instance_lib",
         ":encodesat_lib",
+        "//src/inline:inline_cc_lib",
     ],
     copts = ["-Isrc"],
 )

@@ -2,8 +2,6 @@
 cc_library(
     name = "cx_lib",
     srcs = [
-        "alphatab.c",
-        "alphatab.h",
         "alphatab.hh",
         "bittable.h",
         "bittable.hh",

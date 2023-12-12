@@ -16,6 +16,9 @@
 #include "synsearch.h"
 #include "xnsys.h"
 
+#include "src/inline/eq_cstr.h"
+static inline
+bool eql_cstr(const char* a, const char* b) {return eq_cstr(a, b);}
 
 /** Use Z3 instead of MiniSat.**/
 static bool SatSolve_Z3 = false;

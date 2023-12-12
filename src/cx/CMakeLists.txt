@@ -1,7 +1,5 @@
 
 add_library (cx_lib STATIC
-  "alphatab.c"
-  "alphatab.h"
   "bittable.h"
   "def.h"
   "lgtable.h"
