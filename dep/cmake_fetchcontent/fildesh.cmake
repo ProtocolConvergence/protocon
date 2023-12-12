@@ -1,6 +1,6 @@
 FetchContent_Declare(
   Fildesh
   GIT_REPOSITORY "https://github.com/fildesh/fildesh.git"
-  GIT_TAG "80f50ea9d3f7439a92c6d627113a9a71e83505e6"
+  GIT_TAG "497c733c4172f2ec3b6dbf8590cb33331c61ca29"
 )
 FetchContent_MakeAvailable(Fildesh)

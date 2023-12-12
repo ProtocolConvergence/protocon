@@ -110,6 +110,11 @@ lose_XnVbl (XnVbl* x)
     LoseTable( x->pcs );
 }
 
+  void
+print_name_of_XnVbl_FildeshO(FildeshO* out, const XnVbl* x)
+{
+  put_AlphaTab_FildeshO(out, &x->name);
+}
 
     XnPc
 dflt_XnPc ()
@@ -385,9 +390,8 @@ statevs_of_XnSys (TableT(XnDomSz)* t, const XnSys* sys, XnSz sidx)
   void
 oput_XnEVbl(FildeshO* out, const XnEVbl* ev, const char* delim)
 {
-  puts_FildeshO(out, ccstr_of_AlphaTab(&ev->vbl->name));
-  if (!delim)  delim = "=";
-  puts_FildeshO(out, delim);
+  print_name_of_XnVbl_FildeshO(out, ev->vbl);
+  putstr_FildeshO(out, delim ? delim : "=");
   print_int_FildeshO(out, (int)ev->val);
 }
 

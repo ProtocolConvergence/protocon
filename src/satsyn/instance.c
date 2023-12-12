@@ -168,7 +168,7 @@ inst_bit3_XnSys(unsigned npcs)
 
     ready_vbl.domsz = 2;
     truncate_FildeshO(name);
-    puts_FildeshO(name, "ready");
+    putstrlit_FildeshO(name, "ready");
     print_int_FildeshO(name, (int)r);
     putc_FildeshO(name, '\0');
     assign_cstr_AlphaTab(&ready_vbl.name, name->at);
@@ -312,7 +312,7 @@ inst_dijkstra4state_XnSys(unsigned npcs)
 
     up_vbl.domsz = 2;
     truncate_FildeshO(name);
-    puts_FildeshO(name, "up");
+    putstrlit_FildeshO(name, "up");
     print_int_FildeshO(name, (int)r);
     putc_FildeshO(name, '\0');
     assign_cstr_AlphaTab(&up_vbl.name, name->at);

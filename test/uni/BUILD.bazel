@@ -1,10 +1,10 @@
-load("@fildesh//tool/bazel:fildesh.bzl", "fildesh_test")
-load("@fildesh//tool/bazel:spawn.bzl", "spawn_test")
+load("@fildesh//tool/bazel:fildesh_test.bzl", "fildesh_test")
+load("@fildesh//tool/bazel:spawn_test.bzl", "spawn_test")
 
 fildesh_test(
     name = "aperiodic_expect_test",
     srcs = ["aperiodic_expect_test.fildesh"],
-    aliases = {
+    tool_by_alias = {
         "aperiodic": "//src/uni:aperiodic",
         "xlate": "//src/uni:xlate",
     },
@@ -13,7 +13,7 @@ fildesh_test(
 fildesh_test(
     name = "aperiodic_classify_test",
     srcs = ["aperiodic_classify_test.fildesh"],
-    aliases = {
+    tool_by_alias = {
         "aperiodic": "//src/uni:aperiodic",
         "classify": "//src/uni:classify",
         "xlate": "//src/uni:xlate",
@@ -23,7 +23,7 @@ fildesh_test(
 fildesh_test(
     name = "aperiodic_semick_test",
     srcs = ["aperiodic_semick_test.fildesh"],
-    aliases = {
+    tool_by_alias = {
         "aperiodic": "//src/uni:aperiodic",
         "generate": "//src/uni:generate",
         "xlate": "//src/uni:xlate",
@@ -33,7 +33,7 @@ fildesh_test(
 fildesh_test(
     name = "ppgfun_livelock_test",
     srcs = ["ppgfun_livelock_test.fildesh"],
-    aliases = {
+    tool_by_alias = {
         "classify": "//src/uni:classify",
         "protocon": "//src:protocon",
         "xlate": "//src/uni:xlate",
@@ -43,23 +43,18 @@ fildesh_test(
 fildesh_test(
     name = "g_d7_b3_c20_test",
     srcs = ["g_d7_b3_c20_test.fildesh"],
-    aliases = {"generate": "//src/uni:generate"},
+    tool_by_alias = {"generate": "//src/uni:generate"},
 )
 
 fildesh_test(
     name = "c_d7_b3_c20_test",
     srcs = ["c_d7_b3_c20_test.fildesh"],
-    aliases = {"classify": "//src/uni:classify"},
+    tool_by_alias = {"classify": "//src/uni:classify"},
 )
 
 fildesh_test(
     name = "synthesize_test",
     srcs = ["synthesize_test.fildesh"],
-    aliases = {"synthesize": "//src/uni:synthesize"},
-    args = [
-        "--input_file=$(location //examplespec:SumNotTwo.prot)",
-    ],
-    data = [
-        "//examplespec:SumNotTwo.prot",
-    ],
+    tool_by_alias = {"synthesize": "//src/uni:synthesize"},
+    input_by_option = {"input_file": "//examplespec:SumNotTwo.prot"},
 )

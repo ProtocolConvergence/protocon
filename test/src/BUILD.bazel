@@ -1,9 +1,9 @@
-load("@fildesh//:def.bzl", "fildesh_test")
+load("@fildesh//tool/bazel:fildesh_test.bzl", "fildesh_test")
 
 fildesh_test(
     name = "biring_test",
     srcs = ["biring_test.fildesh"],
-    aliases = {"biring": "//src:biring"},
+    tool_by_alias = {"biring": "//src:biring"},
 )
 
 cc_test(
@@ -21,7 +21,7 @@ cc_binary(
 fildesh_test(
     name = "kautz_test",
     srcs = ["kautz_test.fildesh"],
-    aliases = {"kautz_graphviz": ":kautz_graphviz"},
+    tool_by_alias = {"kautz_graphviz": ":kautz_graphviz"},
 )
 
 cc_test(

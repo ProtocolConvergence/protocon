@@ -186,11 +186,11 @@ oput_protocon_pc_acts_espresso_spawn(std::ostream& out, const Xn::PcSymm& pc_sym
                                      const char* const* argv)
 {
   int istat = 0;
-  fildesh_fd_t to_espresso_fd = -1;
-  fildesh_fd_t in_espresso_fd = -1;
-  fildesh_fd_t out_espresso_fd = -1;
-  fildesh_fd_t from_espresso_fd = -1;
-  fildesh_compat_pid_t pid = -1;
+  Fildesh_fd to_espresso_fd = -1;
+  Fildesh_fd in_espresso_fd = -1;
+  Fildesh_fd out_espresso_fd = -1;
+  Fildesh_fd from_espresso_fd = -1;
+  FildeshCompat_pid pid = -1;
 
   // Names for variables.
   std::vector<std::string> guard_vbls;

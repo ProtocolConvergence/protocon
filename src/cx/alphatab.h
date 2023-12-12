@@ -302,6 +302,16 @@ assign_cstr_AlphaTab(AlphaTab* dst, const char* s)
   cat_cstr_AlphaTab (dst, s);
 }
 
+static inline void put_AlphaTab_FildeshO(FildeshO* out, const AlphaTab* a) {
+  size_t n = a->sz;
+  if (n > 0 && a->s[n-1] == '\0') {
+    n -= 1;
+  }
+  if (n > 0) {
+    put_bytestring_FildeshO(out, (const unsigned char*)a->s, n);
+  }
+}
+
 char*
 itoa_dup_cstr (int x);
 char*

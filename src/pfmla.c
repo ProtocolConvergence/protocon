@@ -5,7 +5,7 @@
   void
 init1_PFmlaCtx (PFmlaCtx* ctx, const PFmlaVT* vt)
 {
-  const FildeshKV empty_map = DEFAULT_FildeshKV_SINGLE_LIST;
+  const FildeshKV empty_map = DEFAULT_FildeshKV;
   assert(vt->vbl_base_offset == 0);
   init_FildeshAT(ctx->vbls);
   ctx->vbl_map = empty_map;
@@ -827,7 +827,7 @@ add_vbl_PFmlaCtx (PFmlaCtx* ctx, const char* name, uint domsz)
 
   {
     char* key = strdup_FildeshAlloc(ctx->alloc, name);
-    const FildeshKV_id_t id = ensuref_FildeshKV(
+    const FildeshKV_id id = ensuref_FildeshKV(
         &ctx->vbl_map, key, strlen(key)+1);
     assign_memref_at_FildeshKV(&ctx->vbl_map, id, x);
     x->name = key;

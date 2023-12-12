@@ -6,7 +6,7 @@
 oput_dimacs_CnfFmla(FildeshO* out, const CnfFmla* fmla)
 {
   CnfDisj clause[] = {DEFAULT_CnfDisj};
-  puts_FildeshO(out, "p cnf ");
+  putstrlit_FildeshO(out, "p cnf ");
   print_int_FildeshO(out, (int)fmla->nvbls);
   putc_FildeshO(out, ' ');
   print_int_FildeshO(out, (int)fmla->idcs.sz);
@@ -19,7 +19,7 @@ oput_dimacs_CnfFmla(FildeshO* out, const CnfFmla* fmla)
       print_int_FildeshO(out, (int)(1+clause->lits.s[j].vbl));
       putc_FildeshO(out, ' ');
     }
-    puts_FildeshO(out, "0\n");
+    putstrlit_FildeshO(out, "0\n");
   }
   lose_CnfDisj(clause);
 }
@@ -67,10 +67,10 @@ extl_solve_CnfFmla (CnfFmla* fmla, bool* sat, BitTable evs)
   const char* const z3_argv[] = {"z3", "-dimacs", "sat.in", NULL};
   const char* const minisat_argv[] = {"minisat", "-verb=0", "sat.in", "sat.out", NULL};
   const char* const* argv = (SatSolve_Z3 ? z3_argv : minisat_argv);
-  fildesh_fd_t out_solver_fd = -1;
-  fildesh_fd_t from_solver_fd = -1;
+  Fildesh_fd out_solver_fd = -1;
+  Fildesh_fd from_solver_fd = -1;
   int istat = 0;
-  fildesh_compat_pid_t pid = -1;
+  FildeshCompat_pid pid = -1;
   if (istat != 0) {
     fildesh_log_error("Failed to create pipe for solver.");
   }

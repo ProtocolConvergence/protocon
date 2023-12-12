@@ -147,6 +147,8 @@ XnVbl
 dflt_XnVbl ();
 void
 lose_XnVbl (XnVbl* x);
+void
+print_name_of_XnVbl_FildeshO(FildeshO* out, const XnVbl* x);
 XnPc
 dflt_XnPc ();
 void

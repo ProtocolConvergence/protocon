@@ -548,7 +548,7 @@ synsearch_quicktrim_mayrules(FMem_synsearch* tape, XnSz nadded)
     else if (false)
     {
       FildeshO* out = open_FildeshOF("/dev/stderr");
-      puts_FildeshO(out, "Pruned: ");
+      putstrlit_FildeshO(out, "Pruned: ");
       oput_promela_XnRule(out, g0, sys);
       putc_FildeshO(out, '\n');
       close_FildeshO(out);
@@ -643,7 +643,7 @@ synsearch_trim(FMem_synsearch* tape)
       else if (false)
       {
         FildeshO* out = open_FildeshOF("/dev/stderr");
-        puts_FildeshO(out, "Pruned: ");
+        putstrlit_FildeshO(out, "Pruned: ");
         oput_promela_XnRule(out, g, sys);
         putc_FildeshO(out, '\n');
         close_FildeshO(out);
@@ -906,11 +906,11 @@ synsearch(FMem_synsearch* tape)
           || tape->may_rules.sz-1 < 40)
       {
         FildeshO* out = open_FildeshOF("/dev/stderr");
-        puts_FildeshO(out, " -- ");
+        putstrlit_FildeshO(out, " -- ");
         print_int_FildeshO(out, (int)tape->may_rules.sz - 1);
-        puts_FildeshO(out, " -- ");
+        putstrlit_FildeshO(out, " -- ");
         print_int_FildeshO(out, (int)may_rules->sz);
-        puts_FildeshO(out, " -- ");
+        putstrlit_FildeshO(out, " -- ");
         oput_promela_XnRule(out, g, sys);
         putc_FildeshO(out, '\n');
         close_FildeshO(out);

@@ -176,7 +176,7 @@ inst_sat3_XnSys (const CnfFmla* fmla)
         XnVbl sat = dflt_XnVbl ();
         sat.domsz = 2;
         truncate_FildeshO(name);
-        puts_FildeshO(name, "sat");
+        putstrlit_FildeshO(name, "sat");
         putc_FildeshO(name, '\0');
         assign_cstr_AlphaTab(&sat.name, name->at);
         sat_idx = sys->vbls.sz;
@@ -302,7 +302,7 @@ inst_sat3_ring_XnSys (const CnfFmla* fmla, const bool use_sat)
         sat->domsz = 2;
 
         truncate_FildeshO(name);
-        puts_FildeshO(name, "sat");
+        putstrlit_FildeshO(name, "sat");
         print_int_FildeshO(name, (int)r);
         putc_FildeshO(name, '\0');
         assign_cstr_AlphaTab(&sat->name, name->at);

@@ -5,7 +5,7 @@
   SespCtx*
 make_SespCtx ()
 {
-  const FildeshKV empty_map = DEFAULT_FildeshKV_SINGLE_LIST;
+  const FildeshKV empty_map = DEFAULT_FildeshKV;
   SespCtx* ctx = AllocT( SespCtx, 1 );
   ctx->kindmap = empty_map;
   ctx->nil.base.kind = 0;
@@ -17,7 +17,7 @@ make_SespCtx ()
   void
 free_SespCtx (SespCtx* ctx)
 {
-  FildeshKV_id_t id;
+  FildeshKV_id id;
   FildeshKV* map = &ctx->kindmap;
   for (id = any_id_FildeshKV(map);
        !fildesh_nullid(id);
@@ -42,7 +42,7 @@ ctx_of_Sesp (const Sesp a)
   SespKind*
 ensure_kind_SespCtx (SespCtx* ctx, const SespVT* vt)
 {
-  FildeshKV_id_t id = ensuref_FildeshKV(&ctx->kindmap, vt, sizeof(*vt));
+  FildeshKV_id id = ensuref_FildeshKV(&ctx->kindmap, vt, sizeof(*vt));
   SespKind* kind = (SespKind*) value_at_FildeshKV(&ctx->kindmap, id);
   if (!kind) {
     kind = make_SespKind(vt);

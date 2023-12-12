@@ -97,9 +97,9 @@ encode_sat(FMem_synsearch* tape)
   DeclTableT( State, struct { TableT(XnSz) tx; TableT(XnSz) to; } );
 
   FildeshAlloc* alloc = open_FildeshAlloc();
-  FildeshKV lstate_map[1] = {DEFAULT_FildeshKV_SINGLE_LIST};
-  FildeshKV xnmap[1] = {DEFAULT_FildeshKV_SINGLE_LIST};
-  FildeshKV pathmap[1] = {DEFAULT_FildeshKV_SINGLE_LIST};
+  FildeshKV lstate_map[1] = {DEFAULT_FildeshKV};
+  FildeshKV xnmap[1] = {DEFAULT_FildeshKV};
+  FildeshKV pathmap[1] = {DEFAULT_FildeshKV};
 
   DeclTable( State, states );
   CnfFmla fmla[] = {DEFAULT_CnfFmla};
@@ -109,7 +109,7 @@ encode_sat(FMem_synsearch* tape)
   const XnSys* restrict sys = tape->sys;
   XnRule* g;
   TableT(XnSz)* may_rules;
-  FildeshKV_id_t kvid;
+  FildeshKV_id kvid;
 
   lstate_map->alloc = alloc;
   xnmap->alloc = alloc;
