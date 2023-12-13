@@ -4,6 +4,7 @@
  **/
 #ifndef Table_HH_
 #define Table_HH_
+#include <cstddef>
 #include <utility>
 #include <vector>
 
