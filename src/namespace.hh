@@ -9,7 +9,6 @@ namespace Cx {
   class PFmlaVbl;
   class PFmlaCtx;
 
-  class AlphaTab;
   class BitTable;
   template <class T> class FlatSet;
   template <class T> class LgTable;
@@ -35,7 +34,6 @@ namespace X {
 namespace PROTOCON_NAMESPACE {
   typedef unsigned Action_id;
 
-  typedef Cx::AlphaTab String;
   using Cx::BitTable;
   using Cx::FlatSet;
   using Cx::LgTable;

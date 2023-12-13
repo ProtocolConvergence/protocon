@@ -145,7 +145,7 @@ static inline
   void
 biring_initials (Cx::Table<uint>& initials, uint config_enum_idx, const BitTable set, const uint domsz)
 {
-  initials.flush();
+  initials.clear();
   uint config[3];
   pc_config_of_enum_idx (config, config_enum_idx, domsz);
   for (uint i = 0; i < domsz; ++i) {
@@ -181,10 +181,9 @@ static inline
   void
 biring_continuations (Cx::Table<uint>& conts, uint config_enum_idx, const BitTable set, const uint domsz)
 {
-  conts.flush();
-  conts.grow(domsz);
+  conts.resize(domsz);
   uint n = direct_biring_continuations (&conts[0], config_enum_idx, set, domsz);
-  conts.cpop(domsz-n);
+  conts.resize(n);
 }
 
 static bool

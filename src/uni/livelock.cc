@@ -1,5 +1,7 @@
 #include "livelock.hh"
 
+#include <string>
+
 #include "adjlist.hh"
 #include "src/cx/bittable.hh"
 #include "src/cx/table.hh"
@@ -95,8 +97,8 @@ livelock_semick_rec(const Table<PcState>& old_bot,
                     Table<PcState>& ret_col)
 {
   const uint n = old_bot.sz();
-  Table<PcState> bot, col;
-  bot.affysz(n+1);  col.affysz(n+1);
+  Table<PcState> bot(n+1);
+  Table<PcState> col(n+1);
   for (uint i = 0; i < n; ++i) {
     bot[i] = old_bot[i];
   }
@@ -151,8 +153,7 @@ livelock_semick(const uint limit,
                 Table<PcState>* ret_row,
                 Table<PcState>* ret_col)
 {
-  Table<PcState> bot, col, tmp_row, tmp_col;
-  bot.affysz(1);  col.affysz(1);
+  Table<PcState> bot(1), col(1), tmp_row, tmp_col;
   bool may_exist = false;
   for (uint c = 0; c < domsz; ++c) {
     bot[0] = col[0] = c;
@@ -194,7 +195,7 @@ guided_livelock_semick_rec(const Table<uint>& top_row,
     if (c >= domsz)
       return Nil;
 
-    mid_row.affysz(top_row.sz());
+    mid_row.resize(top_row.sz());
     mid_row[0] = c;
   }
 
@@ -251,8 +252,7 @@ guided_livelock_ck(const Table< Tuple<uint,2> >& acts,
                    const uint limit)
 {
   livelockset.wipe(0);
-  Table<uint> top_row;
-  top_row.affysz(acts.sz());
+  Table<uint> top_row(acts.size());
   for (uint i = 0; i < acts.sz(); ++i) {
     const PcState a = acts[i][0];
     const PcState b = acts[i][1];
@@ -279,7 +279,7 @@ cycle_ck_from(uint initial_node, const AdjList<uint>& digraph, Table< Tuple<uint
   if (digraph.degree(initial_node) == 0) {
     return false;
   }
-  stack.flush();
+  stack.clear();
   visited.wipe(0);
 
   stack << mk_Tuple<uint>(initial_node, 0);
@@ -295,10 +295,10 @@ cycle_ck_from(uint initial_node, const AdjList<uint>& digraph, Table< Tuple<uint
       break;
     }
     if (backtrack) {
-      stack.cpop();
+      stack.pop_back();
     }
     else if (stack.top()[0] == initial_node) {
-      stack.cpop();
+      stack.pop_back();
       break;
     }
   }

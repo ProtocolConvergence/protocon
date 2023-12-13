@@ -1,6 +1,8 @@
 #include "src/kautz.hh"
 
+#include <cassert>
 #include <cstdlib>
+#include <iostream>
 
 int main(int argc, char** argv) {
   assert(argc == 3);

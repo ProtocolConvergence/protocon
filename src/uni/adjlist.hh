@@ -3,6 +3,8 @@
 
 #include "src/cx/table.hh"
 
+#include "src/cx/synhax.hh"
+
 #define DoTwice( stmt ) \
   for (uint DoTwice_Index = 0; \
        DoTwice_Index < 2; \
@@ -69,7 +71,7 @@ public:
 template <typename T>
 AdjList<T>::AdjList(zuint nnodes)
 {
-  nodes.affysz(nnodes);
+  nodes.resize(nnodes);
 
   if (nnodes == 0)
     return;
@@ -93,7 +95,7 @@ AdjList<T>::commit_degrees()
     nodes[i-1].degree = 0;
   }
 
-  arcs.affysz(nodes.top().endidx());
+  arcs.resize(nodes.back().endidx());
   nodes[nnodes()-1].degree = 0;
 }
 

@@ -84,7 +84,7 @@ Net::commit_initialization()
   if (this->lightweight)
     return;
   Claim2( act_xfmlaes.sz() ,==, 0 );
-  act_xfmlaes.affysz(ntotal, X::Fmlae(&this->xfmlae_ctx));
+  act_xfmlaes.assign(ntotal, X::Fmlae(&this->xfmlae_ctx));
   for (uint i = 0; i < ntotal; ++i) {
     this->cache_action_xfmla(i);
   }

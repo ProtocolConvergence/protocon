@@ -21,6 +21,7 @@
  * but see the comment above ReduceToActionTiles() for the new reduction.
  * It will eventually appear in a journal version.
  **/
+#include <cstring>
 #include <iostream>
 
 #include <fildesh/fildesh.h>

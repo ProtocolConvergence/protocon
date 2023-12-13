@@ -72,7 +72,7 @@ struct SearchOpt
       max_propagations = domsz*domsz;
 
     if (use_bdds) {
-      pfmla_vbls.affysz(1+max_period);
+      pfmla_vbls.resize(1+max_period);
       for (unsigned i = 0; i < 1+max_period; ++i) {
         unsigned vbl_id = pfmla_ctx.add_vbl("x" + std::to_string(i), domsz);
         pfmla_vbls[i] = pfmla_ctx.vbl(vbl_id);
@@ -109,7 +109,7 @@ static
   void
 init_ppgfun(Table<PcState>& ppgfun, const BitTable& delegates, const uint domsz)
 {
-  ppgfun.affysz(domsz*domsz, domsz);
+  ppgfun.assign(domsz*domsz, domsz);
   for each_in_BitTable(actid , delegates) {
     UniAct act = UniAct::of_id(actid, domsz);
     ppgfun[id_of2(act[0], act[1], domsz)] = act[2];
@@ -625,12 +625,12 @@ searchit(const SearchOpt& opt)
 
   BitTable mask( domsz*domsz*domsz, 0 );
   Table<BitTable> delegates_stack;
-  delegates_stack.affysz( domsz*domsz+1, mask );
+  delegates_stack.assign(domsz*domsz+1, mask);
   BitTable& delegates = delegates_stack[0];
 
   mask.wipe(1);
   Table<BitTable> candidates_stack;
-  candidates_stack.affysz( domsz*domsz+1, mask );
+  candidates_stack.assign(domsz*domsz+1, mask);
   BitTable& candidates = candidates_stack[0];
 
   // Remove self-loops.

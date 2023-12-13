@@ -234,7 +234,7 @@ ConflictFamily::flush_new_conflicts(Table< FlatSet<uint> >& ret)
     this->record_new_conflict_sets = true;
   }
   else {
-    ret.flush();
+    ret.clear();
     for (uint i = 0; i < this->new_conflict_sets.sz(); ++i) {
       const FlatSet<uint>& conflict = this->new_conflict_sets[this->new_conflict_sets.sz()-i-1];
       ret.push(conflict);

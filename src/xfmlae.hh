@@ -41,7 +41,7 @@ public:
   Fmlae(const X::FmlaeCtx* _ctx)
     : ctx(_ctx)
   {
-    fmlas.affysz(ctx->sz(), X::Fmla(false));
+    fmlas.assign(ctx->sz(), X::Fmla(false));
   }
 
   uint sz() const { return fmlas.sz(); }

@@ -58,8 +58,7 @@ uniring_ppgfun_of(const Table<UniAct>& acts, uint domsz)
   if (domsz == 0)
     domsz = uniring_domsz_of(acts);
 
-  Table<PcState> ppgfun;
-  ppgfun.affysz(domsz*domsz, domsz);
+  Table<PcState> ppgfun(domsz*domsz, domsz);
   for (uint i = 0; i < acts.sz(); ++i) {
     const UniAct& act = acts[i];
     ppgfun[id_of2(act[0], act[1], domsz)] = act[2];
@@ -73,8 +72,7 @@ uniring_ppgfun_of(const BitTable& actset, uint domsz)
   if (domsz == 0)
     domsz = uniring_domsz_of(actset);
 
-  Table<PcState> ppgfun;
-  ppgfun.affysz(domsz*domsz, domsz);
+  Table<PcState> ppgfun(domsz*domsz, domsz);
   for (zuint i = actset.begidx(); i < actset.sz(); actset.nextidx(&i)) {
     const UniAct& act = UniAct::of_id(i, domsz);
     ppgfun[id_of2(act[0], act[1], domsz)] = act[2];
@@ -271,8 +269,7 @@ map_livelock_ppgs(void (*f) (void**, const UniAct&, uint, uint),
   Claim( bot[0] == bot[n] );
   Claim( bot[0] == col[m] );
   Claim( bot[0] == col[0] );
-  Table<PcState> row;
-  row.affysz(n+1);
+  Table<PcState> row(n+1);
   for (uint j = 1; j < n+1; ++j) {
     row[j] = bot[j];
   }

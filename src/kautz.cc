@@ -1,6 +1,8 @@
 
 #include "kautz.hh"
 
+#include "src/cx/synhax.hh"
+
 static int
 egcd(int* ret_a, int* ret_b);
 static void

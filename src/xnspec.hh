@@ -1,6 +1,7 @@
 
 #ifndef XnSpec_HH_
 #define XnSpec_HH_
+#include <string>
 
 #include "cx/set.hh"
 #include "cx/synhax.hh"

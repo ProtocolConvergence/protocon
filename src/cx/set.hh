@@ -34,7 +34,7 @@ class Set : public std::set<T>
 public:
   Set() {}
   explicit Set(const T& e) { *this << e; }
-  explicit Set(const vector<T>& a) :
+  explicit Set(const std::vector<T>& a) :
     std::set<T>(a.begin(), a.end())
   {}
   explicit Set(const Table<T>& a) :
@@ -117,7 +117,7 @@ public:
   Set<T>& operator|=(const FlatSet<T>& b);
   Set<T>& operator-=(const FlatSet<T>& b);
 
-  void fill(vector<T>& a) const
+  void fill(std::vector<T>& a) const
   {
     a.assign(this->begin(), this->end());
   }
@@ -165,41 +165,22 @@ public:
   FlatSet(const FlatSet<T>& a)
     : Table<T>()
   {
-    this->affy(a.sz());
-    for (zuint i = 0; i < a.sz(); ++i)
-      this->push(a[i]);
+    this->assign(a.begin(), a.end());
   }
   ~FlatSet() {}
   void operator=(const FlatSet<T>& a) {
-    this->affysz(a.sz());
-    for (zuint i = 0; i < a.sz(); ++i)
-      (*this)[i] = a[i];
+    this->assign(a.begin(), a.end());
   }
 
-  explicit FlatSet(const Table<T>& a) {
-    this->affy(a.sz());
-    for (zuint i = 0; i < a.sz(); ++i)
-      this->push(a[i]);
-    std::sort (this->begin(), this->end());
-  }
-  explicit FlatSet(const vector<T>& a) {
-    this->affy(a.size());
-    for (zuint i = 0; i < a.size(); ++i)
-      this->push(a[i]);
+  explicit FlatSet(const std::vector<T>& a) {
+    this->assign(a.begin(), a.end());
     std::sort (this->begin(), this->end());
   }
   explicit FlatSet(const Set<T>& a) {
-    this->affy(a.sz());
-    typename Set<T>::const_iterator it = a.begin();
-    while (this->sz() < a.sz()) {
-      this->push(*it);
-      ++it;
-    }
+    this->assign(a.begin(), a.end());
   }
   explicit FlatSet(const T* a, zuint n) {
-    this->affy(n);
-    for (zuint i = 0; i < n; ++i)
-      this->push(a[i]);
+    this->assign(a, &a[n]);
     std::sort (this->begin(), this->end());
   }
 
@@ -231,7 +212,7 @@ public:
   bool subseteq_fuzz_ck(Cx::Table<T>* diff, const FlatSet<T>& b, zuint nmisses) const {
     const FlatSet<T>& a = *this;
     if (diff)
-      diff->flush();
+      diff->clear();
     if (a.sz() > b.sz() + nmisses)
       return false;
     zuint i = 0;
@@ -317,7 +298,7 @@ using Cx::FlatSet;
 
 template <class T>
   void
-Remove(vector<T>& a, const Cx::Set<T>& set)
+Remove(std::vector<T>& a, const Cx::Set<T>& set)
 {
   uint n = 0;
   for (uint i = 0; i < a.size(); ++i) {

@@ -720,7 +720,7 @@ ProtoconFile::conflict_action(Sesp act_sp)
   const Xn::Pc& pc = *pc_symm->membs[rep_pcidx];
   Xn::ActSymm act;
   act.pc_symm = +pc_symm;
-  act.vals.affysz(pc.rvbls.sz() + pc.wvbls.sz());
+  act.vals.resize(pc.rvbls.sz() + pc.wvbls.sz());
 
   for (uint i = 0; good && i < pc.rvbls.sz(); ++i) {
     if (pc_symm->rvbl_symms[i]->pure_shadow_ck()) {
