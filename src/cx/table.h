@@ -50,8 +50,6 @@ struct ConstTable
     bitint alloc_lgsz; \
   }
 
-#define DeclTableT_MemLoc
-DeclTableT( MemLoc, void* );
 #define DeclTableT_byte
 DeclTableT( byte, byte );
 #define DeclTableT_char
@@ -449,16 +447,6 @@ clear_Table (Table* a)
 { mpop_Table (a, a->sz); }
 #define ClearTable( a )  MPopTable( a, (a).sz )
 
-qual_inline
-  void
-flush_Table (Table* a)
-{
-  a->sz = 0;
-}
-#define FlushTable( a )  do \
-{ \
-  (a).sz = 0; \
-} while (0)
 #endif  /* #ifndef __OPENCL_VERSION__ */
 
 qual_inline
