@@ -15,21 +15,17 @@ template <class T>
 class Table : public std::vector<T>
 {
 public:
-  Table() : std::vector<T>() {}
-  Table(Table<T>&& a) : std::vector<T>(a) {}
-  Table(const Table<T>& a) : std::vector<T>(a) {}
-  Table(std::vector<T>&& a) : std::vector<T>(a) {}
+  Table() = default;
+  Table(Table<T>&& a) = default;
+  Table(const Table<T>& a) = default;
+  Table<T>& operator=(Table<T>&& a) = default;
+  Table<T>& operator=(const Table<T>& a)  = default;
+  virtual ~Table() = default;
+
+  Table(std::vector<T>&& a) : std::vector<T>(std::move(a)) {}
   Table(const std::vector<T>& a) : std::vector<T>(a) {}
   explicit Table(size_t n) : std::vector<T>(n) {}
   explicit Table(size_t n, const T& e) : std::vector<T>(n, e) {}
-  Table<T>& operator=(Table<T>&& a) {
-    *dynamic_cast<std::vector<T>*>(this) = std::move(a);
-    return *this;
-  }
-  Table<T>& operator=(const Table<T>& a) {
-    *dynamic_cast<std::vector<T>*>(this) = a;
-    return *this;
-  }
   Table<T>& operator=(std::vector<T>&& a) {
     *dynamic_cast<std::vector<T>*>(this) = std::move(a);
     return *this;
@@ -38,7 +34,6 @@ public:
     *dynamic_cast<std::vector<T>*>(this) = a;
     return *this;
   }
-  virtual ~Table() {}
 
   size_t sz() const {return this->size();}
   bool empty_ck() const {return this->empty();}

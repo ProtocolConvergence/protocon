@@ -1,11 +1,11 @@
 
 #ifndef Set_HH_
 #define Set_HH_
+#include <algorithm>
+#include <set>
 
 #include "synhax.hh"
 #include "table.hh"
-#include <set>
-#include <algorithm>
 
 namespace Cx {
 template <class T> class LoneSet;
@@ -32,15 +32,17 @@ template <class T>
 class Set : public std::set<T>
 {
 public:
-  Set() {}
+  Set() = default;
+  Set(Set<T>&& a) = default;
+  Set(const Set<T>& a) = default;
+  Set& operator=(Set<T>&& a) = default;
+  Set& operator=(const Set<T>& a) = default;
+  virtual ~Set() = default;
+
   explicit Set(const T& e) { *this << e; }
   explicit Set(const std::vector<T>& a) :
     std::set<T>(a.begin(), a.end())
   {}
-  explicit Set(const Table<T>& a) :
-    std::set<T>(a.begin(), a.end())
-  {}
-  explicit Set(const FlatSet<T>& a);
 
   bool elem_ck(const T& e) const
   {
@@ -121,10 +123,6 @@ public:
   {
     a.assign(this->begin(), this->end());
   }
-  void fill(Cx::Table<T>& a) const
-  {
-    a.assign(this->begin(), this->end());
-  }
 
   bool subseteq_ck(const Set<T>& b) const
   {
@@ -158,19 +156,15 @@ public:
 };
 
 template <class T>
-class FlatSet : public Table<T>
+class FlatSet : public std::vector<T>
 {
 public:
-  FlatSet() {}
-  FlatSet(const FlatSet<T>& a)
-    : Table<T>()
-  {
-    this->assign(a.begin(), a.end());
-  }
-  ~FlatSet() {}
-  void operator=(const FlatSet<T>& a) {
-    this->assign(a.begin(), a.end());
-  }
+  FlatSet() = default;
+  FlatSet(FlatSet<T>&& a) = default;
+  FlatSet(const FlatSet<T>& a) = default;
+  FlatSet& operator=(FlatSet<T>&& a) = default;
+  FlatSet& operator=(const FlatSet<T>& a) = default;
+  virtual ~FlatSet() = default;
 
   explicit FlatSet(const std::vector<T>& a) {
     this->assign(a.begin(), a.end());
@@ -183,6 +177,8 @@ public:
     this->assign(a, &a[n]);
     std::sort (this->begin(), this->end());
   }
+
+  size_t sz() const {return this->size();}
 
   bool elem_ck(const T& e) const {
     return std::binary_search (this->begin(), this->end(), e);
@@ -270,10 +266,6 @@ public:
     return false;
   }
 };
-template <class T>
-Set<T>::Set(const FlatSet<T>& a) :
-  std::set<T>(a.begin(), a.end())
-{}
 template <class T>
   Set<T>&
 Set<T>::operator|=(const FlatSet<T>& b)
