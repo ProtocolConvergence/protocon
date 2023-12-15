@@ -1,8 +1,9 @@
 #ifndef UNIFILE_HH_
 #define UNIFILE_HH_
+#include <ostream>
 
 #include "uniact.hh"
-#include <ostream>
+#include "src/cx/table.hh"
 
 #include "../namespace.hh"
 

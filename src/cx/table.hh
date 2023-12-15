@@ -16,12 +16,26 @@ class Table : public std::vector<T>
 {
 public:
   Table() : std::vector<T>() {}
+  Table(Table<T>&& a) : std::vector<T>(a) {}
   Table(const Table<T>& a) : std::vector<T>(a) {}
-  explicit Table(const std::vector<T>& a) : std::vector<T>(a) {}
+  Table(std::vector<T>&& a) : std::vector<T>(a) {}
+  Table(const std::vector<T>& a) : std::vector<T>(a) {}
   explicit Table(size_t n) : std::vector<T>(n) {}
   explicit Table(size_t n, const T& e) : std::vector<T>(n, e) {}
+  Table<T>& operator=(Table<T>&& a) {
+    *dynamic_cast<std::vector<T>*>(this) = std::move(a);
+    return *this;
+  }
+  Table<T>& operator=(const Table<T>& a) {
+    *dynamic_cast<std::vector<T>*>(this) = a;
+    return *this;
+  }
+  Table<T>& operator=(std::vector<T>&& a) {
+    *dynamic_cast<std::vector<T>*>(this) = std::move(a);
+    return *this;
+  }
   Table<T>& operator=(const std::vector<T>& a) {
-    this->assign(a.begin(), a.end());
+    *dynamic_cast<std::vector<T>*>(this) = a;
     return *this;
   }
   virtual ~Table() {}
@@ -77,39 +91,6 @@ public:
   T& top() {return this->back();}
   const T& top() const {return this->back();}
 
-  int cmp(const Table<T>& b) const
-  {
-    const Table<T>& a = *this;
-    const size_t n = (a.size() <= b.size()) ? a.size() : b.size();
-    for (size_t i = 0; i < n; ++i) {
-      if (a[i] < b[i])  return -1;
-      if (b[i] < a[i])  return  1;
-    }
-    if (a.size() < b.size())  return -1;
-    if (b.size() < a.size())  return  1;
-    return 0;
-  }
-
-  bool operator==(const Table<T>& b) const {
-    return (0 == this->cmp(b));
-  }
-  bool operator!=(const Table<T>& b) const {
-    return !(*this == b);
-  }
-
-  bool operator<=(const Table<T>& b) const {
-    return (this->cmp(b) <= 0);
-  }
-  bool operator<(const Table<T>& b) const {
-    return (this->cmp(b) < 0);
-  }
-  bool operator>(const Table<T>& b) const {
-    return (this->cmp(b) > 0);
-  }
-  bool operator>=(const Table<T>& b) const {
-    return (this->cmp(b) >= 0);
-  }
-
   void reverse() {
     size_t n = this->size() / 2;
     for (size_t i = 0; i < n; ++i) {
@@ -156,7 +137,7 @@ public:
 
 inline
   void
-state_of_index(unsigned* state, size_t idx, const Table<unsigned>& doms)
+state_of_index(unsigned* state, size_t idx, const std::vector<unsigned>& doms)
 {
   for (unsigned i = doms.size(); i > 0; --i) {
     state[i-1] = idx % doms[i-1];
@@ -166,7 +147,7 @@ state_of_index(unsigned* state, size_t idx, const Table<unsigned>& doms)
 
 inline
   size_t
-index_of_state(const unsigned* state, const Table<unsigned>& doms)
+index_of_state(const unsigned* state, const std::vector<unsigned>& doms)
 {
   size_t idx = 0;
   for (unsigned i = 0; i < doms.size(); ++i) {

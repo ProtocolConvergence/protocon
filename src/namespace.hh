@@ -15,7 +15,6 @@ namespace Cx {
   template <class K, class V> class Map;
   template <class T> class Mem;
   template <class T> class Set;
-  template <class T> class Table;
   template <class T, unsigned N> class Tuple;
   template <class T> class Triple;
   class URandom;
@@ -40,7 +39,6 @@ namespace PROTOCON_NAMESPACE {
   using Cx::Map;
   using Cx::Mem;
   using Cx::Set;
-  using Cx::Table;
   using Cx::Tuple;
   using Cx::Triple;
 

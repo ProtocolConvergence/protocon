@@ -5,6 +5,7 @@
   (zuint i = bt.begidx(); i < bt.sz(); bt.nextidx(&i))
 
 #include "uniact.hh"
+#include "src/cx/table.hh"
 
 #include "../namespace.hh"
 template <typename T> class AdjList;
