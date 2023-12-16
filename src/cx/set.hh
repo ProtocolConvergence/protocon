@@ -32,15 +32,17 @@ template <class T>
 class Set : public std::set<T>
 {
 public:
-  Set() {}
+  Set() = default;
+  Set(Set<T>&& a) = default;
+  Set(const Set<T>& a) = default;
+  Set& operator=(Set<T>&& a) = default;
+  Set& operator=(const Set<T>& a) = default;
+  virtual ~Set() = default;
+
   explicit Set(const T& e) { *this << e; }
-  explicit Set(const vector<T>& a) :
+  explicit Set(const std::vector<T>& a) :
     std::set<T>(a.begin(), a.end())
   {}
-  explicit Set(const Table<T>& a) :
-    std::set<T>(a.begin(), a.end())
-  {}
-  explicit Set(const FlatSet<T>& a);
 
   bool elem_ck(const T& e) const
   {
@@ -117,12 +119,7 @@ public:
   Set<T>& operator|=(const FlatSet<T>& b);
   Set<T>& operator-=(const FlatSet<T>& b);
 
-  void fill(vector<T>& a) const
-  {
-    a.assign(this->begin(), this->end());
-  }
-  void fill(Cx::Table<T>& a) const
-  {
+  void fill(std::vector<T>& a) const {
     a.assign(this->begin(), this->end());
   }
 
@@ -161,45 +158,22 @@ template <class T>
 class FlatSet : public Table<T>
 {
 public:
-  FlatSet() {}
-  FlatSet(const FlatSet<T>& a)
-    : Table<T>()
-  {
-    this->affy(a.sz());
-    for (zuint i = 0; i < a.sz(); ++i)
-      this->push(a[i]);
-  }
-  ~FlatSet() {}
-  void operator=(const FlatSet<T>& a) {
-    this->affysz(a.sz());
-    for (zuint i = 0; i < a.sz(); ++i)
-      (*this)[i] = a[i];
-  }
+  FlatSet() = default;
+  FlatSet(FlatSet<T>&& a) = default;
+  FlatSet(const FlatSet<T>& a) = default;
+  FlatSet& operator=(FlatSet<T>&& a) = default;
+  FlatSet& operator=(const FlatSet<T>& a) = default;
+  virtual ~FlatSet() = default;
 
-  explicit FlatSet(const Table<T>& a) {
-    this->affy(a.sz());
-    for (zuint i = 0; i < a.sz(); ++i)
-      this->push(a[i]);
-    std::sort (this->begin(), this->end());
-  }
-  explicit FlatSet(const vector<T>& a) {
-    this->affy(a.size());
-    for (zuint i = 0; i < a.size(); ++i)
-      this->push(a[i]);
+  explicit FlatSet(const std::vector<T>& a) {
+    this->assign(a.begin(), a.end());
     std::sort (this->begin(), this->end());
   }
   explicit FlatSet(const Set<T>& a) {
-    this->affy(a.sz());
-    typename Set<T>::const_iterator it = a.begin();
-    while (this->sz() < a.sz()) {
-      this->push(*it);
-      ++it;
-    }
+    this->assign(a.begin(), a.end());
   }
   explicit FlatSet(const T* a, zuint n) {
-    this->affy(n);
-    for (zuint i = 0; i < n; ++i)
-      this->push(a[i]);
+    this->assign(a, a+n);
     std::sort (this->begin(), this->end());
   }
 
@@ -290,10 +264,6 @@ public:
   }
 };
 template <class T>
-Set<T>::Set(const FlatSet<T>& a) :
-  std::set<T>(a.begin(), a.end())
-{}
-template <class T>
   Set<T>&
 Set<T>::operator|=(const FlatSet<T>& b)
 {
@@ -314,22 +284,6 @@ Set<T>::operator-=(const FlatSet<T>& b)
 using Cx::LoneSet;
 using Cx::Set;
 using Cx::FlatSet;
-
-template <class T>
-  void
-Remove(vector<T>& a, const Cx::Set<T>& set)
-{
-  uint n = 0;
-  for (uint i = 0; i < a.size(); ++i) {
-    if (set.elem_ck(a[i])) {
-      ++ n;
-    }
-    else if (n > 0) {
-      a[i-n] = a[i];
-    }
-  }
-  a.resize(a.size() - n);
-}
 
 #endif
 
