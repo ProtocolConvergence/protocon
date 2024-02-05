@@ -13,7 +13,7 @@ jobs:
 
     steps:
     - name: Cache Setup
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       id: cache-bazel
       with:
         path: ~/.cache/bazel
@@ -35,7 +35,7 @@ jobs:
       run: bazel test --enable_runfiles --test_timeout 300 //...
 
     - name: Upload Test Results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: failure()
       with:
         name: bazel-testlogs-(${{ matrix.platform }})
