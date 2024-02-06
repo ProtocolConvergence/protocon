@@ -6,14 +6,14 @@ module(
 
 bazel_dep(name = "bazel_skylib", version = "1.5.0")
 bazel_dep(name = "fildesh", version = "0.1.9")
-bazel_dep(name = "rules_license", version = "0.0.7")
 bazel_dep(name = "mdd-glu", version = "2.4.0")
+bazel_dep(name = "rules_license", version = "0.0.8")
 bazel_dep(name = "rules_peg", version = "0.1.18")
 
 git_override(
     module_name = "fildesh",
     remote = "https://github.com/fildesh/fildesh.git",
-    commit="497c733c4172f2ec3b6dbf8590cb33331c61ca29",
+    commit="fc27c09ec95a94f434348ea014bf6ccda92ad01f",
 )
 git_override(
     module_name = "mdd-glu",
