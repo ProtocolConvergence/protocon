@@ -13,7 +13,7 @@ bazel_dep(name = "rules_peg", version = "0.1.18")
 git_override(
     module_name = "fildesh",
     remote = "https://github.com/fildesh/fildesh.git",
-    commit="fc27c09ec95a94f434348ea014bf6ccda92ad01f",
+    commit="c195c008ee6a715aa5bcd2a32cf1f3d86a9c378c",
 )
 git_override(
     module_name = "mdd-glu",
