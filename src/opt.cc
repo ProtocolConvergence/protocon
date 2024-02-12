@@ -54,7 +54,7 @@ pathname2(std::string_view opt_dir, std::string_view filename)
       oss << '/';
     }
   }
-  bytestring_sibling_pathname_FildeshO(
+  sibling_pathname_bytestring_FildeshO(
       oss.c_struct(), (const unsigned char*)filename.data(), filename.size());
   return oss.str();
 }
