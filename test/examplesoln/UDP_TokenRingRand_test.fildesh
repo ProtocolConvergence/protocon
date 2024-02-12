@@ -5,5 +5,5 @@
 
 |< protocon -nop -x $(XOF TokenRingRand_file) -param N 10 -o-udp-include -
 |- cmp $(XOF expect_file)
-|> stderr
+|> stdout
 

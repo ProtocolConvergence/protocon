@@ -47,26 +47,16 @@ static
   std::string
 pathname2(std::string_view opt_dir, std::string_view filename)
 {
-  const auto slash_index = filename.rfind('/');
-  const unsigned pflen = (slash_index < filename.size() ? slash_index+1 : 0);
-  const unsigned flen = filename.size() - pflen;
-  unsigned plen = opt_dir.size();
-
-  if (pflen > 0 && filename[0] == '/') {
-    plen = 0;
+  fildesh::ostringstream oss;
+  oss << opt_dir;
+  if (!oss.view().empty()) {
+    if (oss.view().back() != '/') {
+      oss << '/';
+    }
   }
-
-  if (plen > 0 && opt_dir[plen-1] != '/') {
-    plen += 1;
-  }
-
-  std::string pathname;
-  if (plen > 0) {
-    pathname += opt_dir.substr(0, plen-1);
-    pathname += '/';
-  }
-  pathname += filename.substr(0, pflen+flen);
-  return pathname;
+  sibling_pathname_bytestring_FildeshO(
+      oss.c_struct(), (const unsigned char*)filename.data(), filename.size());
+  return oss.str();
 }
 
 static

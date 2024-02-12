@@ -27,14 +27,17 @@ oput_dimacs_CnfFmla(FildeshO* out, const CnfFmla* fmla)
   void
 xget_dimacs_result (FildeshX* in, bool* sat, BitTable evs)
 {
-  const char* line = getline_FildeshX(in);
+  FildeshX slice = sliceline_FildeshX(in);
   wipe_BitTable (evs, 0);
-  if (!line) {
+  if (!slice.at) {
     *sat = false;
     DBog0( "No output!" );
     return;
   }
-  if (0 == strcmp(line, "UNSAT") || 0 == strcmp(line, "unsat")) {
+  if (0 == fildesh_compare_bytestring(
+          bytestring_of_FildeshX(&slice), fildesh_bytestrlit("UNSAT")) ||
+      0 == fildesh_compare_bytestring(
+          bytestring_of_FildeshX(&slice), fildesh_bytestrlit("unsat"))) {
     *sat = false;
   }
   else {
