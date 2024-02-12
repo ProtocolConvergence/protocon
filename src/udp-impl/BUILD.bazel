@@ -1,13 +1,16 @@
+load("@fildesh//tool/bazel:fildesh_run.bzl", "fildesh_run")
 
-genrule(
+fildesh_run(
     name = "act_embed_h",
-    srcs = [
-        "protocol.c",
-        "protocol.h",
-    ],
-    tools = ["@fildesh//tool:cembed"],
-    cmd = "$(location @fildesh//tool:cembed) -o \"$@\" $(location protocol.h) $(location protocol.c)",
-    outs = ["act.embed.h"],
+    input_by_xof = {
+      "x_c": "protocol.c",
+      "x_h": "protocol.h",
+    },
+    output_by_xof = {"o_h": "act.embed.h"},
+    src_content = """
+cembed -o $(XOF o_h) $(XOF x_h) $(XOF x_c)
+    """,
+    tool_by_alias = {"cembed": "@fildesh//tool:cembed"},
     visibility = [
         "//src:__pkg__",
     ],
