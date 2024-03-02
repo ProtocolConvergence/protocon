@@ -58,7 +58,7 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: CMake Version Set
-      uses: jwlawson/actions-setup-cmake@v1
+      uses: jwlawson/actions-setup-cmake@v2
       with:
         cmake-version: '3.14'
 

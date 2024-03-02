@@ -11,14 +11,14 @@ env:
 
 jobs:
   build_and_push:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     permissions:
       contents: read
       packages: write
 
     steps:
     - name: Bazel Setup
-      uses: jwlawson/actions-setup-bazel@v1
+      uses: jwlawson/actions-setup-bazel@v2
       with:
         bazel-version: '6'
 
