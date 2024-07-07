@@ -229,7 +229,8 @@ oput_protocon_pc_acts_espresso_spawn(std::ostream& out, const Xn::PcSymm& pc_sym
   if (istat == 0) {
     from_espresso = open_fd_FildeshX(from_espresso_fd);
     while (!skipstr_FildeshX(from_espresso, ".p")) {
-      if (!getline_FildeshX(from_espresso)) {
+      FildeshX slice = sliceline_FildeshX(from_espresso);
+      if (!slice.at) {
         fildesh_log_error("espresso output finished early");
         istat = -1;
         break;
@@ -243,7 +244,7 @@ oput_protocon_pc_acts_espresso_spawn(std::ostream& out, const Xn::PcSymm& pc_sym
       fildesh_log_error("Cannot parse number of lines");
       istat = -1;
     }
-    getline_FildeshX(from_espresso);
+    sliceline_FildeshX(from_espresso);
   }
 
   for (int i = 0; istat == 0 && i < n; ++i) {

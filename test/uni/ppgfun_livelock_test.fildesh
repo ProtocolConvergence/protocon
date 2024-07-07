@@ -32,7 +32,7 @@ zec -o $(OF expect) / "livelock\tperiod:6\n" /
 |- xlate -x-list - -o-id -
 |- classify 6 -domsz 14
 |- cmp - $(XF expect)
-|> stderr
+|> stdout
 
 $(barrier)
 
@@ -68,12 +68,12 @@ zec -o $(OF expect) / "${expect_output_content}" /
 |< zec / "${interactive_input_content}" /
 |- protocon -interactive -x $(XF protocon_file)
 |- cmp - $(XF expect)
-|> stderr
+|> stdout
 
 $(barrier)
 
 |< zec / "${ppgfun}" /
 |- xlate -x-list - -cutoff 6 -o-svg-livelock $(OF void)
-|> stderr
+|> stdout
 
 void $(X void)

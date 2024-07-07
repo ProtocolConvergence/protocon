@@ -1,3 +1,4 @@
+load("@fildesh//tool/bazel:fildesh_run.bzl", "fildesh_run")
 load("@rules_peg//peg:defs.bzl", "cc_parsing_expression_grammar")
 
 package(
@@ -176,14 +177,15 @@ cc_binary(
     visibility = ["//visibility:public"],
 )
 
-genrule(
+fildesh_run(
     name = "test_embed_h",
-    srcs = [
-        "testlist.txt",
-    ],
-    tools = ["@fildesh//tool:cswitch"],
-    cmd = "$(location @fildesh//tool:cswitch) testname -case-pfx \"fn = Test\" -array AllTests -x $(location testlist.txt) -o \"$@\"",
-    outs = ["test.embed.h"],
+    input_by_xof = {"x_txt": "testlist.txt"},
+    output_by_xof = {"o_h": "test.embed.h"},
+    src_content = """
+cswitch testname -case-pfx \"fn = Test\" -array AllTests -x $(XOF x_txt) -o $(XOF o_h)
+    """,
+    tool_by_alias = {"cswitch": "@fildesh//tool:cswitch"},
+    testonly = 1,
 )
 
 cc_library(

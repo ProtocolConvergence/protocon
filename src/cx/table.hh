@@ -82,6 +82,8 @@ public:
   void mpop(size_t n = 1) {
     this->resize(this->size() - n);
   }
+  void cpop(size_t n = 1) {this->mpop(n);}
+  void flush() {this->clear();}
 
   T& top() {return this->back();}
   const T& top() const {return this->back();}
