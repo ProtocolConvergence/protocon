@@ -258,15 +258,9 @@ do { \
 /** Execute me now!**/
 int main (int argc, char** argv)
 {
-  int argi = 1;
-  const char* arg = argv[argi];
-
   bool commutative = false;
-  if (arg &&
-      (0 == strcmp(arg, "-commute") ||
-       0 == strcmp(arg, "-commutative")))
-  {
-    arg = argv[++argi];
+  std::string_view arg = (argc > 1 ? argv[1] : "");
+  if (arg == "-commute" || arg == "-commutative") {
     commutative = true;
   }
 
