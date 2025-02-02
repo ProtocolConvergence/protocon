@@ -5,16 +5,13 @@ if (NOT Qt5Widgets_FOUND)
   return()
 endif()
 
-set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 set (gui_HEADERS "mainw.hh" "explorew.hh" "searchdialog.hh")
 set (gui_FORMS "mainw.ui"  "explorew.ui" "searchdialog.ui")
 set (gui_SOURCES "mainw.cc" "main.cc" "explorew.cc" "searchdialog.cc")
 
 add_definitions(${Qt5Widgets_DEFINITIONS})
-qt5_wrap_ui(gui_FORMS_HEADERS ${gui_FORMS})
-qt5_wrap_cpp(gui_HEADERS_MOC ${gui_HEADERS})
+qt_wrap_ui(gui_FORMS_HEADERS ${gui_FORMS})
+qt_wrap_cpp(gui_HEADERS_MOC ${gui_HEADERS})
 
 
 add_executable(protocon-gui
