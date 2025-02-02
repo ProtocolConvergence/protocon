@@ -115,6 +115,12 @@ public:
     for (zuint i = old_sz; i < capac; ++i)
       new (&(*this)[i]) T();
   }
+
+#if 1
+  void ensize(zuint capac) {
+    this->resize(capac);
+  }
+#else
   void ensize(zuint capac) {
     zuint old_sz = this->sz();
     for (zuint i = capac; i < old_sz; ++i)
@@ -123,6 +129,7 @@ public:
     for (zuint i = old_sz; i < capac; ++i)
       new (&(*this)[i]) T();
   }
+#endif
   void wipe(const T& x) {
     for (zuint i = 0; i < this->sz(); ++i) {
       (*this)[i] = x;
