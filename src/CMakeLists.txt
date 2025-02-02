@@ -52,7 +52,9 @@ target_link_libraries(xnsys_lib pfmla_lib)
 #### Parser Generation ####
 add_custom_command(
   OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/prot-xfile.leg.cc"
-  COMMAND peg_leg -o "${CMAKE_CURRENT_BINARY_DIR}/prot-xfile.leg.cc" "${CMAKE_CURRENT_SOURCE_DIR}/prot-xfile.leg"
+  COMMAND ${PEG_leg_EXECUTABLE}
+  -o "${CMAKE_CURRENT_BINARY_DIR}/prot-xfile.leg.cc"
+  "${CMAKE_CURRENT_SOURCE_DIR}/prot-xfile.leg"
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/prot-xfile.leg)
 
 add_library(prot_file_lib STATIC

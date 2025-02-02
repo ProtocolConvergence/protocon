@@ -1,9 +1,6 @@
-#include(FetchContent)
-#include("cmake_fetchcontent/fildesh.cmake")
-#include("cmake_fetchcontent/mddglu.cmake")
-#
-#include(ExternalProject)
-#include("cmake_externalproject/peg.cmake")
+include(FetchContent)
+include("cmake_fetchcontent/fildesh.cmake")
+include("cmake_fetchcontent/mddglu.cmake")
 
 find_library(M_LIB m)
 set(M_LIB "${M_LIB}" PARENT_SCOPE)

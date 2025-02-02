@@ -8,4 +8,5 @@ ExternalProject_Add(peg_project
 add_executable(peg_leg IMPORTED)
 ExternalProject_Get_Property(peg_project SOURCE_DIR)
 set_target_properties(peg_leg PROPERTIES IMPORTED_LOCATION "${SOURCE_DIR}/leg")
-add_dependencies (peg_leg peg_project)
+add_dependencies(peg_leg peg_project)
+set(PEG_leg_EXECUTABLE "$<TARGET_NAME:peg_leg>")

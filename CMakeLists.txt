@@ -26,13 +26,9 @@ string(REPLACE "/DNDEBUG" "" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}
 
 include(CTest)
 
-include(FetchContent)
-include("dep/cmake_fetchcontent/fildesh.cmake")
-include("dep/cmake_fetchcontent/mddglu.cmake")
-
+add_subdirectory(dep EXCLUDE_FROM_ALL)
 include(ExternalProject)
 include("dep/cmake_externalproject/peg.cmake")
-add_subdirectory(dep EXCLUDE_FROM_ALL)
 
 #### Build ####
 include_directories(
