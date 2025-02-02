@@ -1,0 +1,9 @@
+(: expect Str """\
+55f4XH5X
+576Pf7XH
+57XHa__A
+""")
+
+|< generate -domsz 4 -cutoff 8
+|- cmp - $(XF expect)
+|> stderr

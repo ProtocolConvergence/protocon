@@ -41,6 +41,12 @@ fildesh_test(
 )
 
 fildesh_test(
+    name = "g_d4_c8_test",
+    srcs = ["g_d4_c8_test.fildesh"],
+    tool_by_alias = {"generate": "//src/uni:generate"},
+)
+
+fildesh_test(
     name = "g_d7_b3_c20_test",
     srcs = ["g_d7_b3_c20_test.fildesh"],
     tool_by_alias = {"generate": "//src/uni:generate"},
@@ -55,6 +61,6 @@ fildesh_test(
 fildesh_test(
     name = "synthesize_test",
     srcs = ["synthesize_test.fildesh"],
-    tool_by_alias = {"synthesize": "//src/uni:synthesize"},
     input_by_option = {"input_file": "//examplespec:SumNotTwo.prot"},
+    tool_by_alias = {"synthesize": "//src/uni:synthesize"},
 )
