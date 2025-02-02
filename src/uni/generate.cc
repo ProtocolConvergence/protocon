@@ -43,7 +43,7 @@ struct SearchOpt
   Table<PFmlaVbl> pfmla_vbls;
   uint allbut2_pfmla_list_id;
 
-  Table<UniAct> given_acts;
+  std::vector<UniAct> given_acts;
 
   SearchOpt()
     : domsz( 0 )
@@ -664,11 +664,11 @@ searchit(const SearchOpt& opt)
     REMOVE_ABA;
   }
 
-  if (!opt.given_acts.empty_ck()) {
+  if (!opt.given_acts.empty()) {
     unsigned hi_id = 0;
     BitTable tmp_delegates = delegates;
-    for (unsigned i = 0; i < opt.given_acts.sz(); ++i) {
-      tmp_delegates.set1(id_of(opt.given_acts[i], domsz));
+    for (const auto& given_act : opt.given_acts) {
+      tmp_delegates.set1(id_of(given_act, domsz));
     }
     for (unsigned actid = 0; actid < delegates.sz(); ++actid) {
       if (tmp_delegates.ck(actid) && !delegates.ck(actid)) {
@@ -848,7 +848,7 @@ int main(int argc, char** argv)
   if (opt.domsz == 0)
     failout_sysCx("Please specify a domain size with the -domsz flag.");
 
-  if (opt.given_acts.sz() > 0) {
+  if (opt.given_acts.size() > 0) {
     if (opt.max_depth > 0 || opt.bfs_ofile) {
       opt.max_depth += 1;
     }
@@ -858,13 +858,13 @@ int main(int argc, char** argv)
   if (periodic_leads_semick_test) {
     const unsigned domsz = opt.domsz;
     BitTable delegates( domsz*domsz*domsz, 0 );
-    for (unsigned i = 0; i < opt.given_acts.size(); ++i) {
-      delegates.set1(id_of(opt.given_acts[i], domsz));
+    for (const auto& given_act : opt.given_acts) {
+      delegates.set1(id_of(given_act, domsz));
     }
     Table<PcState> ppgfun;
     init_ppgfun(ppgfun, delegates, domsz);
     BitTable mask( domsz*domsz*domsz, 0 );
-    const unsigned depth = opt.given_acts.sz();
+    const unsigned depth = opt.given_acts.size();
     Table<BitTable> candidates_stack(depth+1, mask);
     opt.check_ppg_overapprox = false;
     switch (periodic_leads_semick(delegates, ppgfun, mask,

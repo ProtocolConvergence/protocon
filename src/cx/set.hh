@@ -155,7 +155,7 @@ public:
 };
 
 template <class T>
-class FlatSet : public Table<T>
+class FlatSet : public std::vector<T>
 {
 public:
   FlatSet() = default;
@@ -165,21 +165,19 @@ public:
   FlatSet& operator=(const FlatSet<T>& a) = default;
   virtual ~FlatSet() = default;
 
-  explicit FlatSet(const std::vector<T>& a) {
-    this->assign(a.begin(), a.end());
+  explicit FlatSet(const Set<T>& a) : std::vector<T>(a.begin(), a.end()) {}
+  explicit FlatSet(const std::vector<T>& a) : std::vector<T>(a) {
     std::sort (this->begin(), this->end());
   }
-  explicit FlatSet(const Set<T>& a) {
-    this->assign(a.begin(), a.end());
-  }
-  explicit FlatSet(const T* a, zuint n) {
-    this->assign(a, a+n);
+  explicit FlatSet(const T* a, zuint n) : std::vector<T>(a, a+n) {
     std::sort (this->begin(), this->end());
   }
 
-  bool elem_ck(const T& e) const {
+  size_t sz() const {return this->size();}
+  bool contains(const T& e) const {
     return std::binary_search (this->begin(), this->end(), e);
   }
+  bool elem_ck(const T& e) const {return this->contains(e);}
 
   bool subseteq_ck(const FlatSet<T>& b) const {
     const FlatSet<T>& a = *this;
