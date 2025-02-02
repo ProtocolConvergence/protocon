@@ -9,6 +9,8 @@
 namespace Cx {
 class MpiDissem
 {
+public:
+  typedef unsigned char Bool;
 private:
   bool done;
   bool term;

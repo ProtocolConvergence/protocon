@@ -1,8 +1,10 @@
+#include <errno.h>
+#include <signal.h>
 
 #include <mpi.h>
-#include "main-all.hh"
+#include <fildesh/string.hh>
 
-#include <errno.h>
+#include "main-all.hh"
 #include "mpidissem.hh"
 
 #include "namespace.hh"
@@ -50,7 +52,7 @@ handle_dissem_msg(MpiDissem::Tag tag,
 }
 
 static
-  Bool
+  bool
 done_ck (void* dat)
 {
   Table<uint> msg;
@@ -85,12 +87,10 @@ stabilization_search_init
   (SynthesisCtx& synctx,
    Xn::Sys& sys,
    LgTable<Xn::Sys>& systems,
-   lace::ofstream& log_ofile,
    AddConvergenceOpt& opt,
    const ProtoconFileOpt& infile_opt,
    const ProtoconOpt& exec_opt,
-   Table< Table<uint> >& act_layers
-   );
+   Table< Table<uint> >& act_layers);
 
 static
   int
@@ -120,7 +120,6 @@ stabilization_search(vector<uint>& ret_actions,
 
   DeclLegit( good );
   AddConvergenceOpt opt(global_opt);
-  lace::ofstream log_ofile;
 
   opt.sys_pcidx = PcIdx;
   opt.sys_npcs = NPcs;
@@ -129,12 +128,13 @@ stabilization_search(vector<uint>& ret_actions,
   LgTable<Xn::Sys> systems;
   SynthesisCtx synctx( PcIdx, NPcs );
   synctx.conflicts = conflicts;
+  std::ostream& log_out = synctx.log;
 
   Table< Table<uint> > act_layers;
 
   DoLegitLine( "Could not initialize." )
     stabilization_search_init
-    (synctx, sys, systems, log_ofile, opt, infile_opt, exec_opt, act_layers);
+    (synctx, sys, systems, opt, infile_opt, exec_opt, act_layers);
 
   PartialSynthesis& synlvl = synctx.base_partial;
   synctx.done_ck_fn = done_ck;
@@ -147,7 +147,7 @@ stabilization_search(vector<uint>& ret_actions,
 
   if (exec_opt.task == ProtoconOpt::VerifyTask)
   {
-    for (uint i = PcIdx; i < exec_opt.xfilepaths.sz(); i += NPcs) {
+    for (uint i = PcIdx; i < exec_opt.xfilepaths.size(); i += NPcs) {
       if (synctx.done_ck())  break;
       multi_verify_stabilization
         (i, synctx, ret_actions,
@@ -160,7 +160,7 @@ stabilization_search(vector<uint>& ret_actions,
     for (uint conflict_idx = PcIdx; conflict_idx < flat_conflicts.sz(); conflict_idx += NPcs) {
       uint old_sz = flat_conflicts[conflict_idx].sz();
       if (!synctx.done_ck() && old_sz > 1) {
-        *opt.log
+        log_out
           << "pcidx:" << PcIdx
           << " conflict:" << conflict_idx << "/" << flat_conflicts.sz()
           << " sz:" << old_sz
@@ -169,7 +169,7 @@ stabilization_search(vector<uint>& ret_actions,
         uint new_sz =
           synlvl.add_small_conflict_set(flat_conflicts[conflict_idx]);
 
-        *opt.log
+        log_out
           << "DONE: pcidx:" << PcIdx
           << " conflict:" << conflict_idx << "/" << flat_conflicts.sz()
           << " old_sz:" << old_sz << " new_sz:" << new_sz
@@ -222,7 +222,7 @@ stabilization_search(vector<uint>& ret_actions,
     {}
     else if (found)
     {
-      *opt.log << "SOLUTION FOUND!" << std::endl;
+      log_out << "SOLUTION FOUND!" << std::endl;
       bool count_solution = true;
       if (opt.solution_as_conflict || global_opt.optimize_soln) {
         FlatSet<uint> flat_actions( actions );
@@ -234,10 +234,12 @@ stabilization_search(vector<uint>& ret_actions,
         }
       }
 
-      if (global_opt.try_all && !!exec_opt.ofilepath && count_solution) {
-        lace::ofstream prot_out((exec_opt.ofilepath + "." + PcIdx + "." + trial_idx).c_str());
+      if (global_opt.try_all && !exec_opt.ofilepath.empty() && count_solution) {
+        fildesh::ostringstream oss;
+        oss << exec_opt.ofilepath << "." << PcIdx << "." << trial_idx;
+        fildesh::ofstream prot_out(oss.c_str());
         oput_protocon_file(prot_out, sys, actions,
-                           exec_opt.use_espresso,
+                           exec_opt.maybe_espresso,
                            exec_opt.argline.c_str());
       }
 
@@ -257,11 +259,11 @@ stabilization_search(vector<uint>& ret_actions,
         set_term_flag (1);
     }
 
-    synctx.conflicts.oput_conflict_sizes(*opt.log);
+    synctx.conflicts.oput_conflict_sizes(log_out);
 
     for (std::ostream* ofile = &std::cerr;
          true;  // See end of loop.
-         ofile = opt.log)
+         ofile = &log_out)
     {
       *ofile << "pcidx:" << PcIdx << " trial:" << trial_idx+1;
 
@@ -276,7 +278,7 @@ stabilization_search(vector<uint>& ret_actions,
       *ofile << '\n';
       ofile->flush();
 
-      if (ofile == opt.log)
+      if (ofile == &log_out)
         break;
     }
 
@@ -298,10 +300,10 @@ stabilization_search(vector<uint>& ret_actions,
 
   mpi_dissem->finish();
 
-  if (!!exec_opt.conflicts_ofilepath) {
+  if (!exec_opt.conflicts_ofilepath.empty()) {
     Table<uint> flattest_conflicts;
-    synctx.conflicts.oput_conflict_sizes(*opt.log);
-    opt.log->flush();
+    synctx.conflicts.oput_conflict_sizes(log_out);
+    log_out.flush();
     if (PcIdx == 0) {
       synctx.conflicts.flush_new_conflicts();
       for (uint source_idx = 1; source_idx < NPcs; ++source_idx) {
@@ -314,12 +316,13 @@ stabilization_search(vector<uint>& ret_actions,
                  src_and_sz[0], MpiTag_Conflict, MPI_COMM_WORLD, &status);
         synctx.conflicts.add_conflicts(flattest_conflicts);
         synctx.conflicts.flush_new_conflicts();
-        synctx.conflicts.oput_conflict_sizes(*opt.log);
-        opt.log->flush();
+        synctx.conflicts.oput_conflict_sizes(log_out);
+        log_out.flush();
       }
 
       synctx.conflicts.trim(global_opt.max_conflict_sz);
-      oput_conflicts(synctx.conflicts, exec_opt.conflicts_ofilepath);
+      fildesh::ofstream conflict_out(exec_opt.conflicts_ofilepath.c_str());
+      conflict_out << synctx.conflicts;
     }
     else {
       synctx.conflicts.flush_new_conflicts(flattest_conflicts);
@@ -369,7 +372,6 @@ int main(int argc, char** argv)
   int argi = 1;
   DeclLegit( good );
   struct timespec begtime, endtime;
-  push_losefn_sysCx ((void (*) ()) MPI_Finalize);
   uint PcIdx = 0;
   uint NPcs = 1;
   MPI_Comm_rank (MPI_COMM_WORLD, (int*) &PcIdx);
@@ -393,10 +395,10 @@ int main(int argc, char** argv)
     stabilization_search(sys.actions, infile_opt, exec_opt, opt, PcIdx, NPcs);
   if (found_papc == (int)PcIdx) {
     DBog1("Solution found! (By PcIdx %u)", PcIdx);
-    if (!exec_opt.ofilepath.empty_ck())
+    if (!exec_opt.ofilepath.empty())
     {
       oput_protocon_file (exec_opt.ofilepath, sys,
-                          exec_opt.use_espresso,
+                          exec_opt.maybe_espresso,
                           exec_opt.argline.c_str());
     }
     else {
@@ -434,7 +436,7 @@ END_NAMESPACE
 
 int main(int argc, char** argv)
 {
-  MPI_Init (&argc, &argv);
-  return PROTOCON_NAMESPACE::main(argc, argv);
+  MPI_Init(&argc, &argv);
+  int exstatus = PROTOCON_NAMESPACE::main(argc, argv);
+  MPI_Finalize();
 }
-
