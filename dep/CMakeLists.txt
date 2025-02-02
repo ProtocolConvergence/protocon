@@ -1,0 +1,28 @@
+#include(FetchContent)
+#include("cmake_fetchcontent/fildesh.cmake")
+#include("cmake_fetchcontent/mddglu.cmake")
+#
+#include(ExternalProject)
+#include("cmake_externalproject/peg.cmake")
+
+find_library(M_LIB m)
+set(M_LIB "${M_LIB}" PARENT_SCOPE)
+
+find_package(MPI)
+set(MPI_FOUND "${MPI_FOUND}" PARENT_SCOPE)
+if (MPI_FOUND)
+  set(MPI_COMPILE_FLAGS "${MPI_COMPILE_FLAGS}" PARENT_SCOPE)
+  set(MPI_INCLUDE_PATH "${MPI_INCLUDE_PATH}" PARENT_SCOPE)
+  set(MPI_LIBRARIES "${MPI_LIBRARIES}" PARENT_SCOPE)
+  set(MPI_LINK_FLAGS "${MPI_LINK_FLAGS}" PARENT_SCOPE)
+  set(MPIEXEC "${MPIEXEC}" PARENT_SCOPE)
+  set(MPIEXEC_NUMPROC_FLAG "${MPIEXEC_NUMPROC_FLAG}" PARENT_SCOPE)
+  set(MPIEXEC_PREFLAGS "${MPIEXEC_PREFLAGS}" PARENT_SCOPE)
+  set(MPIEXEC_POSTFLAGS "${MPIEXEC_POSTFLAGS}" PARENT_SCOPE)
+endif()
+
+find_package(OpenMP)
+set(OPENMP_FOUND "${OPENMP_FOUND}" PARENT_SCOPE)
+if (OPENMP_FOUND)
+  set(OpenMP_C_FLAGS "${OpenMP_C_FLAGS}" PARENT_SCOPE)
+endif()

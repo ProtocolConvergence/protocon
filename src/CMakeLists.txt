@@ -1,8 +1,4 @@
 
-find_library (M_LIB m)
-find_package(MPI)
-find_package(OpenMP)
-
 add_definitions(-DPROTOCON_NAMESPACE=protocon)
 
 add_subdirectory(inline)
@@ -186,12 +182,6 @@ if (MPI_FOUND)
     "${MPI_INCLUDE_PATH}")
   target_link_libraries (protocon-mpi ${MPI_LIBRARIES})
   target_link_libraries (protocon-mpi protocon_lib ${M_LIB})
-
-  if(MPI_COMPILE_FLAGS)
-    set (MPI_COMPILE_FLAGS "${MPI_COMPILE_FLAGS} ${DEFAULT_COMPILE_FLAGS}")
-  else()
-    set (MPI_COMPILE_FLAGS "${DEFAULT_COMPILE_FLAGS}")
-  endif()
 
   set_target_properties (protocon-mpi PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/.."

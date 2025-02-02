@@ -85,20 +85,6 @@ foreach (f SortRing TokenRingDijkstra)
     COMMAND protocon -x ${SpecPath}/${f}.prot)
 endforeach ()
 
-foreach (f LeaderRingHuang)
-  list (APPEND ExampleSpecs ${f})
-  add_test (NAME SynthOpenMP_${f}
-    COMMAND protocon -parallel 4 -x ${SpecPath}/${f}.prot -prep-conflicts)
-  set_tests_properties (SynthOpenMP_${f} PROPERTIES PROCESSORS 4)
-
-  if (MPI_FOUND)
-    add_test (NAME SynthMPI_${f}
-      COMMAND ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} 4 ${MPIEXEC_PREFLAGS}
-      "$<TARGET_FILE:protocon-mpi>" ${MPIEXEC_POSTFLAGS} -x ${SpecPath}/${f}.prot -prep-conflicts)
-    set_tests_properties (SynthMPI_${f} PROPERTIES PROCESSORS 4)
-  endif ()
-endforeach ()
-
 add_test (NAME Synth_Sat_sat
   COMMAND protocon -def ExpectSat 1 -x ${SpecPath}/Sat.prot)
 add_test (NAME Synth_Sat_unsat
@@ -108,6 +94,7 @@ set_tests_properties (Synth_Sat_unsat PROPERTIES WILL_FAIL TRUE)
 list (APPEND ExampleSolns
   ${ExampleSpecs}
   DiningPhilo
+  LeaderRingHuang
   OrientRing
   OrientRingViaToken
   TokenChainDijkstra

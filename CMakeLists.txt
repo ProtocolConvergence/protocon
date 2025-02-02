@@ -32,6 +32,7 @@ include("dep/cmake_fetchcontent/mddglu.cmake")
 
 include(ExternalProject)
 include("dep/cmake_externalproject/peg.cmake")
+add_subdirectory(dep EXCLUDE_FROM_ALL)
 
 #### Build ####
 include_directories(
@@ -39,6 +40,8 @@ include_directories(
   ${Fildesh_INCLUDE_DIRS}
 )
 add_subdirectory(src)
+
+set(Protocon_EXECUTABLE "$<TARGET_FILE:protocon>")
 
 #### Test ####
 # (The src/ subdirectory has some tests too.)
