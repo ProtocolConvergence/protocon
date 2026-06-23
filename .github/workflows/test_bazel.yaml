@@ -14,7 +14,7 @@ jobs:
 
     steps:
     - name: Cache Setup
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       id: cache-bazel
       with:
         path: ~/.cache/bazel
@@ -26,7 +26,7 @@ jobs:
         bazel-version: latest
 
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
 
     - name: Build
       run: >
@@ -44,7 +44,7 @@ jobs:
         //...
 
     - name: Upload Test Results
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: failure()
       with:
         name: bazel-testlogs-(${{ matrix.platform }})
@@ -64,7 +64,7 @@ jobs:
         bazel-version: latest
 
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
 
     - name: Run tests
       run: >
