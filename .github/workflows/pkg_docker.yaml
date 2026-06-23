@@ -23,20 +23,20 @@ jobs:
         bazel-version: latest
 
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
 
     - name: Build
       run: bazel build -c opt //src:protocon
 
     - name: Docker Login
-      uses: docker/login-action@v3
+      uses: docker/login-action@v4
       with:
         registry: ${{ env.REGISTRY }}
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Build and Push Image
-      uses: docker/build-push-action@v6
+      uses: docker/build-push-action@v7
       with:
         context: bazel-bin/
         file: pkg/docker/Dockerfile
